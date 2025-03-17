@@ -1,6 +1,6 @@
 class Calculator {
   constructor() {
-    this.result = 0;
+    this.result
   }
 
   add(number) {
@@ -12,6 +12,7 @@ class Calculator {
     this.result -= number;
     return this;
   }
+  
 
   multiply(number) {
     this.result *= number;
@@ -29,6 +30,7 @@ class Calculator {
   getResult() {
     return this.result;
   }
+  
 
   reset() {
     this.result = 0;

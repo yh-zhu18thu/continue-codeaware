@@ -6,10 +6,10 @@ import {
   PencilSquareIcon,
   XMarkIcon,
 } from "@heroicons/react/24/outline";
-import { lightGray } from "..";
-import { getMetaKeyLabel, isJetBrains } from "../../util";
 import { useContext } from "react";
+import { lightGray } from "..";
 import { IdeMessengerContext } from "../../context/IdeMessenger";
+import { getMetaKeyLabel, isJetBrains } from "../../util";
 
 interface TutorialCardProps {
   onClose: () => void;

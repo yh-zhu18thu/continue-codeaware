@@ -600,6 +600,7 @@ export class Core {
       );
       return completion;
     });
+    
     on("llm/listModels", async (msg) => {
       const { config } = await this.configHandler.loadConfig();
       if (!config) {

@@ -3,7 +3,7 @@ import Layout from "./components/Layout";
 import { SubmenuContextProvidersProvider } from "./context/SubmenuContextProviders";
 import { VscThemeProvider } from "./context/VscTheme";
 import useSetup from "./hooks/useSetup";
-//CA: import the pages needed in CodeAware
+//CodeAware: import the pages needed in CodeAware
 import { Chat } from "./pages/codeaware-main/Chat";
 import { CodeAware } from "./pages/codeaware-main/CodeAware";
 import Navbar from "./pages/codeaware-main/Navbar";

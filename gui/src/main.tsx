@@ -10,6 +10,7 @@ import { persistor, store } from "./redux/store";
 (async () => {
   ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
     <React.StrictMode>
+      {/* CATODO: 观察这个store是如何维护所有的数据的 */}
       <Provider store={store}>
         <PersistGate loading={null} persistor={persistor}>
           <CustomPostHogProvider>

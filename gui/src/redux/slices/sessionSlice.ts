@@ -39,6 +39,7 @@ type ChatHistoryItemWithMessageId = ChatHistoryItem & {
 };
 
 type SessionState = {
+  //CATODO: 参考着history的实现方式加入codeaware的所有数据结构，包括UserIntent,UserMastery,Flow,KnowledgeCard,Quizzes
   lastSessionId?: string;
   allSessionMetadata: SessionMetadata[];
   history: ChatHistoryItemWithMessageId[];

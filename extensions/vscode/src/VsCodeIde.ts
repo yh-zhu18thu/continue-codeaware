@@ -5,11 +5,12 @@ import { Range } from "core";
 import { EXTENSION_NAME } from "core/control-plane/env";
 import { GetGhTokenArgs } from "core/protocol/ide";
 import { editConfigJson, getConfigJsonPath } from "core/util/paths";
+import * as URI from "uri-js";
 import * as vscode from "vscode";
 
-import * as URI from "uri-js";
 import { executeGotoProvider } from "./autocomplete/lsp";
 import { Repository } from "./otherExtensions/git";
+import { SecretStorage } from "./stubs/SecretStorage";
 import { VsCodeIdeUtils } from "./util/ideUtils";
 import { getExtensionUri, openEditorAndRevealRange } from "./util/vscode";
 import { VsCodeWebviewProtocol } from "./webviewProtocol";
@@ -28,7 +29,7 @@ import type {
   TerminalOptions,
   Thread,
 } from "core";
-import { SecretStorage } from "./stubs/SecretStorage";
+
 
 class VsCodeIde implements IDE {
   ideUtils: VsCodeIdeUtils;

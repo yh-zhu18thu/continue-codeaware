@@ -1,5 +1,6 @@
 import { createAsyncThunk, unwrapResult } from "@reduxjs/toolkit";
-import { ChatMessage, PromptLog } from "core";
+import { ChatMessage } from "core";
+import { modelSupportsTools } from "core/llm/autodetect";
 import { selectCurrentToolCall } from "../selectors/selectCurrentToolCall";
 import { selectDefaultModel } from "../slices/configSlice";
 import {
@@ -10,7 +11,6 @@ import {
 } from "../slices/sessionSlice";
 import { ThunkApiType } from "../store";
 import { callTool } from "./callTool";
-import { modelSupportsTools } from "core/llm/autodetect";
 
 export const streamNormalInput = createAsyncThunk<
   void,

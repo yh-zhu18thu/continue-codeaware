@@ -1,19 +1,15 @@
-import { useDispatch } from "react-redux";
 import { RouterProvider, createMemoryRouter } from "react-router-dom";
 import Layout from "./components/Layout";
+import { SubmenuContextProvidersProvider } from "./context/SubmenuContextProviders";
 import { VscThemeProvider } from "./context/VscTheme";
 import useSetup from "./hooks/useSetup";
-import { AddNewModel, ConfigureProvider } from "./pages/AddNewModel";
-import ConfigErrorPage from "./pages/config-error";
+//CA: import the pages needed in CodeAware
+import { Chat } from "./pages/codeaware-main/Chat";
+import { CodeAware } from "./pages/codeaware-main/CodeAware";
+import Navbar from "./pages/codeaware-main/Navbar";
+import { Quiz } from "./pages/codeaware-main/Quiz";
 import ErrorPage from "./pages/error";
-import Chat from "./pages/gui";
-import History from "./pages/history";
-import MigrationPage from "./pages/migration";
-import MorePage from "./pages/More";
-import Stats from "./pages/stats";
 import { ROUTES } from "./util/navigation";
-import { SubmenuContextProvidersProvider } from "./context/SubmenuContextProviders";
-import ConfigPage from "./pages/config";
 
 const router = createMemoryRouter([
   {
@@ -21,46 +17,23 @@ const router = createMemoryRouter([
     element: <Layout />,
     errorElement: <ErrorPage />,
     children: [
+      //CA:changed the home page to CodeAware
       {
         path: "/index.html",
-        element: <Chat />,
+        element: <CodeAware/>,
       },
       {
         path: ROUTES.HOME,
+        element: <CodeAware/>,
+      },
+      {
+        path: "/chat",
         element: <Chat />,
       },
       {
-        path: "/history",
-        element: <History />,
-      },
-      {
-        path: "/stats",
-        element: <Stats />,
-      },
-      {
-        path: "/addModel",
-        element: <AddNewModel />,
-      },
-      {
-        path: "/addModel/provider/:providerName",
-        element: <ConfigureProvider />,
-      },
-      {
-        path: "/more",
-        element: <MorePage />,
-      },
-      {
-        path: ROUTES.CONFIG_ERROR,
-        element: <ConfigErrorPage />,
-      },
-      {
-        path: ROUTES.CONFIG,
-        element: <ConfigPage />,
-      },
-      {
-        path: "/migration",
-        element: <MigrationPage />,
-      },
+        path: "/quiz",
+        element: <Quiz />,
+      }
     ],
   },
 ]);
@@ -78,6 +51,7 @@ function App() {
   return (
     <VscThemeProvider>
       <SubmenuContextProvidersProvider>
+        <Navbar />
         <RouterProvider router={router} />
       </SubmenuContextProvidersProvider>
       <SetupListeners />

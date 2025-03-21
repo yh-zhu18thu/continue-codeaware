@@ -455,6 +455,86 @@ export interface ChatHistoryItem {
   reasoning?: Reasoning;
 }
 
+//CODEAWARE: 以下是codeaware中所用到的数据结构定义：
+
+export type CollaborationStatus = {
+  status: "initing" | "pending" | "editing" | "confirmed";
+  message: string;
+}
+
+// CODEAWARE: 用于标记requirement中特定语义片段和flow步骤的对应关系：
+export type RequirementChunks = {
+  chunkContent: string;
+  correspondingFlowStepId: string;
+}
+
+// CODEAWARE: 用户输入+LLM paraphrase的程序需求
+export interface ProgramRequirement {
+  // 程序需求部分
+  requirementDescription: string;
+  requirementStatus: CollaborationtStatus;
+  promptLogs?: PromptLog[];
+  highlightChunks: RequirementChunks[];
+}
+
+// CODEAWARE：用呼输入+LLM paraphrase的当前代码水平和学习目标
+export interface UserCodeAwareContext {
+  contextDescription: string;
+  contextStatus: CollaborationStatus;
+  promptLogs?: PromptLog[];
+}
+
+export type KnowledgeStatus = "covered" | "explored" | "examined";
+
+// CODEAWARE: flow步骤
+export interface FlowItem {
+  id: string;
+  title: string;
+  abstract: string;
+  knowledgeCardIds: string[]; //维护该步骤下的知识卡片
+  knowledgeStatusStats?: { //统计当前步骤处于各个状态的知识卡片数量
+    [key in KnowledgeStatus]: number;
+  } 
+}
+
+// CODEAWARE: 知识卡片
+export interface KnowledgeCardItem {
+  id: string;
+  title: string;
+  abstract: string;
+  status: KnowledgeStatus;
+  flowStepId: string; //关联该知识卡片所属的flow步骤
+}
+
+//CATODO: QuizItem 的定义
+
+export type SelfTestResult = "correct" | "wrong" | "unanswered";
+
+// CODEAWARE：自测题目与回答
+export type SelfTestShortAnswer = {
+  stem: string;
+  answer: string;
+  remarks?: string; //LLM给出的解析
+  result: SelfTestResult;
+}
+
+export type SelfTestMultipleChoice = {
+  stem: string;
+  options: string[];
+  answer: string;
+  answerIndex: number;
+  remarks?: string; //LLM给出的解析
+  result: SelfTestResult;
+}
+
+export type SelfTestInteraction = SelfTestShortAnswer | SelfTestMultipleChoice;
+
+export interface SelfTestItem {
+  id: string;
+  question: SelfTestInteraction;
+  flowStepId: string;
+}
+
 export interface LLMFullCompletionOptions extends BaseCompletionOptions {
   log?: boolean;
   model?: string;

@@ -14,8 +14,10 @@ import editModeStateReducer from "./slices/editModeState";
 import indexingReducer from "./slices/indexingSlice";
 import miscReducer from "./slices/miscSlice";
 import sessionReducer from "./slices/sessionSlice";
-import uiReducer from "./slices/uiSlice";
 import tabsReducer from "./slices/tabsSlice";
+import uiReducer from "./slices/uiSlice";
+//CODEAWARE: add the reducer of codeaware
+import codeAwareSessionReducer from "./slices/codeAwareSlice";
 
 export interface ChatMessage {
   role: "system" | "user" | "assistant";
@@ -30,6 +32,7 @@ const rootReducer = combineReducers({
   config: configReducer,
   indexing: indexingReducer,
   tabs: tabsReducer,
+  codeAwareSession: codeAwareSessionReducer
 });
 
 const saveSubsetFilters = [

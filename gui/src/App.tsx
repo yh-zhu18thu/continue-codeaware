@@ -4,10 +4,8 @@ import { SubmenuContextProvidersProvider } from "./context/SubmenuContextProvide
 import { VscThemeProvider } from "./context/VscTheme";
 import useSetup from "./hooks/useSetup";
 //CodeAware: import the pages needed in CodeAware
-import { Chat } from "./pages/codeaware-main/Chat";
-import { CodeAware } from "./pages/codeaware-main/CodeAware";
-import Navbar from "./pages/codeaware-main/Navbar";
-import { Quiz } from "./pages/codeaware-main/Quiz";
+import { Chat } from "./pages/codeaware/Chat";
+import { CodeAware } from "./pages/codeaware/CodeAware";
 import ErrorPage from "./pages/error";
 import { ROUTES } from "./util/navigation";
 
@@ -29,10 +27,6 @@ const router = createMemoryRouter([
       {
         path: "/chat",
         element: <Chat />,
-      },
-      {
-        path: "/quiz",
-        element: <Quiz />,
       }
     ],
   },
@@ -51,7 +45,6 @@ function App() {
   return (
     <VscThemeProvider>
       <SubmenuContextProvidersProvider>
-        <Navbar />
         <RouterProvider router={router} />
       </SubmenuContextProvidersProvider>
       <SetupListeners />

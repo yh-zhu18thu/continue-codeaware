@@ -457,13 +457,12 @@ export interface ChatHistoryItem {
 
 //CODEAWARE: 以下是codeaware中所用到的数据结构定义：
 
-export type CollaborationStatus = {
-  status: "initing" | "pending" | "editing" | "confirmed";
-  message: string;
-}
+export type CollaborationStatus = "resting" | "processing" | "editing" | "confirmed";
+
 
 // CODEAWARE: 用于标记requirement中特定语义片段和flow步骤的对应关系：
 export type RequirementChunks = {
+  id: string;
   chunkContent: string;
   correspondingFlowStepId: string;
 }
@@ -472,9 +471,9 @@ export type RequirementChunks = {
 export interface ProgramRequirement {
   // 程序需求部分
   requirementDescription: string;
-  requirementStatus: CollaborationtStatus;
+  requirementStatus: CollaborationStatus;
   promptLogs?: PromptLog[];
-  highlightChunks: RequirementChunks[];
+  highlightChunks?: RequirementChunks[];
 }
 
 // CODEAWARE：用呼输入+LLM paraphrase的当前代码水平和学习目标
@@ -484,19 +483,42 @@ export interface UserCodeAwareContext {
   promptLogs?: PromptLog[];
 }
 
-export type KnowledgeStatus = "covered" | "explored" | "examined";
+
+//CODEAWARE: 维护mapping是否对应上的状态，对应不上了的话调用LLM重新寻找
+export type MappingStatus = 
+| "mapped"
+| "unmapped"
+| "remapping"
+
+// CODEAWARE: 存储代码与flow步骤的对应关系
+
+export interface CodeToFlowMapping {
+  codeChunk: string;
+  correspondingFlowStepId: string;
+  mappingStatus: MappingStatus;
+}
 
 // CODEAWARE: flow步骤
 export interface FlowItem {
   id: string;
   title: string;
   abstract: string;
+  correspondingRequirementChunkIds: string[]; //维护该步骤下的需求语义片段
   knowledgeCardIds: string[]; //维护该步骤下的知识卡片
   knowledgeStatusStats?: { //统计当前步骤处于各个状态的知识卡片数量
     [key in KnowledgeStatus]: number;
   } 
+  selfTestIds: string[]; //维护该步骤下的自测题目
+  codeMappings: CodeToFlowMapping[]; //维护该步骤下的代码与flow步骤的对应关系
 }
 
+export type KnowledgeStatus = "covered" | "explored" | "examined";
+
+export interface CodeToKnowledgeMapping {
+  codeChunk: string;
+  correspondingKnowledgeCardId: string;
+  mappingStatus: MappingStatus;
+}
 // CODEAWARE: 知识卡片
 export interface KnowledgeCardItem {
   id: string;
@@ -504,14 +526,14 @@ export interface KnowledgeCardItem {
   abstract: string;
   status: KnowledgeStatus;
   flowStepId: string; //关联该知识卡片所属的flow步骤
+  codeMappings: CodeToKnowledgeMapping[]; //维护该知识卡片下的代码与知识卡片的对应关系
 }
-
-//CATODO: QuizItem 的定义
 
 export type SelfTestResult = "correct" | "wrong" | "unanswered";
 
 // CODEAWARE：自测题目与回答
 export type SelfTestShortAnswer = {
+  type: "shortAnswer";
   stem: string;
   answer: string;
   remarks?: string; //LLM给出的解析
@@ -519,6 +541,7 @@ export type SelfTestShortAnswer = {
 }
 
 export type SelfTestMultipleChoice = {
+  type: "multipleChoice";
   stem: string;
   options: string[];
   answer: string;
@@ -535,6 +558,14 @@ export interface SelfTestItem {
   flowStepId: string;
 }
 
+//CODEAWARE: 一个codeaware session (以一次需求沟通作为起点并围绕其展开) 的描述符
+export interface CodeAwareMetadata{
+  codeAwareSessionId: string;
+  title: string;
+  dateCreated: string;
+  workspaceDirectory: string;
+}
+
 export interface LLMFullCompletionOptions extends BaseCompletionOptions {
   log?: boolean;
   model?: string;
@@ -544,7 +575,6 @@ export type ToastType = "info" | "error" | "warning";
 
 export interface LLMOptions {
   model: string;
-
   title?: string;
   uniqueId?: string;
   systemMessage?: string;

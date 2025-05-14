@@ -476,14 +476,6 @@ export interface ProgramRequirement {
   highlightChunks?: RequirementChunks[];
 }
 
-// CODEAWARE：用呼输入+LLM paraphrase的当前代码水平和学习目标
-export interface UserCodeAwareContext {
-  contextDescription: string;
-  contextStatus: CollaborationStatus;
-  promptLogs?: PromptLog[];
-}
-
-
 //CODEAWARE: 维护mapping是否对应上的状态，对应不上了的话调用LLM重新寻找
 export type MappingStatus = 
 | "mapped"

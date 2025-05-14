@@ -10,7 +10,6 @@ import {
     KnowledgeCardItem,
     ProgramRequirement,
     SelfTestItem,
-    UserCodeAwareContext,
 } from 'core';
 import { v4 as uuidv4 } from "uuid";
 
@@ -21,7 +20,6 @@ type CodeAwareSessionState = {
     workspaceDirectory: string;
     //用户需求与当前水平
     userRequirement: ProgramRequirement | null;
-    userCodeAwareContext: UserCodeAwareContext | null;
     currentHighlightKeywords: string[]; //当前需要高亮的requirement关键词，通过当前currentFocusedFlowId查询userRequirement得到
     //当前的flow
     flow: FlowItem[];
@@ -41,10 +39,6 @@ const initialCodeAwareState: CodeAwareSessionState = {
     userRequirement: {
         requirementDescription: "",
         requirementStatus: "resting"
-    },
-    userCodeAwareContext: {
-        contextDescription: "",
-        contextStatus: "resting"
     },
     currentHighlightKeywords: [],
     flow: [],

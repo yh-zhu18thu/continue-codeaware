@@ -51,7 +51,6 @@ export const CodeAware = () => {
   
   //从redux中获取项目需求相关的数据
   const userRequirement = useAppSelector((state) => state.codeAwareSession.userRequirement);
-  const userCodeAwareContext = useAppSelector((state) => state.codeAwareSession.userCodeAwareContext);
 
   
   const updateUserRequirement = useCallback(
@@ -70,17 +69,17 @@ export const CodeAware = () => {
   
   const polishUserRequirement = useCallback(
     () => {
-      if (!userRequirement || !userCodeAwareContext) {
+      if (!userRequirement) {
         return;
       }
       dispatch(setUserRequirementStatus("processing"));
       dispatch(
-        paraphraseUserIntent({ programRequirement: userRequirement, userCodeAwareContext: userCodeAwareContext })
+        paraphraseUserIntent({ programRequirement: userRequirement})
       ).then(() => {
         dispatch(setUserRequirementStatus("resting"));
       });
     },
-    [dispatch, userRequirement, userCodeAwareContext]
+    [dispatch, userRequirement]
   );
 
 

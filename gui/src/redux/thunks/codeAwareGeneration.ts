@@ -1,7 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import {
-    ProgramRequirement,
-    UserCodeAwareContext
+    ProgramRequirement
 } from "core";
 import { constructParaphraseUserIntentPrompt } from "core/llm/codeAwarePrompts";
 import { setUserRequirementContent } from "../slices/codeAwareSlice";
@@ -13,13 +12,12 @@ export const paraphraseUserIntent = createAsyncThunk<
     void,
     {
         programRequirement: ProgramRequirement,
-        userCodeAwareContext: UserCodeAwareContext
     },
     ThunkApiType
 >(
     "codeAware/ParaphraseUserIntent", 
     async (
-        { programRequirement, userCodeAwareContext }, 
+        { programRequirement}, 
         { dispatch, extra, getState })=> {
         try{
             const state = getState();
@@ -29,7 +27,7 @@ export const paraphraseUserIntent = createAsyncThunk<
             }
 
             //send request
-            const prompt = constructParaphraseUserIntentPrompt(programRequirement,userCodeAwareContext);
+            const prompt = constructParaphraseUserIntentPrompt(programRequirement);
             const result = await extra.ideMessenger.request("llm/complete", {
                 prompt: prompt,
                 completionOptions:{},

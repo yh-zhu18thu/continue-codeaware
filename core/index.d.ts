@@ -457,7 +457,7 @@ export interface ChatHistoryItem {
 
 //CODEAWARE: 以下是codeaware中所用到的数据结构定义：
 
-export type CollaborationStatus = "resting" | "processing" | "editing" | "confirmed";
+export type CollaborationStatus = "empty" | "editing" | "paraphrasing" | "confirmed" | "finalized";
 
 
 // CODEAWARE: 用于标记requirement中特定语义片段和flow步骤的对应关系：

@@ -1,6 +1,6 @@
 /*
 CATODO-BP: 
-1. 两个输入框，用来输入项目需求和用户知识状态。AI处理后会把更新后的项目需求与用户知识状态返回到这两个框里
+1. 一个输入框，用来输入项目需求和用户知识状态。AI处理后会把更新后的项目需求与用户知识状态返回到这两个框里
 2. 下方是一个滚动视图，各个步骤可以收缩展开，展开后有步骤简介和之后添加的知识卡片。
 3. 知识卡片上的交互可能
   a. 发送指令到IDE，高亮对应的内容
@@ -20,9 +20,10 @@ import {
 } from "../../redux/thunks/codeAwareGeneration";
 import "./CodeAware.css";
 
+import { RequirementEditor } from "./components/RequirementEditor";
+
 
 //引入各个组件
-import PolishEditor from "./PolishEditor";
 
 
 
@@ -51,6 +52,7 @@ export const CodeAware = () => {
   
   //从redux中获取项目需求相关的数据
   const userRequirement = useAppSelector((state) => state.codeAwareSession.userRequirement);
+  const isEditMode = userRequirement?.requirementStatus === "editing" || userRequirement?.requirementStatus === "empty";
 
   
   const updateUserRequirement = useCallback(
@@ -72,7 +74,7 @@ export const CodeAware = () => {
       if (!userRequirement) {
         return;
       }
-      dispatch(setUserRequirementStatus("processing"));
+      dispatch(setUserRequirementStatus("paraphrasing"));
       dispatch(
         paraphraseUserIntent({ programRequirement: userRequirement})
       ).then(() => {
@@ -84,20 +86,31 @@ export const CodeAware = () => {
 
 
   return(
-  <main className="main-container">
-    <PolishEditor
-        label="项目需求"
-        value={userRequirement?.requirementDescription || ""}
-        loading={userRequirement?.requirementStatus === "processing"}
-        className="requirement-editor"
-        onChange={(text) => 
-          updateUserRequirement(text)
-        }
-        onPolish={() => 
-          polishUserRequirement()
-        }
-      />
-  </main>
+    <div className="h-screen bg-gray-900 text-white">
+      <div className="flex flex-col p-4">
+        {/* Top Section: Requirement Editor or Display */}
+        {isEditMode ? (
+          <RequirementEditor onConfirm={updateUserRequirement} />
+        ) : (
+          <RequirementDisplay
+            projectData={projectData}
+            onEdit={() => setIsEditing(true)}
+            onAI={handleAIMagic}
+            onUndo={handleUndo}
+          />
+        )}
+
+        {/* Generate Button and Loading state */}
+        <GenerateButton onGenerate={handleGenerateFlow} />
+
+        {isLoading ? (
+          <LoadingState />
+        ) : (
+          // Display Flow List if not loading
+          flowSteps.length > 0 && <FlowList flowSteps={flowSteps} />
+        )}
+      </div>
+    </div>
   );
 };
 

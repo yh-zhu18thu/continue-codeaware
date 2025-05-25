@@ -38,7 +38,7 @@ const initialCodeAwareState: CodeAwareSessionState = {
     workspaceDirectory: "", //CATODO: see how to get current workspace name
     userRequirement: {
         requirementDescription: "",
-        requirementStatus: "resting"
+        requirementStatus: "empty"
     },
     currentHighlightKeywords: [],
     flow: [],

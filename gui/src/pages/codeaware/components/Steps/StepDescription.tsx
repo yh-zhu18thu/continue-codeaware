@@ -1,4 +1,4 @@
-import StyledMarkdownPreview from "../../../components/markdown/StyledMarkdownPreview";
+import StyledMarkdownPreview from "../../../../components/markdown/StyledMarkdownPreview";
 
 interface StepDescriptionProps {
   markdownContent: string;

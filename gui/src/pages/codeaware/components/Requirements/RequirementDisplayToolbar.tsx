@@ -1,5 +1,5 @@
 import { ArrowPathIcon, PencilSquareIcon } from "@heroicons/react/24/outline";
-import { ToolTip } from "../../../components/gui/Tooltip";
+import { ToolTip } from "../../../../components/gui/Tooltip";
 
 interface RequirementDisplayToolBarProps {
     onEdit: () => void;

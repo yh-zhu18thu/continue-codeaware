@@ -1,5 +1,5 @@
 import { ArrowUturnLeftIcon, ArrowUturnRightIcon, CheckIcon, SparklesIcon } from "@heroicons/react/24/outline";
-import { ToolTip } from "../../../components/gui/Tooltip";
+import { ToolTip } from "../../../../components/gui/Tooltip";
 
 interface RequirementEditToolBarProps {
     onUndo: () => void;

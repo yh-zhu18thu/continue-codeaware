@@ -8,7 +8,6 @@ CATODO-BP:
   c. 跳转到quiz，并传输对应的context
 */
 import { useCallback, useContext } from "react";
-import { useNavigate } from "react-router-dom";
 import { IdeMessengerContext } from "../../context/IdeMessenger";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks";
 import {
@@ -20,31 +19,11 @@ import {
 } from "../../redux/thunks/codeAwareGeneration";
 import "./CodeAware.css";
 
-import { RequirementEditor } from "./components/RequirementEditor";
-
-
-//引入各个组件
-
-
-
-
-
 export const CodeAware = () => {
   //import the idemessenger that will communicate between core, gui and IDE
   const ideMessenger = useContext(IdeMessengerContext);
 
   const dispatch = useAppDispatch();
-
-  //the navigation function to navigate to chat or quiz, and pass the knowledgeId
-  const navigate = useNavigate();
-
-  const handleNavigateToQuiz = (kId: Number) => {
-    navigate("/quiz", {state: {knowledgeId: kId}});
-  };
-
-  const handleNavigateToChat = (kId: Number) => {
-    navigate("/chat", {state: {knowledgeId: kId}});
-  };
 
   //CodeAware: 增加一个指令，使得可以发送当前所选择的知识卡片id
 
@@ -78,40 +57,12 @@ export const CodeAware = () => {
       dispatch(
         paraphraseUserIntent({ programRequirement: userRequirement})
       ).then(() => {
-        dispatch(setUserRequirementStatus("resting"));
+        dispatch(setUserRequirementStatus("empty"));
       });
     },
     [dispatch, userRequirement]
   );
 
-
-  return(
-    <div className="h-screen bg-gray-900 text-white">
-      <div className="flex flex-col p-4">
-        {/* Top Section: Requirement Editor or Display */}
-        {isEditMode ? (
-          <RequirementEditor onConfirm={updateUserRequirement} />
-        ) : (
-          <RequirementDisplay
-            projectData={projectData}
-            onEdit={() => setIsEditing(true)}
-            onAI={handleAIMagic}
-            onUndo={handleUndo}
-          />
-        )}
-
-        {/* Generate Button and Loading state */}
-        <GenerateButton onGenerate={handleGenerateFlow} />
-
-        {isLoading ? (
-          <LoadingState />
-        ) : (
-          // Display Flow List if not loading
-          flowSteps.length > 0 && <FlowList flowSteps={flowSteps} />
-        )}
-      </div>
-    </div>
-  );
 };
 
 

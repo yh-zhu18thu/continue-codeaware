@@ -484,24 +484,20 @@ export type MappingStatus =
 
 // CODEAWARE: 存储代码与flow步骤的对应关系
 
-export interface CodeToFlowMapping {
+export interface CodeToStepMapping {
   codeChunk: string;
   correspondingFlowStepId: string;
   mappingStatus: MappingStatus;
 }
 
 // CODEAWARE: flow步骤
-export interface FlowItem {
+export interface StepItem {
   id: string;
   title: string;
   abstract: string;
   correspondingRequirementChunkIds: string[]; //维护该步骤下的需求语义片段
-  knowledgeCardIds: string[]; //维护该步骤下的知识卡片
-  knowledgeStatusStats?: { //统计当前步骤处于各个状态的知识卡片数量
-    [key in KnowledgeStatus]: number;
-  } 
-  selfTestIds: string[]; //维护该步骤下的自测题目
-  codeMappings: CodeToFlowMapping[]; //维护该步骤下的代码与flow步骤的对应关系
+  knowledgeCards: KnowledgeCardItem[]; //维护该步骤下的知识卡片
+  codeMappings: CodeToStepMapping[]; //维护该步骤下的代码与flow步骤的对应关系
 }
 
 export type KnowledgeStatus = "covered" | "explored" | "examined";
@@ -515,9 +511,8 @@ export interface CodeToKnowledgeMapping {
 export interface KnowledgeCardItem {
   id: string;
   title: string;
-  abstract: string;
-  status: KnowledgeStatus;
-  flowStepId: string; //关联该知识卡片所属的flow步骤
+  content: string;
+  selfTests: SelfTestItem[]; //维护该知识卡片下的自测题目
   codeMappings: CodeToKnowledgeMapping[]; //维护该知识卡片下的代码与知识卡片的对应关系
 }
 
@@ -547,7 +542,7 @@ export type SelfTestInteraction = SelfTestShortAnswer | SelfTestMultipleChoice;
 export interface SelfTestItem {
   id: string;
   question: SelfTestInteraction;
-  flowStepId: string;
+  questionType: "shortAnswer" | "multipleChoice";
 }
 
 //CODEAWARE: 一个codeaware session (以一次需求沟通作为起点并围绕其展开) 的描述符

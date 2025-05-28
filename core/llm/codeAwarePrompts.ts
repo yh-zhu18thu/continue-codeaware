@@ -9,3 +9,10 @@ export function constructParaphraseUserIntentPrompt(
     //CATODO: 填入paraphrase prompts
     return `Paraphrase the following requirement: ${requirementText}.`;
 }
+
+export function constructGenerateStepsPrompt(
+    userRequirement: string,
+): string {
+    //CATODO: 填入generate steps prompts
+    return `Generate a list of steps based on the following requirement: ${userRequirement}.`;
+}

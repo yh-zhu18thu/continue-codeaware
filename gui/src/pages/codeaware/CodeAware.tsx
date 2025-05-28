@@ -11,10 +11,11 @@ import { useCallback, useContext } from "react";
 import { IdeMessengerContext } from "../../context/IdeMessenger";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks";
 import {
-  setUserRequirementContent,
+  selectIsRequirementInEditMode,
   setUserRequirementStatus
 } from "../../redux/slices/codeAwareSlice";
 import {
+  generateStepsFromRequirement,
   paraphraseUserIntent
 } from "../../redux/thunks/codeAwareGeneration";
 import "./CodeAware.css";
@@ -26,29 +27,21 @@ export const CodeAware = () => {
   const dispatch = useAppDispatch();
 
   //CodeAware: 增加一个指令，使得可以发送当前所选择的知识卡片id
-
   //CATODO: 参照着codeContextProvider的实现，利用上getAllSnippets的获取最近代码的功能，然后再通过coreToWebview的路径发送更新过来。
   
   //从redux中获取项目需求相关的数据
-  const userRequirement = useAppSelector((state) => state.codeAwareSession.userRequirement);
-  const isEditMode = userRequirement?.requirementStatus === "editing" || userRequirement?.requirementStatus === "empty";
-
-  
-  const updateUserRequirement = useCallback(
-    (newRequirement: string) => {
-      if (!userRequirement) {
-        return;
-      }
-      dispatch(
-        setUserRequirementContent(newRequirement)
-      );
-    },
-    [dispatch, userRequirement]
+  // 当前requirement部分应该使用
+  const isEditMode = useAppSelector(selectIsRequirementInEditMode);
+  // 获取可能有的requirement内容
+  const userRequirement = useAppSelector(
+    (state) => state.codeAwareSession.userRequirement
   );
+  const userRequirementStatus = useAppSelector(
+    (state) => state.codeAwareSession.userRequirement?.requirementStatus
+  );
+  // 获取当前高亮的关键词
 
-  
-  
-  const polishUserRequirement = useCallback(
+  const AIPolishUserRequirement = useCallback(
     () => {
       if (!userRequirement) {
         return;
@@ -62,6 +55,25 @@ export const CodeAware = () => {
     },
     [dispatch, userRequirement]
   );
+
+  const AIHandleRequirementConfirmation = useCallback(
+    () => {
+      if (!userRequirement) {
+        return;
+      }
+      dispatch(setUserRequirementStatus("confirmed"));
+      dispatch(generateStepsFromRequirement({ userRequirement: userRequirement.requirementDescription }))
+        .then(() => {
+          dispatch(setUserRequirementStatus("finalized"));
+        });
+    }
+  , [dispatch, userRequirement]
+  );
+
+  
+
+
+  
 
 };
 

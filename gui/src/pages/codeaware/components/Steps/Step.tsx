@@ -6,14 +6,14 @@ import StepTitleBar from './StepTitleBar';
 
 interface StepProps {
   title: string;
-  description: string;
+  content: string;
   knowledgeCards: KnowledgeCardProps[];
   isActive?: boolean;
 }
 
 const Step: React.FC<StepProps> = ({
   title,
-  description,
+  content: description,
   knowledgeCards,
   isActive = false,
 }) => {

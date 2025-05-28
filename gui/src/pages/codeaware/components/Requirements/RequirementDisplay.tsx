@@ -1,16 +1,18 @@
+import { useAppSelector } from "../../../../redux/hooks";
 import RequirementDisplayToolBar from "./RequirementDisplayToolbar";
-
 interface RequirementDisplayProps {
-    requirementText: string;
     onEdit: () => void;
     onRegenerate: () => void;
 }
 
 export default function RequirementDisplay({
-    requirementText,
     onEdit,
     onRegenerate,
 }: RequirementDisplayProps) {
+    const requirementText = useAppSelector(
+        (state) => state.codeAwareSession.userRequirement?.requirementDescription || ""
+    );
+
     return (
         <div className="relative max-w-2xl mx-auto mt-8 p-4 border rounded-2xl shadow-md bg-white">
             {/* Requirement Content Display */}

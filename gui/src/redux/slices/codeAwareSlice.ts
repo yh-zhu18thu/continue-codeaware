@@ -6,10 +6,8 @@ import {
 import {
     CodeAwareMetadata,
     CollaborationStatus,
-    FlowItem,
-    KnowledgeCardItem,
     ProgramRequirement,
-    SelfTestItem,
+    StepItem
 } from 'core';
 import { v4 as uuidv4 } from "uuid";
 
@@ -22,13 +20,10 @@ type CodeAwareSessionState = {
     userRequirement: ProgramRequirement | null;
     currentHighlightKeywords: string[]; //当前需要高亮的requirement关键词，通过当前currentFocusedFlowId查询userRequirement得到
     //当前的flow
-    flow: FlowItem[];
+    steps: StepItem[];
     currentFocusedFlowId: string | null;
     //当前的知识卡片
-    knowledgeCards: KnowledgeCardItem[];
     currentFocusedKnowledgeCardId: string | null;
-    //当前的自测题目
-    selfTestItems: SelfTestItem[];
 }
 
 const initialCodeAwareState: CodeAwareSessionState = {
@@ -41,11 +36,9 @@ const initialCodeAwareState: CodeAwareSessionState = {
         requirementStatus: "empty"
     },
     currentHighlightKeywords: [],
-    flow: [],
+    steps: [],
     currentFocusedFlowId: null,
-    knowledgeCards: [],
     currentFocusedKnowledgeCardId: null,
-    selfTestItems: []
 }
 
 export const codeAwareSessionSlice = createSlice({
@@ -58,24 +51,38 @@ export const codeAwareSessionSlice = createSlice({
                 state.userRequirement.requirementStatus = action.payload;
             }
         },
-        setUserRequirementContent: (state, action: PayloadAction<string>) => {
+        submitRequirementContent: (state, action: PayloadAction<string>) => {
             if (state.userRequirement) {
                 state.userRequirement.requirementDescription = action.payload;
             }
+        },
+        setGeneratedSteps: (state, action: PayloadAction<StepItem[]>) => {
+            state.steps = action.payload;
         }
+
     },
     selectors:{
         //CATODO: write all the selectors to fetch the data
+        selectIsRequirementInEditMode: (state: CodeAwareSessionState) => {
+            if (!state.userRequirement) {
+                return false;
+            }
+            return state.userRequirement.requirementStatus === "editing" || state.userRequirement.requirementStatus === "empty";
+        },
+        selectIsStepsGenerated: (state: CodeAwareSessionState) => {
+            return state.userRequirement?.requirementStatus === "finalized" && state.steps.length > 0;
+        }
     }
 });
 
 export const {
     setUserRequirementStatus,
-    setUserRequirementContent
+    submitRequirementContent,
+    setGeneratedSteps  
 } = codeAwareSessionSlice.actions
 
 export const {
-
+    selectIsRequirementInEditMode
 } = codeAwareSessionSlice.selectors
 
 export default codeAwareSessionSlice.reducer;

@@ -22,6 +22,7 @@ export default function RequirementEditToolBar({
     isSubmitDisabled,
     isAIProcessDisabled,
 }: RequirementEditToolBarProps) {
+
     return (
         <div className="absolute bottom-2 left-4 flex gap-2">
             {/* Undo */}

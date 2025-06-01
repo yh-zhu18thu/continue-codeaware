@@ -1,24 +1,21 @@
-/*
-CATODO-BP: 
-1. 一个输入框，用来输入项目需求和用户知识状态。AI处理后会把更新后的项目需求与用户知识状态返回到这两个框里
-2. 下方是一个滚动视图，各个步骤可以收缩展开，展开后有步骤简介和之后添加的知识卡片。
-3. 知识卡片上的交互可能
-  a. 发送指令到IDE，高亮对应的内容
-  b. 跳转到chat，并传输对应的context
-  c. 跳转到quiz，并传输对应的context
-*/
+// ...existing code...
 import { useCallback, useContext } from "react";
 import { IdeMessengerContext } from "../../context/IdeMessenger";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks";
 import {
-  selectIsRequirementInEditMode,
-  setUserRequirementStatus
+  selectIsRequirementInEditMode, // Import submitRequirementContent
+  selectIsStepsGenerated,
+  setUserRequirementStatus,
+  submitRequirementContent, // Import submitRequirementContent
 } from "../../redux/slices/codeAwareSlice";
 import {
   generateStepsFromRequirement,
   paraphraseUserIntent
 } from "../../redux/thunks/codeAwareGeneration";
 import "./CodeAware.css";
+import RequirementDisplay from "./components/Requirements/RequirementDisplay"; // Import RequirementDisplay
+import RequirementEditor from "./components/Requirements/RequirementEditor"; // Import RequirementEditor
+import Step from "./components/Steps/Step"; // Import Step
 
 export const CodeAware = () => {
   //import the idemessenger that will communicate between core, gui and IDE
@@ -32,6 +29,7 @@ export const CodeAware = () => {
   //从redux中获取项目需求相关的数据
   // 当前requirement部分应该使用
   const isEditMode = useAppSelector(selectIsRequirementInEditMode);
+  const isStepsGenerated = useAppSelector(selectIsStepsGenerated); // Use the selector
   // 获取可能有的requirement内容
   const userRequirement = useAppSelector(
     (state) => state.codeAwareSession.userRequirement
@@ -40,29 +38,32 @@ export const CodeAware = () => {
     (state) => state.codeAwareSession.userRequirement?.requirementStatus
   );
   // 获取当前高亮的关键词
+  const steps = useAppSelector((state) => state.codeAwareSession.steps); // Get steps data
 
   const AIPolishUserRequirement = useCallback(
-    () => {
+    (requirement: string) => { // Expect requirement from editor
       if (!userRequirement) {
         return;
       }
+      dispatch(submitRequirementContent(requirement)); // Submit content first
       dispatch(setUserRequirementStatus("paraphrasing"));
       dispatch(
-        paraphraseUserIntent({ programRequirement: userRequirement})
+        paraphraseUserIntent({ programRequirement: { ...userRequirement, requirementDescription: requirement } })
       ).then(() => {
-        dispatch(setUserRequirementStatus("empty"));
+        dispatch(setUserRequirementStatus("empty")); // Back to edit mode to show paraphrased content
       });
     },
     [dispatch, userRequirement]
   );
 
   const AIHandleRequirementConfirmation = useCallback(
-    () => {
+    (requirement: string) => { // Expect requirement from editor
       if (!userRequirement) {
         return;
       }
+      dispatch(submitRequirementContent(requirement)); // Submit content first
       dispatch(setUserRequirementStatus("confirmed"));
-      dispatch(generateStepsFromRequirement({ userRequirement: userRequirement.requirementDescription }))
+      dispatch(generateStepsFromRequirement({ userRequirement: requirement }))
         .then(() => {
           dispatch(setUserRequirementStatus("finalized"));
         });
@@ -70,11 +71,55 @@ export const CodeAware = () => {
   , [dispatch, userRequirement]
   );
 
-  
+  const handleEditRequirement = useCallback(() => {
+    dispatch(setUserRequirementStatus("editing"));
+  }, [dispatch]);
+
+  const handleRegenerateSteps = useCallback(() => {
+    if (!userRequirement?.requirementDescription) {
+      return;
+    }
+    // CATODO: Consider if a different status is needed during regeneration
+    dispatch(setUserRequirementStatus("confirmed")); // Or a new status like "regenerating"
+    dispatch(generateStepsFromRequirement({ userRequirement: userRequirement.requirementDescription }))
+      .then(() => {
+        dispatch(setUserRequirementStatus("finalized"));
+      });
+  }, [dispatch, userRequirement?.requirementDescription]);
 
 
-  
+  return (
+    <div className="flex flex-col h-full bg-vscode-sideBar-background text-vscode-sideBar-foreground">
+      {isEditMode ? (
+        <RequirementEditor
+          onConfirm={AIHandleRequirementConfirmation}
+          onAIProcess={AIPolishUserRequirement}
+        />
+      ) : (
+        <RequirementDisplay
+          onEdit={handleEditRequirement}
+          onRegenerate={handleRegenerateSteps}
+        />
+      )}
 
+      {isStepsGenerated && (
+        <div className="flex-grow overflow-y-auto p-4 space-y-4">
+          {steps.map((step, index) => (
+            <Step
+              key={index} // Consider using a unique ID from step data if available
+              title={step.title}
+              content={step.abstract}
+              knowledgeCards={step.knowledgeCards.map(kc => ({
+                title: kc.title,
+                markdownContent: kc.content,
+                // CATODO: Add other necessary props for KnowledgeCard if any, like id, type, etc.
+              }))}
+              // isActive can be determined by currentFocusedFlowId if needed
+              // isActive={step.id === currentFocusedFlowId} 
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
 };
-
-

@@ -82,7 +82,8 @@ export const {
 } = codeAwareSessionSlice.actions
 
 export const {
-    selectIsRequirementInEditMode
+    selectIsRequirementInEditMode,
+    selectIsStepsGenerated
 } = codeAwareSessionSlice.selectors
 
 export default codeAwareSessionSlice.reducer;

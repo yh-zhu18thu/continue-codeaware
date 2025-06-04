@@ -58,14 +58,29 @@ export const codeAwareSessionSlice = createSlice({
         },
         setGeneratedSteps: (state, action: PayloadAction<StepItem[]>) => {
             state.steps = action.payload;
+        },
+        newCodeAwareSession: (state) => {
+            // Reset the state for a new CodeAware session
+            state.currentSessionId = uuidv4();
+            state.allSessionMetaData = [];
+            state.title = "New CodeAware Session";
+            state.workspaceDirectory = ""; // Reset workspace directory
+            state.userRequirement = {
+                requirementDescription: "",
+                requirementStatus: "empty"
+            };
+            state.currentHighlightKeywords = [];
+            state.steps = [];
+            state.currentFocusedFlowId = null;
+            state.currentFocusedKnowledgeCardId = null;
         }
-
     },
     selectors:{
         //CATODO: write all the selectors to fetch the data
         selectIsRequirementInEditMode: (state: CodeAwareSessionState) => {
+            // Requirement is in edit mode if it is either being edited or is empty
             if (!state.userRequirement) {
-                return false;
+                return false; // If userRequirement is null, not in edit mode
             }
             return state.userRequirement.requirementStatus === "editing" || state.userRequirement.requirementStatus === "empty";
         },
@@ -78,7 +93,8 @@ export const codeAwareSessionSlice = createSlice({
 export const {
     setUserRequirementStatus,
     submitRequirementContent,
-    setGeneratedSteps  
+    setGeneratedSteps,
+    newCodeAwareSession
 } = codeAwareSessionSlice.actions
 
 export const {

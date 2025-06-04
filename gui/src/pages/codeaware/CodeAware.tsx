@@ -1,12 +1,13 @@
 // ...existing code...
-import { useCallback, useContext } from "react";
+import { Key, useCallback, useContext, useRef } from "react";
+import styled from "styled-components";
 import { IdeMessengerContext } from "../../context/IdeMessenger";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks";
 import {
   selectIsRequirementInEditMode, // Import submitRequirementContent
   selectIsStepsGenerated,
   setUserRequirementStatus,
-  submitRequirementContent, // Import submitRequirementContent
+  submitRequirementContent
 } from "../../redux/slices/codeAwareSlice";
 import {
   generateStepsFromRequirement,
@@ -16,6 +17,21 @@ import "./CodeAware.css";
 import RequirementDisplay from "./components/Requirements/RequirementDisplay"; // Import RequirementDisplay
 import RequirementEditor from "./components/Requirements/RequirementEditor"; // Import RequirementEditor
 import Step from "./components/Steps/Step"; // Import Step
+
+
+// 全局样式：
+const CodeAwareDiv = styled.div`
+  position: relative;
+  background-color: transparent;
+
+  & > * {
+    position: relative;
+  }
+
+  .thread-message {
+    margin: 0px 0px 0px 1px;
+  }
+`;
 
 export const CodeAware = () => {
   //import the idemessenger that will communicate between core, gui and IDE
@@ -37,8 +53,19 @@ export const CodeAware = () => {
   const userRequirementStatus = useAppSelector(
     (state) => state.codeAwareSession.userRequirement?.requirementStatus
   );
-  // 获取当前高亮的关键词
+
   const steps = useAppSelector((state) => state.codeAwareSession.steps); // Get steps data
+
+  // log all the data for debugging
+  console.log("CodeAware Component Rendered");
+  console.log("isEditMode:", isEditMode);
+  console.log("isStepsGenerated:", isStepsGenerated);
+  console.log("userRequirement:", userRequirement);
+  console.log("userRequirementStatus:", userRequirementStatus);
+  console.log("steps:", steps);
+
+  // 设置全局样式：
+  const codeAwareDivRef = useRef<HTMLDivElement>(null);
 
   const AIPolishUserRequirement = useCallback(
     (requirement: string) => { // Expect requirement from editor
@@ -89,7 +116,21 @@ export const CodeAware = () => {
 
 
   return (
-    <div className="flex flex-col h-full bg-vscode-sideBar-background text-vscode-sideBar-foreground">
+    <CodeAwareDiv
+      ref={codeAwareDivRef}
+    >
+      {/*
+        <Button
+          className="absolute top-2 right-2 z-10"
+          onClick={() => {
+            dispatch(newCodeAwareSession()); // Dispatch action to reset CodeAware session
+          }}
+        >
+          New CodeAware Session
+        </Button>
+      */}
+
+      {/* Requirement Section */}
       {isEditMode ? (
         <RequirementEditor
           onConfirm={AIHandleRequirementConfirmation}
@@ -103,8 +144,10 @@ export const CodeAware = () => {
       )}
 
       {isStepsGenerated && (
-        <div className="flex-grow overflow-y-auto p-4 space-y-4">
-          {steps.map((step, index) => (
+        <div 
+        className={`overflow-y-scroll pt-[8px]" "no-scrollbar" ${steps.length > 0 ? "flex-1" : ""}`}
+        >
+          {steps.map((step: { title: string; abstract: string; knowledgeCards: any[]; }, index: Key | null | undefined) => (
             <Step
               key={index} // Consider using a unique ID from step data if available
               title={step.title}
@@ -120,6 +163,6 @@ export const CodeAware = () => {
           ))}
         </div>
       )}
-    </div>
+    </CodeAwareDiv>
   );
 };

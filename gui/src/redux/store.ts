@@ -63,6 +63,17 @@ const saveSubsetFilters = [
   createFilter("ui", ["toolSettings", "useTools"]),
   createFilter("indexing", []),
   createFilter("tabs", ["tabs"]),
+  createFilter("codeAwareSession", [
+    "currentSessionId",
+    "allSessionMetaData",
+    "title",
+    "workspaceDirectory",
+    "userRequirement",
+    "currentHighlightKeywords",
+    "steps",
+    "currentFocusedFlowId",
+    "currentFocusedKnowledgeCardId",
+  ]),
 ];
 
 const migrations: MigrationManifest = {

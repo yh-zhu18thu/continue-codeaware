@@ -93,9 +93,17 @@ export class ContinueGUIWebviewViewProvider
       styleMainUri = panel.webview
         .asWebviewUri(vscode.Uri.joinPath(extensionUri, "gui/assets/index.css"))
         .toString();
+      console.log("Running in production mode, using webview URIs");
+      console.log("scriptUri:", scriptUri);
+      console.log("styleMainUri:", styleMainUri);
     } else {
       scriptUri = "http://localhost:5173/src/main.tsx";
       styleMainUri = "http://localhost:5173/src/index.css";
+      console.log(
+        "Running in development mode, using local script and style URIs",
+      );
+      console.log("scriptUri:", scriptUri);
+      console.log("styleMainUri:", styleMainUri);
     }
 
     panel.webview.options = {

@@ -1,8 +1,51 @@
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { useEffect } from "react";
+import styled from "styled-components";
+import {
+    defaultBorderRadius,
+    lightGray,
+    vscCommandCenterActiveBorder,
+    vscCommandCenterInactiveBorder,
+    vscForeground,
+    vscInputBackground,
+    vscInputBorderFocus
+} from "../../../../components";
 import { useAppSelector } from "../../../../redux/hooks";
 import RequirementEditToolBar from "./RequirementEditToolBar";
+
+const InputBoxDiv = styled.div<{}>`
+  resize: none;
+  padding-bottom: 4px;
+  font-family: inherit;
+  border-radius: ${defaultBorderRadius};
+  margin: 12px;
+  height: auto;
+  background-color: ${vscInputBackground};
+  color: ${vscForeground};
+
+  border: 1px solid ${vscCommandCenterInactiveBorder};
+  transition: border-color 0.15s ease-in-out;
+  &:focus-within {
+    border: 1px solid ${vscCommandCenterActiveBorder};
+  }
+
+  outline: none;
+  font-size: 14px;
+
+  &:focus {
+    outline: none;
+
+    border: 0.5px solid ${vscInputBorderFocus};
+  }
+
+  &::placeholder {
+    color: ${lightGray}cc;
+  }
+
+  display: flex;
+  flex-direction: column;
+`;
 
 
 interface RequirementEditorProps {
@@ -44,31 +87,33 @@ export default function RequirementEditor(props:RequirementEditorProps){
 
     // 
     return (
-        <div className="relative max-w-2xl mx-auto mt-8 p-4 border rounded-2xl shadow-md bg-white">
+        <InputBoxDiv>
             {/* Editor Content */}
-            <EditorContent
-                editor={editor}
-                className="prose max-w-none min-h-[200px] border rounded-md p-4 focus:outline-none"
-            />
+            <div className="px-2.5 pb-1 pt-2">
+                <EditorContent
+                    editor={editor}
+                    className="scroll-container overflow-y-scroll max-h-[150vh]"
+                />
 
-            {/* Tool Bar */}
-            <RequirementEditToolBar
-                onSubmit={() => {
-                    const requirement = editor.getText();
-                    props.onConfirm(requirement);
-                }}
-                onUndo={() => editor.chain().focus().undo().run()}
-                onRedo={() => editor.chain().focus().redo().run()}
-                onAIProcess={() => {
+                {/* Tool Bar */}
+                <RequirementEditToolBar
+                    onSubmit={() => {
                         const requirement = editor.getText();
-                        props.onAIProcess(requirement);
-                }}
-                isUndoDisabled={!editor.can().undo()}
-                isRedoDisabled={!editor.can().redo()}
-                isSubmitDisabled={editor.isEmpty}
-                isAIProcessDisabled={editor.isEmpty}
-                // isSubmitDisabled={editor.isEmpty || !editor.can().run()}
-            />
-        </div>
+                        props.onConfirm(requirement);
+                    }}
+                    onUndo={() => editor.chain().focus().undo().run()}
+                    onRedo={() => editor.chain().focus().redo().run()}
+                    onAIProcess={() => {
+                            const requirement = editor.getText();
+                            props.onAIProcess(requirement);
+                    }}
+                    isUndoDisabled={!editor.can().undo()}
+                    isRedoDisabled={!editor.can().redo()}
+                    isSubmitDisabled={editor.isEmpty}
+                    isAIProcessDisabled={editor.isEmpty}
+                    // isSubmitDisabled={editor.isEmpty || !editor.can().run()}
+                />
+            </div>
+        </InputBoxDiv>
     );
 }

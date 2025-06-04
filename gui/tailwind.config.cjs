@@ -33,7 +33,8 @@ module.exports = {
         "vsc-editor-background":
           "var(--vscode-editor-background, var(--vscode-sideBar-background, rgb(30 30 30)))",
         "vsc-input-border": "var(--vscode-input-border, #999998)",
-
+        "bg-vscode-sideBar-background":
+          "var(--vscode-sideBar-background, rgb(30 30 30))",
         // Starting to make things less vsc-specific
         // TODO make it all non-IDE-specific naming
         "find-match-selected":

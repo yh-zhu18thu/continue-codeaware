@@ -2,7 +2,7 @@ import { createSelector } from "@reduxjs/toolkit";
 import { ComboBoxItemType } from "../../components/mainInput/types";
 import { RootState } from "../store";
 
-export const xselectSlashCommandComboBoxInputs = createSelector(
+export const selectSlashCommandComboBoxInputs = createSelector(
   [(state: RootState) => state.config.config.slashCommands],
   (slashCommands) => {
     return (

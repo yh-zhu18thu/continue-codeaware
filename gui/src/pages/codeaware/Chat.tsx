@@ -1,8 +1,8 @@
 import {
-    ArrowLeftIcon,
-    ChatBubbleOvalLeftIcon,
-    CodeBracketSquareIcon,
-    ExclamationTriangleIcon,
+  ArrowLeftIcon,
+  ChatBubbleOvalLeftIcon,
+  CodeBracketSquareIcon,
+  ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline";
 import { Editor, JSONContent } from "@tiptap/react";
 import { InputModifiers, RangeInFileWithContents, ToolCallState } from "core";
@@ -14,10 +14,10 @@ import { ErrorBoundary } from "react-error-boundary";
 import { useSelector } from "react-redux";
 import styled from "styled-components";
 import {
-    Button,
-    defaultBorderRadius,
-    lightGray,
-    vscBackground,
+  Button,
+  defaultBorderRadius,
+  lightGray,
+  vscBackground,
 } from "../../components";
 import CodeToEditCard from "../../components/CodeToEditCard";
 import FeedbackDialog from "../../components/dialogs/FeedbackDialog";
@@ -31,8 +31,8 @@ import resolveEditorContent from "../../components/mainInput/resolveInput";
 import { TutorialCard } from "../../components/mainInput/TutorialCard";
 import AssistantSelect from "../../components/modelSelection/platform/AssistantSelect";
 import {
-    OnboardingCard,
-    useOnboardingCard,
+  OnboardingCard,
+  useOnboardingCard,
 } from "../../components/OnboardingCard";
 import { PlatformOnboardingCard } from "../../components/OnboardingCard/platform/PlatformOnboardingCard";
 import PageHeader from "../../components/PageHeader";
@@ -48,16 +48,16 @@ import { selectCurrentToolCall } from "../../redux/selectors/selectCurrentToolCa
 import { selectDefaultModel } from "../../redux/slices/configSlice";
 import { submitEdit } from "../../redux/slices/editModeState";
 import {
-    clearLastEmptyResponse,
-    newSession,
-    selectIsInEditMode,
-    selectIsSingleRangeEditOrInsertion,
-    setInactive,
+  clearLastEmptyResponse,
+  newSession,
+  selectIsInEditMode,
+  selectIsSingleRangeEditOrInsertion,
+  setInactive,
 } from "../../redux/slices/sessionSlice";
 import {
-    setDialogEntryOn,
-    setDialogMessage,
-    setShowDialog,
+  setDialogEntryOn,
+  setDialogMessage,
+  setShowDialog,
 } from "../../redux/slices/uiSlice";
 import { RootState } from "../../redux/store";
 import { cancelStream } from "../../redux/thunks/cancelStream";
@@ -65,13 +65,13 @@ import { exitEditMode } from "../../redux/thunks/exitEditMode";
 import { loadLastSession } from "../../redux/thunks/session";
 import { streamResponseThunk } from "../../redux/thunks/streamResponse";
 import {
-    getFontSize,
-    getMetaKeyLabel,
-    isMetaEquivalentKeyPressed,
+  getFontSize,
+  getMetaKeyLabel,
+  isMetaEquivalentKeyPressed,
 } from "../../util";
 import {
-    FREE_TRIAL_LIMIT_REQUESTS,
-    incrementFreeTrialCount,
+  FREE_TRIAL_LIMIT_REQUESTS,
+  incrementFreeTrialCount,
 } from "../../util/freeTrial";
 import getMultifileEditPrompt from "../../util/getMultifileEditPrompt";
 import { getLocalStorage, setLocalStorage } from "../../util/localStorage";

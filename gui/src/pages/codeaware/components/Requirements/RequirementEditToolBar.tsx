@@ -1,5 +1,27 @@
 import { ArrowUturnLeftIcon, ArrowUturnRightIcon, CheckIcon, SparklesIcon } from "@heroicons/react/24/outline";
+import styled from "styled-components";
+import {
+    vscInputBackground
+} from "../../../../components";
 import { ToolTip } from "../../../../components/gui/Tooltip";
+import HoverItem from "../../../../components/mainInput/InputToolbar/HoverItem";
+
+const StyledDiv = styled.div<{ isHidden?: boolean }>`
+  padding-top: 4px;
+  justify-content: flex-end; // Changed from space-between to flex-end
+  gap: 1px;
+  background-color: ${vscInputBackground};
+  align-items: end;
+  font-size: 12 px;
+  cursor: default;
+  opacity: 1;
+  pointer-events: auto;
+  user-select: none;
+  & > * {
+    flex: 0 0 auto;
+  }
+`;
+
 
 interface RequirementEditToolBarProps {
     onUndo: () => void;
@@ -22,56 +44,59 @@ export default function RequirementEditToolBar({
     isSubmitDisabled,
     isAIProcessDisabled,
 }: RequirementEditToolBarProps) {
-
     return (
-        <div className="absolute bottom-2 left-4 flex gap-2">
-            {/* Undo */}
-            <ToolTip text="Undo" position="top">
-                <button
-                    onClick={onUndo}
-                    disabled={isUndoDisabled}
-                    className="p-2 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50"
-                    aria-label="Undo"
-                >
-                    <ArrowUturnLeftIcon className="w-5 h-5" />
-                </button>
-            </ToolTip>
+    
+        <StyledDiv
+            className="find-widget-skip flex"
+        >   
+            <div className="flex items-center justify-start gap-2 whitespace-nowrap align-end">
+                <HoverItem>
+                    <ArrowUturnLeftIcon 
+                        className={`w-4 h-4 ${isUndoDisabled ? 'opacity-50 cursor-not-allowed' : 'hover:brightness-125 cursor-pointer'}`}
+                        onClick={!isUndoDisabled ? onUndo : undefined}
+                    >
+                        <ToolTip text="Undo" position="top">
+                            Undo
+                        </ToolTip>
+                    </ArrowUturnLeftIcon>
+                </HoverItem>
 
-            {/* Redo */}
-            <ToolTip text="Redo" position="top">
-                <button
-                    onClick={onRedo}
-                    disabled={isRedoDisabled}
-                    className="p-2 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50"
-                    aria-label="Redo"
-                >
-                    <ArrowUturnRightIcon className="w-5 h-5" />
-                </button>
-            </ToolTip>
+                {/* Redo */}
+                <HoverItem>
+                    <ArrowUturnRightIcon
+                        className={`w-4 h-4 ${isRedoDisabled ? 'opacity-50 cursor-not-allowed' : 'hover:brightness-125 cursor-pointer'}`}
+                        onClick={!isRedoDisabled ? onRedo : undefined}
+                    >
+                        <ToolTip text="Redo" position="top">
+                            Redo
+                        </ToolTip>
+                    </ArrowUturnRightIcon>
+                </HoverItem>
 
-            {/* AI Process */}
-            <ToolTip text="AI Process" position="top">
-                <button
-                    onClick={onAIProcess}
-                    disabled={isAIProcessDisabled}
-                    className="p-2 bg-purple-500 text-white rounded hover:bg-purple-600 disabled:opacity-50"
-                    aria-label="AI Process"
-                >
-                    <SparklesIcon className="w-5 h-5" />
-                </button>
-            </ToolTip>
+                {/* AI Process */}
+                <HoverItem>
+                    <SparklesIcon
+                        className={`w-4 h-4 ${isAIProcessDisabled ? 'opacity-50 cursor-not-allowed' : 'hover:brightness-125 cursor-pointer'}`}
+                        onClick={!isAIProcessDisabled ? onAIProcess : undefined}
+                    >
+                        <ToolTip text="AI Process" position="top">
+                            AI Process
+                        </ToolTip>
+                    </SparklesIcon>
+                </HoverItem>
 
-            {/* Submit */}
-            <ToolTip text="Submit" position="top">
-                <button
-                    onClick={onSubmit}
-                    disabled={isSubmitDisabled}
-                    className="p-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
-                    aria-label="Submit"
-                >
-                    <CheckIcon className="w-5 h-5" />
-                </button>
-            </ToolTip>
-        </div>
+                {/* Submit */}
+                <HoverItem>
+                    <CheckIcon
+                        className={`w-4 h-4 ${isSubmitDisabled ? 'opacity-50 cursor-not-allowed' : 'hover:brightness-125 cursor-pointer'}`}
+                        onClick={!isSubmitDisabled ? onSubmit : undefined}
+                    >
+                        <ToolTip text="Submit" position="top">
+                            Submit
+                        </ToolTip>
+                    </CheckIcon>
+                </HoverItem>
+            </div>
+        </StyledDiv>
     )
 }

@@ -1,9 +1,9 @@
 import styled from "styled-components";
 import {
     defaultBorderRadius,
-    vscBackground,
     vscCommandCenterInactiveBorder,
-    vscForeground
+    vscForeground,
+    vscInputBackground
 } from "../../../../components";
 import { useAppSelector } from "../../../../redux/hooks";
 import RequirementDisplayToolBar from "./RequirementDisplayToolbar";
@@ -15,7 +15,7 @@ const DisplayContainerDiv = styled.div<{}>`
   border-radius: ${defaultBorderRadius};
   margin: 12px;
   height: auto;
-  background-color: ${vscBackground}; // 使用更深的背景色
+  background-color: ${vscInputBackground};
   color: ${vscForeground};
 
   transition: border-color 0.15s ease-in-out;
@@ -38,7 +38,7 @@ const ContentDisplayDiv = styled.div<{}>`
   border: 1px solid ${vscCommandCenterInactiveBorder};
   border-radius: ${defaultBorderRadius};
   padding: 1rem 1rem 0.25rem 1rem; // Reduced bottom padding from 1rem to 0.5rem
-  background-color: ${vscBackground}; // 使用更深的背景色
+  background-color: ${vscInputBackground}; // 使用更深的背景色
   color: ${vscForeground};
   white-space: pre-wrap; // 保留换行符和空格
   line-height: 1.6;
@@ -59,18 +59,15 @@ export default function RequirementDisplay({
     );
 
     return (
-        <DisplayContainerDiv>
-            {/* Requirement Content Display */}
-            <div className="px-2.5 pb-1 pt-2">
-                <ContentDisplayDiv>
-                    {requirementText}
-                    {/* Tool Bar */}
-                    <RequirementDisplayToolBar
-                        onEdit={onEdit}
-                        onRegenerate={onRegenerate}
-                    />
-                </ContentDisplayDiv>
-            </div>
-        </DisplayContainerDiv>
+        <div className="px-2.5 pb-1 pt-2">
+            <ContentDisplayDiv>
+                {requirementText}
+                {/* Tool Bar */}
+                <RequirementDisplayToolBar
+                    onEdit={onEdit}
+                    onRegenerate={onRegenerate}
+                />
+            </ContentDisplayDiv>
+        </div>
     );
 }

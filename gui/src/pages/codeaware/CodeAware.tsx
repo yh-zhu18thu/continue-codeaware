@@ -18,7 +18,6 @@ import RequirementDisplay from "./components/Requirements/RequirementDisplay"; /
 import RequirementEditor from "./components/Requirements/RequirementEditor"; // Import RequirementEditor
 import Step from "./components/Steps/Step"; // Import Step
 
-
 // 全局样式：
 const CodeAwareDiv = styled.div`
   position: relative;
@@ -121,16 +120,16 @@ export const CodeAware = () => {
     >
       {/*
         <Button
-          className="absolute top-2 right-2 z-10"
+          className="top-2 right-2 z-10"
           onClick={() => {
             dispatch(newCodeAwareSession()); // Dispatch action to reset CodeAware session
           }}
         >
           New CodeAware Session
-        </Button>
-      */}
+        </Button>*/}
 
       {/* Requirement Section */}
+      
       {isEditMode ? (
         <RequirementEditor
           onConfirm={AIHandleRequirementConfirmation}

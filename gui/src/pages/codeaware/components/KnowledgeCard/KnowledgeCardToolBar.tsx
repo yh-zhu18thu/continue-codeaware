@@ -12,7 +12,7 @@ interface KnowledgeCardToolBarProps {
 const KnowledgeCardToolBar: React.FC<KnowledgeCardToolBarProps> = ({
   title,
   onQuestionClick,
-    onChatClick, // use UseNavigate to navigate to the chat page
+  onChatClick, // use UseNavigate to navigate to the chat page
   onAddToCollectionClick,
 }) => {
   return (

@@ -459,12 +459,18 @@ export interface ChatHistoryItem {
 
 export type CollaborationStatus = "empty" | "editing" | "paraphrasing" | "confirmed" | "finalized";
 
-
-// CODEAWARE: 用于标记requirement中特定语义片段和flow步骤的对应关系：
-export type RequirementChunks = {
+// CODEAWARE: 代码高亮的单位
+export type CodeChunk = {
   id: string;
-  chunkContent: string;
-  correspondingFlowStepId: string;
+  content: string;
+  isHighlighted: boolean;
+}
+
+// CODEAWARE: Requirements中高亮的单位
+export type RequirementChunk = {
+  id: string;
+  content: string;
+  isHighlighted: boolean;
 }
 
 // CODEAWARE: 用户输入+LLM paraphrase的程序需求
@@ -473,7 +479,7 @@ export interface ProgramRequirement {
   requirementDescription: string;
   requirementStatus: CollaborationStatus;
   promptLogs?: PromptLog[];
-  highlightChunks?: RequirementChunks[];
+  highlightChunks?: RequirementChunk[];
 }
 
 //CODEAWARE: 维护mapping是否对应上的状态，对应不上了的话调用LLM重新寻找
@@ -482,14 +488,6 @@ export type MappingStatus =
 | "unmapped"
 | "remapping"
 
-// CODEAWARE: 存储代码与flow步骤的对应关系
-
-export interface CodeToStepMapping {
-  codeChunk: string;
-  correspondingFlowStepId: string;
-  mappingStatus: MappingStatus;
-}
-
 // CODEAWARE: flow步骤
 export interface StepItem {
   id: string;
@@ -497,23 +495,18 @@ export interface StepItem {
   abstract: string;
   correspondingRequirementChunkIds: string[]; //维护该步骤下的需求语义片段
   knowledgeCards: KnowledgeCardItem[]; //维护该步骤下的知识卡片
-  codeMappings: CodeToStepMapping[]; //维护该步骤下的代码与flow步骤的对应关系
+  isHighlighted: boolean;
 }
 
 export type KnowledgeStatus = "covered" | "explored" | "examined";
 
-export interface CodeToKnowledgeMapping {
-  codeChunk: string;
-  correspondingKnowledgeCardId: string;
-  mappingStatus: MappingStatus;
-}
 // CODEAWARE: 知识卡片
 export interface KnowledgeCardItem {
   id: string;
   title: string;
   content: string;
   tests: SelfTestItem[]; //维护该知识卡片下的自测题目
-  codeMappings: CodeToKnowledgeMapping[]; //维护该知识卡片下的代码与知识卡片的对应关系
+  isHighlighted: boolean;
 }
 
 export type SelfTestResult = "correct" | "wrong" | "unanswered";
@@ -545,6 +538,15 @@ export interface SelfTestItem {
   id: string;
   question: SelfTestInteraction;
   questionType: "shortAnswer" | "multipleChoice";
+}
+
+//CODEAWARE: 一个用于表征并存储所有的对应关系的数据结构：
+export interface CodeAwareMapping {
+  codeChunk: CodeChunk;
+  requirementChunk: RequirementChunk;
+  stepId: string;
+  knowledgeCardId?: string;
+  isHighlighted: boolean;
 }
 
 //CODEAWARE: 一个codeaware session (以一次需求沟通作为起点并围绕其展开) 的描述符

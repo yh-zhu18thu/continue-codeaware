@@ -463,6 +463,7 @@ export type CollaborationStatus = "empty" | "editing" | "paraphrasing" | "confir
 export type CodeChunk = {
   id: string;
   content: string;
+  lineRange: [number, number];
   isHighlighted: boolean;
 }
 
@@ -478,7 +479,6 @@ export interface ProgramRequirement {
   // 程序需求部分
   requirementDescription: string;
   requirementStatus: CollaborationStatus;
-  promptLogs?: PromptLog[];
   highlightChunks?: RequirementChunk[];
 }
 
@@ -542,11 +542,17 @@ export interface SelfTestItem {
 
 //CODEAWARE: 一个用于表征并存储所有的对应关系的数据结构：
 export interface CodeAwareMapping {
-  codeChunk: CodeChunk;
-  requirementChunk: RequirementChunk;
+  codeChunkId: string;
+  requirementChunkId: string;
   stepId: string;
   knowledgeCardId?: string;
   isHighlighted: boolean;
+}
+
+export interface HighlightEvent {
+  sourceType: "code" | "requirement" | "step" | "knowledgeCard";
+  identifier: string;
+  additionalInfo?: CodeChunk | RequirementChunk | StepItem | KnowledgeCardItem;
 }
 
 //CODEAWARE: 一个codeaware session (以一次需求沟通作为起点并围绕其展开) 的描述符

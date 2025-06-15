@@ -512,7 +512,7 @@ export interface KnowledgeCardItem {
   id: string;
   title: string;
   content: string;
-  selfTests: SelfTestItem[]; //维护该知识卡片下的自测题目
+  tests: SelfTestItem[]; //维护该知识卡片下的自测题目
   codeMappings: CodeToKnowledgeMapping[]; //维护该知识卡片下的代码与知识卡片的对应关系
 }
 
@@ -522,6 +522,7 @@ export type SelfTestResult = "correct" | "wrong" | "unanswered";
 export type SelfTestShortAnswer = {
   type: "shortAnswer";
   stem: string;
+  standard_answer: string; //LLM给出的标准答案
   answer: string;
   remarks?: string; //LLM给出的解析
   result: SelfTestResult;
@@ -530,6 +531,7 @@ export type SelfTestShortAnswer = {
 export type SelfTestMultipleChoice = {
   type: "multipleChoice";
   stem: string;
+  standard_answer: string; //LLM给出的标准答案
   options: string[];
   answer: string;
   answerIndex: number;

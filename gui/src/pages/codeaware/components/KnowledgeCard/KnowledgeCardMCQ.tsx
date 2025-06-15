@@ -1,5 +1,135 @@
 import { PaperAirplaneIcon } from "@heroicons/react/24/outline";
 import React, { useState } from 'react';
+import styled from "styled-components";
+import {
+    defaultBorderRadius,
+    lightGray,
+    vscButtonBackground,
+    vscButtonForeground,
+    vscEditorBackground,
+    vscFocusBorder,
+    vscForeground
+} from "../../../../components";
+
+const QuestionContainer = styled.div`
+  width: 100%;
+  padding: 16px;
+  border: 1px solid ${lightGray}33;
+  border-radius: ${defaultBorderRadius};
+  background-color: ${vscEditorBackground};
+  color: ${vscForeground};
+  text-align: center; /* Center the content */
+`;
+
+const QuestionText = styled.p`
+  margin-bottom: 24px;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.5;
+  text-align: center; /* Center the question text */
+`;
+
+const OptionsContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 24px;
+`;
+
+const OptionButton = styled.button<{ 
+  isSelected: boolean; 
+  isCorrect: boolean; 
+  isSubmitted: boolean; 
+  isWrong: boolean;
+}>`
+  border-radius: ${defaultBorderRadius};
+  padding: 12px;
+  width: 100%;
+  text-align: left;
+  border: 1px solid;
+  transition: all 0.3s ease-in-out;
+  cursor: ${({ isSubmitted }) => isSubmitted ? 'not-allowed' : 'pointer'};
+  font-size: 14px;
+  line-height: 1.4;
+  
+  ${({ isSubmitted, isCorrect, isSelected, isWrong }) => {
+    if (isSubmitted) {
+      if (isCorrect) {
+        return `
+          background-color: #22c55e;
+          color: white;
+          border-color: #16a34a;
+          transform: ${isSelected ? 'scale(1.02)' : 'none'};
+          box-shadow: ${isSelected ? '0 4px 8px rgba(34, 197, 94, 0.3)' : 'none'};
+        `;
+      }
+      if (isWrong && isSelected) {
+        return `
+          background-color: #ef4444;
+          color: white;
+          border-color: #dc2626;
+          transform: scale(1.02);
+          box-shadow: 0 4px 8px rgba(239, 68, 68, 0.3);
+        `;
+      }
+      return `
+        background-color: ${lightGray}22;
+        color: ${vscForeground};
+        border-color: ${lightGray};
+        opacity: 0.7;
+      `;
+    }
+    
+    if (isSelected) {
+      return `
+        background-color: ${vscButtonBackground}44;
+        color: ${vscForeground};
+        border-color: ${vscFocusBorder};
+        transform: scale(1.02);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      `;
+    }
+    
+    return `
+      background-color: ${lightGray}11;
+      color: ${vscForeground};
+      border-color: ${lightGray}66;
+      
+      &:hover {
+        background-color: ${lightGray}22;
+        border-color: ${lightGray};
+      }
+    `;
+  }}
+`;
+
+const SubmitSection = styled.div`
+  display: flex;
+  justify-content: center; /* Center the submit button */
+`;
+
+const SubmitButton = styled.button`
+  padding: 8px 16px;
+  background-color: ${vscButtonBackground};
+  color: ${vscButtonForeground};
+  border: none;
+  border-radius: ${defaultBorderRadius};
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.15s ease-in-out;
+
+  &:hover:enabled {
+    filter: brightness(1.1);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
 
 interface KnowledgeCardMCQProps {
   question: string;

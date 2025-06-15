@@ -79,7 +79,7 @@ const StyledMarkdown = styled.div<{
     "Helvetica Neue",
     sans-serif;
   font-size: ${(props) => props.fontSize || getFontSize()}px;
-  padding-left: 8px;
+  padding-left: 2px;
   padding-right: 8px;
   color: ${vscForeground};
 
@@ -90,8 +90,24 @@ const StyledMarkdown = styled.div<{
     line-height: 1.5;
   }
 
+  /* 调整列表与上方内容的间距，使布局更紧凑 */
+  ul,
+  ol {
+    margin-top: 0.5em;
+    margin-bottom: 0.5em;
+  }
+
+  /* 嵌套列表的间距进一步缩小 */
+  ul ul,
+  ol ol,
+  ul ol,
+  ol ul {
+    margin-top: 0.25em;
+    margin-bottom: 0.25em;
+  }
+
   > *:first-child {
-    margin-top: 8px;
+    margin-top: 4px;
   }
 
   > *:last-child {

@@ -1,4 +1,5 @@
 // ...existing code...
+import { KnowledgeCardItem, StepItem } from "core";
 import { Key, useCallback, useContext, useRef } from "react";
 import styled from "styled-components";
 import { IdeMessengerContext } from "../../context/IdeMessenger";
@@ -146,16 +147,62 @@ export const CodeAware = () => {
         <div 
         className={`overflow-y-scroll pt-[8px]" "no-scrollbar" ${steps.length > 0 ? "flex-1" : ""}`}
         >
-          {steps.map((step: { title: string; abstract: string; knowledgeCards: any[]; }, index: Key | null | undefined) => (
+          {steps.map((step: StepItem, index: Key | null | undefined) => (
             <Step
               key={index} // Consider using a unique ID from step data if available
               title={step.title}
               content={step.abstract}
-              knowledgeCards={step.knowledgeCards.map(kc => ({
-                title: kc.title,
-                markdownContent: kc.content,
-                // CATODO: Add other necessary props for KnowledgeCard if any, like id, type, etc.
-              }))}
+              knowledgeCards={step.knowledgeCards.map((kc: KnowledgeCardItem) => {
+                // 从 KnowledgeCardItem.tests 转换为 TestItem[]
+                const testItems = kc.tests?.map(test => ({
+                  id: test.id,
+                  questionType: test.questionType,
+                  // MCQ specific props
+                  mcqQuestion: test.questionType === 'multipleChoice' && test.question.type === 'multipleChoice' 
+                    ? test.question.stem : undefined,
+                  mcqOptions: test.questionType === 'multipleChoice' && test.question.type === 'multipleChoice' 
+                    ? test.question.options : undefined,
+                  mcqCorrectAnswer: test.questionType === 'multipleChoice' && test.question.type === 'multipleChoice' 
+                    ? test.question.standard_answer : undefined,
+                  // SAQ specific props
+                  saqQuestion: test.questionType === 'shortAnswer' && test.question.type === 'shortAnswer' 
+                    ? test.question.stem : undefined,
+                  saqAnswer: test.questionType === 'shortAnswer' && test.question.type === 'shortAnswer' 
+                    ? test.question.standard_answer : undefined,
+                })) || [];
+                
+                return {
+                  title: kc.title,
+                  markdownContent: kc.content,
+                  testItems: testItems, // 传递所有测试项目
+                  
+                  // 事件处理函数
+                  onMcqSubmit: (testId: string, isCorrect: boolean, selectedOption: string) => {
+                    console.log(`MCQ Result for ${kc.title} (Test ${testId}): ${isCorrect ? 'Correct' : 'Incorrect'}, Selected: ${selectedOption}`);
+                    // TODO: 实现 MCQ 提交逻辑，更新测试结果到 Redux store
+                  },
+                  
+                  onSaqSubmit: (testId: string, answer: string) => {
+                    console.log(`SAQ Answer for ${kc.title} (Test ${testId}): ${answer}`);
+                    // TODO: 实现 SAQ 提交逻辑，更新测试结果到 Redux store
+                  },
+                  
+                  // Toolbar event handlers
+                  onChatClick: () => {
+                    console.log(`Chat clicked for knowledge card: ${kc.title}`);
+                    // TODO: 实现聊天功能，可能导航到聊天页面或打开聊天对话框
+                  },
+                  
+                  onAddToCollectionClick: () => {
+                    console.log(`Add to collection clicked for knowledge card: ${kc.title}`);
+                    // TODO: 实现添加到收藏或重点标记功能
+                  },
+                  
+                  // Default states
+                  defaultTestMode: false,
+                  defaultExpanded: true,
+                };
+              })}
               // isActive can be determined by currentFocusedFlowId if needed
               // isActive={step.id === currentFocusedFlowId} 
             />

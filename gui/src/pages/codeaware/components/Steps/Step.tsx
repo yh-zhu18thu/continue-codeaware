@@ -23,6 +23,7 @@ const ContentArea = styled.div<{ isVisible: boolean }>`
 const KnowledgeCardsContainer = styled.div`
   display: flex;
   flex-direction: column;
+  align-items: center; /* Center the knowledge cards horizontally */
   gap: 8px;
   margin-top: 8px;
 `;

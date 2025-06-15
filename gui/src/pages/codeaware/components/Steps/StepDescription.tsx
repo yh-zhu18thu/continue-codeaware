@@ -9,13 +9,10 @@ import StyledMarkdownPreview from "../../../../components/markdown/StyledMarkdow
 
 
 const ContentArea = styled.div`
-  min-height: 20px;
   border-radius: ${defaultBorderRadius};
   padding: 0.5rem;
   background-color: ${vscEditorBackground};
   color: ${vscForeground};
-  white-space: pre-wrap;
-  line-height: 1.6;
   font-size: 12px;
 `;
 

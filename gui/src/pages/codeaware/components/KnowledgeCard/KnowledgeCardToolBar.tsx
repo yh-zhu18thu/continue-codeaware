@@ -1,61 +1,127 @@
-import { ChatBubbleLeftRightIcon, PlusIcon, QuestionMarkCircleIcon } from '@heroicons/react/24/outline';
+import { ChatBubbleLeftRightIcon, ChevronDownIcon, PlusIcon, QuestionMarkCircleIcon } from '@heroicons/react/24/outline';
 import React from 'react';
-import { ToolTip } from '../../../../components/gui/Tooltip'; // Assuming ToolTip is in this path
+import styled from "styled-components";
+import {
+  lightGray,
+  vscButtonBackground,
+  vscForeground
+} from "../../../../components";
+import { ToolTip } from '../../../../components/gui/Tooltip';
+import HoverItem from '../../../../components/mainInput/InputToolbar/HoverItem';
+
+const ToolBarContainer = styled.div`
+  width: 95%;
+  padding: 4px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: ${vscButtonBackground}22; /* Slightly lighter than Step */
+  color: ${vscForeground};
+  border-bottom: 1px solid ${lightGray}33;
+`;
+
+const TitleSection = styled.div`
+  display: flex;
+  align-items: center;
+  flex: 1;
+  cursor: pointer;
+  min-width: 0; /* Allow text to shrink */
+`;
+
+const Title = styled.span`
+  font-weight: 500;
+  font-size: 14px;
+  color: ${vscForeground};
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-right: 8px;
+  max-width: 100%; /* Ensure it doesn't overflow */
+`;
+
+const ChevronContainer = styled.div<{ isExpanded: boolean }>`
+  display: flex;
+  align-items: center;
+  transition: transform 0.15s ease-in-out;
+  transform: ${({ isExpanded }) => isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)'};
+`;
+
+const ButtonGroup = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+`;
 
 interface KnowledgeCardToolBarProps {
   title: string;
+  isExpanded?: boolean;
+  onToggle?: () => void;
   onQuestionClick?: () => void;
   onChatClick?: () => void;
   onAddToCollectionClick?: () => void;
+  isQuestionDisabled?: boolean;
+  isChatDisabled?: boolean;
+  isAddToCollectionDisabled?: boolean;
 }
 
 const KnowledgeCardToolBar: React.FC<KnowledgeCardToolBarProps> = ({
   title,
+  isExpanded = true,
+  onToggle,
   onQuestionClick,
   onChatClick, // use UseNavigate to navigate to the chat page
   onAddToCollectionClick,
+  isQuestionDisabled = false,
+  isChatDisabled = false,
+  isAddToCollectionDisabled = false,
 }) => {
   return (
-    <div className="w-full px-4 py-1 flex justify-between items-center bg-gray-800 text-gray-100">
-      {/* Title */}
-      <span className="font-medium text-sm truncate pr-2" title={title}>
-        {title}
-      </span>
+    <ToolBarContainer>
+      <TitleSection onClick={onToggle}>
+        <Title title={title}>
+          {title}
+        </Title>
+        <ChevronContainer isExpanded={isExpanded}>
+          <ChevronDownIcon width={16} height={16} />
+        </ChevronContainer>
+      </TitleSection>
 
-      {/* Button Group */}
-      <div className="flex items-center space-x-1 shrink-0">
-        <ToolTip text="Test Your Mastery" position="top">
-          <button
-            onClick={onQuestionClick}
-            className="p-1 text-gray-400 hover:text-gray-100 hover:bg-gray-700 rounded transition-colors duration-150 ease-in-out"
-            aria-label="More information"
+      <ButtonGroup>
+        <HoverItem>
+          <QuestionMarkCircleIcon
+            className={`w-5 h-5 ${isQuestionDisabled ? 'opacity-50 cursor-not-allowed' : 'hover:brightness-125 cursor-pointer'}`}
+            onClick={!isQuestionDisabled ? onQuestionClick : undefined}
           >
-            <QuestionMarkCircleIcon className="h-5 w-5" />
-          </button>
-        </ToolTip>
+            <ToolTip text="Test Your Mastery" position="top">
+              Test Your Mastery
+            </ToolTip>
+          </QuestionMarkCircleIcon>
+        </HoverItem>
 
-        
-        <ToolTip text="Discuss more" position="top">
-          <button
-            onClick={onChatClick}
-            className="p-1 text-gray-400 hover:text-gray-100 hover:bg-gray-700 rounded transition-colors duration-150 ease-in-out"
-            aria-label="Discuss more"
+        <HoverItem>
+          <ChatBubbleLeftRightIcon
+            className={`w-5 h-5 ${isChatDisabled ? 'opacity-50 cursor-not-allowed' : 'hover:brightness-125 cursor-pointer'}`}
+            onClick={!isChatDisabled ? onChatClick : undefined}
           >
-            <ChatBubbleLeftRightIcon className="h-5 w-5" />
-          </button>
-        </ToolTip>
+            <ToolTip text="Discuss more" position="top">
+              Discuss more
+            </ToolTip>
+          </ChatBubbleLeftRightIcon>
+        </HoverItem>
 
-        <ToolTip text="Mark as keypoint" position="top">
-          <button
-            onClick={onAddToCollectionClick}
-            className="p-1 text-gray-400 hover:text-gray-100 hover:bg-gray-700 rounded transition-colors duration-150 ease-in-out"
-            aria-label="Mark as keypoint"
+        <HoverItem>
+          <PlusIcon
+            className={`w-5 h-5 ${isAddToCollectionDisabled ? 'opacity-50 cursor-not-allowed' : 'hover:brightness-125 cursor-pointer'}`}
+            onClick={!isAddToCollectionDisabled ? onAddToCollectionClick : undefined}
           >
-            <PlusIcon className="h-5 w-5" />
-          </button>
-        </ToolTip>
-      </div>
-    </div>
+            <ToolTip text="Mark as keypoint" position="top">
+              Mark as keypoint
+            </ToolTip>
+          </PlusIcon>
+        </HoverItem>
+      </ButtonGroup>
+    </ToolBarContainer>
   );
 };
 

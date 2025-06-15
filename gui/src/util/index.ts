@@ -1,7 +1,7 @@
-import _ from "lodash";
-import { getLocalStorage } from "./localStorage";
-import { KeyboardEvent } from "react";
 import { ProfileDescription } from "core/config/ProfileLifecycleManager";
+import _ from "lodash";
+import { KeyboardEvent } from "react";
+import { getLocalStorage } from "./localStorage";
 
 type Platform = "mac" | "linux" | "windows" | "unknown";
 
@@ -49,7 +49,7 @@ export function getAltKeyLabel(): string {
 }
 
 export function getFontSize(): number {
-  return getLocalStorage("fontSize") ?? (isJetBrains() ? 15 : 14);
+  return getLocalStorage("fontSize") ?? (isJetBrains() ? 13 : 12);
 }
 
 export function isJetBrains() {

@@ -1,5 +1,5 @@
 // ...existing code...
-import { KnowledgeCardItem, StepItem } from "core";
+import { HighlightEvent, KnowledgeCardItem, StepItem } from "core";
 import { Key, useCallback, useContext, useRef } from "react";
 import styled from "styled-components";
 import { IdeMessengerContext } from "../../context/IdeMessenger";
@@ -8,7 +8,8 @@ import {
   selectIsRequirementInEditMode, // Import submitRequirementContent
   selectIsStepsGenerated,
   setUserRequirementStatus,
-  submitRequirementContent
+  submitRequirementContent,
+  updateHighlight
 } from "../../redux/slices/codeAwareSlice";
 import {
   generateStepsFromRequirement,
@@ -16,6 +17,7 @@ import {
 } from "../../redux/thunks/codeAwareGeneration";
 import "./CodeAware.css";
 import RequirementDisplay from "./components/Requirements/RequirementDisplay"; // Import RequirementDisplay
+import RequirementDisplayDemo from "./components/Requirements/RequirementDisplayDemo"; // Import demo component
 import RequirementEditor from "./components/Requirements/RequirementEditor"; // Import RequirementEditor
 import Step from "./components/Steps/Step"; // Import Step
 
@@ -114,6 +116,25 @@ export const CodeAware = () => {
       });
   }, [dispatch, userRequirement?.requirementDescription]);
 
+  
+  const handleHighlightEvent = useCallback((e: HighlightEvent) => {
+    // Dispatch highlight event to trigger mapping-based highlighting
+    if (!e.additionalInfo){
+      // If no additional info, just update the highlight
+      dispatch(updateHighlight({
+        sourceType: e.sourceType,
+        identifier: e.identifier,
+      }));
+    } else {
+      // If additional info is provided, use it to update the highlight
+      dispatch(updateHighlight({
+        sourceType: e.sourceType,
+        identifier: e.identifier,
+        additionalInfo: e.additionalInfo,
+      }));
+    }
+  }, [dispatch]);
+
 
   return (
     <CodeAwareDiv
@@ -129,6 +150,9 @@ export const CodeAware = () => {
           New CodeAware Session
         </Button>*/}
 
+      {/* Demo Controls - Only show in development */}
+      {process.env.NODE_ENV === 'development' && <RequirementDisplayDemo />}
+
       {/* Requirement Section */}
       
       {isEditMode ? (
@@ -140,6 +164,7 @@ export const CodeAware = () => {
         <RequirementDisplay
           onEdit={handleEditRequirement}
           onRegenerate={handleRegenerateSteps}
+          onChunkFocus={handleHighlightEvent} // Pass the highlight event handler
         />
       )}
 

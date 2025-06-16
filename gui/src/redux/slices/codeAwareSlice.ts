@@ -10,6 +10,7 @@ import {
     CollaborationStatus,
     HighlightEvent,
     ProgramRequirement,
+    RequirementChunk,
     StepItem
 } from 'core';
 import { v4 as uuidv4 } from "uuid";
@@ -61,6 +62,19 @@ export const codeAwareSessionSlice = createSlice({
         },
         setGeneratedSteps: (state, action: PayloadAction<StepItem[]>) => {
             state.steps = action.payload;
+        },
+        updateRequirementHighlightChunks: (state, action: PayloadAction<RequirementChunk[]>) => {
+            if (state.userRequirement) {
+                state.userRequirement.highlightChunks = action.payload;
+            }
+        },
+        toggleRequirementChunkHighlight: (state, action: PayloadAction<string>) => {
+            if (state.userRequirement?.highlightChunks) {
+                const chunk = state.userRequirement.highlightChunks.find(c => c.id === action.payload);
+                if (chunk) {
+                    chunk.isHighlighted = !chunk.isHighlighted;
+                }
+            }
         },
         newCodeAwareSession: (state) => {
             // Reset the state for a new CodeAware session
@@ -196,6 +210,8 @@ export const {
     setUserRequirementStatus,
     submitRequirementContent,
     setGeneratedSteps,
+    updateRequirementHighlightChunks,
+    toggleRequirementChunkHighlight,
     newCodeAwareSession,
     updateHighlight
 } = codeAwareSessionSlice.actions

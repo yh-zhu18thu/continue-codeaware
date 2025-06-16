@@ -116,7 +116,7 @@ export const CodeAware = () => {
       });
   }, [dispatch, userRequirement?.requirementDescription]);
 
-  
+
   const handleHighlightEvent = useCallback((e: HighlightEvent) => {
     // Dispatch highlight event to trigger mapping-based highlighting
     if (!e.additionalInfo){
@@ -177,7 +177,10 @@ export const CodeAware = () => {
               key={index} // Consider using a unique ID from step data if available
               title={step.title}
               content={step.abstract}
-              knowledgeCards={step.knowledgeCards.map((kc: KnowledgeCardItem) => {
+              isHighlighted={step.isHighlighted}
+              stepId={step.id}
+              onHighlightEvent={handleHighlightEvent}
+              knowledgeCards={step.knowledgeCards.map((kc: KnowledgeCardItem, kcIndex: number) => {
                 // 从 KnowledgeCardItem.tests 转换为 TestItem[]
                 const testItems = kc.tests?.map(test => ({
                   id: test.id,
@@ -200,6 +203,10 @@ export const CodeAware = () => {
                   title: kc.title,
                   markdownContent: kc.content,
                   testItems: testItems, // 传递所有测试项目
+                  
+                  // Highlight props
+                  isHighlighted: kc.isHighlighted,
+                  cardId: kc.id || `${step.id}-card-${kcIndex}`,
                   
                   // 事件处理函数
                   onMcqSubmit: (testId: string, isCorrect: boolean, selectedOption: string) => {

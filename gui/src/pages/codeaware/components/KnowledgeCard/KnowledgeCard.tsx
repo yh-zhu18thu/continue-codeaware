@@ -1,5 +1,6 @@
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
-import React, { useState } from 'react';
+import { HighlightEvent } from "core";
+import React, { useEffect, useState } from 'react';
 import styled from "styled-components";
 import {
   defaultBorderRadius,
@@ -12,16 +13,20 @@ import KnowledgeCardMCQ from './KnowledgeCardMCQ';
 import KnowledgeCardSAQ from './KnowledgeCardSAQ';
 import KnowledgeCardToolBar from './KnowledgeCardToolBar';
 
-const KnowledgeCardContainer = styled.div`
+const KnowledgeCardContainer = styled.div<{ isHighlighted?: boolean; isFlickering?: boolean }>`
   width: 95%;
   display: flex;
   flex-direction: column;
   background-color: ${vscInputBackground};
   border-radius: ${defaultBorderRadius};
   box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  border: 1px solid ${lightGray}44;
+  border: 1px solid ${({ isHighlighted, isFlickering }) => 
+    isFlickering ? '#ff6b6b' : 
+    isHighlighted ? '#4ade80' : 
+    `${lightGray}44`};
   margin: 6px auto; /* Center the card horizontally */
   overflow: hidden;
+  transition: border-color 0.15s ease-in-out;
 `;
 
 const ContentArea = styled.div<{ isVisible: boolean }>`
@@ -112,6 +117,11 @@ export interface KnowledgeCardProps {
   // Toggle functionality props
   defaultTestMode?: boolean; 
   defaultExpanded?: boolean;
+
+  // Highlight props
+  isHighlighted?: boolean;
+  cardId?: string;
+  onHighlightEvent?: (event: HighlightEvent) => void;
 }
 
 const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
@@ -124,13 +134,45 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
   onSaqSubmit,
   defaultTestMode = false,
   defaultExpanded = true,
+  isHighlighted = false,
+  cardId,
+  onHighlightEvent,
 }) => {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const [isTestMode, setIsTestMode] = useState(defaultTestMode);
   const [currentTestIndex, setCurrentTestIndex] = useState(0);
+  const [isFlickering, setIsFlickering] = useState(false);
+
+  // Handle flickering effect when isHighlighted becomes true
+  useEffect(() => {
+    if (isHighlighted) {
+      setIsFlickering(true);
+      // Create a flickering effect with multiple flashes
+      const flickerSequence = async () => {
+        for (let i = 0; i < 3; i++) {
+          await new Promise(resolve => setTimeout(resolve, 200));
+          setIsFlickering(false);
+          await new Promise(resolve => setTimeout(resolve, 200));
+          setIsFlickering(true);
+        }
+        // Keep highlighted after flickering
+        setIsFlickering(false);
+      };
+      flickerSequence();
+    } else {
+      setIsFlickering(false);
+    }
+  }, [isHighlighted]);
 
   const handleToggle = () => {
     setIsExpanded(!isExpanded);
+    // Trigger highlight event when expanding/collapsing
+    if (onHighlightEvent && cardId) {
+      onHighlightEvent({
+        sourceType: "knowledgeCard",
+        identifier: cardId,
+      });
+    }
   };
 
   const onQuestionMarkClick = () => {
@@ -150,7 +192,7 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
   const currentTest = testItems[currentTestIndex];
 
   return (
-    <KnowledgeCardContainer>
+    <KnowledgeCardContainer isHighlighted={isHighlighted} isFlickering={isFlickering}>
       <KnowledgeCardToolBar
         title={title}
         isExpanded={isExpanded}
@@ -158,11 +200,17 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
         onQuestionClick={onQuestionMarkClick} // Pass to the actual prop name in KnowledgeCardToolBar
         onChatClick={onChatClick}
         onAddToCollectionClick={onAddToCollectionClick}
+        isHighlighted={isHighlighted}
+        isFlickering={isFlickering}
       />
       <ContentArea isVisible={isExpanded}>
 
         {!isTestMode && (
-          <KnowledgeCardContent markdownContent={markdownContent} />
+          <KnowledgeCardContent 
+            markdownContent={markdownContent} 
+            isHighlighted={isHighlighted}
+            isFlickering={isFlickering}
+          />
         )}
         
         {isTestMode && testItems.length > 0 && currentTest && (

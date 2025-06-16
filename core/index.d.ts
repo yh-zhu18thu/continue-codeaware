@@ -493,7 +493,6 @@ export interface StepItem {
   id: string;
   title: string;
   abstract: string;
-  correspondingRequirementChunkIds: string[]; //维护该步骤下的需求语义片段
   knowledgeCards: KnowledgeCardItem[]; //维护该步骤下的知识卡片
   isHighlighted: boolean;
 }

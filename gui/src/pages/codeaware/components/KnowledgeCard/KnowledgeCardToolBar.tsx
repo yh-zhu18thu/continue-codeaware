@@ -9,7 +9,7 @@ import {
 import { ToolTip } from '../../../../components/gui/Tooltip';
 import HoverItem from '../../../../components/mainInput/InputToolbar/HoverItem';
 
-const ToolBarContainer = styled.div`
+const ToolBarContainer = styled.div<{ isHighlighted?: boolean; isFlickering?: boolean }>`
   width: 95%;
   padding: 4px 16px;
   display: flex;
@@ -17,7 +17,11 @@ const ToolBarContainer = styled.div`
   align-items: center;
   background-color: ${vscButtonBackground}22; /* Slightly lighter than Step */
   color: ${vscForeground};
-  border-bottom: 1px solid ${lightGray}33;
+  border-bottom: 1px solid ${({ isHighlighted, isFlickering }) => 
+    isFlickering ? '#ff6b6b' : 
+    isHighlighted ? '#4ade80' : 
+    `${lightGray}33`};
+  transition: border-color 0.15s ease-in-out;
 `;
 
 const TitleSection = styled.div`
@@ -63,6 +67,8 @@ interface KnowledgeCardToolBarProps {
   isQuestionDisabled?: boolean;
   isChatDisabled?: boolean;
   isAddToCollectionDisabled?: boolean;
+  isHighlighted?: boolean;
+  isFlickering?: boolean;
 }
 
 const KnowledgeCardToolBar: React.FC<KnowledgeCardToolBarProps> = ({
@@ -75,9 +81,11 @@ const KnowledgeCardToolBar: React.FC<KnowledgeCardToolBarProps> = ({
   isQuestionDisabled = false,
   isChatDisabled = false,
   isAddToCollectionDisabled = false,
+  isHighlighted = false,
+  isFlickering = false,
 }) => {
   return (
-    <ToolBarContainer>
+    <ToolBarContainer isHighlighted={isHighlighted} isFlickering={isFlickering}>
       <TitleSection onClick={onToggle}>
         <Title title={title}>
           {title}

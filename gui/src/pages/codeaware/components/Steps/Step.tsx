@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import { HighlightEvent } from "core";
+import React, { useEffect, useState } from 'react';
 import styled from "styled-components";
 import { vscBackground } from "../../../../components";
 import KnowledgeCard, { KnowledgeCardProps } from '../KnowledgeCard/KnowledgeCard';
@@ -34,6 +35,9 @@ interface StepProps {
   knowledgeCards: KnowledgeCardProps[];
   isActive?: boolean;
   defaultExpanded?: boolean;
+  isHighlighted?: boolean;
+  stepId?: string;
+  onHighlightEvent?: (event: HighlightEvent) => void;
 }
 
 const Step: React.FC<StepProps> = ({
@@ -42,11 +46,43 @@ const Step: React.FC<StepProps> = ({
   knowledgeCards,
   isActive = false,
   defaultExpanded = true,
+  isHighlighted = false,
+  stepId,
+  onHighlightEvent,
 }) => {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
+  const [isFlickering, setIsFlickering] = useState(false);
+
+  // Handle flickering effect when isHighlighted becomes true
+  useEffect(() => {
+    if (isHighlighted) {
+      setIsFlickering(true);
+      // Create a flickering effect with multiple flashes
+      const flickerSequence = async () => {
+        for (let i = 0; i < 3; i++) {
+          await new Promise(resolve => setTimeout(resolve, 200));
+          setIsFlickering(false);
+          await new Promise(resolve => setTimeout(resolve, 200));
+          setIsFlickering(true);
+        }
+        // Keep highlighted after flickering
+        setIsFlickering(false);
+      };
+      flickerSequence();
+    } else {
+      setIsFlickering(false);
+    }
+  }, [isHighlighted]);
 
   const handleToggle = () => {
     setIsExpanded(!isExpanded);
+    // Trigger highlight event when expanding/collapsing
+    if (onHighlightEvent && stepId) {
+      onHighlightEvent({
+        sourceType: "step",
+        identifier: stepId,
+      });
+    }
   };
 
   return (
@@ -55,6 +91,8 @@ const Step: React.FC<StepProps> = ({
         title={title} 
         isActive={isActive} 
         isExpanded={isExpanded}
+        isHighlighted={isHighlighted}
+        isFlickering={isFlickering}
         onToggle={handleToggle}
       />
       <ContentArea isVisible={isExpanded}>
@@ -65,7 +103,12 @@ const Step: React.FC<StepProps> = ({
         {knowledgeCards.length > 0 && (
           <KnowledgeCardsContainer>
             {knowledgeCards.map((cardProps, index) => (
-              <KnowledgeCard key={index} {...cardProps} />
+              <KnowledgeCard 
+                key={index} 
+                {...cardProps} 
+                cardId={cardProps.cardId || `card-${index}`}
+                onHighlightEvent={onHighlightEvent}
+              />
             ))}
           </KnowledgeCardsContainer>
         )}

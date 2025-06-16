@@ -99,21 +99,20 @@ export const generateStepsFromRequirement = createAsyncThunk<
                         abstract: "+ 读取原始数据文件。\n + 打印数据，查看数据结构。",
                         correspondingRequirementChunkIds: [],
                         knowledgeCards: [],
-                        codeMappings: []
+                        isHighlighted: false,
                     },
                     {
                         id: "s-2", 
                         title: "数据预处理",
                         abstract: "+ 读取原始数据文件。\n + 打印数据，查看数据结构。",
-                        correspondingRequirementChunkIds: [],
+                        isHighlighted: false,
                         knowledgeCards: [],
-                        codeMappings: []
                     },
                     {
                         id: "s-3",
                         title: "文本特征提取", 
                         abstract: "**理解为何需要把文本变成数值供机器理解** \n + 创建TF-IDF向量化转化器 \n  + 将所有邮件文本转化成向量 ",
-                        correspondingRequirementChunkIds: [],
+                        isHighlighted: false,
                         knowledgeCards: [
                             {
                                 id: "k-1",
@@ -145,17 +144,15 @@ export const generateStepsFromRequirement = createAsyncThunk<
                                         questionType: "shortAnswer"
                                     }
                                 ],
-                                codeMappings: []
                             },
                             {
                                 id: "k-2",
                                 title: "性能评估指标",
                                 content: "准确率、精确率、召回率和F1分数是常用的分类模型评估指标。",
                                 tests: [],
-                                codeMappings: []
                             }
                         ],
-                        codeMappings: []
+
                     }
                 ])
             };
@@ -176,7 +173,7 @@ export const generateStepsFromRequirement = createAsyncThunk<
                         item && typeof item === 'object' && 
                         'id' in item && 'title' in item && 'abstract' in item && 
                         'correspondingRequirementChunkIds' in item && 
-                        'knowledgeCards' in item && 'codeMappings' in item)) {
+                        'knowledgeCards' in item)) {
                     parsedSteps = rawParsed as StepItem[];
                 } else {
                     throw new Error("Parsed steps are not in the expected format");

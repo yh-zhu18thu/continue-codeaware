@@ -17,7 +17,6 @@ import {
 } from "../../redux/thunks/codeAwareGeneration";
 import "./CodeAware.css";
 import RequirementDisplay from "./components/Requirements/RequirementDisplay"; // Import RequirementDisplay
-import RequirementDisplayDemo from "./components/Requirements/RequirementDisplayDemo"; // Import demo component
 import RequirementEditor from "./components/Requirements/RequirementEditor"; // Import RequirementEditor
 import Step from "./components/Steps/Step"; // Import Step
 
@@ -149,9 +148,6 @@ export const CodeAware = () => {
         >
           New CodeAware Session
         </Button>*/}
-
-      {/* Demo Controls - Only show in development */}
-      {process.env.NODE_ENV === 'development' && <RequirementDisplayDemo />}
 
       {/* Requirement Section */}
       

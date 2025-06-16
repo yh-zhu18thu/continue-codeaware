@@ -1,4 +1,4 @@
-
+import { CodeAwareMapping, CodeChunk, RequirementChunk } from "core";
 
 export function getTestStepsData() {
     const result = {
@@ -68,4 +68,87 @@ export function getTestStepsData() {
                 ])
             };
     return result;
+}
+
+export function createTestRequirementChunks(): RequirementChunk[] {
+    return [
+        {
+            id: "r-1",
+            content: "读入标注了是垃圾邮件还是非垃圾邮件的表格（\"src/spam.csv\"）并构建数据集",
+            isHighlighted: false
+        },
+        {
+            id: "r-2", 
+            content: "对邮件文本数据进行预处理，包括转换为小写、移除标点符号和数字、处理空格等",
+            isHighlighted: false
+        },
+        {
+            id: "r-3",
+            content: "使用TF-IDF进行文本特征提取，将文本数据转换为数值向量",
+            isHighlighted: false
+        }
+    ];
+}
+
+export function createTestCodeChunks(): CodeChunk[] {
+    return [
+        {
+            id: "c-1",
+            content: "# 1. 读取垃圾邮件数据集\nprint(\"正在加载数据集...\")\ndata = pd.read_csv(data_file)\nprint(f\"数据集大小: {data.shape}\")\nprint(f\"垃圾邮件数量: {sum(data['label'] == 'spam')}\")\nprint(f\"正常邮件数量: {sum(data['label'] == 'ham')}\")",
+            lineRange: [25, 32],
+            isHighlighted: false
+        },
+        {
+            id: "c-2",
+            content: "# 2. 文本预处理\nprint(\"正在预处理文本数据...\")\nprocessed_texts = []\nfor text in data['text']:\n    # 转换为小写\n    text = text.lower()\n    # 移除标点符号\n    text = text.translate(str.maketrans('', '', string.punctuation))\n    # 移除数字\n    text = re.sub(r'\\d+', '', text)\n    # 移除多余的空格\n    text = ' '.join(text.split())\n    processed_texts.append(text)\n\ndata['processed_text'] = processed_texts",
+            lineRange: [34, 49],
+            isHighlighted: false
+        },
+        {
+            id: "c-3",
+            content: "# 3. 准备特征和标签\nX = data['processed_text']\ny = data['label']\n\n# 4. 划分训练集和测试集\nX_train, X_test, y_train, y_test = train_test_split(\n    X, y, test_size=0.3, random_state=42, stratify=y\n)",
+            lineRange: [51, 58],
+            isHighlighted: false
+        },
+        {
+            id: "c-4",
+            content: "# 5. 构建TF-IDF向量化器部分\nsvm_pipeline = Pipeline([\n    ('tfidf', TfidfVectorizer(\n        max_features=5000,  # 最多使用5000个特征\n        stop_words='english',  # 移除英文停用词\n        ngram_range=(1, 2),  # 使用1-gram和2-gram\n        lowercase=True\n    ))",
+            lineRange: [63, 70],
+            isHighlighted: false
+        }
+    ];
+}
+
+export function createTestCodeAwareMappings(): CodeAwareMapping[] {
+    return [
+        // 需求1: 读取数据 -> 步骤1: 数据加载 -> 代码块1: 读取数据集
+        {
+            codeChunkId: "c-1",
+            requirementChunkId: "r-1", 
+            stepId: "s-1",
+            isHighlighted: false
+        },
+        // 需求2: 数据预处理 -> 步骤2: 数据预处理 -> 代码块2: 文本预处理
+        {
+            codeChunkId: "c-2",
+            requirementChunkId: "r-2",
+            stepId: "s-2", 
+            isHighlighted: false
+        },
+        // 需求2: 数据预处理 -> 步骤2: 数据预处理 -> 代码块3: 准备特征和标签
+        {
+            codeChunkId: "c-3",
+            requirementChunkId: "r-2",
+            stepId: "s-2",
+            isHighlighted: false
+        },
+        // 需求3: TF-IDF特征提取 -> 步骤3: 文本特征提取 -> 代码块4: TF-IDF向量化器
+        {
+            codeChunkId: "c-4",
+            requirementChunkId: "r-3",
+            stepId: "s-3",
+            knowledgeCardId: "s-3-k-1",
+            isHighlighted: false
+        }
+    ];
 }

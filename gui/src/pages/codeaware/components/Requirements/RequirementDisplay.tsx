@@ -1,5 +1,5 @@
 import { HighlightEvent } from "core";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import styled, { keyframes } from "styled-components";
 import {
     defaultBorderRadius,
@@ -102,8 +102,8 @@ export default function RequirementDisplay({
         (state) => state.codeAwareSession.userRequirement?.highlightChunks || []
     );
 
-    // Track previous highlight states for flickering animation
-    const [previousHighlightStates, setPreviousHighlightStates] = useState<Map<string, boolean>>(new Map());
+    // Track previous highlight states for flickering animation using useRef to avoid circular dependency
+    const previousHighlightStatesRef = useRef<Map<string, boolean>>(new Map());
     const [flickeringChunks, setFlickeringChunks] = useState<Set<string>>(new Set());
 
     // Monitor highlight state changes and trigger flickering
@@ -111,7 +111,7 @@ export default function RequirementDisplay({
         const newFlickering = new Set<string>();
         
         highlightChunks.forEach(chunk => {
-            const previousState = previousHighlightStates.get(chunk.id);
+            const previousState = previousHighlightStatesRef.current.get(chunk.id);
             if (previousState !== undefined && previousState !== chunk.isHighlighted) {
                 newFlickering.add(chunk.id);
             }
@@ -131,8 +131,8 @@ export default function RequirementDisplay({
         highlightChunks.forEach(chunk => {
             newPreviousStates.set(chunk.id, chunk.isHighlighted);
         });
-        setPreviousHighlightStates(newPreviousStates);
-    }, [highlightChunks, previousHighlightStates]);
+        previousHighlightStatesRef.current = newPreviousStates;
+    }, [highlightChunks]);
 
     const handleChunkClick = (chunkId: string) => {
         if (onChunkFocus) {

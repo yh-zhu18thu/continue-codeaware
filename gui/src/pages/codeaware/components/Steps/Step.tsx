@@ -77,7 +77,7 @@ const Step: React.FC<StepProps> = ({
   const handleToggle = () => {
     setIsExpanded(!isExpanded);
     // Trigger highlight event when expanding/collapsing
-    if (onHighlightEvent && stepId) {
+    if (onHighlightEvent && stepId && isExpanded) {
       onHighlightEvent({
         sourceType: "step",
         identifier: stepId,

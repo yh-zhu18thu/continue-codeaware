@@ -58,12 +58,6 @@ export const CodeAware = () => {
   const steps = useAppSelector((state) => state.codeAwareSession.steps); // Get steps data
 
   // log all the data for debugging
-  console.log("CodeAware Component Rendered");
-  console.log("isEditMode:", isEditMode);
-  console.log("isStepsGenerated:", isStepsGenerated);
-  console.log("userRequirement:", userRequirement);
-  console.log("userRequirementStatus:", userRequirementStatus);
-  console.log("steps:", steps);
 
   // 设置全局样式：
   const codeAwareDivRef = useRef<HTMLDivElement>(null);

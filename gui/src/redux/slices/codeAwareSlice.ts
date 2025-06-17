@@ -27,7 +27,7 @@ type CodeAwareSessionState = {
     //当前的代码块
     codeChunks: CodeChunk[];
     //存储所有的Mapping，用于查找和触发相关元素的高亮，各个元素的高亮写在元素之中
-    codeMappings: CodeAwareMapping[];
+    codeAwareMappings: CodeAwareMapping[];
 }
 
 const initialCodeAwareState: CodeAwareSessionState = {
@@ -42,7 +42,7 @@ const initialCodeAwareState: CodeAwareSessionState = {
     },
     steps: [],
     codeChunks: [],
-    codeMappings: []
+    codeAwareMappings: []
 }
 
 export const codeAwareSessionSlice = createSlice({
@@ -87,18 +87,20 @@ export const codeAwareSessionSlice = createSlice({
                 requirementStatus: "empty"
             };
             state.steps = [];
-            state.codeMappings = [];
+            state.codeAwareMappings = [];
             state.codeChunks = [];
 
         },
         updateHighlight: (state, action: PayloadAction<HighlightEvent>) => {
             const { sourceType, identifier, additionalInfo } = action.payload;
+
+            console.log("Updating highlight for:", sourceType, identifier, additionalInfo);
             
-            // Find the mapping that matches the highlight event
-            let matchedMapping: CodeAwareMapping | null = null;
+            // Find all mappings that match the highlight event
+            let matchedMappings: CodeAwareMapping[] = [];
             
-            // First, try to match by identifier
-            for (const mapping of state.codeMappings) {
+            // First, try to match by identifier - collect all matching mappings
+            for (const mapping of state.codeAwareMappings) {
                 let isMatch = false;
                 
                 switch (sourceType) {
@@ -117,13 +119,12 @@ export const codeAwareSessionSlice = createSlice({
                 }
                 
                 if (isMatch) {
-                    matchedMapping = mapping;
-                    break;
+                    matchedMappings.push(mapping);
                 }
             }
             
             // If no match found by identifier and sourceType is "code", try meta search using additionalInfo
-            if (!matchedMapping && sourceType === "code" && additionalInfo) {
+            if (matchedMappings.length === 0 && sourceType === "code" && additionalInfo) {
                 const codeInfo = additionalInfo as CodeChunk;
                 
                 // Search through code chunks to find a match by line range and content
@@ -139,56 +140,123 @@ export const codeAwareSessionSlice = createSlice({
                                          codeInfo.content.includes(codeChunk.content);
                     
                     if (rangesOverlap && contentMatches) {
-                        // Find the mapping for this code chunk
-                        const foundMapping = state.codeMappings.find(mapping => 
+                        // Find all mappings for this code chunk
+                        const foundMappings = state.codeAwareMappings.filter(mapping => 
                             mapping.codeChunkId === codeChunk.id
                         );
-                        if (foundMapping) {
-                            matchedMapping = foundMapping;
-                            break;
-                        }
+                        matchedMappings.push(...foundMappings);
                     }
                 }
             }
+
+            //console.log("current mappings");
+            for (const mapping of state.codeAwareMappings) {
+                console.log(mapping.codeChunkId, mapping.requirementChunkId, mapping.stepId, mapping.knowledgeCardId);
+            }
             
-            // If a mapping is found, update highlight status of all elements within it
-            if (matchedMapping) {
-                // Update code chunk highlight
-                const codeChunk = state.codeChunks.find(chunk => chunk.id === matchedMapping.codeChunkId);
-                if (codeChunk) {
-                    codeChunk.isHighlighted = true;
-                    // TODO: Need to communicate code element highlighting to IDE/editor
-                }
-                
-                // Update requirement chunk highlight
+            // If mappings are found, update highlight status of all elements within them
+            if (matchedMappings.length > 0) {
+                console.log("Matched mappings found:", matchedMappings.length);
+
+                // Reset highlight status for all mappings
+                state.codeAwareMappings.forEach(mapping => {
+                    mapping.isHighlighted = false;
+                });
+                // Reset highlight status for all code chunks
+                state.codeChunks.forEach(chunk => {
+                    chunk.isHighlighted = false;
+                    //TODO: Need to communicate code element highlighting to IDE/editor
+                });
+                // Reset highlight status for all requirement chunks
                 if (state.userRequirement?.highlightChunks) {
-                    const reqChunk = state.userRequirement.highlightChunks.find(
-                        chunk => chunk.id === matchedMapping.requirementChunkId
-                    );
-                    if (reqChunk) {
-                        reqChunk.isHighlighted = true;
+                    state.userRequirement.highlightChunks.forEach(chunk => {
+                        chunk.isHighlighted = false;
+                    });
+                }
+                // Reset highlight status for all steps
+                state.steps.forEach(step => {
+                    step.isHighlighted = false;
+                    // Reset highlight status for all knowledge cards in the step
+                    step.knowledgeCards.forEach(card => {
+                        card.isHighlighted = false;
+                    });
+                });
+
+                // Collect unique IDs from all matched mappings to avoid duplicate highlighting
+                const codeChunkIds = new Set<string>();
+                const requirementChunkIds = new Set<string>();
+                const stepIds = new Set<string>();
+                const knowledgeCardIds = new Set<string>();
+
+                matchedMappings.forEach(mapping => {
+                    if (mapping.codeChunkId) codeChunkIds.add(mapping.codeChunkId);
+                    if (mapping.requirementChunkId) requirementChunkIds.add(mapping.requirementChunkId);
+                    if (mapping.stepId) stepIds.add(mapping.stepId);
+                    if (mapping.knowledgeCardId) knowledgeCardIds.add(mapping.knowledgeCardId);
+                });
+
+                // Update code chunk highlights
+                codeChunkIds.forEach(codeChunkId => {
+                    const codeChunk = state.codeChunks.find(chunk => chunk.id === codeChunkId);
+                    if (codeChunk) {
+                        codeChunk.isHighlighted = true;
+                        // TODO: Need to communicate code element highlighting to IDE/editor
                     }
+                });
+                
+                // Update requirement chunk highlights
+                if (state.userRequirement?.highlightChunks) {
+                    requirementChunkIds.forEach(requirementChunkId => {
+                        const reqChunk = state.userRequirement?.highlightChunks?.find(
+                            chunk => chunk.id === requirementChunkId
+                        );
+                        if (reqChunk) {
+                            reqChunk.isHighlighted = true;
+                        }
+                    });
                 }
                 
-                // Update step highlight
-                const step = state.steps.find(step => step.id === matchedMapping.stepId);
-                if (step) {
-                    step.isHighlighted = true;
-                    
-                    // Update knowledge card highlight if it exists
-                    if (matchedMapping.knowledgeCardId) {
+                // Update step highlights
+                stepIds.forEach(stepId => {
+                    const step = state.steps.find(step => step.id === stepId);
+                    if (step) {
+                        step.isHighlighted = true;
+                    }
+                });
+
+                // Update knowledge card highlights
+                knowledgeCardIds.forEach(knowledgeCardId => {
+                    for (const step of state.steps) {
                         const knowledgeCard = step.knowledgeCards.find(
-                            card => card.id === matchedMapping.knowledgeCardId
+                            card => card.id === knowledgeCardId
                         );
                         if (knowledgeCard) {
                             knowledgeCard.isHighlighted = true;
+                            break; // Found the knowledge card, no need to continue searching
                         }
                     }
-                }
-                
-                // Update the mapping's highlight status
-                matchedMapping.isHighlighted = true;
+                });
+
+                console.log("Highlight updated for", matchedMappings.length, "mappings");
+                // Update all matched mappings' highlight status
+                matchedMappings.forEach(mapping => {
+                    mapping.isHighlighted = true;
+                });
             }
+        },
+        updateRequirementChunks: (state, action: PayloadAction<RequirementChunk[]>) => {
+            if (state.userRequirement) {
+                state.userRequirement.highlightChunks = action.payload;
+            }
+            console.log("RequirementChunks updated:", state.userRequirement?.highlightChunks);
+        },
+        updateCodeChunks: (state, action: PayloadAction<CodeChunk[]>) => {
+            state.codeChunks = action.payload;
+            console.log("CodeChunks updated:", state.codeChunks);
+        },
+        updateCodeAwareMappings: (state, action: PayloadAction<CodeAwareMapping[]>) => {
+            state.codeAwareMappings = action.payload;
+            console.log("CodeAwareMappings updated:", state.codeAwareMappings);
         }
     },
     selectors:{
@@ -213,7 +281,10 @@ export const {
     updateRequirementHighlightChunks,
     toggleRequirementChunkHighlight,
     newCodeAwareSession,
-    updateHighlight
+    updateHighlight,
+    updateRequirementChunks,
+    updateCodeChunks,
+    updateCodeAwareMappings
 } = codeAwareSessionSlice.actions
 
 export const {

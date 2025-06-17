@@ -1,15 +1,13 @@
-import { CodeAwareMapping, CodeChunk, RequirementChunk } from "core";
+import { CodeAwareMapping, CodeChunk, RequirementChunk, SelfTestResult, StepItem } from "core";
 
-export function getTestStepsData() {
-    const result = {
-                status: "success",
-                content: JSON.stringify([
+export function getTestStepsData(): StepItem[] {
+    const result = [
                     {
                         id: "s-1",
                         title: "数据加载",
                         abstract: "+ 读取原始数据文件。\n + 打印数据，查看数据结构。",
-                        isHighlighted: false,
                         knowledgeCards: [],
+                        isHighlighted: false,
                     },
                     {
                         id: "s-2", 
@@ -31,26 +29,26 @@ export function getTestStepsData() {
                                     {
                                         id: "s-3-k-1-t-1",
                                         question: {
-                                            type: "shortAnswer",
+                                            type: "shortAnswer" as const,
                                             stem: "为什么Vectorizer可以并行地将大量文本转化为向量？",
                                             standard_answer: "批量处理基于统一词汇表且利用稀疏矩阵实现高效存储。",
                                             answer: "",
                                             remarks: "",
-                                            result: "unanswered"
+                                            result: "unanswered" as SelfTestResult
                                         },
-                                        questionType: "shortAnswer"
+                                        questionType: "shortAnswer" as const
                                     },
                                     {
                                         id: "s-3-k-1-t-2",
                                         question: {
-                                            type: "shortAnswer",
+                                            type: "shortAnswer" as const,
                                             stem: "Vectorizer如何处理新文本？",
                                             standard_answer: "新文本使用已有词汇表进行向量化，确保一致性。",
                                             answer: "",
                                             remarks: "",
-                                            result: "unanswered"
+                                            result: "unanswered" as SelfTestResult
                                         },
-                                        questionType: "shortAnswer"
+                                        questionType: "shortAnswer" as const
                                     }
                                 ],
                                 isHighlighted: false,
@@ -65,8 +63,7 @@ export function getTestStepsData() {
                         ],
                         isHighlighted: false,
                     }
-                ])
-            };
+                ]
     return result;
 }
 
@@ -74,17 +71,12 @@ export function createTestRequirementChunks(): RequirementChunk[] {
     return [
         {
             id: "r-1",
-            content: "读入标注了是垃圾邮件还是非垃圾邮件的表格（\"src/spam.csv\"）并构建数据集",
+            content: "读入标注了是垃圾邮件还是非垃圾邮件的表格",
             isHighlighted: false
         },
         {
             id: "r-2", 
-            content: "对邮件文本数据进行预处理，包括转换为小写、移除标点符号和数字、处理空格等",
-            isHighlighted: false
-        },
-        {
-            id: "r-3",
-            content: "使用TF-IDF进行文本特征提取，将文本数据转换为数值向量",
+            content: "并构建数据集",
             isHighlighted: false
         }
     ];
@@ -108,12 +100,6 @@ export function createTestCodeChunks(): CodeChunk[] {
             id: "c-3",
             content: "# 3. 准备特征和标签\nX = data['processed_text']\ny = data['label']\n\n# 4. 划分训练集和测试集\nX_train, X_test, y_train, y_test = train_test_split(\n    X, y, test_size=0.3, random_state=42, stratify=y\n)",
             lineRange: [51, 58],
-            isHighlighted: false
-        },
-        {
-            id: "c-4",
-            content: "# 5. 构建TF-IDF向量化器部分\nsvm_pipeline = Pipeline([\n    ('tfidf', TfidfVectorizer(\n        max_features=5000,  # 最多使用5000个特征\n        stop_words='english',  # 移除英文停用词\n        ngram_range=(1, 2),  # 使用1-gram和2-gram\n        lowercase=True\n    ))",
-            lineRange: [63, 70],
             isHighlighted: false
         }
     ];
@@ -140,14 +126,6 @@ export function createTestCodeAwareMappings(): CodeAwareMapping[] {
             codeChunkId: "c-3",
             requirementChunkId: "r-2",
             stepId: "s-2",
-            isHighlighted: false
-        },
-        // 需求3: TF-IDF特征提取 -> 步骤3: 文本特征提取 -> 代码块4: TF-IDF向量化器
-        {
-            codeChunkId: "c-4",
-            requirementChunkId: "r-3",
-            stepId: "s-3",
-            knowledgeCardId: "s-3-k-1",
             isHighlighted: false
         }
     ];

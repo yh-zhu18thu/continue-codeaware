@@ -1,7 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import {
-    ProgramRequirement,
-    StepItem
+    ProgramRequirement
 } from "core";
 import {
     constructGenerateStepsPrompt,
@@ -9,11 +8,19 @@ import {
 } from "core/llm/codeAwarePrompts";
 import {
     setGeneratedSteps,
-    submitRequirementContent
+    submitRequirementContent,
+    updateCodeAwareMappings,
+    updateCodeChunks,
+    updateRequirementChunks
 } from "../slices/codeAwareSlice";
 import { selectDefaultModel } from "../slices/configSlice";
 import { ThunkApiType } from "../store";
-import { getTestStepsData } from "./codeAwareTestData";
+import {
+    createTestCodeAwareMappings,
+    createTestCodeChunks,
+    createTestRequirementChunks,
+    getTestStepsData
+} from "./codeAwareTestData";
 
 //异步对用户需求和当前知识状态进行生成
 export const paraphraseUserIntent = createAsyncThunk<
@@ -89,10 +96,9 @@ export const generateStepsFromRequirement = createAsyncThunk<
                 title: defaultModel.title
             });*/
             
-            // mockup a response for testing
-            // ...existing code...
-            const result = getTestStepsData();
-
+            
+            const parsedSteps = getTestStepsData();
+            /*
             if (result.status !== "success" || !result.content) {
                 throw new Error("LLM request to generate steps failed or returned empty content");
             }
@@ -117,12 +123,20 @@ export const generateStepsFromRequirement = createAsyncThunk<
             } catch (parseError) {
                 console.error("Error parsing JSON steps from LLM:", parseError);
                 throw new Error("Failed to parse steps from LLM response. Expected JSON format.");
-            }
+            }*/
             // 4. 分发 action 以存储步骤
+
             dispatch(setGeneratedSteps(parsedSteps));
             //CATODO: 这里在有正式的prompts之前，先调用CodeAwareSlice中的设置highlights的函数手动设置
 
+            const requirementChunks = createTestRequirementChunks();
+            const codeChunks = createTestCodeChunks();
+            const codeMappings = createTestCodeAwareMappings();
 
+            // 5. 更新状态
+            dispatch(updateRequirementChunks(requirementChunks));
+            dispatch(updateCodeChunks(codeChunks));
+            dispatch(updateCodeAwareMappings(codeMappings));
         } catch (error) {
             console.error("Error during LLM request for generating steps:", error);
             // 在抛出新错误之前，确保 error 是一个 Error 实例，以便保留原始堆栈跟踪

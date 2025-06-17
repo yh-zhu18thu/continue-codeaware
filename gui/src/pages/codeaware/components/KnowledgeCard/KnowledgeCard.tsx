@@ -161,8 +161,8 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
     });
     flickerTimeoutRef.current = [];
 
-    if (isHighlighted) {
-      // Start with flickering state
+    if (isHighlighted && isExpanded) {
+      // Only start flickering if both highlighted AND expanded
       setIsFlickering(true);
       
       // Create a flickering effect with multiple flashes
@@ -187,7 +187,7 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
       }, 200 + (3 * 400));
       flickerTimeoutRef.current[timeoutIndex] = finalTimeout;
     } else {
-      // Immediately turn off flickering when not highlighted
+      // Immediately turn off flickering when not highlighted or not expanded
       setIsFlickering(false);
     }
 
@@ -198,15 +198,25 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
       });
       flickerTimeoutRef.current = [];
     };
-  }, [isHighlighted, cardId]);
+  }, [isHighlighted, isExpanded, cardId]);
 
   const handleToggle = () => {
     const wasExpanded = isExpanded;
     setIsExpanded(!isExpanded);
     
-    // If card is being collapsed, clear all highlights
-    if (wasExpanded && onClearHighlight) {
-      onClearHighlight();
+    // If card is being collapsed, clear all highlights and immediately stop flickering
+    if (wasExpanded) {
+      // Immediately stop any flickering animation
+      setIsFlickering(false);
+      // Clear all existing timeouts
+      flickerTimeoutRef.current.forEach((timeout) => {
+        if (timeout) clearTimeout(timeout);
+      });
+      flickerTimeoutRef.current = [];
+      
+      if (onClearHighlight) {
+        onClearHighlight();
+      }
     }
     
     // Trigger highlight event when expanding/collapsing
@@ -242,7 +252,7 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
   const currentTest = testItems[currentTestIndex];
 
   return (
-    <KnowledgeCardContainer isHighlighted={isHighlighted} isFlickering={isFlickering}>
+    <KnowledgeCardContainer isHighlighted={isHighlighted} isFlickering={isFlickering && isExpanded}>
       <KnowledgeCardToolBar
         title={title}
         isExpanded={isExpanded}
@@ -251,7 +261,7 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
         onChatClick={onChatClick}
         onAddToCollectionClick={onAddToCollectionClick}
         isHighlighted={isHighlighted}
-        isFlickering={isFlickering}
+        isFlickering={isFlickering && isExpanded}
       />
       <ContentArea isVisible={isExpanded}>
 
@@ -259,7 +269,7 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
           <KnowledgeCardContent 
             markdownContent={markdownContent} 
             isHighlighted={isHighlighted}
-            isFlickering={isFlickering}
+            isFlickering={isFlickering && isExpanded}
           />
         )}
         

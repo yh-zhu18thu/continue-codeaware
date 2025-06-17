@@ -66,8 +66,8 @@ const Step: React.FC<StepProps> = ({
     });
     flickerTimeoutRef.current = [];
 
-    if (isHighlighted) {
-      // Start with flickering state
+    if (isHighlighted && isExpanded) {
+      // Only start flickering if both highlighted AND expanded
       setIsFlickering(true);
       
       // Create a flickering effect with multiple flashes
@@ -92,7 +92,7 @@ const Step: React.FC<StepProps> = ({
       }, 200 + (3 * 400));
       flickerTimeoutRef.current[timeoutIndex] = finalTimeout;
     } else {
-      // Immediately turn off flickering when not highlighted
+      // Immediately turn off flickering when not highlighted or not expanded
       setIsFlickering(false);
     }
 
@@ -103,19 +103,30 @@ const Step: React.FC<StepProps> = ({
       });
       flickerTimeoutRef.current = [];
     };
-  }, [isHighlighted, stepId]);
+  }, [isHighlighted, isExpanded, stepId]);
 
   const handleToggle = () => {
     const wasExpanded = isExpanded;
-    setIsExpanded(!isExpanded);
+    const willBeExpanded = !isExpanded;
+    setIsExpanded(willBeExpanded);
     
-    // If step is being collapsed, clear all highlights
-    if (wasExpanded && onClearHighlight) {
-      onClearHighlight();
+    // If step is being collapsed, clear all highlights and immediately stop flickering
+    if (wasExpanded) {
+      // Immediately stop any flickering animation
+      setIsFlickering(false);
+      // Clear all existing timeouts
+      flickerTimeoutRef.current.forEach((timeout) => {
+        if (timeout) clearTimeout(timeout);
+      });
+      flickerTimeoutRef.current = [];
+      
+      if (onClearHighlight) {
+        onClearHighlight();
+      }
     }
     
-    // Trigger highlight event when expanding/collapsing
-    if (onHighlightEvent && stepId && isExpanded) {
+    // Trigger highlight event when expanding (not when collapsing)
+    if (onHighlightEvent && stepId && willBeExpanded) {
       onHighlightEvent({
         sourceType: "step",
         identifier: stepId,
@@ -130,7 +141,7 @@ const Step: React.FC<StepProps> = ({
         isActive={isActive} 
         isExpanded={isExpanded}
         isHighlighted={isHighlighted}
-        isFlickering={isFlickering}
+        isFlickering={isFlickering && isExpanded}
         onToggle={handleToggle}
       />
       <ContentArea isVisible={isExpanded}>

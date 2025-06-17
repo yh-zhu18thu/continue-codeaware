@@ -1,12 +1,12 @@
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import { HighlightEvent } from "core";
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import styled from "styled-components";
 import {
-  defaultBorderRadius,
-  lightGray,
-  vscForeground,
-  vscInputBackground
+    defaultBorderRadius,
+    lightGray,
+    vscForeground,
+    vscInputBackground
 } from "../../../../components";
 import KnowledgeCardContent from './KnowledgeCardContent';
 import KnowledgeCardMCQ from './KnowledgeCardMCQ';
@@ -27,6 +27,11 @@ const KnowledgeCardContainer = styled.div<{ isHighlighted?: boolean; isFlickerin
   margin: 6px auto; /* Center the card horizontally */
   overflow: hidden;
   transition: border-color 0.15s ease-in-out;
+  box-shadow: ${({ isHighlighted, isFlickering }) => {
+    if (isFlickering) return '0 0 12px rgba(255, 107, 107, 0.8), 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)';
+    if (isHighlighted) return '0 0 8px rgba(74, 222, 128, 0.4), 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)';
+    return '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)';
+  }};
 `;
 
 const ContentArea = styled.div<{ isVisible: boolean }>`
@@ -122,6 +127,7 @@ export interface KnowledgeCardProps {
   isHighlighted?: boolean;
   cardId?: string;
   onHighlightEvent?: (event: HighlightEvent) => void;
+  onClearHighlight?: () => void;
 }
 
 const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
@@ -137,35 +143,72 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
   isHighlighted = false,
   cardId,
   onHighlightEvent,
+  onClearHighlight,
 }) => {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const [isTestMode, setIsTestMode] = useState(defaultTestMode);
   const [currentTestIndex, setCurrentTestIndex] = useState(0);
   const [isFlickering, setIsFlickering] = useState(false);
+  const flickerTimeoutRef = useRef<(NodeJS.Timeout | null)[]>([]);
 
   // Handle flickering effect when isHighlighted becomes true
   useEffect(() => {
+    console.log(`KnowledgeCard ${cardId}: isHighlighted changed to ${isHighlighted}`);
+    
+    // Clear any existing timeouts to prevent race conditions
+    flickerTimeoutRef.current.forEach((timeout) => {
+      if (timeout) clearTimeout(timeout);
+    });
+    flickerTimeoutRef.current = [];
+
     if (isHighlighted) {
+      // Start with flickering state
       setIsFlickering(true);
+      
       // Create a flickering effect with multiple flashes
-      const flickerSequence = async () => {
-        for (let i = 0; i < 3; i++) {
-          await new Promise(resolve => setTimeout(resolve, 200));
+      let timeoutIndex = 0;
+      for (let i = 0; i < 3; i++) {
+        // Turn off flickering
+        const timeoutOff = setTimeout(() => {
           setIsFlickering(false);
-          await new Promise(resolve => setTimeout(resolve, 200));
+        }, 200 + (i * 400));
+        flickerTimeoutRef.current[timeoutIndex++] = timeoutOff;
+        
+        // Turn on flickering
+        const timeoutOn = setTimeout(() => {
           setIsFlickering(true);
-        }
-        // Keep highlighted after flickering
+        }, 400 + (i * 400));
+        flickerTimeoutRef.current[timeoutIndex++] = timeoutOn;
+      }
+      
+      // Final timeout to turn off flickering and keep highlighted
+      const finalTimeout = setTimeout(() => {
         setIsFlickering(false);
-      };
-      flickerSequence();
+      }, 200 + (3 * 400));
+      flickerTimeoutRef.current[timeoutIndex] = finalTimeout;
     } else {
+      // Immediately turn off flickering when not highlighted
       setIsFlickering(false);
     }
-  }, [isHighlighted]);
+
+    // Cleanup function to clear timeouts when component unmounts or effect re-runs
+    return () => {
+      flickerTimeoutRef.current.forEach((timeout) => {
+        if (timeout) clearTimeout(timeout);
+      });
+      flickerTimeoutRef.current = [];
+    };
+  }, [isHighlighted, cardId]);
 
   const handleToggle = () => {
+    const wasExpanded = isExpanded;
     setIsExpanded(!isExpanded);
+    
+    // If card is being collapsed, clear all highlights
+    if (wasExpanded && onClearHighlight) {
+      onClearHighlight();
+    }
+    
     // Trigger highlight event when expanding/collapsing
     if (onHighlightEvent && cardId) {
       onHighlightEvent({
@@ -176,7 +219,14 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
   };
 
   const onQuestionMarkClick = () => {
+    const wasInTestMode = isTestMode;
     setIsTestMode(!isTestMode);
+    
+    // If exiting test mode, clear all highlights
+    if (wasInTestMode && onClearHighlight) {
+      onClearHighlight();
+    }
+    
     //print all the test items in the console
     console.log('Test Items:', testItems);
   }

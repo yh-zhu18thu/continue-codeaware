@@ -35,10 +35,13 @@ const TitleBarContainer = styled.div<{
   font-size: 14px;
   font-weight: 500;
   box-shadow: ${({ isHighlighted, isFlickering }) => {
-    if (isFlickering) return '0 0 8px rgba(255, 215, 0, 0.6)'; // Gold glow for flickering
+    if (isFlickering) return '0 0 12px rgba(255, 215, 0, 0.8)'; // Stronger gold glow for flickering
     if (isHighlighted) return '0 0 8px rgba(0, 122, 204, 0.4)'; // Blue glow for highlighted
     return 'none';
   }};
+  animation: ${({ isFlickering }) => 
+    isFlickering ? 'none' : 'none'
+  }; // Remove any conflicting animations
 
   &:hover {
     background-color: ${vscInputBackground};

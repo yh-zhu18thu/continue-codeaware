@@ -91,6 +91,31 @@ export const codeAwareSessionSlice = createSlice({
             state.codeChunks = [];
 
         },
+        clearAllHighlights: (state) => {
+            // Reset highlight status for all mappings
+            state.codeAwareMappings.forEach(mapping => {
+                mapping.isHighlighted = false;
+            });
+            // Reset highlight status for all code chunks
+            state.codeChunks.forEach(chunk => {
+                chunk.isHighlighted = false;
+                //TODO: Need to communicate code element highlighting to IDE/editor
+            });
+            // Reset highlight status for all requirement chunks
+            if (state.userRequirement?.highlightChunks) {
+                state.userRequirement.highlightChunks.forEach(chunk => {
+                    chunk.isHighlighted = false;
+                });
+            }
+            // Reset highlight status for all steps
+            state.steps.forEach(step => {
+                step.isHighlighted = false;
+                // Reset highlight status for all knowledge cards in the step
+                step.knowledgeCards.forEach(card => {
+                    card.isHighlighted = false;
+                });
+            });
+        },
         updateHighlight: (state, action: PayloadAction<HighlightEvent>) => {
             const { sourceType, identifier, additionalInfo } = action.payload;
 
@@ -158,29 +183,8 @@ export const codeAwareSessionSlice = createSlice({
             if (matchedMappings.length > 0) {
                 console.log("Matched mappings found:", matchedMappings.length);
 
-                // Reset highlight status for all mappings
-                state.codeAwareMappings.forEach(mapping => {
-                    mapping.isHighlighted = false;
-                });
-                // Reset highlight status for all code chunks
-                state.codeChunks.forEach(chunk => {
-                    chunk.isHighlighted = false;
-                    //TODO: Need to communicate code element highlighting to IDE/editor
-                });
-                // Reset highlight status for all requirement chunks
-                if (state.userRequirement?.highlightChunks) {
-                    state.userRequirement.highlightChunks.forEach(chunk => {
-                        chunk.isHighlighted = false;
-                    });
-                }
-                // Reset highlight status for all steps
-                state.steps.forEach(step => {
-                    step.isHighlighted = false;
-                    // Reset highlight status for all knowledge cards in the step
-                    step.knowledgeCards.forEach(card => {
-                        card.isHighlighted = false;
-                    });
-                });
+                // Clear all existing highlights using the dedicated reducer
+                codeAwareSessionSlice.caseReducers.clearAllHighlights(state);
 
                 // Collect unique IDs from all matched mappings to avoid duplicate highlighting
                 const codeChunkIds = new Set<string>();
@@ -281,6 +285,7 @@ export const {
     updateRequirementHighlightChunks,
     toggleRequirementChunkHighlight,
     newCodeAwareSession,
+    clearAllHighlights,
     updateHighlight,
     updateRequirementChunks,
     updateCodeChunks,

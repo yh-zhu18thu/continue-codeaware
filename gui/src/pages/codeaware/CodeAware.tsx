@@ -1,10 +1,11 @@
 // ...existing code...
 import { HighlightEvent, KnowledgeCardItem, StepItem } from "core";
-import { Key, useCallback, useContext, useRef } from "react";
+import { Key, useCallback, useContext, useEffect, useRef } from "react";
 import styled from "styled-components";
 import { IdeMessengerContext } from "../../context/IdeMessenger";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks";
 import {
+  clearAllHighlights,
   selectIsRequirementInEditMode, // Import submitRequirementContent
   selectIsStepsGenerated,
   setUserRequirementStatus,
@@ -128,10 +129,35 @@ export const CodeAware = () => {
     }
   }, [dispatch]);
 
+  const removeHighlightEvent = useCallback(() => {
+    // Dispatch action to clear all highlights
+    dispatch(clearAllHighlights());
+  }, [dispatch]);
+
+  // Add keyboard event listener for Escape key to clear highlights
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        removeHighlightEvent();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [removeHighlightEvent]);
+
 
   return (
     <CodeAwareDiv
       ref={codeAwareDivRef}
+      onClick={(e) => {
+        // Check if the click is on the main container itself (not a child)
+        if (e.target === e.currentTarget) {
+          removeHighlightEvent();
+        }
+      }}
     >
       {/*
         <Button
@@ -155,6 +181,7 @@ export const CodeAware = () => {
           onEdit={handleEditRequirement}
           onRegenerate={handleRegenerateSteps}
           onChunkFocus={handleHighlightEvent} // Pass the highlight event handler
+          onClearHighlight={removeHighlightEvent} // Pass the clear highlight function
         />
       )}
 
@@ -170,6 +197,7 @@ export const CodeAware = () => {
               isHighlighted={step.isHighlighted}
               stepId={step.id}
               onHighlightEvent={handleHighlightEvent}
+              onClearHighlight={removeHighlightEvent} // Pass the clear highlight function
               knowledgeCards={step.knowledgeCards.map((kc: KnowledgeCardItem, kcIndex: number) => {
                 // 从 KnowledgeCardItem.tests 转换为 TestItem[]
                 const testItems = kc.tests?.map(test => ({

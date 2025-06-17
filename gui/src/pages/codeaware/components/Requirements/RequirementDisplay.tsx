@@ -1,6 +1,6 @@
 import { HighlightEvent } from "core";
 import { useEffect, useRef, useState } from "react";
-import styled, { keyframes } from "styled-components";
+import styled, { css, keyframes } from "styled-components";
 import {
     defaultBorderRadius,
     vscCommandCenterInactiveBorder,
@@ -32,7 +32,7 @@ const HighlightedChunk = styled.span<{ isHighlighted: boolean; isFlickering: boo
     border: 1px solid transparent;
   `}
   
-  ${props => props.isFlickering && `
+  ${props => props.isFlickering && css`
     animation: ${flicker} 0.6s ease-in-out 3;
   `}
   
@@ -87,12 +87,14 @@ interface RequirementDisplayProps {
     onEdit: () => void;
     onRegenerate: () => void;
     onChunkFocus?: (highlight: HighlightEvent) => void;
+    onClearHighlight?: () => void;
 }
 
 export default function RequirementDisplay({
     onEdit,
     onRegenerate,
     onChunkFocus,
+    onClearHighlight,
 }: RequirementDisplayProps) {
     const requirementText = useAppSelector(
         (state) => state.codeAwareSession.userRequirement?.requirementDescription || ""
@@ -105,6 +107,7 @@ export default function RequirementDisplay({
     // Track previous highlight states for flickering animation using useRef to avoid circular dependency
     const previousHighlightStatesRef = useRef<Map<string, boolean>>(new Map());
     const [flickeringChunks, setFlickeringChunks] = useState<Set<string>>(new Set());
+    const blurTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     // Monitor highlight state changes and trigger flickering
     useEffect(() => {
@@ -134,6 +137,15 @@ export default function RequirementDisplay({
         previousHighlightStatesRef.current = newPreviousStates;
     }, [highlightChunks]);
 
+    // Cleanup timeout on unmount
+    useEffect(() => {
+        return () => {
+            if (blurTimeoutRef.current) {
+                clearTimeout(blurTimeoutRef.current);
+            }
+        };
+    }, []);
+
     const handleChunkClick = (chunkId: string) => {
         if (onChunkFocus) {
             // construct a HighlightEvent
@@ -149,6 +161,29 @@ export default function RequirementDisplay({
         if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault();
             handleChunkClick(chunkId);
+        }
+    };
+
+    const handleChunkBlur = () => {
+        // Clear any existing timeout
+        if (blurTimeoutRef.current) {
+            clearTimeout(blurTimeoutRef.current);
+        }
+        
+        // Set a delay before clearing highlights to avoid immediate clearing
+        // when focus moves between related elements
+        blurTimeoutRef.current = setTimeout(() => {
+            if (onClearHighlight) {
+                onClearHighlight();
+            }
+        }, 200); // 200ms delay
+    };
+
+    const handleChunkFocus = () => {
+        // Clear the blur timeout if chunk gets focus again
+        if (blurTimeoutRef.current) {
+            clearTimeout(blurTimeoutRef.current);
+            blurTimeoutRef.current = null;
         }
     };
 
@@ -185,6 +220,8 @@ export default function RequirementDisplay({
                         isFlickering={flickeringChunks.has(chunk.id)}
                         onClick={() => handleChunkClick(chunk.id)}
                         onKeyDown={(e) => handleChunkKeyDown(e, chunk.id)}
+                        onBlur={handleChunkBlur}
+                        onFocus={handleChunkFocus}
                         tabIndex={0}
                         role="button"
                         aria-label={`Requirement chunk: ${chunk.content}`}

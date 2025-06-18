@@ -38,6 +38,7 @@ import { VsCodeIde } from "../VsCodeIde";
 
 import { VsCodeMessenger } from "./VsCodeMessenger";
 
+import { MetaCompleteProvider } from "../autocomplete/metacomplete";
 import type { VsCodeWebviewProtocol } from "../webviewProtocol";
 
 export class VsCodeExtension {
@@ -55,6 +56,7 @@ export class VsCodeExtension {
   private battery: Battery;
   private workOsAuthProvider: WorkOsAuthProvider;
   private fileSearch: FileSearch;
+  private metacompleteProvider: MetaCompleteProvider;
 
   constructor(context: vscode.ExtensionContext) {
     // Register auth provider
@@ -371,6 +373,8 @@ export class VsCodeExtension {
         });
       }
     });
+
+    this.metacompleteProvider = new MetaCompleteProvider(context, this.ide, this.configHandler);
   }
 
   static continueVirtualDocumentScheme = EXTENSION_NAME;

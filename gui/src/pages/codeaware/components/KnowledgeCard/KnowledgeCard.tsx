@@ -161,8 +161,9 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
     });
     flickerTimeoutRef.current = [];
 
-    if (isHighlighted && isExpanded) {
-      // Only start flickering if both highlighted AND expanded
+    if (isHighlighted) {
+      // Start flickering when highlighted, regardless of expanded state
+      // The card should always flicker to indicate highlighting
       setIsFlickering(true);
       
       // Create a flickering effect with multiple flashes
@@ -187,7 +188,7 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
       }, 200 + (3 * 400));
       flickerTimeoutRef.current[timeoutIndex] = finalTimeout;
     } else {
-      // Immediately turn off flickering when not highlighted or not expanded
+      // Immediately turn off flickering when not highlighted
       setIsFlickering(false);
     }
 
@@ -198,7 +199,7 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
       });
       flickerTimeoutRef.current = [];
     };
-  }, [isHighlighted, isExpanded, cardId]);
+  }, [isHighlighted, cardId]);
 
   const handleToggle = () => {
     const wasExpanded = isExpanded;
@@ -252,7 +253,7 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
   const currentTest = testItems[currentTestIndex];
 
   return (
-    <KnowledgeCardContainer isHighlighted={isHighlighted} isFlickering={isFlickering && isExpanded}>
+    <KnowledgeCardContainer isHighlighted={isHighlighted} isFlickering={isFlickering}>
       <KnowledgeCardToolBar
         title={title}
         isExpanded={isExpanded}
@@ -261,7 +262,7 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
         onChatClick={onChatClick}
         onAddToCollectionClick={onAddToCollectionClick}
         isHighlighted={isHighlighted}
-        isFlickering={isFlickering && isExpanded}
+        isFlickering={isFlickering}
       />
       <ContentArea isVisible={isExpanded}>
 

@@ -107,25 +107,23 @@ export function createTestCodeChunks(): CodeChunk[] {
 
 export function createTestCodeAwareMappings(): CodeAwareMapping[] {
     return [
-        // 需求1: 读取数据 -> 步骤1: 数据加载 -> 代码块1: 读取数据集
         {
             codeChunkId: "c-1",
             requirementChunkId: "r-1", 
             stepId: "s-1",
             isHighlighted: false
         },
-        // 需求2: 数据预处理 -> 步骤2: 数据预处理 -> 代码块2: 文本预处理
         {
             codeChunkId: "c-2",
             requirementChunkId: "r-2",
             stepId: "s-2", 
             isHighlighted: false
         },
-        // 需求2: 数据预处理 -> 步骤2: 数据预处理 -> 代码块3: 准备特征和标签
         {
             codeChunkId: "c-3",
             requirementChunkId: "r-2",
-            stepId: "s-2",
+            stepId: "s-3",
+            knowledgeCardId: "s-3-k-1",
             isHighlighted: false
         }
     ];

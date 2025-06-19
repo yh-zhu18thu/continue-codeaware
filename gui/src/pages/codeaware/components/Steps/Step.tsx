@@ -66,8 +66,9 @@ const Step: React.FC<StepProps> = ({
     });
     flickerTimeoutRef.current = [];
 
-    if (isHighlighted && isExpanded) {
-      // Only start flickering if both highlighted AND expanded
+    if (isHighlighted) {
+      // Start flickering when highlighted, regardless of expanded state
+      // The title bar should always flicker to indicate highlighting
       setIsFlickering(true);
       
       // Create a flickering effect with multiple flashes
@@ -92,7 +93,7 @@ const Step: React.FC<StepProps> = ({
       }, 200 + (3 * 400));
       flickerTimeoutRef.current[timeoutIndex] = finalTimeout;
     } else {
-      // Immediately turn off flickering when not highlighted or not expanded
+      // Immediately turn off flickering when not highlighted
       setIsFlickering(false);
     }
 
@@ -103,7 +104,7 @@ const Step: React.FC<StepProps> = ({
       });
       flickerTimeoutRef.current = [];
     };
-  }, [isHighlighted, isExpanded, stepId]);
+  }, [isHighlighted, stepId]);
 
   const handleToggle = () => {
     const wasExpanded = isExpanded;
@@ -141,7 +142,7 @@ const Step: React.FC<StepProps> = ({
         isActive={isActive} 
         isExpanded={isExpanded}
         isHighlighted={isHighlighted}
-        isFlickering={isFlickering && isExpanded}
+        isFlickering={isFlickering}
         onToggle={handleToggle}
       />
       <ContentArea isVisible={isExpanded}>

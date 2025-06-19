@@ -13,7 +13,9 @@ import {
     RequirementChunk,
     StepItem
 } from 'core';
+import { useContext } from 'react';
 import { v4 as uuidv4 } from "uuid";
+import { IdeMessengerContext } from '../../context/IdeMessenger';
 
 type CodeAwareSessionState = {
     currentSessionId: string;
@@ -99,7 +101,6 @@ export const codeAwareSessionSlice = createSlice({
             // Reset highlight status for all code chunks
             state.codeChunks.forEach(chunk => {
                 chunk.isHighlighted = false;
-                //TODO: Need to communicate code element highlighting to IDE/editor
             });
             // Reset highlight status for all requirement chunks
             if (state.userRequirement?.highlightChunks) {
@@ -115,8 +116,19 @@ export const codeAwareSessionSlice = createSlice({
                     card.isHighlighted = false;
                 });
             });
+            
+            // 通知IDE清除所有高亮
+            try {
+                const ideMessenger = useContext(IdeMessengerContext);
+                ideMessenger?.post("clearCodeHighlight", undefined);
+            
+            } catch (error) {
+                console.error("Failed to clear highlights in IDE:", error);
+            }
         },
         updateHighlight: (state, action: PayloadAction<HighlightEvent>) => {
+            const ideMessenger = useContext(IdeMessengerContext);
+
             const { sourceType, identifier, additionalInfo } = action.payload;
 
             console.log("Updating highlight for:", sourceType, identifier, additionalInfo);
@@ -204,7 +216,12 @@ export const codeAwareSessionSlice = createSlice({
                     const codeChunk = state.codeChunks.find(chunk => chunk.id === codeChunkId);
                     if (codeChunk) {
                         codeChunk.isHighlighted = true;
-                        // TODO: Need to communicate code element highlighting to IDE/editor
+                        // 通知IDE高亮这个代码块
+                        try {
+                            ideMessenger?.post("highlightCodeChunk", codeChunk);
+                        } catch (error) {
+                            console.error("Failed to highlight code in IDE:", error);
+                        }
                     }
                 });
                 

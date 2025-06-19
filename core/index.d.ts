@@ -465,6 +465,7 @@ export type CodeChunk = {
   content: string;
   lineRange: [number, number];
   isHighlighted: boolean;
+  filePath: string;
 }
 
 // CODEAWARE: Requirements中高亮的单位

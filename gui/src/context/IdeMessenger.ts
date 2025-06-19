@@ -117,6 +117,10 @@ export class IdeMessenger implements IIdeMessenger {
     attempt: number = 0,
   ) {
     try {
+      console.log(
+        `Sending message to IDE: ${messageType} with data:`,
+        data,
+      );
       this._postToIde(messageType, data, messageId);
     } catch (error) {
       if (attempt < 5) {

@@ -3,11 +3,11 @@ import { ToWebviewFromIdeOrCoreProtocol } from "./webview";
 
 import type {
   ApplyState,
+  CodeChunk,
   CodeToEdit,
-  ContextSubmenuItem,
   EditStatus,
   MessageContent,
-  RangeInFileWithContents,
+  RangeInFileWithContents
 } from "../";
 
 export type ToIdeFromWebviewProtocol = ToIdeFromWebviewOrCoreProtocol & {
@@ -57,6 +57,8 @@ export type ToIdeFromWebviewProtocol = ToIdeFromWebviewOrCoreProtocol & {
     void,
   ];
   "edit/exit": [{ shouldFocusEditor: boolean }, void];
+  highlightCodeChunk: [codeChunk: CodeChunk, void];
+  clearCodeHighlight: [undefined, void];
 };
 
 export type ToWebviewFromIdeProtocol = ToWebviewFromIdeOrCoreProtocol & {

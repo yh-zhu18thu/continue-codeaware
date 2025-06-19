@@ -88,19 +88,22 @@ export function createTestCodeChunks(): CodeChunk[] {
             id: "c-1",
             content: "# 1. 读取垃圾邮件数据集\nprint(\"正在加载数据集...\")\ndata = pd.read_csv(data_file)\nprint(f\"数据集大小: {data.shape}\")\nprint(f\"垃圾邮件数量: {sum(data['label'] == 'spam')}\")\nprint(f\"正常邮件数量: {sum(data['label'] == 'ham')}\")",
             lineRange: [25, 32],
-            isHighlighted: false
+            isHighlighted: false,
+            filePath: "manual-testing-sandbox/spam.py"
         },
         {
             id: "c-2",
             content: "# 2. 文本预处理\nprint(\"正在预处理文本数据...\")\nprocessed_texts = []\nfor text in data['text']:\n    # 转换为小写\n    text = text.lower()\n    # 移除标点符号\n    text = text.translate(str.maketrans('', '', string.punctuation))\n    # 移除数字\n    text = re.sub(r'\\d+', '', text)\n    # 移除多余的空格\n    text = ' '.join(text.split())\n    processed_texts.append(text)\n\ndata['processed_text'] = processed_texts",
             lineRange: [34, 49],
-            isHighlighted: false
+            isHighlighted: false,
+            filePath: "manual-testing-sandbox/spam.py"
         },
         {
             id: "c-3",
             content: "# 3. 准备特征和标签\nX = data['processed_text']\ny = data['label']\n\n# 4. 划分训练集和测试集\nX_train, X_test, y_train, y_test = train_test_split(\n    X, y, test_size=0.3, random_state=42, stratify=y\n)",
             lineRange: [51, 58],
-            isHighlighted: false
+            isHighlighted: false,
+            filePath: "manual-testing-sandbox/spam.py"
         }
     ];
 }

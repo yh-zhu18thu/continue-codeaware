@@ -7,18 +7,19 @@ import { Core } from "core/core";
 import { FromCoreProtocol, ToCoreProtocol } from "core/protocol";
 import { InProcessMessenger } from "core/protocol/messenger";
 import {
-  getConfigJsonPath,
-  getConfigTsPath,
-  getConfigYamlPath,
+    getConfigJsonPath,
+    getConfigTsPath,
+    getConfigYamlPath,
 } from "core/util/paths";
 import { v4 as uuidv4 } from "uuid";
 import * as vscode from "vscode";
 
 import { ContinueCompletionProvider } from "../autocomplete/completionProvider";
+import { MetaCompleteProvider } from "../autocomplete/metacomplete";
 import {
-  monitorBatteryChanges,
-  setupStatusBar,
-  StatusBarStatus,
+    monitorBatteryChanges,
+    setupStatusBar,
+    StatusBarStatus,
 } from "../autocomplete/statusBar";
 import { registerAllCommands } from "../commands";
 import { ContinueGUIWebviewViewProvider } from "../ContinueGUIWebviewViewProvider";
@@ -29,16 +30,16 @@ import EditDecorationManager from "../quickEdit/EditDecorationManager";
 import { QuickEdit } from "../quickEdit/QuickEditQuickPick";
 import { setupRemoteConfigSync } from "../stubs/activation";
 import {
-  getControlPlaneSessionInfo,
-  WorkOsAuthProvider,
+    getControlPlaneSessionInfo,
+    WorkOsAuthProvider,
 } from "../stubs/WorkOsAuthProvider";
 import { Battery } from "../util/battery";
 import { FileSearch } from "../util/FileSearch";
 import { VsCodeIde } from "../VsCodeIde";
 
+import { HighlightCodeManager } from "./HighlightCodeManager";
 import { VsCodeMessenger } from "./VsCodeMessenger";
 
-import { MetaCompleteProvider } from "../autocomplete/metacomplete";
 import type { VsCodeWebviewProtocol } from "../webviewProtocol";
 
 export class VsCodeExtension {
@@ -50,6 +51,7 @@ export class VsCodeExtension {
   private sidebar: ContinueGUIWebviewViewProvider;
   private windowId: string;
   private editDecorationManager: EditDecorationManager;
+  private highlightCodeManager: HighlightCodeManager;
   private verticalDiffManager: VerticalDiffManager;
   webviewProtocolPromise: Promise<VsCodeWebviewProtocol>;
   private core: Core;
@@ -65,6 +67,7 @@ export class VsCodeExtension {
     context.subscriptions.push(this.workOsAuthProvider);
 
     this.editDecorationManager = new EditDecorationManager(context);
+    this.highlightCodeManager = new HighlightCodeManager();
 
     let resolveWebviewProtocol: any = undefined;
     this.webviewProtocolPromise = new Promise<VsCodeWebviewProtocol>(
@@ -122,6 +125,7 @@ export class VsCodeExtension {
       configHandlerPromise,
       this.workOsAuthProvider,
       this.editDecorationManager,
+      this.highlightCodeManager,
     );
 
     this.core = new Core(inProcessMessenger, this.ide, async (log: string) => {

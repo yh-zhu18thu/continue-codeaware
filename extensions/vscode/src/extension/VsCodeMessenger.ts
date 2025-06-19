@@ -1,3 +1,4 @@
+import { ILLM } from "core";
 import { ConfigHandler } from "core/config/ConfigHandler";
 import { getModelByRole } from "core/config/util";
 import { applyCodeBlock } from "core/edit/lazy/applyCodeBlock";
@@ -28,7 +29,9 @@ import { showTutorial } from "../util/tutorial";
 import { getExtensionUri } from "../util/vscode";
 import { VsCodeIde } from "../VsCodeIde";
 import { VsCodeWebviewProtocol } from "../webviewProtocol";
-import { ILLM } from "core";
+
+import { HighlightCodeManager } from "./HighlightCodeManager";
+
 
 /**
  * A shared messenger class between Core and Webview
@@ -82,6 +85,7 @@ export class VsCodeMessenger {
     private readonly configHandlerPromise: Promise<ConfigHandler>,
     private readonly workOsAuthProvider: WorkOsAuthProvider,
     private readonly editDecorationManager: EditDecorationManager,
+    private readonly highlightCodeManager: HighlightCodeManager,
   ) {
     /** WEBVIEW ONLY LISTENERS **/
     this.onWebview("showFile", (msg) => {
@@ -315,6 +319,15 @@ export class VsCodeMessenger {
       }
 
       editDecorationManager.clear();
+    });
+
+    this.onWebview("highlightCodeChunk", async (msg) => {
+      console.log("highlightCodeChunk", msg.data);
+      await this.highlightCodeManager.highlightCodeChunk(msg.data);
+    });
+
+    this.onWebview("clearCodeHighlight", async (msg) => {
+      this.highlightCodeManager.clearAllHighlights();
     });
 
     /** PASS THROUGH FROM WEBVIEW TO CORE AND BACK **/

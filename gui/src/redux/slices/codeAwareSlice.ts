@@ -13,9 +13,7 @@ import {
     RequirementChunk,
     StepItem
 } from 'core';
-import { useContext } from 'react';
 import { v4 as uuidv4 } from "uuid";
-import { IdeMessengerContext } from '../../context/IdeMessenger';
 
 type CodeAwareSessionState = {
     currentSessionId: string;
@@ -30,6 +28,9 @@ type CodeAwareSessionState = {
     codeChunks: CodeChunk[];
     //存储所有的Mapping，用于查找和触发相关元素的高亮，各个元素的高亮写在元素之中
     codeAwareMappings: CodeAwareMapping[];
+    // IDE communication flags
+    shouldClearIdeHighlights: boolean;
+    codeChunksToHighlightInIde: CodeChunk[];
 }
 
 const initialCodeAwareState: CodeAwareSessionState = {
@@ -44,7 +45,9 @@ const initialCodeAwareState: CodeAwareSessionState = {
     },
     steps: [],
     codeChunks: [],
-    codeAwareMappings: []
+    codeAwareMappings: [],
+    shouldClearIdeHighlights: false,
+    codeChunksToHighlightInIde: []
 }
 
 export const codeAwareSessionSlice = createSlice({
@@ -91,6 +94,8 @@ export const codeAwareSessionSlice = createSlice({
             state.steps = [];
             state.codeAwareMappings = [];
             state.codeChunks = [];
+            state.shouldClearIdeHighlights = false;
+            state.codeChunksToHighlightInIde = [];
 
         },
         clearAllHighlights: (state) => {
@@ -117,18 +122,11 @@ export const codeAwareSessionSlice = createSlice({
                 });
             });
             
-            // 通知IDE清除所有高亮
-            try {
-                const ideMessenger = useContext(IdeMessengerContext);
-                ideMessenger?.post("clearCodeHighlight", undefined);
-            
-            } catch (error) {
-                console.error("Failed to clear highlights in IDE:", error);
-            }
+            // Set flag to clear IDE highlights
+            state.shouldClearIdeHighlights = true;
+            state.codeChunksToHighlightInIde = [];
         },
         updateHighlight: (state, action: PayloadAction<HighlightEvent>) => {
-            const ideMessenger = useContext(IdeMessengerContext);
-
             const { sourceType, identifier, additionalInfo } = action.payload;
 
             console.log("Updating highlight for:", sourceType, identifier, additionalInfo);
@@ -211,19 +209,21 @@ export const codeAwareSessionSlice = createSlice({
                     if (mapping.knowledgeCardId) knowledgeCardIds.add(mapping.knowledgeCardId);
                 });
 
+                // Collect code chunks to highlight in IDE
+                const codeChunksForIde: CodeChunk[] = [];
+
                 // Update code chunk highlights
                 codeChunkIds.forEach(codeChunkId => {
                     const codeChunk = state.codeChunks.find(chunk => chunk.id === codeChunkId);
                     if (codeChunk) {
                         codeChunk.isHighlighted = true;
-                        // 通知IDE高亮这个代码块
-                        try {
-                            ideMessenger?.post("highlightCodeChunk", codeChunk);
-                        } catch (error) {
-                            console.error("Failed to highlight code in IDE:", error);
-                        }
+                        codeChunksForIde.push(codeChunk);
                     }
                 });
+
+                // Set code chunks to highlight in IDE
+                state.codeChunksToHighlightInIde = codeChunksForIde;
+                state.shouldClearIdeHighlights = false;
                 
                 // Update requirement chunk highlights
                 if (state.userRequirement?.highlightChunks) {
@@ -278,6 +278,10 @@ export const codeAwareSessionSlice = createSlice({
         updateCodeAwareMappings: (state, action: PayloadAction<CodeAwareMapping[]>) => {
             state.codeAwareMappings = action.payload;
             console.log("CodeAwareMappings updated:", state.codeAwareMappings);
+        },
+        resetIdeCommFlags: (state) => {
+            state.shouldClearIdeHighlights = false;
+            state.codeChunksToHighlightInIde = [];
         }
     },
     selectors:{
@@ -306,7 +310,8 @@ export const {
     updateHighlight,
     updateRequirementChunks,
     updateCodeChunks,
-    updateCodeAwareMappings
+    updateCodeAwareMappings,
+    resetIdeCommFlags
 } = codeAwareSessionSlice.actions
 
 export const {

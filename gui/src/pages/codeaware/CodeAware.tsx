@@ -6,6 +6,7 @@ import { IdeMessengerContext } from "../../context/IdeMessenger";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks";
 import {
   clearAllHighlights,
+  resetIdeCommFlags,
   selectIsRequirementInEditMode, // Import submitRequirementContent
   selectIsStepsGenerated,
   setUserRequirementStatus,
@@ -57,6 +58,10 @@ export const CodeAware = () => {
   );
 
   const steps = useAppSelector((state) => state.codeAwareSession.steps); // Get steps data
+
+  // Get IDE communication flags
+  const shouldClearIdeHighlights = useAppSelector((state) => state.codeAwareSession.shouldClearIdeHighlights);
+  const codeChunksToHighlightInIde = useAppSelector((state) => state.codeAwareSession.codeChunksToHighlightInIde);
 
   // log all the data for debugging
 
@@ -147,6 +152,35 @@ export const CodeAware = () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, [removeHighlightEvent]);
+
+  // Handle IDE communication for highlights
+  useEffect(() => {
+    if (shouldClearIdeHighlights) {
+      // Clear all highlights in IDE
+      try {
+        ideMessenger?.post("clearCodeHighlight", undefined);
+      } catch (error) {
+        console.error("Failed to clear highlights in IDE:", error);
+      }
+      // Reset the flag
+      dispatch(resetIdeCommFlags());
+    }
+  }, [shouldClearIdeHighlights, ideMessenger, dispatch]);
+
+  useEffect(() => {
+    if (codeChunksToHighlightInIde.length > 0) {
+      // Highlight code chunks in IDE
+      codeChunksToHighlightInIde.forEach(codeChunk => {
+        try {
+          ideMessenger?.post("highlightCodeChunk", codeChunk);
+        } catch (error) {
+          console.error("Failed to highlight code in IDE:", error);
+        }
+      });
+      // Reset the flag
+      dispatch(resetIdeCommFlags());
+    }
+  }, [codeChunksToHighlightInIde, ideMessenger, dispatch]);
 
 
   return (

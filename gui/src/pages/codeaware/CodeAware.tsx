@@ -63,7 +63,15 @@ export const CodeAware = () => {
   const shouldClearIdeHighlights = useAppSelector((state) => state.codeAwareSession.shouldClearIdeHighlights);
   const codeChunksToHighlightInIde = useAppSelector((state) => state.codeAwareSession.codeChunksToHighlightInIde);
 
+  // Get all the mappings:
+  const allMappings = useAppSelector(
+    (state) => state.codeAwareSession.codeAwareMappings
+  );
+
   // log all the data for debugging
+  useEffect(() => {
+    console.log("All Mappings:", allMappings);
+  }, [allMappings]);
 
   // 设置全局样式：
   const codeAwareDivRef = useRef<HTMLDivElement>(null);

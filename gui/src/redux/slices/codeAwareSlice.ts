@@ -184,9 +184,9 @@ export const codeAwareSessionSlice = createSlice({
                 }
             }
 
-            //console.log("current mappings");
+            console.log("current mappings");
             for (const mapping of state.codeAwareMappings) {
-                console.log(mapping.codeChunkId, mapping.requirementChunkId, mapping.stepId, mapping.knowledgeCardId);
+                console.log("mappings: ",mapping.codeChunkId, mapping.requirementChunkId, mapping.stepId, mapping.knowledgeCardId);
             }
             
             // If mappings are found, update highlight status of all elements within them

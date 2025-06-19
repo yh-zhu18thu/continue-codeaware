@@ -17,53 +17,55 @@ export class HighlightCodeManager {
     
     try {
       // Open the file if it's not already open
+      /* CATODO: open the directed file in the editor 
       const uri = vscode.Uri.parse(filepath);
       const document = await vscode.workspace.openTextDocument(uri);
-      const editor = await vscode.window.showTextDocument(document);
-      
+      const editor = await vscode.window.showTextDocument(document);*/
+       
+
       // Create the range from the CodeChunk lineRange
-      const [startLine, endLine] = codeChunk.lineRange;
+        const editor = vscode.window.activeTextEditor;
+        const [startLine, endLine] = codeChunk.lineRange;
+        if (!editor) {
+          console.warn(`No active editor found for file ${filepath}`);
+          return;
+        }
       
-      // Validate line numbers
-      if (startLine < 0 || startLine >= document.lineCount || 
-          endLine < 0 || endLine >= document.lineCount ||
-          startLine > endLine) {
-        console.warn(`Invalid line range [${startLine}, ${endLine}] for file ${filepath}`);
-        return;
-      }
-      
-      const range = new vscode.Range(
-        new vscode.Position(startLine, 0),
-        new vscode.Position(endLine, editor.document.lineAt(endLine).text.length)
-      );
-      
-      // Create decoration type for highlighting with better visual feedback
-      const decorationType = vscode.window.createTextEditorDecorationType({
-        backgroundColor: new vscode.ThemeColor('editor.wordHighlightBackground'),
-        border: '1px solid',
-        borderColor: new vscode.ThemeColor('editor.wordHighlightBorder'),
-        borderRadius: '3px',
-        overviewRulerColor: new vscode.ThemeColor('editor.wordHighlightBorder'),
-        overviewRulerLane: vscode.OverviewRulerLane.Right,
-        isWholeLine: false,
-      });
-      
-      // Clear any existing highlights for this file before applying new one
-      this.clearHighlightForFile(filepath);
-      
-      // Apply the decoration
-      editor.setDecorations(decorationType, [range]);
-      
-      // Store decoration for management
-      this.activeDecorations.set(filepath, decorationType);
-      
-      // Reveal the range in the editor
-      editor.revealRange(range, vscode.TextEditorRevealType.InCenter);
-      
-      // Auto-remove highlight after 10 seconds
-      setTimeout(() => {
+        // Validate line numbers
+        if (startLine < 0 || startLine >= editor.document.lineCount ||
+            endLine < 0 || endLine >= editor.document.lineCount ||
+            startLine > endLine) {
+            console.warn(`Invalid line range [${startLine}, ${endLine}] for file ${filepath}`);
+            return;
+        }
+        
+        const range = new vscode.Range(
+            new vscode.Position(startLine, 0),
+            new vscode.Position(endLine, editor.document.lineAt(endLine).text.length)
+        );
+        
+        // Create decoration type for highlighting with better visual feedback
+        const decorationType = vscode.window.createTextEditorDecorationType({
+            backgroundColor: new vscode.ThemeColor('editor.wordHighlightBackground'),
+            border: '1px solid',
+            borderColor: new vscode.ThemeColor('editor.wordHighlightBorder'),
+            borderRadius: '3px',
+            overviewRulerColor: new vscode.ThemeColor('editor.wordHighlightBorder'),
+            overviewRulerLane: vscode.OverviewRulerLane.Right,
+            isWholeLine: false,
+        });
+        
+        // Clear any existing highlights for this file before applying new one
         this.clearHighlightForFile(filepath);
-      }, 10000);
+        
+        // Apply the decoration
+        editor.setDecorations(decorationType, [range]);
+        
+        // Store decoration for management
+        this.activeDecorations.set(filepath, decorationType);
+        
+        // Reveal the range in the editor
+        editor.revealRange(range, vscode.TextEditorRevealType.InCenter);
       
     } catch (error) {
       console.error('Error highlighting code chunk:', error);

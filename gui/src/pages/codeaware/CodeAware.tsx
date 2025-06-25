@@ -1,21 +1,20 @@
-// ...existing code...
 import { HighlightEvent, KnowledgeCardItem, StepItem } from "core";
-import { Key, useCallback, useContext, useEffect, useRef } from "react";
+import { Key, useCallback, useContext, useEffect, useRef, useState } from "react";
 import styled from "styled-components";
 import { IdeMessengerContext } from "../../context/IdeMessenger";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks";
 import {
-  clearAllHighlights,
-  resetIdeCommFlags,
-  selectIsRequirementInEditMode, // Import submitRequirementContent
-  selectIsStepsGenerated,
-  setUserRequirementStatus,
-  submitRequirementContent,
-  updateHighlight
+    clearAllHighlights,
+    resetIdeCommFlags,
+    selectIsRequirementInEditMode, // Import submitRequirementContent
+    selectIsStepsGenerated,
+    setUserRequirementStatus,
+    submitRequirementContent,
+    updateHighlight
 } from "../../redux/slices/codeAwareSlice";
 import {
-  generateStepsFromRequirement,
-  paraphraseUserIntent
+    generateStepsFromRequirement,
+    paraphraseUserIntent
 } from "../../redux/thunks/codeAwareGeneration";
 import "./CodeAware.css";
 import RequirementDisplay from "./components/Requirements/RequirementDisplay"; // Import RequirementDisplay
@@ -75,6 +74,27 @@ export const CodeAware = () => {
 
   // 设置全局样式：
   const codeAwareDivRef = useRef<HTMLDivElement>(null);
+
+  // CodeAware: 调试状态 - 跟踪最近的光标位置和选择信息
+  const [debugInfo, setDebugInfo] = useState<{
+    lastCursorPosition?: {
+      filePath: string;
+      lineNumber: number;
+      startLine: number;
+      endLine: number;
+    };
+    lastSelection?: {
+      filePath: string;
+      selectedLines: [number, number];
+      selectedContent: string;
+    };
+    matchedCodeChunks: string[];
+  }>({
+    matchedCodeChunks: []
+  });
+
+  // 获取当前 CodeChunks 用于调试
+  const codeChunks = useAppSelector((state) => state.codeAwareSession.codeChunks);
 
   const AIPolishUserRequirement = useCallback(
     (requirement: string) => { // Expect requirement from editor
@@ -201,6 +221,40 @@ export const CodeAware = () => {
         }
       }}
     >
+      {/* CodeAware 调试面板 */}
+      <div style={{
+        position: "fixed",
+        top: "10px",
+        right: "10px",
+        background: "rgba(0, 0, 0, 0.8)",
+        color: "white",
+        padding: "10px",
+        borderRadius: "5px",
+        fontSize: "12px",
+        maxWidth: "300px",
+        zIndex: 1000,
+        fontFamily: "monospace"
+      }}>
+        <div><strong>CodeAware 调试信息</strong></div>
+        <div>CodeChunks 总数: {codeChunks.length}</div>
+        <div>Mappings 总数: {allMappings.length}</div>
+        <div>高亮的 CodeChunks: {codeChunksToHighlightInIde.length}</div>
+        {debugInfo.lastCursorPosition && (
+          <div>
+            <div>最近光标位置:</div>
+            <div>文件: {debugInfo.lastCursorPosition.filePath.split('/').pop()}</div>
+            <div>行号: {debugInfo.lastCursorPosition.lineNumber}</div>
+          </div>
+        )}
+        {debugInfo.lastSelection && (
+          <div>
+            <div>最近选择:</div>
+            <div>行号: {debugInfo.lastSelection.selectedLines[0]}-{debugInfo.lastSelection.selectedLines[1]}</div>
+          </div>
+        )}
+        <div>匹配的代码块: {debugInfo.matchedCodeChunks.join(', ')}</div>
+      </div>
+
       {/*
         <Button
           className="top-2 right-2 z-10"

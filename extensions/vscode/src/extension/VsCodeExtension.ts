@@ -7,9 +7,9 @@ import { Core } from "core/core";
 import { FromCoreProtocol, ToCoreProtocol } from "core/protocol";
 import { InProcessMessenger } from "core/protocol/messenger";
 import {
-    getConfigJsonPath,
-    getConfigTsPath,
-    getConfigYamlPath,
+  getConfigJsonPath,
+  getConfigTsPath,
+  getConfigYamlPath,
 } from "core/util/paths";
 import { v4 as uuidv4 } from "uuid";
 import * as vscode from "vscode";
@@ -17,9 +17,9 @@ import * as vscode from "vscode";
 import { ContinueCompletionProvider } from "../autocomplete/completionProvider";
 import { MetaCompleteProvider } from "../autocomplete/metacomplete";
 import {
-    monitorBatteryChanges,
-    setupStatusBar,
-    StatusBarStatus,
+  monitorBatteryChanges,
+  setupStatusBar,
+  StatusBarStatus,
 } from "../autocomplete/statusBar";
 import { registerAllCommands } from "../commands";
 import { ContinueGUIWebviewViewProvider } from "../ContinueGUIWebviewViewProvider";
@@ -30,8 +30,8 @@ import EditDecorationManager from "../quickEdit/EditDecorationManager";
 import { QuickEdit } from "../quickEdit/QuickEditQuickPick";
 import { setupRemoteConfigSync } from "../stubs/activation";
 import {
-    getControlPlaneSessionInfo,
-    WorkOsAuthProvider,
+  getControlPlaneSessionInfo,
+  WorkOsAuthProvider,
 } from "../stubs/WorkOsAuthProvider";
 import { Battery } from "../util/battery";
 import { FileSearch } from "../util/FileSearch";
@@ -366,6 +366,51 @@ export class VsCodeExtension {
 
     this.ide.onDidChangeActiveTextEditor((filepath) => {
       void this.core.invoke("didChangeActiveTextEditor", { filepath });
+    });
+
+    // CodeAware: 监听光标位置变化
+    vscode.window.onDidChangeTextEditorSelection(async (event) => {
+      const editor = event.textEditor;
+      const document = editor.document;
+      
+      // 确保这是一个有效的文本文档
+      if (document.uri.scheme !== 'file') {
+        return;
+      }
+
+      const selection = event.selections[0]; // 取第一个选择区域
+      const webviewProtocol = await this.webviewProtocolPromise;
+
+      if (selection.isEmpty) {
+        // 光标位置变化（没有选中内容）
+        const currentLine = selection.active.line;
+        const startLine = Math.max(0, currentLine - 10);
+        const endLine = Math.min(document.lineCount - 1, currentLine + 10);
+        
+        const contextLines: string[] = [];
+        for (let i = startLine; i <= endLine; i++) {
+          contextLines.push(document.lineAt(i).text);
+        }
+
+        void webviewProtocol.request("cursorPositionChanged", {
+          filePath: document.uri.fsPath,
+          lineNumber: currentLine + 1, // VS Code 使用 0 基础索引，转换为 1 基础
+          contextLines,
+          startLine: startLine + 1,
+          endLine: endLine + 1,
+        });
+      } else {
+        // 代码选择变化
+        const startLine = selection.start.line + 1;
+        const endLine = selection.end.line + 1;
+        const selectedContent = document.getText(selection);
+
+        void webviewProtocol.request("codeSelectionChanged", {
+          filePath: document.uri.fsPath,
+          selectedLines: [startLine, endLine],
+          selectedContent,
+        });
+      }
     });
 
     vscode.workspace.onDidChangeConfiguration(async (event) => {

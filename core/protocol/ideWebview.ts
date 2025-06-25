@@ -97,4 +97,18 @@ export type ToWebviewFromIdeProtocol = ToWebviewFromIdeOrCoreProtocol & {
   exitEditMode: [undefined, void];
   focusEdit: [undefined, void];
   focusEditWithoutClear: [undefined, void];
+  // CodeAware: 光标位置变化事件
+  cursorPositionChanged: [{
+    filePath: string;
+    lineNumber: number;
+    contextLines: string[];
+    startLine: number;
+    endLine: number;
+  }, void];
+  // CodeAware: 代码选择事件
+  codeSelectionChanged: [{
+    filePath: string;
+    selectedLines: [number, number];
+    selectedContent: string;
+  }, void];
 };

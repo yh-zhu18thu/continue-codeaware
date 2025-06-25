@@ -5,6 +5,7 @@ import { IdeMessengerContext } from "../context/IdeMessenger";
 import { ConfigResult } from "@continuedev/config-yaml";
 import { BrowserSerializedContinueConfig } from "core";
 import { useAppDispatch, useAppSelector } from "../redux/hooks";
+import { updateHighlight } from "../redux/slices/codeAwareSlice";
 import { setConfigError, setConfigResult } from "../redux/slices/configSlice";
 import { updateIndexingStatus } from "../redux/slices/indexingSlice";
 import { updateDocsSuggestions } from "../redux/slices/miscSlice";
@@ -13,6 +14,7 @@ import {
   setInactive,
 } from "../redux/slices/sessionSlice";
 import { setTTSActive } from "../redux/slices/uiSlice";
+import { store } from "../redux/store";
 import { selectProfileThunk } from "../redux/thunks/profileAndOrg";
 import { refreshSessionMetadata } from "../redux/thunks/session";
 import { streamResponseThunk } from "../redux/thunks/streamResponse";
@@ -243,6 +245,85 @@ function useSetup() {
     },
     [defaultModelTitle],
   );
+
+  // CodeAware: 监听光标位置变化事件
+  useWebviewListener("cursorPositionChanged", async (data) => {
+    const { filePath, lineNumber, contextLines, startLine, endLine } = data;
+
+    // 检查当前聚焦的代码位置是否属于某个 CodeChunk
+    const codeChunks = store.getState().codeAwareSession.codeChunks;
+    const matchedChunks: string[] = [];
+
+    for (const chunk of codeChunks) {
+      // 检查文件路径和行号范围
+      if (
+        chunk.filePath === filePath &&
+        lineNumber >= chunk.lineRange[0] &&
+        lineNumber <= chunk.lineRange[1]
+      ) {
+        matchedChunks.push(chunk.id);
+
+        // 触发高亮更新
+        dispatch(
+          updateHighlight({
+            sourceType: "code",
+            identifier: chunk.id,
+            additionalInfo: chunk,
+          }),
+        );
+        break;
+      }
+    }
+
+    // 发送调试信息到控制台
+    console.log("Cursor Position Changed:", {
+      filePath,
+      lineNumber,
+      matchedChunks,
+      totalCodeChunks: codeChunks.length,
+    });
+  });
+
+  // CodeAware: 监听代码选择变化事件
+  useWebviewListener("codeSelectionChanged", async (data) => {
+    const { filePath, selectedLines, selectedContent } = data;
+
+    // 检查选中的代码是否属于某个 CodeChunk
+    const codeChunks = store.getState().codeAwareSession.codeChunks;
+    const matchedChunks: string[] = [];
+
+    for (const chunk of codeChunks) {
+      // 检查文件路径和行号范围是否有重叠
+      if (chunk.filePath === filePath) {
+        const hasOverlap =
+          selectedLines[0] <= chunk.lineRange[1] &&
+          selectedLines[1] >= chunk.lineRange[0];
+
+        if (hasOverlap) {
+          matchedChunks.push(chunk.id);
+
+          // 触发高亮更新
+          dispatch(
+            updateHighlight({
+              sourceType: "code",
+              identifier: chunk.id,
+              additionalInfo: chunk,
+            }),
+          );
+          break;
+        }
+      }
+    }
+
+    // 发送调试信息到控制台
+    console.log("Code Selection Changed:", {
+      filePath,
+      selectedLines,
+      selectedContent: selectedContent.substring(0, 100) + "...", // 只显示前100个字符
+      matchedChunks,
+      totalCodeChunks: codeChunks.length,
+    });
+  });
 }
 
 export default useSetup;

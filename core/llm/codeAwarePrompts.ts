@@ -6,7 +6,6 @@ export function constructParaphraseUserIntentPrompt(
     programRequirement: ProgramRequirement,
 ): string {
     const requirementText = programRequirement.requirementDescription;
-    //CATODO: 填入paraphrase prompts
     return `{
         "task": "You are given a brief description of a coding project. Expand upon the description and provide a detailed list of steps. After that, generate a list of learning goals for someone doing the project.",
         "requirements": [
@@ -24,5 +23,16 @@ export function constructGenerateStepsPrompt(
     userRequirement: string,
 ): string {
     //CATODO: 填入generate steps prompts
-    return `Generate a list of steps based on the following requirement: ${userRequirement}.`;
+    return `{
+        "task": "You are given a description of a coding project. Provide a detailed list of steps based on the project description.",
+        "requirements": [
+            "The steps should be fine-grained. If the title of a step is 'A and B', divide it into two steps 'A' and 'B'.",
+            "Generate an abstract for each step. The abstract can contain Markdown.",
+            "Each step must correspond to a part of the given description",
+            "Respond in the same language as the project description, EXCEPT FOR THE JSON FIELD NAMES, which must be in English.",
+            "You must follow this JSON format in your response: {"title": "(title of the project)", "tasks": "(exactly the same task description as given in the input), "learning_goal": "(exactly the same learning goals as given in the input)", "steps": [{"title": "(title of the step)", "abstract": "(abstract of the step, can contain Markdown)", "tasks_corresponding_chunks": [(a list of exact quotes from the task description)]}]}.",
+            "Please do not use invalid \`\`\`json character to envelope the JSON response, just return the JSON object directly.",
+        ],
+        "description": "${userRequirement}"
+    }`;
 }

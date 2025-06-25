@@ -1,6 +1,11 @@
 import { HighlightEvent, KnowledgeCardItem, StepItem } from "core";
 import { Key, useCallback, useContext, useEffect, useRef, useState } from "react";
 import styled from "styled-components";
+import {
+  defaultBorderRadius,
+  lightGray,
+  vscForeground
+} from "../../components";
 import { IdeMessengerContext } from "../../context/IdeMessenger";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks";
 import {
@@ -35,6 +40,34 @@ const CodeAwareDiv = styled.div`
   }
 `;
 
+const LoadingOverlay = styled.div`
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.3);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: ${defaultBorderRadius};
+  z-index: 1000;
+`;
+
+const SpinnerIcon = styled.div`
+  width: 24px;
+  height: 24px;
+  border: 2px solid ${lightGray};
+  border-top: 2px solid ${vscForeground};
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+`;
+
 export const CodeAware = () => {
   //import the idemessenger that will communicate between core, gui and IDE
   const ideMessenger = useContext(IdeMessengerContext);
@@ -66,6 +99,9 @@ export const CodeAware = () => {
   const allMappings = useAppSelector(
     (state) => state.codeAwareSession.codeAwareMappings
   );
+
+  // Check if we should show loading overlay
+  const isGeneratingSteps = userRequirementStatus === "confirmed";
 
   // log all the data for debugging
   useEffect(() => {
@@ -121,7 +157,7 @@ export const CodeAware = () => {
       dispatch(setUserRequirementStatus("confirmed"));
       dispatch(generateStepsFromRequirement({ userRequirement: requirement }))
         .then(() => {
-          dispatch(setUserRequirementStatus("finalized"));
+          console.log("Steps generated from requirement");
         });
     }
   , [dispatch, userRequirement]
@@ -221,6 +257,12 @@ export const CodeAware = () => {
         }
       }}
     >
+      {/* Loading Overlay */}
+      {isGeneratingSteps && (
+        <LoadingOverlay>
+          <SpinnerIcon />
+        </LoadingOverlay>
+      )}
       {/* CodeAware 调试面板 */}
       {/*
       <div style={{
@@ -356,6 +398,13 @@ export const CodeAware = () => {
             />
           ))}
         </div>
+      )}
+
+      {/* Loading Overlay */}
+      {isGeneratingSteps && (
+        <LoadingOverlay>
+          <SpinnerIcon />
+        </LoadingOverlay>
       )}
     </CodeAwareDiv>
   );

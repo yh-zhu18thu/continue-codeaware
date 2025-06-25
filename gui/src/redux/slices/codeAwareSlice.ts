@@ -5,7 +5,6 @@ import {
 } from '@reduxjs/toolkit';
 import {
     CodeAwareMapping,
-    CodeAwareMetadata,
     CodeChunk,
     CollaborationStatus,
     HighlightEvent,
@@ -17,11 +16,12 @@ import { v4 as uuidv4 } from "uuid";
 
 type CodeAwareSessionState = {
     currentSessionId: string;
-    allSessionMetaData: CodeAwareMetadata[];
     title: string;
     workspaceDirectory: string;
-    //用户需求与当前水平
+    //用户需求，用于记载一系列的需求调整
     userRequirement: ProgramRequirement | null;
+    //学习目标
+    learningGoal: string;
     //当前的flow
     steps: StepItem[];
     //当前的代码块
@@ -35,7 +35,6 @@ type CodeAwareSessionState = {
 
 const initialCodeAwareState: CodeAwareSessionState = {
     currentSessionId: uuidv4(),
-    allSessionMetaData: [],
     title: "New CodeAware Session",
     workspaceDirectory: "", //CATODO: see how to get current workspace name
     userRequirement: {
@@ -43,6 +42,7 @@ const initialCodeAwareState: CodeAwareSessionState = {
         requirementStatus: "empty",
         highlightChunks: []
     },
+    learningGoal: "",
     steps: [],
     codeChunks: [],
     codeAwareMappings: [],
@@ -59,6 +59,9 @@ export const codeAwareSessionSlice = createSlice({
             if (state.userRequirement) {
                 state.userRequirement.requirementStatus = action.payload;
             }
+        },
+        setLearningGoal: (state, action: PayloadAction<string>) => {
+            state.learningGoal = action.payload;
         },
         submitRequirementContent: (state, action: PayloadAction<string>) => {
             if (state.userRequirement) {
@@ -84,7 +87,6 @@ export const codeAwareSessionSlice = createSlice({
         newCodeAwareSession: (state) => {
             // Reset the state for a new CodeAware session
             state.currentSessionId = uuidv4();
-            state.allSessionMetaData = [];
             state.title = "New CodeAware Session";
             state.workspaceDirectory = ""; // Reset workspace directory
             state.userRequirement = {
@@ -266,18 +268,22 @@ export const codeAwareSessionSlice = createSlice({
             }
         },
         updateRequirementChunks: (state, action: PayloadAction<RequirementChunk[]>) => {
-            if (state.userRequirement) {
-                state.userRequirement.highlightChunks = action.payload;
+            if (state.userRequirement) { 
+                state.userRequirement.highlightChunks?.push(...action.payload);
             }
             console.log("RequirementChunks updated:", state.userRequirement?.highlightChunks);
         },
         updateCodeChunks: (state, action: PayloadAction<CodeChunk[]>) => {
-            state.codeChunks = action.payload;
+            state.codeChunks.push(...action.payload);
             console.log("CodeChunks updated:", state.codeChunks);
         },
         updateCodeAwareMappings: (state, action: PayloadAction<CodeAwareMapping[]>) => {
-            state.codeAwareMappings = action.payload;
+            state.codeAwareMappings.push(...action.payload);
             console.log("CodeAwareMappings updated:", state.codeAwareMappings);
+        },
+        setCodeAwareTitle: (state, action: PayloadAction<string>) => {
+            state.title = action.payload;
+            console.log("CodeAware title updated:", state.title);
         },
         resetIdeCommFlags: (state) => {
             state.shouldClearIdeHighlights = false;
@@ -311,6 +317,8 @@ export const {
     updateRequirementChunks,
     updateCodeChunks,
     updateCodeAwareMappings,
+    setCodeAwareTitle,
+    setLearningGoal,
     resetIdeCommFlags
 } = codeAwareSessionSlice.actions
 

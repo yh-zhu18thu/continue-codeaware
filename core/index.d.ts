@@ -540,11 +540,11 @@ export interface SelfTestItem {
   questionType: "shortAnswer" | "multipleChoice";
 }
 
-//CODEAWARE: 一个用于表征并存储所有的对应关系的数据结构：
+//CODEAWARE: 一个用于表征并存储所有的对应关系的数据结构，它有着相当大的冗余，主要是为了生成的时候方便，几乎所有元素都是可以
 export interface CodeAwareMapping {
-  codeChunkId: string;
-  requirementChunkId: string;
-  stepId: string;
+  codeChunkId?: string;
+  requirementChunkId?: string;
+  stepId?: string;
   knowledgeCardId?: string;
   isHighlighted: boolean;
 }

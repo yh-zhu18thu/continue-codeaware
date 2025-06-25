@@ -234,7 +234,7 @@ Select the \`GPT-4o\` model below to complete your provider configuration, but n
         label: "API Version",
         placeholder: "Enter the API version",
         required: false,
-        defaultValue: "2023-07-01-preview",
+        defaultValue: "2024-11-20",
       },
       ...completionParamsInputsConfigs,
     ],

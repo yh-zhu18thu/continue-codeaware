@@ -4,17 +4,17 @@ import styled from "styled-components";
 import { IdeMessengerContext } from "../../context/IdeMessenger";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks";
 import {
-    clearAllHighlights,
-    resetIdeCommFlags,
-    selectIsRequirementInEditMode, // Import submitRequirementContent
-    selectIsStepsGenerated,
-    setUserRequirementStatus,
-    submitRequirementContent,
-    updateHighlight
+  clearAllHighlights,
+  resetIdeCommFlags,
+  selectIsRequirementInEditMode, // Import submitRequirementContent
+  selectIsStepsGenerated,
+  setUserRequirementStatus,
+  submitRequirementContent,
+  updateHighlight
 } from "../../redux/slices/codeAwareSlice";
 import {
-    generateStepsFromRequirement,
-    paraphraseUserIntent
+  generateStepsFromRequirement,
+  paraphraseUserIntent
 } from "../../redux/thunks/codeAwareGeneration";
 import "./CodeAware.css";
 import RequirementDisplay from "./components/Requirements/RequirementDisplay"; // Import RequirementDisplay
@@ -106,7 +106,7 @@ export const CodeAware = () => {
       dispatch(
         paraphraseUserIntent({ programRequirement: { ...userRequirement, requirementDescription: requirement } })
       ).then(() => {
-        dispatch(setUserRequirementStatus("empty")); // Back to edit mode to show paraphrased content
+        console.log("Requirement submitted to AI");
       });
     },
     [dispatch, userRequirement]
@@ -222,6 +222,7 @@ export const CodeAware = () => {
       }}
     >
       {/* CodeAware 调试面板 */}
+      {/*
       <div style={{
         position: "fixed",
         top: "10px",
@@ -254,6 +255,7 @@ export const CodeAware = () => {
         )}
         <div>匹配的代码块: {debugInfo.matchedCodeChunks.join(', ')}</div>
       </div>
+    */}
 
       {/*
         <Button

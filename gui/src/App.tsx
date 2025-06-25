@@ -4,9 +4,13 @@ import { SubmenuContextProvidersProvider } from "./context/SubmenuContextProvide
 import { VscThemeProvider } from "./context/VscTheme";
 import useSetup from "./hooks/useSetup";
 //CodeAware: import the pages needed in CodeAware
+import { AddNewModel, ConfigureProvider } from "./pages/AddNewModel";
 import { Chat } from "./pages/codeaware/Chat";
 import { CodeAware } from "./pages/codeaware/CodeAware";
+import ConfigPage from "./pages/config";
+import ConfigErrorPage from "./pages/config-error";
 import ErrorPage from "./pages/error";
+import MorePage from "./pages/More";
 import { ROUTES } from "./util/navigation";
 
 const router = createMemoryRouter([
@@ -27,7 +31,27 @@ const router = createMemoryRouter([
       {
         path: "/chat",
         element: <Chat />,
-      }
+      },
+      {
+        path: "/addModel",
+        element: <AddNewModel />,
+      },
+      {
+        path: "/addModel/provider/:providerName",
+        element: <ConfigureProvider />,
+      },
+      {
+        path: "/more",
+        element: <MorePage />,
+      },
+      {
+        path: ROUTES.CONFIG_ERROR,
+        element: <ConfigErrorPage />,
+      },
+      {
+        path: ROUTES.CONFIG,
+        element: <ConfigPage />,
+      },
     ],
   },
 ]);

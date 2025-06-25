@@ -8,6 +8,7 @@ import {
 } from "core/llm/codeAwarePrompts";
 import {
     setGeneratedSteps,
+    setUserRequirementStatus,
     submitRequirementContent,
     updateCodeAwareMappings,
     updateCodeChunks,
@@ -41,8 +42,12 @@ export const paraphraseUserIntent = createAsyncThunk<
                 throw new Error("Default model not defined");
             }
 
+
+
             //send request
             const prompt = constructParaphraseUserIntentPrompt(programRequirement);
+
+            console.log("paraphraseUserIntent called with programRequirement:", prompt);
             const result = await extra.ideMessenger.request("llm/complete", {
                 prompt: prompt,
                 completionOptions:{},
@@ -55,6 +60,7 @@ export const paraphraseUserIntent = createAsyncThunk<
 
             console.log("LLM response:", result.content);
             dispatch(submitRequirementContent(result.content));
+            dispatch(setUserRequirementStatus("editing"));
         } catch(error) {
             console.error("Error during LLM request:", error);
             throw new Error("Failed to fetch LLM response");

@@ -13,7 +13,7 @@ import KnowledgeCardMCQ from './KnowledgeCardMCQ';
 import KnowledgeCardSAQ from './KnowledgeCardSAQ';
 import KnowledgeCardToolBar from './KnowledgeCardToolBar';
 
-const KnowledgeCardContainer = styled.div<{ isHighlighted?: boolean; isFlickering?: boolean }>`
+const KnowledgeCardContainer = styled.div<{ isHighlighted?: boolean; isFlickering?: boolean; isHovered?: boolean }>`
   width: 95%;
   display: flex;
   flex-direction: column;
@@ -26,10 +26,12 @@ const KnowledgeCardContainer = styled.div<{ isHighlighted?: boolean; isFlickerin
     `${lightGray}44`};
   margin: 6px auto; /* Center the card horizontally */
   overflow: hidden;
-  transition: border-color 0.15s ease-in-out;
-  box-shadow: ${({ isHighlighted, isFlickering }) => {
+  transition: all 0.2s ease-in-out;
+  transform: ${({ isHovered }) => isHovered ? 'scale(1.03)' : 'scale(1)'};
+  box-shadow: ${({ isHighlighted, isFlickering, isHovered }) => {
     if (isFlickering) return '0 0 12px rgba(255, 107, 107, 0.8), 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)';
     if (isHighlighted) return '0 0 8px rgba(74, 222, 128, 0.4), 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)';
+    if (isHovered) return '0 8px 16px rgba(0, 0, 0, 0.2), 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)';
     return '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)';
   }};
 `;
@@ -149,7 +151,17 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
   const [isTestMode, setIsTestMode] = useState(defaultTestMode);
   const [currentTestIndex, setCurrentTestIndex] = useState(0);
   const [isFlickering, setIsFlickering] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
   const flickerTimeoutRef = useRef<(NodeJS.Timeout | null)[]>([]);
+
+  // Handle mouse enter/leave for hover effects
+  const handleMouseEnter = () => {
+    setIsHovered(true);
+  };
+
+  const handleMouseLeave = () => {
+    setIsHovered(false);
+  };
 
   // Handle flickering effect when isHighlighted becomes true
   useEffect(() => {
@@ -253,7 +265,13 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
   const currentTest = testItems[currentTestIndex];
 
   return (
-    <KnowledgeCardContainer isHighlighted={isHighlighted} isFlickering={isFlickering}>
+    <KnowledgeCardContainer 
+      isHighlighted={isHighlighted} 
+      isFlickering={isFlickering}
+      isHovered={isHovered}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
       <KnowledgeCardToolBar
         title={title}
         isExpanded={isExpanded}

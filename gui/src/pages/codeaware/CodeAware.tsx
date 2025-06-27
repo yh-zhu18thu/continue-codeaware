@@ -331,7 +331,7 @@ export const CodeAware = () => {
         >
           {steps.map((step: StepItem, index: Key | null | undefined) => (
             <Step
-              key={index} // Consider using a unique ID from step data if available
+              key={step.id} // Use step.id for proper React tracking
               title={step.title}
               content={step.abstract}
               isHighlighted={step.isHighlighted}

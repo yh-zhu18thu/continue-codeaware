@@ -65,14 +65,15 @@ const saveSubsetFilters = [
   createFilter("tabs", ["tabs"]),
   createFilter("codeAwareSession", [
     "currentSessionId",
-    "allSessionMetaData",
     "title",
     "workspaceDirectory",
     "userRequirement",
-    "currentHighlightKeywords",
+    "learningGoal",
     "steps",
-    "currentFocusedFlowId",
-    "currentFocusedKnowledgeCardId",
+    "codeChunks",
+    "codeAwareMappings",
+    // Note: shouldClearIdeHighlights and codeChunksToHighlightInIde are intentionally not persisted
+    // as they are temporary IDE communication flags that should reset on reload
   ]),
 ];
 

@@ -116,12 +116,15 @@ export const codeAwareSessionSlice = createSlice({
                 });
             }
             // Reset highlight status for all steps
-            state.steps.forEach(step => {
-                step.isHighlighted = false;
-                // Reset highlight status for all knowledge cards in the step
-                step.knowledgeCards.forEach(card => {
-                    card.isHighlighted = false;
-                });
+            state.steps = state.steps.map(step => {
+                return {
+                    ...step,
+                    isHighlighted: false,
+                    knowledgeCards: step.knowledgeCards.map(card => ({
+                        ...card,
+                        isHighlighted: false
+                    }))
+                };
             });
             
             // Set flag to clear IDE highlights
@@ -131,8 +134,6 @@ export const codeAwareSessionSlice = createSlice({
         updateHighlight: (state, action: PayloadAction<HighlightEvent>) => {
             const { sourceType, identifier, additionalInfo } = action.payload;
 
-            console.log("Updating highlight for:", sourceType, identifier, additionalInfo);
-            
             // Find all mappings that match the highlight event
             let matchedMappings: CodeAwareMapping[] = [];
             
@@ -185,16 +186,9 @@ export const codeAwareSessionSlice = createSlice({
                     }
                 }
             }
-
-            console.log("current mappings");
-            for (const mapping of state.codeAwareMappings) {
-                console.log("mappings: ",mapping.codeChunkId, mapping.requirementChunkId, mapping.stepId, mapping.knowledgeCardId);
-            }
             
             // If mappings are found, update highlight status of all elements within them
             if (matchedMappings.length > 0) {
-                console.log("Matched mappings found:", matchedMappings.length);
-
                 // Clear all existing highlights using the dedicated reducer
                 codeAwareSessionSlice.caseReducers.clearAllHighlights(state);
 
@@ -241,9 +235,13 @@ export const codeAwareSessionSlice = createSlice({
                 
                 // Update step highlights
                 stepIds.forEach(stepId => {
-                    const step = state.steps.find(step => step.id === stepId);
-                    if (step) {
-                        step.isHighlighted = true;
+                    const stepIndex = state.steps.findIndex(step => step.id === stepId);
+                    if (stepIndex !== -1) {
+                        // Create a new step object to ensure React detects the change
+                        state.steps[stepIndex] = {
+                            ...state.steps[stepIndex],
+                            isHighlighted: true
+                        };
                     }
                 });
 
@@ -260,7 +258,6 @@ export const codeAwareSessionSlice = createSlice({
                     }
                 });
 
-                console.log("Highlight updated for", matchedMappings.length, "mappings");
                 // Update all matched mappings' highlight status
                 matchedMappings.forEach(mapping => {
                     mapping.isHighlighted = true;
@@ -271,19 +268,15 @@ export const codeAwareSessionSlice = createSlice({
             if (state.userRequirement) { 
                 state.userRequirement.highlightChunks?.push(...action.payload);
             }
-            console.log("RequirementChunks updated:", state.userRequirement?.highlightChunks);
         },
         updateCodeChunks: (state, action: PayloadAction<CodeChunk[]>) => {
             state.codeChunks.push(...action.payload);
-            console.log("CodeChunks updated:", state.codeChunks);
         },
         updateCodeAwareMappings: (state, action: PayloadAction<CodeAwareMapping[]>) => {
             state.codeAwareMappings.push(...action.payload);
-            console.log("CodeAwareMappings updated:", state.codeAwareMappings);
         },
         setCodeAwareTitle: (state, action: PayloadAction<string>) => {
             state.title = action.payload;
-            console.log("CodeAware title updated:", state.title);
         },
         resetIdeCommFlags: (state) => {
             state.shouldClearIdeHighlights = false;
@@ -329,4 +322,4 @@ export const {
 
 export default codeAwareSessionSlice.reducer;
 
- 
+

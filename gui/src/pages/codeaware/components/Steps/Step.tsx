@@ -6,12 +6,16 @@ import KnowledgeCard, { KnowledgeCardProps } from '../KnowledgeCard/KnowledgeCar
 import StepDescription from './StepDescription';
 import StepTitleBar from './StepTitleBar';
 
-const StepContainer = styled.div`
+const StepContainer = styled.div<{ isHovered: boolean }>`
   width: 100%;
   display: flex;
   flex-direction: column;
   background-color: ${vscBackground};
   margin: 8px 0;
+  transition: all 0.2s ease-in-out;
+  transform: ${({ isHovered }) => isHovered ? 'scale(1.02)' : 'scale(1)'};
+  box-shadow: ${({ isHovered }) => isHovered ? '0 4px 12px rgba(0, 0, 0, 0.15)' : '0 2px 4px rgba(0, 0, 0, 0.1)'};
+  border-radius: 4px;
 `;
 
 const ContentArea = styled.div<{ isVisible: boolean }>`
@@ -21,12 +25,14 @@ const ContentArea = styled.div<{ isVisible: boolean }>`
   transition: all 0.15s ease-in-out;
 `;
 
-const KnowledgeCardsContainer = styled.div`
+const KnowledgeCardsContainer = styled.div<{ isHovered: boolean }>`
   display: flex;
   flex-direction: column;
   align-items: center; /* Center the knowledge cards horizontally */
   gap: 8px;
   margin-top: 8px;
+  transition: all 0.2s ease-in-out;
+  transform: ${({ isHovered }) => isHovered ? 'scale(1.01)' : 'scale(1)'};
 `;
 
 interface StepProps {
@@ -46,7 +52,7 @@ const Step: React.FC<StepProps> = ({
   content: description,
   knowledgeCards,
   isActive = false,
-  defaultExpanded = true,
+  defaultExpanded = false, // Changed to false for collapsed by default
   isHighlighted = false,
   stepId,
   onHighlightEvent,
@@ -54,12 +60,51 @@ const Step: React.FC<StepProps> = ({
 }) => {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const [isFlickering, setIsFlickering] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
   const flickerTimeoutRef = useRef<(NodeJS.Timeout | null)[]>([]);
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const exitTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Handle mouse enter/leave for hover effects and highlighting
+  const handleMouseEnter = () => {
+    setIsHovered(true);
+    
+    // Clear any existing exit timeout
+    if (exitTimeoutRef.current) {
+      clearTimeout(exitTimeoutRef.current);
+      exitTimeoutRef.current = null;
+    }
+    
+    // Only start hover timer if step is expanded
+    if (isExpanded && onHighlightEvent && stepId) {
+      hoverTimeoutRef.current = setTimeout(() => {
+        onHighlightEvent({
+          sourceType: "step",
+          identifier: stepId,
+        });
+      }, 3000); // 3 seconds
+    }
+  };
+
+  const handleMouseLeave = () => {
+    setIsHovered(false);
+    
+    // Clear hover timeout
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+      hoverTimeoutRef.current = null;
+    }
+    
+    // Start exit timer to clear highlights after 3 seconds
+    if (onClearHighlight) {
+      exitTimeoutRef.current = setTimeout(() => {
+        onClearHighlight();
+      }, 3000);
+    }
+  };
 
   // Handle flickering effect when isHighlighted becomes true
   useEffect(() => {
-    console.log(`Step ${stepId}: isHighlighted changed to ${isHighlighted}`);
-    
     // Clear any existing timeouts to prevent race conditions
     flickerTimeoutRef.current.forEach((timeout) => {
       if (timeout) clearTimeout(timeout);
@@ -106,10 +151,32 @@ const Step: React.FC<StepProps> = ({
     };
   }, [isHighlighted, stepId]);
 
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    return () => {
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
+      }
+      if (exitTimeoutRef.current) {
+        clearTimeout(exitTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const handleToggle = () => {
     const wasExpanded = isExpanded;
     const willBeExpanded = !isExpanded;
     setIsExpanded(willBeExpanded);
+    
+    // Clear all timeouts when toggling
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+      hoverTimeoutRef.current = null;
+    }
+    if (exitTimeoutRef.current) {
+      clearTimeout(exitTimeoutRef.current);
+      exitTimeoutRef.current = null;
+    }
     
     // If step is being collapsed, clear all highlights and immediately stop flickering
     if (wasExpanded) {
@@ -126,8 +193,8 @@ const Step: React.FC<StepProps> = ({
       }
     }
     
-    // Trigger highlight event when expanding (not when collapsing)
-    if (onHighlightEvent && stepId && willBeExpanded) {
+    // Trigger highlight event only when expanding from collapsed state
+    if (onHighlightEvent && stepId && willBeExpanded && !wasExpanded) {
       onHighlightEvent({
         sourceType: "step",
         identifier: stepId,
@@ -136,7 +203,11 @@ const Step: React.FC<StepProps> = ({
   };
 
   return (
-    <StepContainer>
+    <StepContainer 
+      isHovered={isHovered}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
       <StepTitleBar 
         title={title} 
         isActive={isActive} 
@@ -151,7 +222,7 @@ const Step: React.FC<StepProps> = ({
           isVisible={isExpanded}
         />
         {knowledgeCards.length > 0 && (
-          <KnowledgeCardsContainer>
+          <KnowledgeCardsContainer isHovered={isHovered}>
             {knowledgeCards.map((cardProps, index) => (
               <KnowledgeCard 
                 key={index} 

@@ -14,6 +14,7 @@ import {
 import { v4 as uuidv4 } from "uuid";
 import * as vscode from "vscode";
 
+import { CodeAwareCompletionManager } from "../autocomplete/codeAwareCompletionManager";
 import { ContinueCompletionProvider } from "../autocomplete/completionProvider";
 import { MetaCompleteProvider } from "../autocomplete/metacomplete";
 import {
@@ -59,6 +60,7 @@ export class VsCodeExtension {
   private workOsAuthProvider: WorkOsAuthProvider;
   private fileSearch: FileSearch;
   private metacompleteProvider: MetaCompleteProvider;
+  private codeAwareManager: CodeAwareCompletionManager;
 
   constructor(context: vscode.ExtensionContext) {
     // Register auth provider
@@ -68,6 +70,7 @@ export class VsCodeExtension {
 
     this.editDecorationManager = new EditDecorationManager(context);
     this.highlightCodeManager = new HighlightCodeManager();
+    this.codeAwareManager = new CodeAwareCompletionManager();
 
     let resolveWebviewProtocol: any = undefined;
     this.webviewProtocolPromise = new Promise<VsCodeWebviewProtocol>(
@@ -126,6 +129,7 @@ export class VsCodeExtension {
       this.workOsAuthProvider,
       this.editDecorationManager,
       this.highlightCodeManager,
+      this.codeAwareManager,
     );
 
     this.core = new Core(inProcessMessenger, this.ide, async (log: string) => {
@@ -195,6 +199,7 @@ export class VsCodeExtension {
           this.configHandler,
           this.ide,
           this.sidebar.webviewProtocol,
+          this.codeAwareManager,
         ),
       ),
     );

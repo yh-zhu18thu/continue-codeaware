@@ -1,9 +1,10 @@
 import Handlebars from "handlebars";
 
-import { CompletionOptions } from "../..";
+import { CodeAwareContext, CompletionOptions } from "../..";
 import { getUriPathBasename } from "../../util/uri";
 import { AutocompleteLanguageInfo } from "../constants/AutocompleteLanguageInfo";
 import { SnippetPayload } from "../snippets";
+
 import { HelperVars } from "../util/HelperVars";
 import {
   AutocompleteTemplate,
@@ -31,6 +32,7 @@ function renderStringTemplate(
   lang: AutocompleteLanguageInfo,
   filepath: string,
   reponame: string,
+  codeAwareContext?: CodeAwareContext,
 ) {
   const filename = getUriPathBasename(filepath);
   const compiledTemplate = Handlebars.compile(template);
@@ -41,7 +43,39 @@ function renderStringTemplate(
     filename,
     reponame,
     language: lang.name,
+    // CodeAware: 添加上下文变量
+    userRequirement: codeAwareContext?.userRequirement || "",
+    currentStep: codeAwareContext?.currentStep || "",
+    nextStep: codeAwareContext?.nextStep || "",
   });
+}
+
+// CodeAware: 为prefix添加上下文的辅助函数
+function enhancePrefixWithCodeAwareContext(
+  prefix: string,
+  codeAwareContext?: CodeAwareContext,
+): string {
+  if (!codeAwareContext || 
+      (!codeAwareContext.userRequirement && !codeAwareContext.currentStep && !codeAwareContext.nextStep)) {
+    return prefix;
+  }
+
+  const contextParts: string[] = [];
+  
+  if (codeAwareContext.userRequirement) {
+    contextParts.push(`// Task: ${codeAwareContext.userRequirement}`);
+  }
+  
+  if (codeAwareContext.currentStep) {
+    contextParts.push(`// Current Step: ${codeAwareContext.currentStep}`);
+  }
+  
+  if (codeAwareContext.nextStep) {
+    contextParts.push(`// Next Step: ${codeAwareContext.nextStep}`);
+  }
+  
+  const contextString = contextParts.join("\n");
+  return `${contextString}\n\n${prefix}`;
 }
 
 export function renderPrompt({
@@ -88,6 +122,11 @@ export function renderPrompt({
     prefix = [formattedSnippets, prefix].join("\n");
   }
 
+  // CodeAware: 如果有上下文信息，增强prefix
+  if (helper.input.codeAwareContext) {
+    prefix = enhancePrefixWithCodeAwareContext(prefix, helper.input.codeAwareContext);
+  }
+
   const prompt =
     // Templates can be passed as a Handlebars template string or a function
     typeof template === "string"
@@ -98,6 +137,7 @@ export function renderPrompt({
           helper.lang,
           helper.filepath,
           reponame,
+          helper.input.codeAwareContext, // CodeAware: 传递上下文
         )
       : template(
           prefix,

@@ -57,8 +57,12 @@ export type ToIdeFromWebviewProtocol = ToIdeFromWebviewOrCoreProtocol & {
     void,
   ];
   "edit/exit": [{ shouldFocusEditor: boolean }, void];
+  //CodeAware: 代码高亮相关
   highlightCodeChunk: [codeChunk: CodeChunk, void];
   clearCodeHighlight: [undefined, void];
+  //CodeAware: 向ide同步当前的任务描述和当前/下一步骤等
+  syncCodeAwareRequirement: [{ userRequirement: string }, void];
+  syncCodeAwareSteps: [{ currentStep: string; nextStep: string }, void];
 };
 
 export type ToWebviewFromIdeProtocol = ToWebviewFromIdeOrCoreProtocol & {

@@ -162,10 +162,31 @@ export const generateStepsFromRequirement = createAsyncThunk<
             dispatch(updateRequirementChunks(requirementChunks));
             dispatch(updateCodeAwareMappings(initialMappings));
             dispatch(setUserRequirementStatus("finalized"));
+
+            // CodeAware: 通过protocol同步requirement和步骤信息到IDE
+            try {
+                // 发送用户需求到IDE
+                await extra.ideMessenger.request("syncCodeAwareRequirement", {
+                    userRequirement: userRequirement
+                });
+
+                // 发送当前步骤和下一步骤信息到IDE
+                const currentStep = ""; // 刚生成时还没有当前步骤
+                const nextStep = parsedSteps.length > 0 ? parsedSteps[0].title : "";
+                
+                await extra.ideMessenger.request("syncCodeAwareSteps", {
+                    currentStep: currentStep,
+                    nextStep: nextStep
+                });
+
+                console.log("CodeAware: Successfully synced requirement and steps to IDE");
+            } catch (error) {
+                console.warn("CodeAware: Failed to sync context to IDE:", error);
+                // 不影响主流程，只是记录警告
+            }
         } catch (error) {
             console.error("Error during LLM request for generating steps:", error);
             dispatch(setUserRequirementStatus("editing"));
         }
     }
 );
-

@@ -563,6 +563,13 @@ export interface CodeAwareMetadata{
   workspaceDirectory: string;
 }
 
+//CodeAware 用于补全的context
+export interface CodeAwareContext{
+    userRequirement?: string;
+    currentStep?: string;
+    nextStep?: string;
+}
+
 export interface LLMFullCompletionOptions extends BaseCompletionOptions {
   log?: boolean;
   model?: string;

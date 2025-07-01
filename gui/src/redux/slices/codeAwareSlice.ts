@@ -24,6 +24,8 @@ type CodeAwareSessionState = {
     learningGoal: string;
     //当前的flow
     steps: StepItem[];
+    //当前步骤索引（-1表示还没开始任何步骤）
+    currentStepIndex: number;
     //当前的代码块
     codeChunks: CodeChunk[];
     //存储所有的Mapping，用于查找和触发相关元素的高亮，各个元素的高亮写在元素之中
@@ -44,6 +46,7 @@ const initialCodeAwareState: CodeAwareSessionState = {
     },
     learningGoal: "",
     steps: [],
+    currentStepIndex: -1, // -1表示还没开始任何步骤
     codeChunks: [],
     codeAwareMappings: [],
     shouldClearIdeHighlights: false,
@@ -71,6 +74,19 @@ export const codeAwareSessionSlice = createSlice({
         setGeneratedSteps: (state, action: PayloadAction<StepItem[]>) => {
             state.steps = action.payload;
         },
+        setCurrentStepIndex: (state, action: PayloadAction<number>) => {
+            state.currentStepIndex = action.payload;
+        },
+        goToNextStep: (state) => {
+            if (state.currentStepIndex < state.steps.length - 1) {
+                state.currentStepIndex += 1;
+            }
+        },
+        goToPreviousStep: (state) => {
+            if (state.currentStepIndex > -1) {
+                state.currentStepIndex -= 1;
+            }
+        },
         updateRequirementHighlightChunks: (state, action: PayloadAction<RequirementChunk[]>) => {
             if (state.userRequirement) {
                 state.userRequirement.highlightChunks = action.payload;
@@ -94,6 +110,7 @@ export const codeAwareSessionSlice = createSlice({
                 requirementStatus: "empty"
             };
             state.steps = [];
+            state.currentStepIndex = -1; // 重置当前步骤索引
             state.codeAwareMappings = [];
             state.codeChunks = [];
             state.shouldClearIdeHighlights = false;
@@ -302,6 +319,9 @@ export const {
     setUserRequirementStatus,
     submitRequirementContent,
     setGeneratedSteps,
+    setCurrentStepIndex,
+    goToNextStep,
+    goToPreviousStep,
     updateRequirementHighlightChunks,
     toggleRequirementChunkHighlight,
     newCodeAwareSession,

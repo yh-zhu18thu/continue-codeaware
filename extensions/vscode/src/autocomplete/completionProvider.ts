@@ -4,6 +4,7 @@ import {
   type AutocompleteOutcome,
 } from "core/autocomplete/util/types";
 import { ConfigHandler } from "core/config/ConfigHandler";
+import { startLocalOllama } from "core/util/ollamaHelper";
 import * as URI from "uri-js";
 import { v4 as uuidv4 } from "uuid";
 import * as vscode from "vscode";
@@ -11,6 +12,7 @@ import * as vscode from "vscode";
 import { showFreeTrialLoginMessage } from "../util/messages";
 import { VsCodeWebviewProtocol } from "../webviewProtocol";
 
+import { CodeAwareCompletionManager } from "./codeAwareCompletionManager";
 import { getDefinitionsFromLsp } from "./lsp";
 import { RecentlyEditedTracker } from "./recentlyEdited";
 import { RecentlyVisitedRangesService } from "./RecentlyVisitedRangesService";
@@ -21,8 +23,7 @@ import {
   stopStatusBarLoading,
 } from "./statusBar";
 
-import { startLocalOllama } from "core/util/ollamaHelper";
-import type { IDE } from "core";
+import type { CodeAwareContext, IDE } from "core";
 
 const Diff = require("diff");
 
@@ -83,6 +84,7 @@ export class ContinueCompletionProvider
     private readonly configHandler: ConfigHandler,
     private readonly ide: IDE,
     private readonly webviewProtocol: VsCodeWebviewProtocol,
+    private readonly codeAwareManager: CodeAwareCompletionManager,
   ) {
     async function getAutocompleteModel() {
       const { config } = await configHandler.loadConfig();
@@ -202,6 +204,17 @@ export class ContinueCompletionProvider
       // Handle commit message input box
       let manuallyPassPrefix: string | undefined = undefined;
 
+      // CodeAware: 获取上下文信息
+      let codeAwareContext: CodeAwareContext | undefined = undefined;
+      try {
+        if (this.codeAwareManager.hasContext()) {
+          const context = this.codeAwareManager.getContext();
+          codeAwareContext = context;
+        }
+      } catch (error) {
+        console.warn("CodeAware: Failed to get context for autocomplete:", error);
+      }
+
       const input: AutocompleteInput = {
         pos,
         manuallyPassFileContents,
@@ -214,6 +227,7 @@ export class ContinueCompletionProvider
         recentlyVisitedRanges: this.recentlyVisitedRanges.getSnippets(),
         recentlyEditedRanges:
           await this.recentlyEditedTracker.getRecentlyEditedRanges(),
+        codeAwareContext, // CodeAware: 添加上下文
       };
 
       setupStatusBar(undefined, true);

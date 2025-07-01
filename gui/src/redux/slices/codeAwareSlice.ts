@@ -186,8 +186,8 @@ export const codeAwareSessionSlice = createSlice({
                 for (const codeChunk of state.codeChunks) {
                     // Check if line ranges overlap or match
                     const rangesOverlap = (
-                        codeInfo.lineRange[0] <= codeChunk.lineRange[1] &&
-                        codeInfo.lineRange[1] >= codeChunk.lineRange[0]
+                        codeInfo.range[0] <= codeChunk.range[1] &&
+                        codeInfo.range[1] >= codeChunk.range[0]
                     );
                     
                     // Check if content matches (partial match allowed)
@@ -298,6 +298,87 @@ export const codeAwareSessionSlice = createSlice({
         resetIdeCommFlags: (state) => {
             state.shouldClearIdeHighlights = false;
             state.codeChunksToHighlightInIde = [];
+        },
+        // 设置知识卡片加载状态
+        setKnowledgeCardLoading: (state, action: PayloadAction<{stepId: string, cardId: string, isLoading: boolean}>) => {
+            const { stepId, cardId, isLoading } = action.payload;
+            const step = state.steps.find(s => s.id === stepId);
+            if (step) {
+                const card = step.knowledgeCards.find(c => c.id === cardId);
+                if (card) {
+                    // 我们用一个特殊的标记来表示加载状态
+                    if (isLoading) {
+                        card.content = "::LOADING::";
+                    }
+                }
+            }
+        },
+        // 更新知识卡片内容和测试题目
+        updateKnowledgeCardContent: (state, action: PayloadAction<{
+            stepId: string, 
+            cardId: string, 
+            content: string, 
+            tests?: Array<{
+                question_type: "shortAnswer" | "multipleChoice",
+                question: {
+                    stem: string,
+                    standard_answer: string,
+                    options?: string[]
+                }
+            }>
+        }>) => {
+            const { stepId, cardId, content, tests } = action.payload;
+            const step = state.steps.find(s => s.id === stepId);
+            if (step) {
+                const card = step.knowledgeCards.find(c => c.id === cardId);
+                if (card) {
+                    card.content = content;
+                    
+                    // 更新测试题目
+                    if (tests && tests.length > 0) {
+                        card.tests = tests.map((test, index) => {
+                            if (test.question_type === "shortAnswer") {
+                                return {
+                                    id: `${cardId}-test-${index}`,
+                                    questionType: "shortAnswer" as const,
+                                    question: {
+                                        type: "shortAnswer" as const,
+                                        stem: test.question.stem,
+                                        standard_answer: test.question.standard_answer,
+                                        answer: "",
+                                        result: "unanswered" as const
+                                    }
+                                };
+                            } else {
+                                return {
+                                    id: `${cardId}-test-${index}`,
+                                    questionType: "multipleChoice" as const,
+                                    question: {
+                                        type: "multipleChoice" as const,
+                                        stem: test.question.stem,
+                                        standard_answer: test.question.standard_answer,
+                                        options: test.question.options || [],
+                                        answer: "",
+                                        answerIndex: -1,
+                                        result: "unanswered" as const
+                                    }
+                                };
+                            }
+                        });
+                    }
+                }
+            }
+        },
+        // 设置知识卡片内容加载失败
+        setKnowledgeCardError: (state, action: PayloadAction<{stepId: string, cardId: string, error: string}>) => {
+            const { stepId, cardId, error } = action.payload;
+            const step = state.steps.find(s => s.id === stepId);
+            if (step) {
+                const card = step.knowledgeCards.find(c => c.id === cardId);
+                if (card) {
+                    card.content = `加载失败: ${error}`;
+                }
+            }
         }
     },
     selectors:{
@@ -332,7 +413,10 @@ export const {
     updateCodeAwareMappings,
     setCodeAwareTitle,
     setLearningGoal,
-    resetIdeCommFlags
+    resetIdeCommFlags,
+    setKnowledgeCardLoading,
+    updateKnowledgeCardContent,
+    setKnowledgeCardError
 } = codeAwareSessionSlice.actions
 
 export const {

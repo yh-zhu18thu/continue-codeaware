@@ -70,6 +70,7 @@ const saveSubsetFilters = [
     "userRequirement",
     "learningGoal",
     "steps",
+    "currentStepIndex",
     "codeChunks",
     "codeAwareMappings",
     // Note: shouldClearIdeHighlights and codeChunksToHighlightInIde are intentionally not persisted

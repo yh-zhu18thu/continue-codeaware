@@ -10,8 +10,8 @@ import { setConfigError, setConfigResult } from "../redux/slices/configSlice";
 import { updateIndexingStatus } from "../redux/slices/indexingSlice";
 import { updateDocsSuggestions } from "../redux/slices/miscSlice";
 import {
-  addContextItemsAtIndex,
-  setInactive,
+    addContextItemsAtIndex,
+    setInactive,
 } from "../redux/slices/sessionSlice";
 import { setTTSActive } from "../redux/slices/uiSlice";
 import { store } from "../redux/store";
@@ -258,8 +258,8 @@ function useSetup() {
       // 检查文件路径和行号范围
       if (
         chunk.filePath === filePath &&
-        lineNumber >= chunk.lineRange[0] &&
-        lineNumber <= chunk.lineRange[1]
+        lineNumber >= chunk.range[0] &&
+        lineNumber <= chunk.range[1]
       ) {
         matchedChunks.push(chunk.id);
 
@@ -296,8 +296,8 @@ function useSetup() {
       // 检查文件路径和行号范围是否有重叠
       if (chunk.filePath === filePath) {
         const hasOverlap =
-          selectedLines[0] <= chunk.lineRange[1] &&
-          selectedLines[1] >= chunk.lineRange[0];
+          selectedLines[0] <= chunk.range[1] &&
+          selectedLines[1] >= chunk.range[0];
 
         if (hasOverlap) {
           matchedChunks.push(chunk.id);

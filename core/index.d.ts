@@ -463,7 +463,7 @@ export type CollaborationStatus = "empty" | "editing" | "paraphrasing" | "confir
 export type CodeChunk = {
   id: string;
   content: string;
-  lineRange: [number, number];
+  range: [number, number];
   isHighlighted: boolean;
   filePath: string;
 }
@@ -504,9 +504,10 @@ export type KnowledgeStatus = "covered" | "explored" | "examined";
 export interface KnowledgeCardItem {
   id: string;
   title: string;
-  content: string;
-  tests: SelfTestItem[]; //维护该知识卡片下的自测题目
+  content?: string;
+  tests?: SelfTestItem[]; //维护该知识卡片下的自测题目
   isHighlighted: boolean;
+  codeContext?: string; // 代码上下文，在触发knowledge card item生成时一并存储。
 }
 
 export type SelfTestResult = "correct" | "wrong" | "unanswered";

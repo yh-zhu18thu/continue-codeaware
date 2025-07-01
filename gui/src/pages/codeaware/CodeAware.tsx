@@ -18,7 +18,7 @@ import {
   updateHighlight
 } from "../../redux/slices/codeAwareSlice";
 import {
-  generateStepsFromRequirement,
+  generateKnowledgeCardDetail, generateStepsFromRequirement,
   paraphraseUserIntent
 } from "../../redux/thunks/codeAwareGeneration";
 import "./CodeAware.css";
@@ -179,6 +179,32 @@ export const CodeAware = () => {
       });
   }, [dispatch, userRequirement?.requirementDescription]);
 
+
+  // CodeAware: 获取学习目标和代码上下文
+  const learningGoal = useAppSelector((state) => state.codeAwareSession.learningGoal);
+
+  // 处理生成知识卡片内容
+  const handleGenerateKnowledgeCardContent = useCallback(
+    (stepId: string, cardId: string, theme: string, learningGoal: string, codeContext: string) => {
+      console.log("Generating knowledge card content for:", { stepId, cardId, theme });
+      
+      // 如果没有提供代码上下文，我们可以使用一个默认的上下文或者从当前的代码中获取
+      let contextToUse = codeContext;
+      if (!contextToUse) {
+        // 可以从当前的 IDE 状态获取代码上下文
+        contextToUse = "当前代码上下文暂时不可用，请基于知识卡片主题生成内容。";
+      }
+
+      dispatch(generateKnowledgeCardDetail({
+        stepId,
+        knowledgeCardId: cardId,
+        knowledgeCardTheme: theme,
+        learningGoal: learningGoal || "提升编程技能和理解相关概念",
+        codeContext: contextToUse
+      }));
+    },
+    [dispatch]
+  );
 
   const handleHighlightEvent = useCallback((e: HighlightEvent) => {
     // Dispatch highlight event to trigger mapping-based highlighting
@@ -359,7 +385,7 @@ export const CodeAware = () => {
                 
                 return {
                   title: kc.title,
-                  markdownContent: kc.content,
+                  markdownContent: kc.content || "", // 提供默认空字符串
                   testItems: testItems, // 传递所有测试项目
                   
                   // Highlight props
@@ -388,9 +414,15 @@ export const CodeAware = () => {
                     // TODO: 实现添加到收藏或重点标记功能
                   },
                   
-                  // Default states
+                  // Default states - 只有title时默认折叠
                   defaultTestMode: false,
-                  defaultExpanded: true,
+                  defaultExpanded: Boolean(kc.content), // 有内容时展开，只有title时折叠
+                  
+                  // Lazy loading props
+                  stepId: step.id,
+                  learningGoal: learningGoal,
+                  codeContext: kc.codeContext || "",
+                  onGenerateContent: handleGenerateKnowledgeCardContent,
                 };
               })}
               // isActive can be determined by currentFocusedFlowId if needed

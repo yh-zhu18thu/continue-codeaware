@@ -36,3 +36,24 @@ export function constructGenerateStepsPrompt(
         "description": "${userRequirement}"
     }`;
 }
+
+
+export function constructGenerateKnowledgeCardDetailPrompt(
+    knowledgeCardTheme: string,
+    learningGoal: string,
+    codeContext: string
+): string {
+    return `{
+        "task": "You are given a code snippet, as well as the theme of a related knowledge card. Generate the contents of the knowledge card, including detailed explanation of concepts and 1 to 3 test questions.",
+        "requirements": [
+            "The knowledge card should contain stuff related to the learning goal given in the input. Do not include content beyond the learning goal.",
+            "The questions should be about either high-level concepts introduced in the knowledge card, or details about implementation. You can use actual examples in the questions.",
+            "Respond in the same language as the project description.",
+            "You must follow this JSON format in your response: {\\"title\\": \\"(title of the knowledge card)\\", \\"content\\": \\"(content of the knowledge card. Markdown can be used here)\\", \\"tests\\":[{\\"question_type\\": \\"shortAnswer\\", \\"question\\": {\\"stem\\": \\"(the question itself)\\", \\"standard_answer\\": \\"(the correct answer)\\"}}]}",
+            "Please do not use invalid \`\`\`json character to envelope the JSON response, just return the JSON object directly."
+        ],
+        "knowledge_card_theme": "${knowledgeCardTheme}",
+        "learning_goal": "${learningGoal}",
+        "code_context": "${codeContext}"
+    }`;
+}

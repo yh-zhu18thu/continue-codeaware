@@ -6,16 +6,20 @@ import {
     StepItem,
 } from "core";
 import {
+    constructGenerateKnowledgeCardDetailPrompt,
     constructGenerateStepsPrompt,
     constructParaphraseUserIntentPrompt
 } from "core/llm/codeAwarePrompts";
 import {
     setCodeAwareTitle,
     setGeneratedSteps,
+    setKnowledgeCardError,
+    setKnowledgeCardLoading,
     setLearningGoal,
     setUserRequirementStatus,
     submitRequirementContent,
     updateCodeAwareMappings,
+    updateKnowledgeCardContent,
     updateRequirementChunks
 } from "../slices/codeAwareSlice";
 import { selectDefaultModel } from "../slices/configSlice";
@@ -187,6 +191,90 @@ export const generateStepsFromRequirement = createAsyncThunk<
         } catch (error) {
             console.error("Error during LLM request for generating steps:", error);
             dispatch(setUserRequirementStatus("editing"));
+        }
+    }  
+);
+
+//异步生成知识卡片具体内容
+export const generateKnowledgeCardDetail = createAsyncThunk<
+    void,
+    {
+        stepId: string;
+        knowledgeCardId: string; 
+        knowledgeCardTheme: string; // 知识卡片的主题
+        learningGoal: string; // 学习目标
+        codeContext: string; // 代码上下文
+    },
+    ThunkApiType
+>(
+    "codeAware/GenerateKnowledgeCardDetail", 
+    async (
+        { stepId, knowledgeCardId, knowledgeCardTheme, learningGoal, codeContext }, 
+        { dispatch, extra, getState })=> {
+        try{
+            const state = getState();
+            const defaultModel = selectDefaultModel(state);
+            if (!defaultModel) {
+                throw new Error("Default model not defined");
+            }
+
+            // 设置加载状态
+            dispatch(setKnowledgeCardLoading({ stepId, cardId: knowledgeCardId, isLoading: true }));
+
+            // 构造提示词并发送请求
+            const prompt = constructGenerateKnowledgeCardDetailPrompt(knowledgeCardTheme, learningGoal, codeContext);
+
+            console.log("generateKnowledgeCardDetail called with:", {
+                stepId,
+                knowledgeCardId,
+                knowledgeCardTheme,
+                learningGoal,
+                codeContext: codeContext.substring(0, 100) + "..." // 只打印前100个字符
+            });
+
+            const result = await extra.ideMessenger.request("llm/complete", {
+                prompt: prompt,
+                completionOptions: {},
+                title: defaultModel.title
+            });
+
+            if (result.status !== "success" || !result.content) {
+                throw new Error("LLM request failed or returned empty content");
+            }
+
+            console.log("LLM response for knowledge card:", result.content);
+
+            // 解析 LLM 返回的 JSON 内容
+            try {
+                const jsonResponse = JSON.parse(result.content);
+                const content = jsonResponse.content || "";
+                const tests = jsonResponse.tests || [];
+
+                // 更新知识卡片内容
+                dispatch(updateKnowledgeCardContent({
+                    stepId,
+                    cardId: knowledgeCardId,
+                    content,
+                    tests
+                }));
+
+                console.log("Knowledge card content updated successfully");
+            } catch (parseError) {
+                console.error("Error parsing LLM response:", parseError);
+                dispatch(setKnowledgeCardError({
+                    stepId,
+                    cardId: knowledgeCardId,
+                    error: "解析LLM响应失败"
+                }));
+            }
+        } catch(error) {
+            console.error("Error during knowledge card generation:", error);
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            dispatch(setKnowledgeCardError({
+                stepId,
+                cardId: knowledgeCardId,
+                error: errorMessage
+            }));
         }
     }
 );

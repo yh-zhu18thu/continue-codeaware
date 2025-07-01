@@ -3,12 +3,13 @@ import { HighlightEvent } from "core";
 import React, { useEffect, useRef, useState } from 'react';
 import styled from "styled-components";
 import {
-    defaultBorderRadius,
-    lightGray,
-    vscForeground,
-    vscInputBackground
+  defaultBorderRadius,
+  lightGray,
+  vscForeground,
+  vscInputBackground
 } from "../../../../components";
 import KnowledgeCardContent from './KnowledgeCardContent';
+import KnowledgeCardLoader from './KnowledgeCardLoader';
 import KnowledgeCardMCQ from './KnowledgeCardMCQ';
 import KnowledgeCardSAQ from './KnowledgeCardSAQ';
 import KnowledgeCardToolBar from './KnowledgeCardToolBar';
@@ -112,7 +113,7 @@ export interface KnowledgeCardProps {
   onAddToCollectionClick?: () => void;
 
   // Content props
-  markdownContent: string;
+  markdownContent?: string; // 内容现在是可选的
 
   // Multiple test items support
   testItems: TestItem[]; // Array of test items, ordered from newest to oldest
@@ -130,11 +131,17 @@ export interface KnowledgeCardProps {
   cardId?: string;
   onHighlightEvent?: (event: HighlightEvent) => void;
   onClearHighlight?: () => void;
+
+  // Lazy loading props
+  stepId?: string;
+  learningGoal?: string;
+  codeContext?: string;
+  onGenerateContent?: (stepId: string, cardId: string, theme: string, learningGoal: string, codeContext: string) => void;
 }
 
 const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
   title,
-  markdownContent,
+  markdownContent = "", // 为markdownContent提供默认空字符串
   onChatClick,
   onAddToCollectionClick,
   testItems = [],
@@ -146,6 +153,10 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
   cardId,
   onHighlightEvent,
   onClearHighlight,
+  stepId,
+  learningGoal = "",
+  codeContext = "",
+  onGenerateContent,
 }) => {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const [isTestMode, setIsTestMode] = useState(defaultTestMode);
@@ -232,6 +243,12 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
       }
     }
     
+    // If card is being expanded and content is empty, trigger lazy loading
+    if (!wasExpanded && !markdownContent && onGenerateContent && stepId && cardId) {
+      console.log('Triggering lazy loading for knowledge card:', cardId);
+      onGenerateContent(stepId, cardId, title, learningGoal, codeContext);
+    }
+    
     // Trigger highlight event when expanding/collapsing
     if (onHighlightEvent && cardId) {
       onHighlightEvent({
@@ -242,6 +259,12 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
   };
 
   const onQuestionMarkClick = () => {
+    // 如果没有测试项目，则不允许切换到测试模式
+    if (testItems.length === 0) {
+      console.log('No test items available for this knowledge card');
+      return;
+    }
+    
     const wasInTestMode = isTestMode;
     setIsTestMode(!isTestMode);
     
@@ -279,17 +302,34 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
         onQuestionClick={onQuestionMarkClick} // Pass to the actual prop name in KnowledgeCardToolBar
         onChatClick={onChatClick}
         onAddToCollectionClick={onAddToCollectionClick}
+        isQuestionDisabled={testItems.length === 0} // 没有测试项目时禁用问号按钮
         isHighlighted={isHighlighted}
         isFlickering={isFlickering}
       />
       <ContentArea isVisible={isExpanded}>
 
-        {!isTestMode && (
+        {!isTestMode && markdownContent === "::LOADING::" && (
+          <KnowledgeCardLoader text="正在生成知识卡片内容..." />
+        )}
+
+        {!isTestMode && markdownContent && markdownContent !== "::LOADING::" && (
           <KnowledgeCardContent 
             markdownContent={markdownContent} 
             isHighlighted={isHighlighted}
             isFlickering={isFlickering && isExpanded}
           />
+        )}
+
+        {!isTestMode && !markdownContent && (
+          <div style={{
+            padding: '12px',
+            color: '#888',
+            fontSize: '14px',
+            fontStyle: 'italic',
+            textAlign: 'center'
+          }}>
+            此知识卡片暂无详细内容
+          </div>
         )}
         
         {isTestMode && testItems.length > 0 && currentTest && (

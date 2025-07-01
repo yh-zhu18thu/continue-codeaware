@@ -340,6 +340,9 @@ export class ContinueCompletionProvider
           arguments: [input.completionId, this.completionProvider],
         },
       );
+      
+
+  
 
       (completionItem as any).completeBracketPairs = true;
       return [completionItem];

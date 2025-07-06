@@ -86,6 +86,7 @@ export class ContinueCompletionProvider
     private readonly webviewProtocol: VsCodeWebviewProtocol,
     private readonly codeAwareManager: CodeAwareCompletionManager,
   ) {
+    console.log("ContinueCompletionProvider: Initializing...");
     async function getAutocompleteModel() {
       const { config } = await configHandler.loadConfig();
       if (!config) {
@@ -114,13 +115,17 @@ export class ContinueCompletionProvider
     token: vscode.CancellationToken,
     //@ts-ignore
   ): ProviderResult<InlineCompletionItem[] | InlineCompletionList> {
+    console.log("ContinueCompletionProvider: provideInlineCompletionItems called");
+
     const enableTabAutocomplete =
       getStatusBarStatus() === StatusBarStatus.Enabled;
     if (token.isCancellationRequested || !enableTabAutocomplete) {
+      console.log("ContinueCompletionProvider: tab autocompletion not enabled");
       return null;
     }
 
     if (document.uri.scheme === "vscode-scm") {
+      console.log("ContinueCompletionProvider: vscode scm");
       return null;
     }
 
@@ -138,6 +143,7 @@ export class ContinueCompletionProvider
         document.getText(context.selectedCompletionInfo.range),
       )
     ) {
+      console.log("ContinueCompletionProvider: not a predix of intellisense");
       return null;
     }
 
@@ -152,6 +158,8 @@ export class ContinueCompletionProvider
     };
     const selectedCompletionInfo = context.selectedCompletionInfo;
     this._lastVsCodeCompletionInput = newVsCodeInput;
+
+    console.log("ContinueCompletionProvider: begin completion");
 
     try {
       const abortController = new AbortController();
@@ -208,7 +216,7 @@ export class ContinueCompletionProvider
       let codeAwareContext: CodeAwareContext | undefined = undefined;
       try {
         if (this.codeAwareManager.hasContext()) {
-          const context = this.codeAwareManager.getContext();
+          const context = await this.codeAwareManager.getContext();
           codeAwareContext = context;
         }
       } catch (error) {
@@ -340,9 +348,22 @@ export class ContinueCompletionProvider
           arguments: [input.completionId, this.completionProvider],
         },
       );
-      
 
-  
+      console.log("ContinueCompletionProvider: completionText", completionText);
+      
+      // CodeAware: 发送代码补全信息到webview
+      try {
+        const prefixCode = document.getText(new vscode.Range(new vscode.Position(0, 0), startPos));
+        
+        await this.webviewProtocol.request("codeCompletionGenerated", {
+          prefixCode: prefixCode,
+          completionText: completionText,
+          range: [startPos.line, startPos.line + (completionText.split('\n').length - 1)],
+          filePath: document.uri.toString()
+        });
+      } catch (error) {
+        console.warn("CodeAware: Failed to send completion to webview:", error);
+      }
 
       (completionItem as any).completeBracketPairs = true;
       return [completionItem];

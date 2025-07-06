@@ -734,6 +734,7 @@ export class Core {
 
     // Autocomplete
     on("autocomplete/complete", async (msg) => {
+      console.log("autocomplete/complete", msg.data);
       const outcome =
         await this.completionProvider.provideInlineCompletionItems(
           msg.data,

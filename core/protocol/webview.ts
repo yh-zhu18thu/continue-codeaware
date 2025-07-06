@@ -1,4 +1,5 @@
 import { ConfigResult, ConfigValidationError } from "@continuedev/config-yaml";
+
 import type {
   BrowserSerializedContinueConfig,
   ContextItemWithId,
@@ -39,4 +40,6 @@ export type ToWebviewFromIdeOrCoreProtocol = {
   getCurrentSessionId: [undefined, string];
   "docs/suggestions": [PackageDocsResult[], void];
   "jetbrains/setColors": [Record<string, string>, void];
+  //CodeAware: 获取完整的CodeAware上下文
+  getCodeAwareContext: [undefined, { userRequirement: string; currentStep: string; nextStep: string }];
 };

@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 
 interface CodeChunk {
   filePath: string;
-  lineRange: [number, number];
+  range: [number, number];
 }
 
 export class HighlightCodeManager {
@@ -25,7 +25,7 @@ export class HighlightCodeManager {
 
       // Create the range from the CodeChunk lineRange
         const editor = vscode.window.activeTextEditor;
-        const [startLine, endLine] = codeChunk.lineRange;
+        const [startLine, endLine] = codeChunk.range;
         if (!editor) {
           console.warn(`No active editor found for file ${filepath}`);
           return;

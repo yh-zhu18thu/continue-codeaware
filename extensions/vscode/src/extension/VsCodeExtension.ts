@@ -63,6 +63,7 @@ export class VsCodeExtension {
   private codeAwareManager: CodeAwareCompletionManager;
 
   constructor(context: vscode.ExtensionContext) {
+    console.log("VsCodeExtension: Initializing...");
     // Register auth provider
     this.workOsAuthProvider = new WorkOsAuthProvider(context);
     this.workOsAuthProvider.refreshSessions();
@@ -70,6 +71,7 @@ export class VsCodeExtension {
 
     this.editDecorationManager = new EditDecorationManager(context);
     this.highlightCodeManager = new HighlightCodeManager();
+    // CodeAware manager will be initialized later with webview protocol
     this.codeAwareManager = new CodeAwareCompletionManager();
 
     let resolveWebviewProtocol: any = undefined;
@@ -110,6 +112,9 @@ export class VsCodeExtension {
       ),
     );
     resolveWebviewProtocol(this.sidebar.webviewProtocol);
+
+    // Update CodeAware manager with webview protocol
+    this.codeAwareManager = new CodeAwareCompletionManager(this.sidebar.webviewProtocol);
 
     // Config Handler with output channel
     const outputChannel = vscode.window.createOutputChannel(
@@ -373,7 +378,7 @@ export class VsCodeExtension {
       void this.core.invoke("didChangeActiveTextEditor", { filepath });
     });
 
-    // CodeAware: 监听光标位置变化
+    // CodeAware: 监听选取的变化
     vscode.window.onDidChangeTextEditorSelection(async (event) => {
       const editor = event.textEditor;
       const document = editor.document;

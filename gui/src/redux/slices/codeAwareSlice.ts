@@ -8,6 +8,7 @@ import {
     CodeChunk,
     CollaborationStatus,
     HighlightEvent,
+    KnowledgeCardItem,
     ProgramRequirement,
     RequirementChunk,
     StepItem
@@ -46,7 +47,7 @@ const initialCodeAwareState: CodeAwareSessionState = {
     },
     learningGoal: "",
     steps: [],
-    currentStepIndex: -1, // -1表示还没开始任何步骤
+    currentStepIndex: 0,
     codeChunks: [],
     codeAwareMappings: [],
     shouldClearIdeHighlights: false,
@@ -69,6 +70,7 @@ export const codeAwareSessionSlice = createSlice({
         submitRequirementContent: (state, action: PayloadAction<string>) => {
             if (state.userRequirement) {
                 state.userRequirement.requirementDescription = action.payload;
+                state.currentStepIndex = 0; // Reset to the first step when requirement is submitted
             }
         },
         setGeneratedSteps: (state, action: PayloadAction<StepItem[]>) => {
@@ -110,12 +112,11 @@ export const codeAwareSessionSlice = createSlice({
                 requirementStatus: "empty"
             };
             state.steps = [];
-            state.currentStepIndex = -1; // 重置当前步骤索引
+            state.currentStepIndex = 0; // 重置当前步骤索引
             state.codeAwareMappings = [];
             state.codeChunks = [];
             state.shouldClearIdeHighlights = false;
             state.codeChunksToHighlightInIde = [];
-
         },
         clearAllHighlights: (state) => {
             // Reset highlight status for all mappings
@@ -379,6 +380,46 @@ export const codeAwareSessionSlice = createSlice({
                     card.content = `加载失败: ${error}`;
                 }
             }
+        },
+        // 添加新的代码块（从autocomplete生成）
+        addCodeChunkFromCompletion: (state, action: PayloadAction<{
+            prefixCode: string;
+            completionText: string;
+            range: [number, number];
+            filePath: string;
+        }>) => {
+            const { completionText, range, filePath } = action.payload;
+            const newCodeChunk: CodeChunk = {
+                id: `c-${state.codeChunks.length + 1}`,
+                content: completionText,
+                range: range,
+                isHighlighted: false,
+                filePath: filePath
+            };
+            state.codeChunks.push(newCodeChunk);
+        },
+        // 创建新的知识卡片（不包含content和tests）
+        createKnowledgeCard: (state, action: PayloadAction<{
+            stepId: string;
+            cardId: string;
+            theme: string;
+        }>) => {
+            const { stepId, cardId, theme } = action.payload;
+            const step = state.steps.find(s => s.id === stepId);
+            if (step) {
+                const newCard: KnowledgeCardItem = {
+                    id: cardId,
+                    title: theme,
+                    content: "",
+                    tests: [],
+                    isHighlighted: false
+                };
+                step.knowledgeCards.push(newCard);
+            }
+        },
+        // 创建新的mapping
+        createCodeAwareMapping: (state, action: PayloadAction<CodeAwareMapping>) => {
+            state.codeAwareMappings.push(action.payload);
         }
     },
     selectors:{
@@ -392,6 +433,22 @@ export const codeAwareSessionSlice = createSlice({
         },
         selectIsStepsGenerated: (state: CodeAwareSessionState) => {
             return state.userRequirement?.requirementStatus === "finalized" && state.steps.length > 0;
+        },
+        selectCurrentStep: (state: CodeAwareSessionState) => {
+            if (state.currentStepIndex >= 0 && state.currentStepIndex < state.steps.length) {
+                return state.steps[state.currentStepIndex];
+            }
+            return null;
+        },
+        selectNextStep: (state: CodeAwareSessionState) => {
+            const nextIndex = state.currentStepIndex + 1;
+            if (nextIndex >= 0 && nextIndex < state.steps.length) {
+                return state.steps[nextIndex];
+            }
+            return null;
+        },
+        selectLearningGoal: (state: CodeAwareSessionState) => {
+            return state.learningGoal;
         }
     }
 });
@@ -416,12 +473,18 @@ export const {
     resetIdeCommFlags,
     setKnowledgeCardLoading,
     updateKnowledgeCardContent,
-    setKnowledgeCardError
+    setKnowledgeCardError,
+    addCodeChunkFromCompletion,
+    createKnowledgeCard,
+    createCodeAwareMapping
 } = codeAwareSessionSlice.actions
 
 export const {
     selectIsRequirementInEditMode,
-    selectIsStepsGenerated
+    selectIsStepsGenerated,
+    selectCurrentStep,
+    selectNextStep,
+    selectLearningGoal
 } = codeAwareSessionSlice.selectors
 
 export default codeAwareSessionSlice.reducer;

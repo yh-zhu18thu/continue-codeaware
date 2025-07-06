@@ -57,3 +57,26 @@ export function constructGenerateKnowledgeCardDetailPrompt(
         "code_context": "${codeContext}"
     }`;
 }
+
+
+export function constructAnalyzeCompletionStepPrompt(
+    prefixCode: string,
+    newCode: string,
+    currentStep: string,
+    nextStep: string,
+    learningGoal: string
+): string {
+    return `{
+        "task": "You are given a code snippet, as well as the next part of the code. You are also given the current step of the project, and the subsequent step. Decide if we should move on to the subsequent step AFTER the new code is appended to the snippet. Then provide a knowledge card based on the new code and learning goals given in the input.",
+        "requirements": [
+            "The knowledge card should contain stuff the user might be interested in, or questions the user might have. All these should be in line with the learning goals",
+            "Respond in the same language as the project description.",
+            "You must follow this JSON format in your response: {\\"to_next_step\\": (true or false), \\"knowledge_card_themes\\": [\\"(theme 1)\\", \\"(theme 2)\\", ...]}"
+        ],
+        "prefix_code": "${prefixCode}",
+        "new_code": "${newCode}",
+        "current_step": "${currentStep}",
+        "next_step": "${nextStep}",
+        "learning_goal": "${learningGoal}"
+    }`;
+}

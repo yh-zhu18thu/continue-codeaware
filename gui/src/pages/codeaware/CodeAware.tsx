@@ -7,9 +7,11 @@ import {
   vscForeground
 } from "../../components";
 import { IdeMessengerContext } from "../../context/IdeMessenger";
+import { useWebviewListener } from "../../hooks/useWebviewListener";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks";
 import {
   clearAllHighlights,
+  newCodeAwareSession, // Add this import
   resetIdeCommFlags,
   selectIsRequirementInEditMode, // Import submitRequirementContent
   selectIsStepsGenerated,
@@ -90,6 +92,45 @@ export const CodeAware = () => {
   );
 
   const steps = useAppSelector((state) => state.codeAwareSession.steps); // Get steps data
+
+  // Get current CodeAware context for IDE synchronization
+  const currentStep = useAppSelector(state => {
+    const currentStepIndex = state.codeAwareSession.currentStepIndex;
+    if (currentStepIndex >= 0 && currentStepIndex < state.codeAwareSession.steps.length) {
+      return state.codeAwareSession.steps[currentStepIndex];
+    }
+    return null;
+  });
+  
+  const nextStep = useAppSelector(state => {
+    const nextStepIndex = state.codeAwareSession.currentStepIndex + 1;
+    if (nextStepIndex >= 0 && nextStepIndex < state.codeAwareSession.steps.length) {
+      return state.codeAwareSession.steps[nextStepIndex];
+    }
+    return null;
+  });
+
+  // Add webview listener for getting CodeAware context
+  useWebviewListener(
+    "getCodeAwareContext",
+    async () => {
+      return {
+        userRequirement: userRequirement?.requirementDescription || "",
+        currentStep: currentStep?.title || "",
+        nextStep: nextStep?.title || ""
+      };
+    },
+    [userRequirement, currentStep, nextStep]
+  );
+
+  // Add webview listener for new session event to initialize CodeAware session
+  useWebviewListener(
+    "newSession",
+    async () => {
+      dispatch(newCodeAwareSession());
+    },
+    [dispatch]
+  );
 
   // Get IDE communication flags
   const shouldClearIdeHighlights = useAppSelector((state) => state.codeAwareSession.shouldClearIdeHighlights);

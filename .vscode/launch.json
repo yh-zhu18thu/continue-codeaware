@@ -84,7 +84,8 @@
         // Pass a directory to run tests in
         "${workspaceFolder}/extensions/vscode/manual-testing-sandbox",
         "--extensionDevelopmentPath=${workspaceFolder}/extensions/vscode",
-        "--extensionTestsPath=${workspaceFolder}/extensions/vscode/out/test/runner/mochaRunner"
+        "--extensionTestsPath=${workspaceFolder}/extensions/vscode/out/test/runner/mochaRunner",
+        "--disable-extensions=GitHub.copilot"
       ],
       "outFiles": [
         // Allows setting breakpoints in test suites across the /src folder

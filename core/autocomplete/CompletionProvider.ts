@@ -53,6 +53,8 @@ export class CompletionProvider {
 private async _prepareLlm(): Promise<ILLM | undefined> {
     const llm = await this._injectedGetLlm();
 
+    console.log("getting llm",llm?.title);
+
     if (!llm) {
       return undefined;
     }
@@ -149,8 +151,11 @@ private async _prepareLlm(): Promise<ILLM | undefined> {
         return undefined;
       }
 
+      console.log("CompletionProvider: Begin Preparation");
+
       const llm = await this._prepareLlm();
       if (!llm) {
+        console.log("No completion llm");
         return undefined;
       }
 
@@ -175,11 +180,15 @@ private async _prepareLlm(): Promise<ILLM | undefined> {
         this.ide.getWorkspaceDirs(),
       ]);
 
+      console.log("CompletionProvider: Generating prompt:");
+
       const { prompt, prefix, suffix, completionOptions } = renderPrompt({
         snippetPayload,
         workspaceDirs,
         helper,
       });
+
+      console.log("CompletionProvider: Generated prompt:", prompt);
 
       // Completion
       let completion: string | undefined = "";
@@ -218,6 +227,8 @@ private async _prepareLlm(): Promise<ILLM | undefined> {
           return undefined;
         }
 
+        console.log("CompletionProvider completion:", completion);
+
         const processedCompletion = helper.options.transform
           ? postprocessCompletion({
               completion,
@@ -228,6 +239,7 @@ private async _prepareLlm(): Promise<ILLM | undefined> {
           : completion;
 
         completion = processedCompletion;
+        console.log("CompletionProvider: Postprocessed completion:", processedCompletion);
       }
 
       if (!completion) {
@@ -265,6 +277,15 @@ private async _prepareLlm(): Promise<ILLM | undefined> {
       if (ideType === "jetbrains") {
         this.markDisplayed(input.completionId, outcome);
       }
+
+      console.log("CompletionProvider: Autocompletion completed:", {
+        time: outcome.time,
+        model: outcome.modelName,
+        provider: outcome.modelProvider,
+        cacheHit: outcome.cacheHit,
+        filepath: outcome.filepath,
+        content: outcome.completion,
+      });
 
       return outcome;
     } catch (e: any) {

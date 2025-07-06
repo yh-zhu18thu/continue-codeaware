@@ -10,11 +10,12 @@ import { setConfigError, setConfigResult } from "../redux/slices/configSlice";
 import { updateIndexingStatus } from "../redux/slices/indexingSlice";
 import { updateDocsSuggestions } from "../redux/slices/miscSlice";
 import {
-    addContextItemsAtIndex,
-    setInactive,
+  addContextItemsAtIndex,
+  setInactive,
 } from "../redux/slices/sessionSlice";
 import { setTTSActive } from "../redux/slices/uiSlice";
 import { store } from "../redux/store";
+import { analyzeCompletionAndUpdateStep } from "../redux/thunks/codeAwareGeneration";
 import { selectProfileThunk } from "../redux/thunks/profileAndOrg";
 import { refreshSessionMetadata } from "../redux/thunks/session";
 import { streamResponseThunk } from "../redux/thunks/streamResponse";
@@ -246,6 +247,26 @@ function useSetup() {
     [defaultModelTitle],
   );
 
+  // CodeAware: 监听代码补全生成事件
+  useWebviewListener("codeCompletionGenerated", async (data) => {
+    const { prefixCode, completionText, range, filePath } = data;
+    
+    console.log("CodeAware: Code completion generated:", {
+      prefixLength: prefixCode.length,
+      completionLength: completionText.length,
+      range,
+      filePath
+    });
+
+    // 分发thunk来处理代码补全分析
+    dispatch(analyzeCompletionAndUpdateStep({
+      prefixCode,
+      completionText,
+      range,
+      filePath
+    }));
+  });
+
   // CodeAware: 监听光标位置变化事件
   useWebviewListener("cursorPositionChanged", async (data) => {
     const { filePath, lineNumber, contextLines, startLine, endLine } = data;
@@ -276,12 +297,12 @@ function useSetup() {
     }
 
     // 发送调试信息到控制台
-    console.log("Cursor Position Changed:", {
+    /*console.log("Cursor Position Changed:", {
       filePath,
       lineNumber,
       matchedChunks,
       totalCodeChunks: codeChunks.length,
-    });
+    });*/
   });
 
   // CodeAware: 监听代码选择变化事件

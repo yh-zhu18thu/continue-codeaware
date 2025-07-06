@@ -63,6 +63,8 @@ export type ToIdeFromWebviewProtocol = ToIdeFromWebviewOrCoreProtocol & {
   //CodeAware: 向ide同步当前的任务描述和当前/下一步骤等
   syncCodeAwareRequirement: [{ userRequirement: string }, void];
   syncCodeAwareSteps: [{ currentStep: string; nextStep: string }, void];
+  //CodeAware: 获取完整的CodeAware上下文
+  getCodeAwareContext: [undefined, { userRequirement: string; currentStep: string; nextStep: string }];
 };
 
 export type ToWebviewFromIdeProtocol = ToWebviewFromIdeOrCoreProtocol & {
@@ -114,5 +116,12 @@ export type ToWebviewFromIdeProtocol = ToWebviewFromIdeOrCoreProtocol & {
     filePath: string;
     selectedLines: [number, number];
     selectedContent: string;
+  }, void];
+  // CodeAware: 代码补全事件
+  codeCompletionGenerated: [{
+    prefixCode: string;
+    completionText: string;
+    range: [number, number];
+    filePath: string;
   }, void];
 };

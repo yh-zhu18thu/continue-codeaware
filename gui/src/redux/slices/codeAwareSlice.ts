@@ -1,5 +1,6 @@
 //CATODO: 参考着sessionSlice中chatHistory的实现方式加入codeaware的所有数据结构，包括UserIntent,UserMastery,Flow,KnowledgeCard,Quizzes
 import {
+    createSelector,
     createSlice,
     PayloadAction
 } from '@reduxjs/toolkit';
@@ -14,6 +15,9 @@ import {
     StepItem
 } from 'core';
 import { v4 as uuidv4 } from "uuid";
+
+// Import RootState for proper typing
+import type { RootState } from '../store';
 
 type CodeAwareSessionState = {
     currentSessionId: string;
@@ -70,6 +74,10 @@ export const codeAwareSessionSlice = createSlice({
         submitRequirementContent: (state, action: PayloadAction<string>) => {
             if (state.userRequirement) {
                 state.userRequirement.requirementDescription = action.payload;
+                // Initialize highlightChunks if it doesn't exist
+                if (!state.userRequirement.highlightChunks) {
+                    state.userRequirement.highlightChunks = [];
+                }
                 state.currentStepIndex = 0; // Reset to the first step when requirement is submitted
             }
         },
@@ -91,11 +99,19 @@ export const codeAwareSessionSlice = createSlice({
         },
         updateRequirementHighlightChunks: (state, action: PayloadAction<RequirementChunk[]>) => {
             if (state.userRequirement) {
+                // Initialize highlightChunks if it doesn't exist
+                if (!state.userRequirement.highlightChunks) {
+                    state.userRequirement.highlightChunks = [];
+                }
                 state.userRequirement.highlightChunks = action.payload;
             }
         },
         toggleRequirementChunkHighlight: (state, action: PayloadAction<string>) => {
             if (state.userRequirement?.highlightChunks) {
+                // Initialize highlightChunks if it doesn't exist
+                if (!state.userRequirement.highlightChunks) {
+                    state.userRequirement.highlightChunks = [];
+                }
                 const chunk = state.userRequirement.highlightChunks.find(c => c.id === action.payload);
                 if (chunk) {
                     chunk.isHighlighted = !chunk.isHighlighted;
@@ -109,8 +125,10 @@ export const codeAwareSessionSlice = createSlice({
             state.workspaceDirectory = ""; // Reset workspace directory
             state.userRequirement = {
                 requirementDescription: "",
-                requirementStatus: "empty"
+                requirementStatus: "empty",
+                highlightChunks: []
             };
+            state.learningGoal = "";
             state.steps = [];
             state.currentStepIndex = 0; // 重置当前步骤索引
             state.codeAwareMappings = [];
@@ -284,7 +302,11 @@ export const codeAwareSessionSlice = createSlice({
         },
         updateRequirementChunks: (state, action: PayloadAction<RequirementChunk[]>) => {
             if (state.userRequirement) { 
-                state.userRequirement.highlightChunks?.push(...action.payload);
+                // Initialize highlightChunks if it doesn't exist
+                if (!state.userRequirement.highlightChunks) {
+                    state.userRequirement.highlightChunks = [];
+                }
+                state.userRequirement.highlightChunks.push(...action.payload);
             }
         },
         updateCodeChunks: (state, action: PayloadAction<CodeChunk[]>) => {
@@ -452,6 +474,17 @@ export const codeAwareSessionSlice = createSlice({
         }
     }
 });
+
+// Create memoized selectors outside of the slice to prevent re-renders
+export const selectRequirementHighlightChunks = createSelector(
+    (state: RootState) => state.codeAwareSession.userRequirement?.highlightChunks,
+    (highlightChunks): RequirementChunk[] => highlightChunks || []
+);
+
+export const selectRequirementText = createSelector(
+    (state: RootState) => state.codeAwareSession.userRequirement?.requirementDescription,
+    (requirementDescription): string => requirementDescription || ""
+);
 
 export const {
     setUserRequirementStatus,

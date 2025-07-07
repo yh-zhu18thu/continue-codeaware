@@ -8,6 +8,7 @@ import {
     vscInputBackground
 } from "../../../../components";
 import { useAppSelector } from "../../../../redux/hooks";
+import { selectRequirementHighlightChunks, selectRequirementText } from "../../../../redux/slices/codeAwareSlice";
 import RequirementDisplayToolBar from "./RequirementDisplayToolbar";
 
 // Flickering animation for highlight state changes
@@ -96,13 +97,8 @@ export default function RequirementDisplay({
     onChunkFocus,
     onClearHighlight,
 }: RequirementDisplayProps) {
-    const requirementText = useAppSelector(
-        (state) => state.codeAwareSession.userRequirement?.requirementDescription || ""
-    );
-    
-    const highlightChunks = useAppSelector(
-        (state) => state.codeAwareSession.userRequirement?.highlightChunks || []
-    );
+    const requirementText = useAppSelector(selectRequirementText);
+    const highlightChunks = useAppSelector(selectRequirementHighlightChunks);
 
     // Track previous highlight states for flickering animation using useRef to avoid circular dependency
     const previousHighlightStatesRef = useRef<Map<string, boolean>>(new Map());
@@ -111,6 +107,8 @@ export default function RequirementDisplay({
 
     // Monitor highlight state changes and trigger flickering
     useEffect(() => {
+        console.log("Highlight chunks updated:", highlightChunks);
+
         const newFlickering = new Set<string>();
         
         highlightChunks.forEach(chunk => {

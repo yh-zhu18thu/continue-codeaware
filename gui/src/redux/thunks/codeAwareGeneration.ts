@@ -127,6 +127,7 @@ export const generateStepsFromRequirement = createAsyncThunk<
             // 解析 LLM 返回的 JSON 内容
             try {
                 const jsonResponse = JSON.parse(result.content);
+                console.log("LLM response JSON:", jsonResponse);
                 title = jsonResponse.title || "";
                 taskRequirements = jsonResponse.tasks || "";
                 learningGoal = jsonResponse.learning_goal || "";
@@ -167,6 +168,8 @@ export const generateStepsFromRequirement = createAsyncThunk<
                 throw new Error(`Failed to generate steps: ${errorMessage}`);
                 // CATODO: UI提示，告知用户请求失败
             }
+            console.log("userRequirement chunks:", requirementChunks);
+
             // 更新 Redux 状态
             dispatch(submitRequirementContent(userRequirement));
             dispatch(setCodeAwareTitle(title));

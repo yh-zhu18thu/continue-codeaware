@@ -3,6 +3,7 @@ import { SnippetPayload } from "../snippets";
 import {
   AutocompleteCodeSnippet,
   AutocompleteSnippet,
+  AutocompleteSnippetType,
 } from "../snippets/types";
 import { HelperVars } from "../util/HelperVars";
 
@@ -38,6 +39,100 @@ function filterSnippetsAlreadyInCaretWindow(
   );
 }
 
+/**
+ * Checks if we're in a sandbox environment by looking for manual-testing-sandbox in workspace paths
+ */
+function isSandboxEnvironment(workspaceUris: string[]): boolean {
+  return workspaceUris.some(uri => 
+    uri.includes("manual-testing-sandbox")
+  );
+}
+
+/**
+ * Filters out snippets that are not from sandbox folders when debugging
+ * In sandbox environments, we only want to include snippets from the sandbox folder itself
+ */
+function filterNonSandboxSnippets(
+  snippets: AutocompleteCodeSnippet[],
+  workspaceUris: string[],
+): AutocompleteCodeSnippet[] {
+  if (!isSandboxEnvironment(workspaceUris)) {
+    return snippets; // Not in sandbox, don't filter
+  }
+
+  // In sandbox environment, only keep snippets from sandbox folders
+  return snippets.filter(snippet => {
+    return workspaceUris.some(workspaceUri => 
+      snippet.filepath.startsWith(workspaceUri)
+    );
+  });
+}
+
+/**
+ * Checks if a diff snippet should be filtered out in sandbox environment
+ * Returns true if the snippet should be kept
+ */
+function shouldKeepDiffSnippet(snippet: AutocompleteSnippet, workspaceUris: string[]): boolean {
+  if (!isSandboxEnvironment(workspaceUris)) {
+    return true; // Not in sandbox, keep all diffs
+  }
+
+  const content = snippet.content;
+  console.log("[Debug] Analyzing diff content:");
+  console.log(content.substring(0, 300) + (content.length > 300 ? "..." : ""));
+  
+  // Look for file paths in diff format with multiple patterns
+  const patterns = [
+    /^diff --git a\/(.+?)\s+b\/(.+?)$/gm,  // diff --git a/path b/path
+    /^[+-]{3}\s+(?:[ab]\/)?(.+?)(?:\s|$)/gm,  // --- a/path or +++ b/path
+    /^index\s+[\da-f]+\.\.[\da-f]+\s+\d+$/gm,  // index line (usually after file paths)
+  ];
+  
+  let foundPaths = [];
+  let hasNonSandboxPaths = false;
+  
+  // Try each pattern to extract file paths
+  for (const pattern of patterns) {
+    let match;
+    while ((match = pattern.exec(content)) !== null) {
+      // Get file paths from capture groups
+      for (let i = 1; i < match.length; i++) {
+        if (match[i]) {
+          foundPaths.push(match[i]);
+        }
+      }
+    }
+  }
+  
+  // Remove duplicates and check each path
+  const uniquePaths = [...new Set(foundPaths)];
+  
+  console.log("[Debug] Found diff paths:", uniquePaths);
+  
+  for (const filePath of uniquePaths) {
+    // Check if this file path contains sandbox folder reference
+    const isSandboxPath = filePath.includes("manual-testing-sandbox");
+    
+    if (!isSandboxPath) {
+      hasNonSandboxPaths = true;
+      console.log(`[Debug] Non-sandbox path found: ${filePath}`);
+    } else {
+      console.log(`[Debug] Sandbox path found: ${filePath}`);
+    }
+  }
+  
+  // If no paths found, filter it out to be safe in sandbox mode
+  if (uniquePaths.length === 0) {
+    console.log("[Debug] No file paths found in diff, filtering it out in sandbox mode");
+    return false;
+  }
+  
+  // Only keep if ALL paths are from sandbox
+  const shouldKeep = !hasNonSandboxPaths;
+  console.log(`[Debug] Diff decision: ${shouldKeep ? "KEEP" : "FILTER"} (${uniquePaths.length} paths found)`);
+  return shouldKeep;
+}
+
 export const getSnippets = (
   helper: HelperVars,
   payload: SnippetPayload,
@@ -52,7 +147,7 @@ export const getSnippets = (
       [...payload.rootPathSnippets, ...payload.importDefinitionSnippets],
       helper.prunedCaretWindow,
     )),
-  }
+  };
 
   // Define snippets with their priorities
   const snippetConfigs: {
@@ -107,7 +202,7 @@ export const getSnippets = (
     .filter(({ enabledOrPriority }) => enabledOrPriority)
     .map(({ key, enabledOrPriority, defaultPriority }) => ({
       key,
-      priority: typeof enabledOrPriority === 'number' ? enabledOrPriority : defaultPriority,
+      priority: typeof enabledOrPriority === "number" ? enabledOrPriority : defaultPriority,
     }))
     .sort((a, b) => a.priority - b.priority);
 
@@ -130,6 +225,39 @@ export const getSnippets = (
   // while looking at the prompts in the Continue's output
   prioritizedSnippets = prioritizedSnippets.filter((snippet) =>
     !(snippet as AutocompleteCodeSnippet).filepath?.startsWith("output:extension-output-Continue.continue"));
+
+  // Filter out non-sandbox snippets when in sandbox environment
+  if (isSandboxEnvironment(helper.workspaceUris)) {
+    console.log("[Debug] Running in sandbox environment, applying filtering...");
+    const originalCount = prioritizedSnippets.length;
+    
+    prioritizedSnippets = prioritizedSnippets.filter((snippet) => {
+      const codeSnippet = snippet as AutocompleteCodeSnippet;
+      
+      // Handle code snippets with filepath
+      if (codeSnippet.filepath) {
+        const shouldKeep = filterNonSandboxSnippets([codeSnippet], helper.workspaceUris).length > 0;
+        if (!shouldKeep) {
+          console.log(`[Debug] Filtered code snippet: ${codeSnippet.filepath}`);
+        }
+        return shouldKeep;
+      }
+      
+      // Handle diff snippets (check content for file paths)
+      if (snippet.type === AutocompleteSnippetType.Diff) {
+        const shouldKeep = shouldKeepDiffSnippet(snippet, helper.workspaceUris);
+        if (!shouldKeep) {
+          console.log("[Debug] Filtered diff snippet");
+        }
+        return shouldKeep;
+      }
+      
+      // Keep other types (clipboard, etc.) that don't have file paths
+      return true;
+    });
+    
+    console.log(`[Debug] Filtering complete: ${originalCount} -> ${prioritizedSnippets.length} snippets`);
+  }
 
   const finalSnippets = [];
   let remainingTokenCount = getRemainingTokenCount(helper);

@@ -54,7 +54,6 @@ export const paraphraseUserIntent = createAsyncThunk<
             }
 
 
-
             //send request
             const prompt = constructParaphraseUserIntentPrompt(programRequirement);
 
@@ -171,7 +170,6 @@ export const generateStepsFromRequirement = createAsyncThunk<
             console.log("userRequirement chunks:", requirementChunks);
 
             // 更新 Redux 状态
-            dispatch(submitRequirementContent(userRequirement));
             dispatch(setCodeAwareTitle(title));
             dispatch(setLearningGoal(learningGoal));
             dispatch(setGeneratedSteps(parsedSteps));

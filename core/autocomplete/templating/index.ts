@@ -63,16 +63,17 @@ function enhancePrefixWithCodeAwareContext(
   const contextParts: string[] = [];
   
   if (codeAwareContext.userRequirement) {
-    contextParts.push(`// Task: ${codeAwareContext.userRequirement}`);
+    contextParts.push(`# Task: ${codeAwareContext.userRequirement}`);
   }
   
+  /*
   if (codeAwareContext.currentStep) {
-    contextParts.push(`// Current Step: ${codeAwareContext.currentStep}`);
+    contextParts.push(`# Current Step: ${codeAwareContext.currentStep}`);
   }
   
   if (codeAwareContext.nextStep) {
-    contextParts.push(`// Next Step: ${codeAwareContext.nextStep}`);
-  }
+    contextParts.push(`# Next Step: ${codeAwareContext.nextStep}`);
+  }*/
   
   const contextString = contextParts.join("\n");
   return `${contextString}\n\n${prefix}`;

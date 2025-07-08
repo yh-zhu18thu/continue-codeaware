@@ -5,13 +5,13 @@ import { IdeMessengerContext } from "../context/IdeMessenger";
 import { ConfigResult } from "@continuedev/config-yaml";
 import { BrowserSerializedContinueConfig } from "core";
 import { useAppDispatch, useAppSelector } from "../redux/hooks";
-import { selectCodeAwareContext, selectCodeChunks, updateHighlight } from "../redux/slices/codeAwareSlice";
+import { cancelPendingCompletion, confirmPendingCompletion, selectCodeAwareContext, selectCodeChunks, updateHighlight } from "../redux/slices/codeAwareSlice";
 import { setConfigError, setConfigResult } from "../redux/slices/configSlice";
 import { updateIndexingStatus } from "../redux/slices/indexingSlice";
 import { updateDocsSuggestions } from "../redux/slices/miscSlice";
 import {
-  addContextItemsAtIndex,
-  setInactive,
+    addContextItemsAtIndex,
+    setInactive,
 } from "../redux/slices/sessionSlice";
 import { setTTSActive } from "../redux/slices/uiSlice";
 import { analyzeCompletionAndUpdateStep } from "../redux/thunks/codeAwareGeneration";
@@ -250,15 +250,19 @@ function useSetup() {
     [defaultModelTitle],
   );
 
-  // CodeAware: 监听代码补全生成事件
+  // CodeAware: 监听代码补全生成事件，在这个时候调用分析是否步进并生成knowledge cards
   useWebviewListener("codeCompletionGenerated", async (data) => {
     const { prefixCode, completionText, range, filePath } = data;
     
-    console.log("CodeAware: Code completion generated:", {
+    console.log("🚀 [CodeAware Event] Code completion GENERATED:", {
+      event: "codeCompletionGenerated",
+      timestamp: new Date().toISOString(),
       prefixLength: prefixCode.length,
       completionLength: completionText.length,
-      range,
-      filePath
+      completionPreview: completionText.substring(0, 50) + (completionText.length > 50 ? "..." : ""),
+      range: `[${range[0]}, ${range[1]}]`,
+      filePath: filePath.split('/').pop(), // 只显示文件名
+      fullFilePath: filePath
     });
 
     // 分发thunk来处理代码补全分析
@@ -267,8 +271,42 @@ function useSetup() {
       completionText,
       range,
       filePath
-    }));
+    }))
   });
+
+  // CodeAware: 监听生成代码cancel时间，此时需要清理highlight, 之前生成的knowledge cards等
+  useWebviewListener("codeCompletionRejected", async (data) => {
+    console.log("❌ [CodeAware Event] Code completion REJECTED:", {
+      event: "codeCompletionRejected",
+      timestamp: new Date().toISOString(),
+      reason: "User rejected the suggested completion",
+      data: data || "No additional data provided"
+    });
+    
+    // 取消待确认的补全，恢复之前的状态并清理临时数据
+    console.log("🔄 [CodeAware Action] Dispatching cancelPendingCompletion...");
+    dispatch(cancelPendingCompletion());
+    console.log("✅ [CodeAware Action] cancelPendingCompletion dispatched successfully");
+  });
+
+  // CodeAware: 监听代码Confirmation事件，此时再真的录入进去mapping, 写入knowledge cards
+  useWebviewListener("codeCompletionAccepted", async (data) => {
+    console.log("✅ [CodeAware Event] Code completion ACCEPTED:", {
+      event: "codeCompletionAccepted",
+      timestamp: new Date().toISOString(),
+      completionData: data ? {
+        completionId: data.completionId || "Unknown",
+        outcomeAvailable: !!data.outcome,
+        outcomeFields: data.outcome ? Object.keys(data.outcome) : []
+      } : "No data provided"
+    });
+    
+    // 确认待确认的补全，将临时数据正式写入状态
+    console.log("💾 [CodeAware Action] Dispatching confirmPendingCompletion...");
+    dispatch(confirmPendingCompletion());
+    console.log("✅ [CodeAware Action] confirmPendingCompletion dispatched successfully");
+  });
+
 
   // CodeAware: 监听光标位置变化事件
   useWebviewListener("cursorPositionChanged", async (data) => {

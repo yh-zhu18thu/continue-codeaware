@@ -6,7 +6,6 @@ import { DEFAULT_AUTOCOMPLETE_OPTS } from "../util/parameters.js";
 
 import { shouldCompleteMultiline } from "./classification/shouldCompleteMultiline.js";
 import { ContextRetrievalService } from "./context/ContextRetrievalService.js";
-
 import { BracketMatchingService } from "./filtering/BracketMatchingService.js";
 import { CompletionStreamer } from "./generation/CompletionStreamer.js";
 import { postprocessCompletion } from "./postprocessing/index.js";
@@ -45,6 +44,7 @@ export class CompletionProvider {
     private readonly _injectedGetLlm: () => Promise<ILLM | undefined>,
     private readonly _onError: (e: any) => void,
     private readonly getDefinitionsFromLsp: GetLspDefinitionsFunction,
+    private readonly _onCodeAwareEvent?: (eventType: string, data: any) => Promise<void>,
   ) {
     this.completionStreamer = new CompletionStreamer(this.onError.bind(this));
     this.contextRetrievalService = new ContextRetrievalService(this.ide);
@@ -104,18 +104,52 @@ private async _prepareLlm(): Promise<ILLM | undefined> {
   }
 
   public cancel() {
+    console.log("🔄 [CodeAware Core] CompletionProvider.cancel() called");
     this.loggingService.cancel();
+    
+    // CodeAware: 发送代码补全取消事件
+    if (this._onCodeAwareEvent) {
+      console.log("📤 [CodeAware Core] Sending codeCompletionRejected event...");
+      this._onCodeAwareEvent("codeCompletionRejected", {
+        timestamp: new Date().toISOString(),
+        reason: "User cancelled completion"
+      })
+        .then(() => console.log("✅ [CodeAware Core] codeCompletionRejected event sent successfully"))
+        .catch(error => console.error("❌ [CodeAware Core] Failed to send completion rejected event:", error));
+    } else {
+      console.log("⚠️ [CodeAware Core] No CodeAware event handler available");
+    }
   }
 
   public accept(completionId: string) {
+    console.log("🔄 [CodeAware Core] CompletionProvider.accept() called with completionId:", completionId);
     const outcome = this.loggingService.accept(completionId);
     if (!outcome) {
+      console.log("⚠️ [CodeAware Core] No outcome available for completion ID:", completionId);
       return;
     }
     this.bracketMatchingService.handleAcceptedCompletion(
       outcome.completion,
       outcome.filepath,
     );
+    
+    // CodeAware: 发送代码补全确认事件
+    if (this._onCodeAwareEvent) {
+      console.log("📤 [CodeAware Core] Sending codeCompletionAccepted event...", {
+        completionId: completionId,
+        outcomeFields: Object.keys(outcome),
+        completionLength: outcome.completion.length
+      });
+      this._onCodeAwareEvent("codeCompletionAccepted", {
+        completionId: completionId,
+        outcome: outcome,
+        timestamp: new Date().toISOString()
+      })
+        .then(() => console.log("✅ [CodeAware Core] codeCompletionAccepted event sent successfully"))
+        .catch(error => console.error("❌ [CodeAware Core] Failed to send completion accepted event:", error));
+    } else {
+      console.log("⚠️ [CodeAware Core] No CodeAware event handler available");
+    }
   }
 
   public markDisplayed(completionId: string, outcome: AutocompleteOutcome) {
@@ -269,7 +303,7 @@ private async _prepareLlm(): Promise<ILLM | undefined> {
 
       // Save to cache
       if (!outcome.cacheHit && helper.options.useCache) {
-        (await this.autocompleteCache).put(outcome.prefix, outcome.completion);
+        void (await this.autocompleteCache).put(outcome.prefix, outcome.completion);
       }
 
       // When using the JetBrains extension, Mark as displayed

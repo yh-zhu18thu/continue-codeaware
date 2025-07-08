@@ -19,6 +19,22 @@ import { v4 as uuidv4 } from "uuid";
 // Import RootState for proper typing
 import type { RootState } from '../store';
 
+// 待确认的补全信息类型
+type PendingCompletion = {
+    prefixCode: string;
+    completionText: string;
+    range: [number, number];
+    filePath: string;
+    // 分析结果
+    toNextStep: boolean;
+    originalStepIndex: number;
+    knowledgeCardThemes: string[];
+    // 生成的临时数据
+    tempCodeChunk?: CodeChunk;
+    tempKnowledgeCards: KnowledgeCardItem[];
+    tempMappings: CodeAwareMapping[];
+};
+
 type CodeAwareSessionState = {
     currentSessionId: string;
     title: string;
@@ -38,6 +54,8 @@ type CodeAwareSessionState = {
     // IDE communication flags
     shouldClearIdeHighlights: boolean;
     codeChunksToHighlightInIde: CodeChunk[];
+    // 待确认的补全信息
+    pendingCompletion: PendingCompletion | null;
 }
 
 const initialCodeAwareState: CodeAwareSessionState = {
@@ -55,7 +73,8 @@ const initialCodeAwareState: CodeAwareSessionState = {
     codeChunks: [],
     codeAwareMappings: [],
     shouldClearIdeHighlights: false,
-    codeChunksToHighlightInIde: []
+    codeChunksToHighlightInIde: [],
+    pendingCompletion: null
 }
 
 export const codeAwareSessionSlice = createSlice({
@@ -135,6 +154,7 @@ export const codeAwareSessionSlice = createSlice({
             state.codeChunks = [];
             state.shouldClearIdeHighlights = false;
             state.codeChunksToHighlightInIde = [];
+            state.pendingCompletion = null;
         },
         clearAllHighlights: (state) => {
             // Reset highlight status for all mappings
@@ -442,6 +462,115 @@ export const codeAwareSessionSlice = createSlice({
         // 创建新的mapping
         createCodeAwareMapping: (state, action: PayloadAction<CodeAwareMapping>) => {
             state.codeAwareMappings.push(action.payload);
+        },
+        // 设置待确认的补全信息
+        setPendingCompletion: (state, action: PayloadAction<PendingCompletion>) => {
+            console.log("📝 [CodeAware Slice] setPendingCompletion:", {
+                timestamp: new Date().toISOString(),
+                toNextStep: action.payload.toNextStep,
+                originalStepIndex: action.payload.originalStepIndex,
+                knowledgeCardCount: action.payload.knowledgeCardThemes.length,
+                tempMappingsCount: action.payload.tempMappings.length
+            });
+            state.pendingCompletion = action.payload;
+        },
+        // 确认补全 - 将临时数据正式写入状态
+        confirmPendingCompletion: (state) => {
+            console.log("✅ [CodeAware Slice] confirmPendingCompletion called");
+            if (!state.pendingCompletion) {
+                console.log("⚠️ [CodeAware Slice] No pending completion to confirm");
+                return;
+            }
+            
+            const pending = state.pendingCompletion;
+            console.log("💾 [CodeAware Slice] Confirming pending completion:", {
+                toNextStep: pending.toNextStep,
+                originalStepIndex: pending.originalStepIndex,
+                knowledgeCardCount: pending.tempKnowledgeCards.length,
+                mappingCount: pending.tempMappings.length
+            });
+            
+            // 更新步骤索引
+            if (pending.toNextStep) {
+                const newStepIndex = Math.min(pending.originalStepIndex + 1, state.steps.length - 1);
+                console.log(`🔄 [CodeAware Slice] Updating step index: ${state.currentStepIndex} -> ${newStepIndex}`);
+                state.currentStepIndex = newStepIndex;
+            }
+            
+            // 添加代码块
+            if (pending.tempCodeChunk) {
+                console.log("📦 [CodeAware Slice] Adding code chunk:", pending.tempCodeChunk.id);
+                state.codeChunks.push(pending.tempCodeChunk);
+            }
+            
+            // 添加知识卡片到对应步骤
+            const currentStep = state.steps[state.currentStepIndex];
+            if (currentStep) {
+                console.log(`📚 [CodeAware Slice] Adding ${pending.tempKnowledgeCards.length} knowledge cards to step: ${currentStep.title}`);
+                currentStep.knowledgeCards.push(...pending.tempKnowledgeCards);
+            }
+            
+            // 添加映射
+            console.log(`🔗 [CodeAware Slice] Adding ${pending.tempMappings.length} mappings`);
+            state.codeAwareMappings.push(...pending.tempMappings);
+            
+            // 清理待确认状态
+            console.log("🧹 [CodeAware Slice] Clearing pending completion state");
+            state.pendingCompletion = null;
+        },
+        // 取消补全 - 清理临时数据并恢复高亮状态
+        cancelPendingCompletion: (state) => {
+            console.log("❌ [CodeAware Slice] cancelPendingCompletion called");
+            if (!state.pendingCompletion) {
+                console.log("⚠️ [CodeAware Slice] No pending completion to cancel");
+                return;
+            }
+            
+            const pending = state.pendingCompletion;
+            console.log("🔄 [CodeAware Slice] Canceling pending completion:", {
+                toNextStep: pending.toNextStep,
+                originalStepIndex: pending.originalStepIndex,
+                knowledgeCardCount: pending.tempKnowledgeCards.length
+            });
+            
+            // 如果之前步进了，恢复之前的步骤高亮
+            if (pending.toNextStep) {
+                console.log(`🔄 [CodeAware Slice] Restoring step index: ${state.currentStepIndex} -> ${pending.originalStepIndex}`);
+                state.currentStepIndex = pending.originalStepIndex;
+                
+                // 恢复原步骤的高亮
+                const originalStep = state.steps[pending.originalStepIndex];
+                if (originalStep) {
+                    console.log(`✨ [CodeAware Slice] Restoring highlight for original step: ${originalStep.title}`);
+                    originalStep.isHighlighted = true;
+                }
+                
+                // 取消下一步骤的高亮
+                const nextStep = state.steps[pending.originalStepIndex + 1];
+                if (nextStep) {
+                    console.log(`🔘 [CodeAware Slice] Removing highlight from next step: ${nextStep.title}`);
+                    nextStep.isHighlighted = false;
+                }
+            }
+            
+            // 清理临时知识卡片的高亮状态
+            console.log(`🧹 [CodeAware Slice] Removing ${pending.tempKnowledgeCards.length} temporary knowledge cards`);
+            pending.tempKnowledgeCards.forEach(card => {
+                // 从当前步骤中移除临时知识卡片
+                const currentStep = state.steps[state.currentStepIndex];
+                if (currentStep) {
+                    const beforeCount = currentStep.knowledgeCards.length;
+                    currentStep.knowledgeCards = currentStep.knowledgeCards.filter(
+                        existingCard => !pending.tempKnowledgeCards.some(tempCard => tempCard.id === existingCard.id)
+                    );
+                    const afterCount = currentStep.knowledgeCards.length;
+                    console.log(`📚 [CodeAware Slice] Removed ${beforeCount - afterCount} knowledge cards from step: ${currentStep.title}`);
+                }
+            });
+            
+            // 清理待确认状态
+            console.log("🧹 [CodeAware Slice] Clearing pending completion state");
+            state.pendingCompletion = null;
         }
     },
     selectors:{
@@ -531,7 +660,10 @@ export const {
     setKnowledgeCardError,
     addCodeChunkFromCompletion,
     createKnowledgeCard,
-    createCodeAwareMapping
+    createCodeAwareMapping,
+    setPendingCompletion,
+    confirmPendingCompletion,
+    cancelPendingCompletion
 } = codeAwareSessionSlice.actions
 
 export const {

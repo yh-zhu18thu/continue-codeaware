@@ -1,7 +1,7 @@
 import { CompletionProvider } from "core/autocomplete/CompletionProvider";
 import {
-  type AutocompleteInput,
-  type AutocompleteOutcome,
+    type AutocompleteInput,
+    type AutocompleteOutcome,
 } from "core/autocomplete/util/types";
 import { ConfigHandler } from "core/config/ConfigHandler";
 import { startLocalOllama } from "core/util/ollamaHelper";
@@ -17,10 +17,10 @@ import { getDefinitionsFromLsp } from "./lsp";
 import { RecentlyEditedTracker } from "./recentlyEdited";
 import { RecentlyVisitedRangesService } from "./RecentlyVisitedRangesService";
 import {
-  StatusBarStatus,
-  getStatusBarStatus,
-  setupStatusBar,
-  stopStatusBarLoading,
+    StatusBarStatus,
+    getStatusBarStatus,
+    setupStatusBar,
+    stopStatusBarLoading,
 } from "./statusBar";
 
 import type { CodeAwareContext, IDE } from "core";
@@ -100,6 +100,18 @@ export class ContinueCompletionProvider
       getAutocompleteModel,
       this.onError.bind(this),
       getDefinitionsFromLsp,
+      async (eventType: string, data: any) => {
+        try {
+          // 使用正确的事件类型
+          if (eventType === "codeCompletionRejected") {
+            await this.webviewProtocol.request("codeCompletionRejected", undefined);
+          } else if (eventType === "codeCompletionAccepted") {
+            await this.webviewProtocol.request("codeCompletionAccepted", data);
+          }
+        } catch (error) {
+          console.warn(`CodeAware: Failed to send ${eventType} event:`, error);
+        }
+      },
     );
     this.recentlyVisitedRanges = new RecentlyVisitedRangesService(ide);
   }
@@ -354,14 +366,26 @@ export class ContinueCompletionProvider
       try {
         const prefixCode = document.getText(new vscode.Range(new vscode.Position(0, 0), startPos));
         
+        console.log("🔄 [CodeAware VSCode] Sending codeCompletionGenerated event to webview:", {
+          event: "codeCompletionGenerated",
+          timestamp: new Date().toISOString(),
+          completionId: input.completionId,
+          fileName: document.fileName.split('/').pop(),
+          prefixLength: prefixCode.length,
+          completionLength: completionText.length,
+          range: [startPos.line, startPos.line + (completionText.split('\n').length - 1)]
+        });
+        
         await this.webviewProtocol.request("codeCompletionGenerated", {
           prefixCode: prefixCode,
           completionText: completionText,
           range: [startPos.line, startPos.line + (completionText.split('\n').length - 1)],
           filePath: document.uri.toString()
         });
+        
+        console.log("✅ [CodeAware VSCode] codeCompletionGenerated event sent successfully");
       } catch (error) {
-        console.warn("CodeAware: Failed to send completion to webview:", error);
+        console.error("❌ [CodeAware VSCode] Failed to send completion to webview:", error);
       }
 
       (completionItem as any).completeBracketPairs = true;

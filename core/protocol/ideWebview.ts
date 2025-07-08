@@ -2,12 +2,12 @@ import { ToIdeFromWebviewOrCoreProtocol } from "./ide";
 import { ToWebviewFromIdeOrCoreProtocol } from "./webview";
 
 import type {
-  ApplyState,
-  CodeChunk,
-  CodeToEdit,
-  EditStatus,
-  MessageContent,
-  RangeInFileWithContents
+    ApplyState,
+    CodeChunk,
+    CodeToEdit,
+    EditStatus,
+    MessageContent,
+    RangeInFileWithContents
 } from "../";
 
 export type ToIdeFromWebviewProtocol = ToIdeFromWebviewOrCoreProtocol & {
@@ -123,5 +123,12 @@ export type ToWebviewFromIdeProtocol = ToWebviewFromIdeOrCoreProtocol & {
     completionText: string;
     range: [number, number];
     filePath: string;
+  }, void];
+  // CodeAware: 代码补全取消事件
+  codeCompletionRejected: [undefined, void];
+  // CodeAware: 代码补全确认事件
+  codeCompletionAccepted: [{
+    completionId?: string;
+    outcome?: any;
   }, void];
 };

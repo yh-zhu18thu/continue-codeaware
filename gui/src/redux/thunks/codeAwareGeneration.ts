@@ -1,6 +1,8 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import {
     CodeAwareMapping,
+    CodeChunk,
+    KnowledgeCardItem,
     ProgramRequirement,
     RequirementChunk,
     StepItem,
@@ -12,8 +14,6 @@ import {
     constructParaphraseUserIntentPrompt
 } from "core/llm/codeAwarePrompts";
 import {
-    addCodeChunkFromCompletion,
-    createCodeAwareMapping,
     createKnowledgeCard,
     selectCurrentStep,
     selectLearningGoal,
@@ -24,6 +24,7 @@ import {
     setKnowledgeCardError,
     setKnowledgeCardLoading,
     setLearningGoal,
+    setPendingCompletion,
     setUserRequirementStatus,
     submitRequirementContent,
     updateCodeAwareMappings,
@@ -311,6 +312,14 @@ export const analyzeCompletionAndUpdateStep = createAsyncThunk<
         { prefixCode, completionText, range, filePath },
         { dispatch, extra, getState }
     ) => {
+        console.log("🔄 [CodeAware Thunk] analyzeCompletionAndUpdateStep started:", {
+            timestamp: new Date().toISOString(),
+            prefixLength: prefixCode.length,
+            completionLength: completionText.length,
+            range,
+            fileName: filePath.split('/').pop()
+        });
+        
         try {
             const state = getState();
             const defaultModel = selectDefaultModel(state);
@@ -318,21 +327,23 @@ export const analyzeCompletionAndUpdateStep = createAsyncThunk<
             const nextStep = selectNextStep(state);
             const learningGoal = selectLearningGoal(state);
 
+            console.log("📊 [CodeAware Thunk] Current state:", {
+                hasDefaultModel: !!defaultModel,
+                hasCurrentStep: !!currentStep,
+                hasNextStep: !!nextStep,
+                currentStepTitle: currentStep?.title,
+                nextStepTitle: nextStep?.title,
+                learningGoal: learningGoal.substring(0, 50) + (learningGoal.length > 50 ? "..." : "")
+            });
+
             if (!defaultModel) {
+                console.error("❌ [CodeAware Thunk] Default model not defined");
                 throw new Error("Default model not defined");
             }
 
-            // 首先添加代码块到状态中
-            dispatch(addCodeChunkFromCompletion({
-                prefixCode,
-                completionText,
-                range,
-                filePath
-            }));
-
             // 如果没有当前步骤和下一步骤，直接返回
             if (!currentStep || !nextStep) {
-                console.log("CodeAware: No current or next step available, skipping analysis");
+                console.log("⚠️ [CodeAware Thunk] No current or next step available, skipping analysis");
                 return;
             }
 
@@ -370,77 +381,109 @@ export const analyzeCompletionAndUpdateStep = createAsyncThunk<
                     nextStep: nextStep.title
                 });
 
-                // 如果需要进入下一步骤
-                if (toNextStep) {
-                    // 更新当前步骤索引
-                    const newStepIndex = state.codeAwareSession.currentStepIndex + 1;
-                    dispatch(setCurrentStepIndex(newStepIndex));
+                // 创建临时代码块
+                const tempCodeChunk: CodeChunk = {
+                    id: `c-${state.codeAwareSession.codeChunks.length + 1}`,
+                    content: completionText,
+                    range: range,
+                    isHighlighted: false,
+                    filePath: filePath
+                };
 
-                    // 通过messenger更新codeAwareCompletionManager
-                    try {
-                        await extra.ideMessenger.request("syncCodeAwareSteps", {
-                            currentStep: nextStep.title,
-                            nextStep: state.codeAwareSession.steps[newStepIndex + 1]?.title || ""
-                        });
-                    } catch (error) {
-                        console.warn("CodeAware: Failed to sync steps to completion manager:", error);
-                    }
-                }
+                // 创建临时知识卡片
+                const tempKnowledgeCards: KnowledgeCardItem[] = [];
+                const tempMappings: CodeAwareMapping[] = [];
 
-                // 为每个知识卡片主题创建新的知识卡片
-                const codeChunkId = `c-${state.codeAwareSession.codeChunks.length}`;
-                const currentStepAfterUpdate = toNextStep ? nextStep : currentStep;
+                // 确定当前生效的步骤
+                const effectiveStep = toNextStep ? nextStep : currentStep;
 
                 for (let i = 0; i < knowledgeCardThemes.length; i++) {
                     const theme = knowledgeCardThemes[i];
-                    const cardId = `${currentStepAfterUpdate.id}-k-${currentStepAfterUpdate.knowledgeCards.length + i + 1}`;
+                    const cardId = `${effectiveStep.id}-k-${effectiveStep.knowledgeCards.length + i + 1}`;
 
-                    // 创建知识卡片
-                    dispatch(createKnowledgeCard({
-                        stepId: currentStepAfterUpdate.id,
-                        cardId: cardId,
-                        theme: theme
-                    }));
+                    // 创建临时知识卡片
+                    const tempCard: KnowledgeCardItem = {
+                        id: cardId,
+                        title: theme,
+                        content: "",
+                        tests: [],
+                        isHighlighted: true // 临时状态时高亮显示
+                    };
+                    tempKnowledgeCards.push(tempCard);
 
-                    // 创建mapping关系
+                    // 创建临时mapping关系
                     // 需要找到相关的requirement chunk
                     const relatedRequirementChunks = state.codeAwareSession.codeAwareMappings
-                        .filter((mapping: CodeAwareMapping) => mapping.stepId === currentStepAfterUpdate.id)
+                        .filter((mapping: CodeAwareMapping) => mapping.stepId === effectiveStep.id)
                         .map((mapping: CodeAwareMapping) => mapping.requirementChunkId)
                         .filter((id: string | undefined) => id);
 
                     // 为每个相关的requirement chunk创建mapping
                     for (const reqChunkId of relatedRequirementChunks) {
-                        dispatch(createCodeAwareMapping({
-                            codeChunkId: codeChunkId,
+                        tempMappings.push({
+                            codeChunkId: tempCodeChunk.id,
                             requirementChunkId: reqChunkId,
-                            stepId: currentStepAfterUpdate.id,
+                            stepId: effectiveStep.id,
                             knowledgeCardId: cardId,
-                            isHighlighted: false
-                        }));
+                            isHighlighted: true // 临时状态时高亮显示
+                        });
                     }
 
                     // 如果没有相关的requirement chunk，至少创建code-step-card的mapping
                     if (relatedRequirementChunks.length === 0) {
-                        dispatch(createCodeAwareMapping({
-                            codeChunkId: codeChunkId,
-                            stepId: currentStepAfterUpdate.id,
+                        tempMappings.push({
+                            codeChunkId: tempCodeChunk.id,
+                            stepId: effectiveStep.id,
                             knowledgeCardId: cardId,
-                            isHighlighted: false
-                        }));
+                            isHighlighted: true // 临时状态时高亮显示
+                        });
                     }
                 }
 
-                // 高亮当前步骤
-                dispatch(updateHighlight({
-                    sourceType: "step",
-                    identifier: currentStepAfterUpdate.id
+                // 设置待确认的补全信息
+                dispatch(setPendingCompletion({
+                    prefixCode,
+                    completionText,
+                    range,
+                    filePath,
+                    toNextStep,
+                    originalStepIndex: state.codeAwareSession.currentStepIndex,
+                    knowledgeCardThemes,
+                    tempCodeChunk,
+                    tempKnowledgeCards,
+                    tempMappings
                 }));
 
-                console.log("CodeAware: Successfully analyzed completion and updated step", {
+                // 如果需要进入下一步骤，更新步骤索引并高亮
+                if (toNextStep) {
+                    dispatch(setCurrentStepIndex(state.codeAwareSession.currentStepIndex + 1));
+                    
+                    // 高亮下一步骤
+                    dispatch(updateHighlight({
+                        sourceType: "step",
+                        identifier: nextStep.id
+                    }));
+                } else {
+                    // 高亮当前步骤
+                    dispatch(updateHighlight({
+                        sourceType: "step",
+                        identifier: currentStep.id
+                    }));
+                }
+
+                // 将临时知识卡片添加到对应步骤中用于显示
+                for (const tempCard of tempKnowledgeCards) {
+                    dispatch(createKnowledgeCard({
+                        stepId: effectiveStep.id,
+                        cardId: tempCard.id,
+                        theme: tempCard.title
+                    }));
+                }
+
+                console.log("CodeAware: Successfully analyzed completion and set pending state", {
                     toNextStep,
                     knowledgeCardThemes,
-                    currentStep: currentStepAfterUpdate.title
+                    effectiveStep: effectiveStep.title
                 });
 
             } catch (parseError) {

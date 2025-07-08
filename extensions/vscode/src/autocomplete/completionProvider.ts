@@ -215,11 +215,10 @@ export class ContinueCompletionProvider
       // CodeAware: 获取上下文信息
       let codeAwareContext: CodeAwareContext | undefined = undefined;
       try {
-        if (this.codeAwareManager.hasContext()) {
           const context = await this.codeAwareManager.getContext();
+          console.log("CodeAware: Retrieved context:", context);
           codeAwareContext = context;
-        }
-      } catch (error) {
+      }catch (error) {
         console.warn("CodeAware: Failed to get context for autocomplete:", error);
       }
 

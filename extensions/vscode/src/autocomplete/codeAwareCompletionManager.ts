@@ -29,18 +29,22 @@ export class CodeAwareCompletionManager {
     // 只有在本地context为空时，才尝试从webview获取最新的上下文
     if (this.webviewProtocol && !this.hasContext()) {
       try {
+        console.log("CodeAware: Fetching context from webview...");
         const response = await this.webviewProtocol.request("getCodeAwareContext", undefined);
-        if (response && response.status === "success" && response.content) {
+        console.log("CodeAware: Received context from webview:", response);
+        if (response) {
           // 更新本地缓存
           this.context = {
-            userRequirement: response.content.userRequirement || "",
-            currentStep: response.content.currentStep || "",
-            nextStep: response.content.nextStep || ""
+            userRequirement: response.userRequirement || "",
+            currentStep: response.currentStep || "",
+            nextStep: response.nextStep || ""
           };
         }
       } catch (error) {
         console.warn("Failed to get CodeAware context from webview, using cached context:", error);
       }
+    }else {
+      console.log("CodeAware: Using cached context");
     }
     
     return { ...this.context };

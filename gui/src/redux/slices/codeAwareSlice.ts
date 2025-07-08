@@ -446,6 +446,12 @@ export const codeAwareSessionSlice = createSlice({
     },
     selectors:{
         //CATODO: write all the selectors to fetch the data
+        selectCodeChunks: (state: CodeAwareSessionState) => {
+            return state.codeChunks;
+        },
+        selectCodeAwareSessionState: (state: CodeAwareSessionState) => {
+            return state;
+        },
         selectIsRequirementInEditMode: (state: CodeAwareSessionState) => {
             // Requirement is in edit mode if it is either being edited or is empty
             if (!state.userRequirement) {
@@ -471,6 +477,22 @@ export const codeAwareSessionSlice = createSlice({
         },
         selectLearningGoal: (state: CodeAwareSessionState) => {
             return state.learningGoal;
+        },
+        selectCodeAwareContext: (state: CodeAwareSessionState) => {
+            const currentStep = state.currentStepIndex >= 0 && state.currentStepIndex < state.steps.length 
+                ? state.steps[state.currentStepIndex] 
+                : null;
+            
+            const nextStepIndex = state.currentStepIndex + 1;
+            const nextStep = nextStepIndex >= 0 && nextStepIndex < state.steps.length 
+                ? state.steps[nextStepIndex] 
+                : null;
+
+            return {
+                userRequirement: state.userRequirement?.requirementDescription || undefined,
+                currentStep: currentStep ? `${currentStep.title}: ${currentStep.abstract}` : undefined,
+                nextStep: nextStep ? `${nextStep.title}: ${nextStep.abstract}` : undefined,
+            };
         }
     }
 });
@@ -513,11 +535,14 @@ export const {
 } = codeAwareSessionSlice.actions
 
 export const {
+    selectCodeChunks,
+    selectCodeAwareSessionState,
     selectIsRequirementInEditMode,
     selectIsStepsGenerated,
     selectCurrentStep,
     selectNextStep,
-    selectLearningGoal
+    selectLearningGoal,
+    selectCodeAwareContext
 } = codeAwareSessionSlice.selectors
 
 export default codeAwareSessionSlice.reducer;

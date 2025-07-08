@@ -5,7 +5,7 @@ import { IdeMessengerContext } from "../context/IdeMessenger";
 import { ConfigResult } from "@continuedev/config-yaml";
 import { BrowserSerializedContinueConfig } from "core";
 import { useAppDispatch, useAppSelector } from "../redux/hooks";
-import { updateHighlight } from "../redux/slices/codeAwareSlice";
+import { selectCodeAwareContext, selectCodeChunks, updateHighlight } from "../redux/slices/codeAwareSlice";
 import { setConfigError, setConfigResult } from "../redux/slices/configSlice";
 import { updateIndexingStatus } from "../redux/slices/indexingSlice";
 import { updateDocsSuggestions } from "../redux/slices/miscSlice";
@@ -14,7 +14,6 @@ import {
   setInactive,
 } from "../redux/slices/sessionSlice";
 import { setTTSActive } from "../redux/slices/uiSlice";
-import { store } from "../redux/store";
 import { analyzeCompletionAndUpdateStep } from "../redux/thunks/codeAwareGeneration";
 import { selectProfileThunk } from "../redux/thunks/profileAndOrg";
 import { refreshSessionMetadata } from "../redux/thunks/session";
@@ -31,6 +30,10 @@ function useSetup() {
   const defaultModelTitle = useAppSelector(
     (store) => store.config.defaultModelTitle,
   );
+  
+  // 使用 selector 获取 CodeAware 相关数据
+  const codeChunks = useAppSelector(selectCodeChunks);
+  const codeAwareContext = useAppSelector(selectCodeAwareContext);
 
   const hasLoadedConfig = useRef(false);
 
@@ -272,7 +275,6 @@ function useSetup() {
     const { filePath, lineNumber, contextLines, startLine, endLine } = data;
 
     // 检查当前聚焦的代码位置是否属于某个 CodeChunk
-    const codeChunks = store.getState().codeAwareSession.codeChunks;
     const matchedChunks: string[] = [];
 
     for (const chunk of codeChunks) {
@@ -303,14 +305,13 @@ function useSetup() {
       matchedChunks,
       totalCodeChunks: codeChunks.length,
     });*/
-  });
+  }, [codeChunks, dispatch]);
 
   // CodeAware: 监听代码选择变化事件
   useWebviewListener("codeSelectionChanged", async (data) => {
     const { filePath, selectedLines, selectedContent } = data;
 
     // 检查选中的代码是否属于某个 CodeChunk
-    const codeChunks = store.getState().codeAwareSession.codeChunks;
     const matchedChunks: string[] = [];
 
     for (const chunk of codeChunks) {
@@ -344,7 +345,20 @@ function useSetup() {
       matchedChunks,
       totalCodeChunks: codeChunks.length,
     });
-  });
+  }, [codeChunks, dispatch]);
+
+  useWebviewListener(
+    "getCodeAwareContext",
+    async () => {
+      console.log("CodeAwar GUI: Fetching context from store, using cached context", codeAwareContext);
+      return {
+        userRequirement: codeAwareContext.userRequirement || "",
+        currentStep: codeAwareContext.currentStep || "",
+        nextStep: codeAwareContext.nextStep || "",
+      };
+    },
+    [codeAwareContext],
+  );
 }
 
 export default useSetup;

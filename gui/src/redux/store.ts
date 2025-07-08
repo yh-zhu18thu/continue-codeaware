@@ -1,9 +1,9 @@
 import { combineReducers, configureStore } from "@reduxjs/toolkit";
 import {
-  createMigrate,
-  MigrationManifest,
-  persistReducer,
-  persistStore,
+    createMigrate,
+    MigrationManifest,
+    persistReducer,
+    persistStore,
 } from "redux-persist";
 import { createFilter } from "redux-persist-transform-filter";
 import autoMergeLevel2 from "redux-persist/lib/stateReconciler/autoMergeLevel2";
@@ -124,6 +124,7 @@ export function setupStore() {
     middleware: (getDefaultMiddleware) =>
       getDefaultMiddleware({
         serializableCheck: false,
+        immutableCheck: false, // 禁用 ImmutableStateInvariantMiddleware 以提高性能
         thunk: {
           extraArgument: {
             ideMessenger: new IdeMessenger(),

@@ -71,7 +71,8 @@ export function constructAnalyzeCompletionStepPrompt(
         "requirements": [
             "The knowledge card should contain stuff the user might be interested in, or questions the user might have. All these should be in line with the learning goals",
             "Respond in the same language as the project description.",
-            "You must follow this JSON format in your response: {\\"to_next_step\\": (true or false), \\"knowledge_card_themes\\": [\\"(theme 1)\\", \\"(theme 2)\\", ...]}"
+            "You must follow this JSON format in your response: {\\"to_next_step\\": (true or false), \\"knowledge_card_themes\\": [\\"(theme 1)\\", \\"(theme 2)\\", ...]}",
+            "Please do not use invalid \`\`\`json character to envelope the JSON response, just return the JSON object directly.",
         ],
         "prefix_code": "${prefixCode}",
         "new_code": "${newCode}",

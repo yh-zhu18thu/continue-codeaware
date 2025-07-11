@@ -43,7 +43,6 @@ function renderStringTemplate(
     filename,
     reponame,
     language: lang.name,
-    // CodeAware: 添加上下文变量
     userRequirement: codeAwareContext?.userRequirement || "",
     currentStep: codeAwareContext?.currentStep || "",
     nextStep: codeAwareContext?.nextStep || "",
@@ -55,28 +54,43 @@ function enhancePrefixWithCodeAwareContext(
   prefix: string,
   codeAwareContext?: CodeAwareContext,
 ): string {
-  if (!codeAwareContext || 
-      (!codeAwareContext.userRequirement && !codeAwareContext.currentStep && !codeAwareContext.nextStep)) {
+  if (!codeAwareContext || !codeAwareContext.userRequirement) {
     return prefix;
   }
 
-  const contextParts: string[] = [];
+  const taskParts: string[] = [];
   
   if (codeAwareContext.userRequirement) {
-    contextParts.push(`# Task: ${codeAwareContext.userRequirement}`);
+    taskParts.push(`# Task: ${codeAwareContext.userRequirement}`);
   }
-  
-  /*
-  if (codeAwareContext.currentStep) {
-    contextParts.push(`# Current Step: ${codeAwareContext.currentStep}`);
+
+  const taskString = taskParts.join("\n");
+
+  const stepParts: string[] = [];
+
+  console.log("CodeAware: Enhancing prefix with context", codeAwareContext);
+
+  if (codeAwareContext && (codeAwareContext.nextStep !== undefined || codeAwareContext.currentStep !== undefined)) {
+    if (codeAwareContext.currentStep === "") {
+      // 如果当前步骤为空，表示这是第一次生成代码
+      stepParts.push(`# ${codeAwareContext.nextStep}`);
+    } else if (codeAwareContext.nextStep === "") {
+      stepParts.push(`# ${codeAwareContext.currentStep}`);
+    } else {
+      stepParts.push(`# ${codeAwareContext.nextStep}`);
+    }
   }
-  
-  if (codeAwareContext.nextStep) {
-    contextParts.push(`# Next Step: ${codeAwareContext.nextStep}`);
-  }*/
-  
-  const contextString = contextParts.join("\n");
-  return `${contextString}\n\n${prefix}`;
+
+  const stepString = stepParts.join("\n");
+
+  // 将任务和步骤信息分别添加到prefix的开头和结尾：
+  if (taskString) {
+    prefix = `${taskString}\n${prefix}`;
+  }
+  if (stepString) {
+    prefix = `${prefix}\n${stepString}\n`;
+  }
+  return prefix;
 }
 
 export function renderPrompt({
@@ -123,7 +137,7 @@ export function renderPrompt({
     prefix = [formattedSnippets, prefix].join("\n");
   }
 
-  // CodeAware: 如果有上下文信息，增强prefix
+  // CodeAware: 如果有上下文信息，增强prefix和suffix
   if (helper.input.codeAwareContext) {
     prefix = enhancePrefixWithCodeAwareContext(prefix, helper.input.codeAwareContext);
   }

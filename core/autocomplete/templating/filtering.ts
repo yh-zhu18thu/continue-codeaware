@@ -149,6 +149,9 @@ export const getSnippets = (
     )),
   };
 
+  console.log("getSnippets: Diff snippets count:", payload.diffSnippets.length);
+  console.log("getSnippets: Include diff option:", helper.options.experimental_includeDiff);
+
   // Define snippets with their priorities
   const snippetConfigs: {
     key: keyof typeof snippets;

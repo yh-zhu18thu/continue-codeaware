@@ -6,7 +6,7 @@ export const DEFAULT_AUTOCOMPLETE_OPTS: TabAutocompleteOptions = {
   prefixPercentage: 0.3,
   maxSuffixPercentage: 0.2,
   debounceDelay: 350,
-  multilineCompletions: "auto",
+  multilineCompletions: "always",
   // @deprecated TO BE REMOVED
   slidingWindowPrefixPercentage: 0.75,
   // @deprecated TO BE REMOVED
@@ -18,10 +18,10 @@ export const DEFAULT_AUTOCOMPLETE_OPTS: TabAutocompleteOptions = {
   useImports: true,
   transform: true,
   showWhateverWeHaveAtXMs: 300,
-  experimental_includeClipboard: true,
-  experimental_includeRecentlyVisitedRanges: true,
-  experimental_includeRecentlyEditedRanges: true,
-  experimental_includeDiff: true,
+  experimental_includeClipboard: false,
+  experimental_includeRecentlyVisitedRanges: false,
+  experimental_includeRecentlyEditedRanges: false,
+  experimental_includeDiff: false,
 };
 
 export const COUNT_COMPLETION_REJECTED_AFTER = 10_000;

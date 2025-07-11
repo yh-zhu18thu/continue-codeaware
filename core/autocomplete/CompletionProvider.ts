@@ -185,11 +185,9 @@ private async _prepareLlm(): Promise<ILLM | undefined> {
         return undefined;
       }
 
-      console.log("CompletionProvider: Begin Preparation");
-
       const llm = await this._prepareLlm();
       if (!llm) {
-        console.log("No completion llm");
+        console.error("No completion llm");
         return undefined;
       }
 
@@ -215,6 +213,12 @@ private async _prepareLlm(): Promise<ILLM | undefined> {
       ]);
 
       console.log("CompletionProvider: Generating prompt:");
+      console.log("CompletionProvider: Options:", {
+        includeDiff: helper.options.experimental_includeDiff,
+        includeClipboard: helper.options.experimental_includeClipboard,
+        includeRecentlyEdited: helper.options.experimental_includeRecentlyEditedRanges,
+        includeRecentlyVisited: helper.options.experimental_includeRecentlyVisitedRanges
+      });
 
       const { prompt, prefix, suffix, completionOptions } = renderPrompt({
         snippetPayload,

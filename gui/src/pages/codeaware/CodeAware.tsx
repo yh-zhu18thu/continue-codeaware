@@ -110,19 +110,6 @@ export const CodeAware = () => {
     return null;
   });
 
-  // Add webview listener for getting CodeAware context
-  useWebviewListener(
-    "getCodeAwareContext",
-    async () => {
-      return {
-        userRequirement: userRequirement?.requirementDescription || "",
-        currentStep: currentStep?.title || "",
-        nextStep: nextStep?.title || ""
-      };
-    },
-    [userRequirement, currentStep, nextStep]
-  );
-
   // Add webview listener for new session event to initialize CodeAware session
   useWebviewListener(
     "newSession",

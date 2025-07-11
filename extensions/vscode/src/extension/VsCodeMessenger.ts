@@ -342,7 +342,10 @@ export class VsCodeMessenger {
     this.onWebview("syncCodeAwareSteps", async (msg) => {
       this.codeAwareManager.setCurrentStep(msg.data.currentStep);
       this.codeAwareManager.setNextStep(msg.data.nextStep);
-      console.log("CodeAware: Steps synced - Current:", msg.data.currentStep, "Next:", msg.data.nextStep);
+      if (msg.data.stepFinished !== undefined) {
+        this.codeAwareManager.setStepFinished(msg.data.stepFinished);
+      }
+      console.log("CodeAware: Steps synced - Current:", msg.data.currentStep, "Next:", msg.data.nextStep, "Finished:", msg.data.stepFinished);
     });
 
     /** PASS THROUGH FROM WEBVIEW TO CORE AND BACK **/

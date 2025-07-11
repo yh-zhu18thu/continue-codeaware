@@ -10,8 +10,8 @@ import { setConfigError, setConfigResult } from "../redux/slices/configSlice";
 import { updateIndexingStatus } from "../redux/slices/indexingSlice";
 import { updateDocsSuggestions } from "../redux/slices/miscSlice";
 import {
-    addContextItemsAtIndex,
-    setInactive,
+  addContextItemsAtIndex,
+  setInactive,
 } from "../redux/slices/sessionSlice";
 import { setTTSActive } from "../redux/slices/uiSlice";
 import { analyzeCompletionAndUpdateStep } from "../redux/thunks/codeAwareGeneration";
@@ -305,6 +305,31 @@ function useSetup() {
     console.log("💾 [CodeAware Action] Dispatching confirmPendingCompletion...");
     dispatch(confirmPendingCompletion());
     console.log("✅ [CodeAware Action] confirmPendingCompletion dispatched successfully");
+
+    // 获取更新后的状态并同步步骤信息到 IDE
+    // 由于 dispatch 是同步的，我们需要稍微延迟一下来确保状态已更新
+    setTimeout(async () => {
+      try {
+        const updatedContext = codeAwareContext;
+        const currentStep = updatedContext.currentStep || "";
+        const nextStep = updatedContext.nextStep || "";
+        const stepFinished = updatedContext.stepFinished || false;
+
+        await ideMessenger.request("syncCodeAwareSteps", {
+          currentStep: currentStep,
+          nextStep: nextStep,
+          stepFinished: stepFinished
+        });
+
+        console.log("📡 [CodeAware] Successfully synced steps to IDE:", {
+          currentStep: currentStep.substring(0, 50) + (currentStep.length > 50 ? "..." : ""),
+          nextStep: nextStep.substring(0, 50) + (nextStep.length > 50 ? "..." : ""),
+          stepFinished
+        });
+      } catch (error) {
+        console.warn("⚠️ [CodeAware] Failed to sync steps to IDE:", error);
+      }
+    }, 0);
   });
 
 
@@ -393,6 +418,7 @@ function useSetup() {
         userRequirement: codeAwareContext.userRequirement || "",
         currentStep: codeAwareContext.currentStep || "",
         nextStep: codeAwareContext.nextStep || "",
+        stepFinished: codeAwareContext.stepFinished || false,
       };
     },
     [codeAwareContext],

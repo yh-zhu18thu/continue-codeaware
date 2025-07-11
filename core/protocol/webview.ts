@@ -41,5 +41,5 @@ export type ToWebviewFromIdeOrCoreProtocol = {
   "docs/suggestions": [PackageDocsResult[], void];
   "jetbrains/setColors": [Record<string, string>, void];
   //CodeAware: 获取完整的CodeAware上下文
-  getCodeAwareContext: [undefined, { userRequirement: string; currentStep: string; nextStep: string }];
+  getCodeAwareContext: [undefined, { userRequirement: string; currentStep: string; nextStep: string; stepFinished: boolean }];
 };

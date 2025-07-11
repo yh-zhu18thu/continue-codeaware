@@ -71,8 +71,6 @@ export class VsCodeExtension {
 
     this.editDecorationManager = new EditDecorationManager(context);
     this.highlightCodeManager = new HighlightCodeManager();
-    // CodeAware manager will be initialized later with webview protocol
-    this.codeAwareManager = new CodeAwareCompletionManager();
 
     let resolveWebviewProtocol: any = undefined;
     this.webviewProtocolPromise = new Promise<VsCodeWebviewProtocol>(
@@ -81,6 +79,9 @@ export class VsCodeExtension {
       },
     );
     this.ide = new VsCodeIde(this.webviewProtocolPromise, context);
+    // CodeAware manager will be initialized later with webview protocol
+    this.codeAwareManager = new CodeAwareCompletionManager(this.webviewProtocolPromise);
+
     this.extensionContext = context;
     this.windowId = uuidv4();
 

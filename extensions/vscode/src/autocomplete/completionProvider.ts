@@ -1,7 +1,7 @@
 import { CompletionProvider } from "core/autocomplete/CompletionProvider";
 import {
-    type AutocompleteInput,
-    type AutocompleteOutcome,
+  type AutocompleteInput,
+  type AutocompleteOutcome,
 } from "core/autocomplete/util/types";
 import { ConfigHandler } from "core/config/ConfigHandler";
 import { startLocalOllama } from "core/util/ollamaHelper";
@@ -17,10 +17,10 @@ import { getDefinitionsFromLsp } from "./lsp";
 import { RecentlyEditedTracker } from "./recentlyEdited";
 import { RecentlyVisitedRangesService } from "./RecentlyVisitedRangesService";
 import {
-    StatusBarStatus,
-    getStatusBarStatus,
-    setupStatusBar,
-    stopStatusBarLoading,
+  StatusBarStatus,
+  getStatusBarStatus,
+  setupStatusBar,
+  stopStatusBarLoading,
 } from "./statusBar";
 
 import type { CodeAwareContext, IDE } from "core";
@@ -127,17 +127,14 @@ export class ContinueCompletionProvider
     token: vscode.CancellationToken,
     //@ts-ignore
   ): ProviderResult<InlineCompletionItem[] | InlineCompletionList> {
-    console.log("ContinueCompletionProvider: provideInlineCompletionItems called");
 
     const enableTabAutocomplete =
       getStatusBarStatus() === StatusBarStatus.Enabled;
     if (token.isCancellationRequested || !enableTabAutocomplete) {
-      console.log("ContinueCompletionProvider: tab autocompletion not enabled");
       return null;
     }
 
     if (document.uri.scheme === "vscode-scm") {
-      console.log("ContinueCompletionProvider: vscode scm");
       return null;
     }
 

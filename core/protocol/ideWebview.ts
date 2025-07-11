@@ -2,12 +2,12 @@ import { ToIdeFromWebviewOrCoreProtocol } from "./ide";
 import { ToWebviewFromIdeOrCoreProtocol } from "./webview";
 
 import type {
-    ApplyState,
-    CodeChunk,
-    CodeToEdit,
-    EditStatus,
-    MessageContent,
-    RangeInFileWithContents
+  ApplyState,
+  CodeChunk,
+  CodeToEdit,
+  EditStatus,
+  MessageContent,
+  RangeInFileWithContents
 } from "../";
 
 export type ToIdeFromWebviewProtocol = ToIdeFromWebviewOrCoreProtocol & {
@@ -62,9 +62,9 @@ export type ToIdeFromWebviewProtocol = ToIdeFromWebviewOrCoreProtocol & {
   clearCodeHighlight: [undefined, void];
   //CodeAware: 向ide同步当前的任务描述和当前/下一步骤等
   syncCodeAwareRequirement: [{ userRequirement: string }, void];
-  syncCodeAwareSteps: [{ currentStep: string; nextStep: string }, void];
+  syncCodeAwareSteps: [{ currentStep: string; nextStep: string; stepFinished?: boolean }, void];
   //CodeAware: 获取完整的CodeAware上下文
-  getCodeAwareContext: [undefined, { userRequirement: string; currentStep: string; nextStep: string }];
+  getCodeAwareContext: [undefined, { userRequirement: string; currentStep: string; nextStep: string; stepFinished: boolean }];
 };
 
 export type ToWebviewFromIdeProtocol = ToWebviewFromIdeOrCoreProtocol & {

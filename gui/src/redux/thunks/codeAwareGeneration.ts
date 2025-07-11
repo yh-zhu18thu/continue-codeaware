@@ -15,11 +15,8 @@ import {
 } from "core/llm/codeAwarePrompts";
 import {
     createKnowledgeCard,
-    selectCurrentStep,
     selectLearningGoal,
-    selectNextStep,
     setCodeAwareTitle,
-    setCurrentStepIndex,
     setGeneratedSteps,
     setKnowledgeCardError,
     setKnowledgeCardLoading,
@@ -34,6 +31,23 @@ import {
 } from "../slices/codeAwareSlice";
 import { selectDefaultModel } from "../slices/configSlice";
 import { ThunkApiType } from "../store";
+
+// 辅助函数：清理markdown格式的文本，去掉换行符等特殊字符
+function cleanMarkdownText(text: string): string {
+    return text
+        .replace(/\n/g, ' ')           // 替换换行符为空格
+        .replace(/\r/g, ' ')           // 替换回车符为空格
+        .replace(/\t/g, ' ')           // 替换制表符为空格
+        .replace(/\s+/g, ' ')          // 将多个连续空格替换为单个空格
+        .replace(/\*\*(.*?)\*\*/g, '$1')  // 去掉粗体标记 **text**
+        .replace(/\*(.*?)\*/g, '$1')      // 去掉斜体标记 *text*
+        .replace(/`(.*?)`/g, '$1')        // 去掉行内代码标记 `code`
+        .replace(/#{1,6}\s*/g, '')        // 去掉标题标记 # ## ### 等
+        .replace(/>\s*/g, '')             // 去掉引用标记 >
+        .replace(/[-*+]\s*/g, '')         // 去掉列表标记 - * +
+        .replace(/\d+\.\s*/g, '')         // 去掉有序列表标记 1. 2. 等
+        .trim();                          // 去掉首尾空白
+}
 
 //异步对用户需求和当前知识状态进行生成
 export const paraphraseUserIntent = createAsyncThunk<
@@ -186,12 +200,15 @@ export const generateStepsFromRequirement = createAsyncThunk<
                 });
 
                 // 发送当前步骤和下一步骤信息到IDE
-                const currentStep = ""; // 刚生成时还没有当前步骤
-                const nextStep = parsedSteps.length > 0 ? parsedSteps[0].title : "";
+                const currentStep = parsedSteps.length > 0 ? 
+                    `${parsedSteps[0].title}: ${cleanMarkdownText(parsedSteps[0].abstract)}` : ""; // 第一步作为当前步骤
+                const nextStep = parsedSteps.length > 1 ? 
+                    `${parsedSteps[1].title}: ${cleanMarkdownText(parsedSteps[1].abstract)}` : ""; // 第二步作为下一步骤
                 
                 await extra.ideMessenger.request("syncCodeAwareSteps", {
                     currentStep: currentStep,
-                    nextStep: nextStep
+                    nextStep: nextStep,
+                    stepFinished: false // 刚生成时步骤还没有完成
                 });
 
                 console.log("CodeAware: Successfully synced requirement and steps to IDE");
@@ -323,16 +340,12 @@ export const analyzeCompletionAndUpdateStep = createAsyncThunk<
         try {
             const state = getState();
             const defaultModel = selectDefaultModel(state);
-            const currentStep = selectCurrentStep(state);
-            const nextStep = selectNextStep(state);
+            const steps = state.codeAwareSession.steps;
             const learningGoal = selectLearningGoal(state);
 
             console.log("📊 [CodeAware Thunk] Current state:", {
                 hasDefaultModel: !!defaultModel,
-                hasCurrentStep: !!currentStep,
-                hasNextStep: !!nextStep,
-                currentStepTitle: currentStep?.title,
-                nextStepTitle: nextStep?.title,
+                stepsCount: steps.length,
                 learningGoal: learningGoal.substring(0, 50) + (learningGoal.length > 50 ? "..." : "")
             });
 
@@ -341,18 +354,24 @@ export const analyzeCompletionAndUpdateStep = createAsyncThunk<
                 throw new Error("Default model not defined");
             }
 
-            // 如果没有当前步骤和下一步骤，直接返回
-            if (!currentStep || !nextStep) {
-                console.log("⚠️ [CodeAware Thunk] No current or next step available, skipping analysis");
+            // 如果没有步骤，直接返回
+            if (steps.length === 0) {
+                console.log("⚠️ [CodeAware Thunk] No steps available, skipping analysis");
                 return;
             }
+
+            // 构造简化的步骤列表用于LLM分析
+            const simplifiedSteps = steps.map(step => ({
+                id: step.id,
+                title: step.title,
+                abstract: step.abstract
+            }));
 
             // 构造并发送LLM请求
             const prompt = constructAnalyzeCompletionStepPrompt(
                 prefixCode,
                 completionText,
-                currentStep.title,
-                nextStep.title,
+                simplifiedSteps,
                 learningGoal
             );
 
@@ -371,14 +390,14 @@ export const analyzeCompletionAndUpdateStep = createAsyncThunk<
             // 解析LLM响应
             try {
                 const jsonResponse = JSON.parse(result.content);
-                const toNextStep = jsonResponse.to_next_step || false;
+                const currentStepFromLLM = jsonResponse.current_step || "";
+                const stepFinished = jsonResponse.step_finished || false;
                 const knowledgeCardThemes = jsonResponse.knowledge_card_themes || [];
 
                 console.log("LLM response for completion analysis:", {
-                    toNextStep,
-                    knowledgeCardThemes,
-                    currentStep: currentStep.title,
-                    nextStep: nextStep.title
+                    currentStep: currentStepFromLLM,
+                    stepFinished,
+                    knowledgeCardThemes
                 });
 
                 // 创建临时代码块
@@ -394,8 +413,25 @@ export const analyzeCompletionAndUpdateStep = createAsyncThunk<
                 const tempKnowledgeCards: KnowledgeCardItem[] = [];
                 const tempMappings: CodeAwareMapping[] = [];
 
-                // 确定当前生效的步骤
-                const effectiveStep = toNextStep ? nextStep : currentStep;
+                // 确定当前生效的步骤 - 根据LLM返回的步骤标题匹配
+                let effectiveStep = null;
+                if (currentStepFromLLM && currentStepFromLLM !== "") {
+                    effectiveStep = steps.find(step => step.title === currentStepFromLLM);
+                }
+                
+                // 如果没有匹配到步骤，使用当前步骤
+                if (!effectiveStep) {
+                    const currentStepIndex = state.codeAwareSession.currentStepIndex;
+                    if (currentStepIndex >= 0 && currentStepIndex < steps.length) {
+                        effectiveStep = steps[currentStepIndex];
+                    }
+                }
+
+                // 如果没有找到有效步骤，跳过处理
+                if (!effectiveStep) {
+                    console.log("⚠️ [CodeAware Thunk] No effective step found, skipping knowledge card generation");
+                    return;
+                }
 
                 for (let i = 0; i < knowledgeCardThemes.length; i++) {
                     const theme = knowledgeCardThemes[i];
@@ -440,13 +476,25 @@ export const analyzeCompletionAndUpdateStep = createAsyncThunk<
                     }
                 }
 
+                // 找到匹配的步骤以获取完整的标题和摘要
+                let currentStepWithAbstract = "";
+                if (currentStepFromLLM && currentStepFromLLM !== "") {
+                    const matchedStep = steps.find(step => step.title === currentStepFromLLM);
+                    if (matchedStep) {
+                        currentStepWithAbstract = `${matchedStep.title}: ${cleanMarkdownText(matchedStep.abstract)}`;
+                    } else {
+                        currentStepWithAbstract = currentStepFromLLM; // 如果没有匹配到，至少保留标题
+                    }
+                }
+
                 // 设置待确认的补全信息
                 dispatch(setPendingCompletion({
                     prefixCode,
                     completionText,
                     range,
                     filePath,
-                    toNextStep,
+                    currentStep: currentStepWithAbstract,
+                    stepFinished,
                     originalStepIndex: state.codeAwareSession.currentStepIndex,
                     knowledgeCardThemes,
                     tempCodeChunk,
@@ -454,21 +502,24 @@ export const analyzeCompletionAndUpdateStep = createAsyncThunk<
                     tempMappings
                 }));
 
-                // 如果需要进入下一步骤，更新步骤索引并高亮
-                if (toNextStep) {
-                    dispatch(setCurrentStepIndex(state.codeAwareSession.currentStepIndex + 1));
-                    
-                    // 高亮下一步骤
-                    dispatch(updateHighlight({
-                        sourceType: "step",
-                        identifier: nextStep.id
-                    }));
+                // 根据LLM分析结果高亮对应步骤
+                if (currentStepFromLLM && currentStepFromLLM !== "") {
+                    const matchedStep = steps.find(step => step.title === currentStepFromLLM);
+                    if (matchedStep) {
+                        dispatch(updateHighlight({
+                            sourceType: "step",
+                            identifier: matchedStep.id
+                        }));
+                    }
                 } else {
-                    // 高亮当前步骤
-                    dispatch(updateHighlight({
-                        sourceType: "step",
-                        identifier: currentStep.id
-                    }));
+                    // 如果没有匹配的步骤，高亮当前步骤
+                    const currentStepIndex = state.codeAwareSession.currentStepIndex;
+                    if (currentStepIndex >= 0 && currentStepIndex < steps.length) {
+                        dispatch(updateHighlight({
+                            sourceType: "step",
+                            identifier: steps[currentStepIndex].id
+                        }));
+                    }
                 }
 
                 // 将临时知识卡片添加到对应步骤中用于显示
@@ -481,7 +532,8 @@ export const analyzeCompletionAndUpdateStep = createAsyncThunk<
                 }
 
                 console.log("CodeAware: Successfully analyzed completion and set pending state", {
-                    toNextStep,
+                    currentStep: currentStepFromLLM,
+                    stepFinished,
                     knowledgeCardThemes,
                     effectiveStep: effectiveStep.title
                 });

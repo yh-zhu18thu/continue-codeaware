@@ -62,22 +62,24 @@ export function constructGenerateKnowledgeCardDetailPrompt(
 export function constructAnalyzeCompletionStepPrompt(
     prefixCode: string,
     newCode: string,
-    currentStep: string,
-    nextStep: string,
+    steps: Array<{id: string, title: string, abstract: string}>,
     learningGoal: string
 ): string {
+    const stepsText = steps.map((step, index) => `${index + 1}. ${step.title}: ${step.abstract}`).join("\n");
+    
     return `{
-        "task": "You are given a code snippet, as well as the next part of the code. You are also given the current step of the project, and the subsequent step. Decide if we should move on to the subsequent step AFTER the new code is appended to the snippet. Then provide a knowledge card based on the new code and learning goals given in the input.",
+        "task": "You are given a code snippet and new code that was just generated. You need to analyze which step this new code belongs to from the provided step list, and determine if this step is now complete. Then provide knowledge card themes based on the new code and learning goals.",
         "requirements": [
-            "The knowledge card should contain stuff the user might be interested in, or questions the user might have. All these should be in line with the learning goals",
+            "Analyze the new code and determine which step from the step list it belongs to",
+            "Determine if the current step is now fully implemented (step_finished: true/false)",
+            "The knowledge card themes should contain concepts the user might be interested in or questions they might have, aligned with the learning goals",
             "Respond in the same language as the project description.",
-            "You must follow this JSON format in your response: {\\"to_next_step\\": (true or false), \\"knowledge_card_themes\\": [\\"(theme 1)\\", \\"(theme 2)\\", ...]}",
+            "You must follow this JSON format in your response: {\\"current_step\\": \\"(step title)\\", \\"step_finished\\": (true or false), \\"knowledge_card_themes\\": [\\"(theme 1)\\", \\"(theme 2)\\", ...]}",
             "Please do not use invalid \`\`\`json character to envelope the JSON response, just return the JSON object directly.",
         ],
         "prefix_code": "${prefixCode}",
         "new_code": "${newCode}",
-        "current_step": "${currentStep}",
-        "next_step": "${nextStep}",
+        "steps": "${stepsText}",
         "learning_goal": "${learningGoal}"
     }`;
 }

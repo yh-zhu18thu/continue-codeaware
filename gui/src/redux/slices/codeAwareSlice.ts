@@ -19,6 +19,23 @@ import { v4 as uuidv4 } from "uuid";
 // Import RootState for proper typing
 import type { RootState } from '../store';
 
+// 辅助函数：清理markdown格式的文本，去掉换行符等特殊字符
+function cleanMarkdownText(text: string): string {
+    return text
+        .replace(/\n/g, ' ')           // 替换换行符为空格
+        .replace(/\r/g, ' ')           // 替换回车符为空格
+        .replace(/\t/g, ' ')           // 替换制表符为空格
+        .replace(/\s+/g, ' ')          // 将多个连续空格替换为单个空格
+        .replace(/\*\*(.*?)\*\*/g, '$1')  // 去掉粗体标记 **text**
+        .replace(/\*(.*?)\*/g, '$1')      // 去掉斜体标记 *text*
+        .replace(/`(.*?)`/g, '$1')        // 去掉行内代码标记 `code`
+        .replace(/#{1,6}\s*/g, '')        // 去掉标题标记 # ## ### 等
+        .replace(/>\s*/g, '')             // 去掉引用标记 >
+        .replace(/[-*+]\s*/g, '')         // 去掉列表标记 - * +
+        .replace(/\d+\.\s*/g, '')         // 去掉有序列表标记 1. 2. 等
+        .trim();                          // 去掉首尾空白
+}
+
 // 待确认的补全信息类型
 type PendingCompletion = {
     prefixCode: string;
@@ -26,7 +43,8 @@ type PendingCompletion = {
     range: [number, number];
     filePath: string;
     // 分析结果
-    toNextStep: boolean;
+    currentStep: string;
+    stepFinished: boolean;
     originalStepIndex: number;
     knowledgeCardThemes: string[];
     // 生成的临时数据
@@ -45,8 +63,10 @@ type CodeAwareSessionState = {
     learningGoal: string;
     //当前的flow
     steps: StepItem[];
-    //当前步骤索引（-1表示还没开始任何步骤）
+    //当前步骤索引
     currentStepIndex: number;
+    //当前步骤是否完成
+    stepFinished: boolean;
     //当前的代码块
     codeChunks: CodeChunk[];
     //存储所有的Mapping，用于查找和触发相关元素的高亮，各个元素的高亮写在元素之中
@@ -70,6 +90,7 @@ const initialCodeAwareState: CodeAwareSessionState = {
     learningGoal: "",
     steps: [],
     currentStepIndex: 0,
+    stepFinished: false,
     codeChunks: [],
     codeAwareMappings: [],
     shouldClearIdeHighlights: false,
@@ -105,15 +126,22 @@ export const codeAwareSessionSlice = createSlice({
         },
         setCurrentStepIndex: (state, action: PayloadAction<number>) => {
             state.currentStepIndex = action.payload;
+            // 当手动设置步骤索引时，重置stepFinished状态
+            state.stepFinished = false;
+        },
+        setStepFinished: (state, action: PayloadAction<boolean>) => {
+            state.stepFinished = action.payload;
         },
         goToNextStep: (state) => {
             if (state.currentStepIndex < state.steps.length - 1) {
                 state.currentStepIndex += 1;
+                state.stepFinished = false; // 新步骤默认未完成
             }
         },
         goToPreviousStep: (state) => {
             if (state.currentStepIndex > -1) {
                 state.currentStepIndex -= 1;
+                state.stepFinished = false; // 返回的步骤默认未完成
             }
         },
         updateRequirementHighlightChunks: (state, action: PayloadAction<RequirementChunk[]>) => {
@@ -150,6 +178,7 @@ export const codeAwareSessionSlice = createSlice({
             state.learningGoal = "";
             state.steps = [];
             state.currentStepIndex = 0; // 重置当前步骤索引
+            state.stepFinished = false; // 重置步骤完成状态
             state.codeAwareMappings = [];
             state.codeChunks = [];
             state.shouldClearIdeHighlights = false;
@@ -467,7 +496,8 @@ export const codeAwareSessionSlice = createSlice({
         setPendingCompletion: (state, action: PayloadAction<PendingCompletion>) => {
             console.log("📝 [CodeAware Slice] setPendingCompletion:", {
                 timestamp: new Date().toISOString(),
-                toNextStep: action.payload.toNextStep,
+                currentStep: action.payload.currentStep,
+                stepFinished: action.payload.stepFinished,
                 originalStepIndex: action.payload.originalStepIndex,
                 knowledgeCardCount: action.payload.knowledgeCardThemes.length,
                 tempMappingsCount: action.payload.tempMappings.length
@@ -484,18 +514,25 @@ export const codeAwareSessionSlice = createSlice({
             
             const pending = state.pendingCompletion;
             console.log("💾 [CodeAware Slice] Confirming pending completion:", {
-                toNextStep: pending.toNextStep,
+                currentStep: pending.currentStep,
+                stepFinished: pending.stepFinished,
                 originalStepIndex: pending.originalStepIndex,
                 knowledgeCardCount: pending.tempKnowledgeCards.length,
                 mappingCount: pending.tempMappings.length
             });
             
-            // 更新步骤索引
-            if (pending.toNextStep) {
-                const newStepIndex = Math.min(pending.originalStepIndex + 1, state.steps.length - 1);
-                console.log(`🔄 [CodeAware Slice] Updating step index: ${state.currentStepIndex} -> ${newStepIndex}`);
-                state.currentStepIndex = newStepIndex;
+            // 根据分析结果找到对应的步骤并更新当前步骤索引
+            if (pending.currentStep && pending.currentStep !== "") {
+                const matchedStepIndex = state.steps.findIndex(step => step.title === pending.currentStep);
+                if (matchedStepIndex !== -1 && matchedStepIndex !== state.currentStepIndex) {
+                    console.log(`🔄 [CodeAware Slice] Updating step index: ${state.currentStepIndex} -> ${matchedStepIndex}`);
+                    state.currentStepIndex = matchedStepIndex;
+                }
             }
+            
+            // 更新步骤完成状态
+            state.stepFinished = pending.stepFinished;
+            console.log(`📊 [CodeAware Slice] Setting stepFinished to: ${pending.stepFinished}`);
             
             // 添加代码块
             if (pending.tempCodeChunk) {
@@ -528,13 +565,14 @@ export const codeAwareSessionSlice = createSlice({
             
             const pending = state.pendingCompletion;
             console.log("🔄 [CodeAware Slice] Canceling pending completion:", {
-                toNextStep: pending.toNextStep,
+                currentStep: pending.currentStep,
+                stepFinished: pending.stepFinished,
                 originalStepIndex: pending.originalStepIndex,
                 knowledgeCardCount: pending.tempKnowledgeCards.length
             });
             
-            // 如果之前步进了，恢复之前的步骤高亮
-            if (pending.toNextStep) {
+            // 如果当前步骤发生了变化，恢复到原来的步骤
+            if (pending.currentStep && pending.currentStep !== "" && state.currentStepIndex !== pending.originalStepIndex) {
                 console.log(`🔄 [CodeAware Slice] Restoring step index: ${state.currentStepIndex} -> ${pending.originalStepIndex}`);
                 state.currentStepIndex = pending.originalStepIndex;
                 
@@ -545,11 +583,14 @@ export const codeAwareSessionSlice = createSlice({
                     originalStep.isHighlighted = true;
                 }
                 
-                // 取消下一步骤的高亮
-                const nextStep = state.steps[pending.originalStepIndex + 1];
-                if (nextStep) {
-                    console.log(`🔘 [CodeAware Slice] Removing highlight from next step: ${nextStep.title}`);
-                    nextStep.isHighlighted = false;
+                // 取消当前步骤的高亮（如果不同的话）
+                const currentMatchedStepIndex = state.steps.findIndex(step => step.title === pending.currentStep);
+                if (currentMatchedStepIndex !== -1 && currentMatchedStepIndex !== pending.originalStepIndex) {
+                    const currentMatchedStep = state.steps[currentMatchedStepIndex];
+                    if (currentMatchedStep) {
+                        console.log(`🔘 [CodeAware Slice] Removing highlight from matched step: ${currentMatchedStep.title}`);
+                        currentMatchedStep.isHighlighted = false;
+                    }
                 }
             }
             
@@ -619,8 +660,9 @@ export const codeAwareSessionSlice = createSlice({
 
             return {
                 userRequirement: state.userRequirement?.requirementDescription || undefined,
-                currentStep: currentStep ? `${currentStep.title}: ${currentStep.abstract}` : undefined,
-                nextStep: nextStep ? `${nextStep.title}: ${nextStep.abstract}` : undefined,
+                currentStep: currentStep ? `${currentStep.title}: ${cleanMarkdownText(currentStep.abstract)}` : undefined,
+                nextStep: nextStep ? `${nextStep.title}: ${cleanMarkdownText(nextStep.abstract)}` : undefined,
+                stepFinished: state.stepFinished,
             };
         }
     }
@@ -642,6 +684,7 @@ export const {
     submitRequirementContent,
     setGeneratedSteps,
     setCurrentStepIndex,
+    setStepFinished,
     goToNextStep,
     goToPreviousStep,
     updateRequirementHighlightChunks,

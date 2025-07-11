@@ -569,6 +569,7 @@ export interface CodeAwareContext{
     userRequirement?: string;
     currentStep?: string;
     nextStep?: string;
+    stepFinished?: boolean;
 }
 
 export interface LLMFullCompletionOptions extends BaseCompletionOptions {

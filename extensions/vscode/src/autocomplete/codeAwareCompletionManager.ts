@@ -4,12 +4,13 @@ export class CodeAwareCompletionManager {
   private context: CodeAwareContext = {
     userRequirement: "",
     currentStep: "",
-    nextStep: ""
+    nextStep: "",
+    stepFinished: false
   };
   
   private webviewProtocol: any; // 将在构造函数中设置
 
-  constructor(webviewProtocol?: any) {
+  constructor(webviewProtocol: any) {
     this.webviewProtocol = webviewProtocol;
   }
 
@@ -25,6 +26,10 @@ export class CodeAwareCompletionManager {
     this.context.nextStep = step;
   }
 
+  public setStepFinished(finished: boolean): void {
+    this.context.stepFinished = finished;
+  }
+
   public async getContext(): Promise<CodeAwareContext> {
     // 只有在本地context为空时，才尝试从webview获取最新的上下文
     if (this.webviewProtocol && !this.hasContext()) {
@@ -37,7 +42,8 @@ export class CodeAwareCompletionManager {
           this.context = {
             userRequirement: response.userRequirement || "",
             currentStep: response.currentStep || "",
-            nextStep: response.nextStep || ""
+            nextStep: response.nextStep || "",
+            stepFinished: response.stepFinished || false
           };
         }
       } catch (error) {
@@ -50,23 +56,19 @@ export class CodeAwareCompletionManager {
     return { ...this.context };
   }
 
-  // 保留原有的同步getter用于向后兼容
-  public getContextSync(): CodeAwareContext {
-    console.warn("getContextSync() is deprecated, use getContext() instead");
-    return { ...this.context };
-  }
-
   public hasContext(): boolean {
     return this.context.userRequirement !== "" || 
            this.context.currentStep !== "" || 
-           this.context.nextStep !== "";
+           this.context.nextStep !== "" ||
+           this.context.stepFinished !== false;
   }
 
   public clear(): void {
     this.context = {
       userRequirement: "",
       currentStep: "",
-      nextStep: ""
+      nextStep: "",
+      stepFinished: false
     };
   }
 }

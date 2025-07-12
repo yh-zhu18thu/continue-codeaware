@@ -15,7 +15,9 @@ import KnowledgeCardSAQ from './KnowledgeCardSAQ';
 import KnowledgeCardToolBar from './KnowledgeCardToolBar';
 
 const KnowledgeCardContainer = styled.div<{ isHighlighted?: boolean; isFlickering?: boolean; isHovered?: boolean }>`
-  width: 95%;
+  width: 98%;
+  max-width: 98%;
+  min-width: 0; /* 防止内容撑开 */
   display: flex;
   flex-direction: column;
   background-color: ${vscInputBackground};
@@ -25,26 +27,30 @@ const KnowledgeCardContainer = styled.div<{ isHighlighted?: boolean; isFlickerin
     isFlickering ? '#ff6b6b' : 
     isHighlighted ? '#4ade80' : 
     `${lightGray}44`};
-  margin: 6px auto; /* Center the card horizontally */
+  margin: 3px auto; /* Center the card horizontally with smaller margin */
   overflow: hidden;
-  transition: all 0.2s ease-in-out;
-  transform: ${({ isHovered }) => isHovered ? 'scale(1.03)' : 'scale(1)'};
+  transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+  box-sizing: border-box;
   box-shadow: ${({ isHighlighted, isFlickering, isHovered }) => {
     if (isFlickering) return '0 0 12px rgba(255, 107, 107, 0.8), 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)';
     if (isHighlighted) return '0 0 8px rgba(74, 222, 128, 0.4), 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)';
-    if (isHovered) return '0 8px 16px rgba(0, 0, 0, 0.2), 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)';
+    if (isHovered) return '0 6px 12px rgba(0, 0, 0, 0.15), 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)';
     return '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)';
   }};
 `;
 
 const ContentArea = styled.div<{ isVisible: boolean }>`
-  padding: ${({ isVisible }) => isVisible ? '4px' : '0'};
+  padding: ${({ isVisible }) => isVisible ? '2px' : '0'}; /* 减少内边距 */
   display: ${({ isVisible }) => isVisible ? 'block' : 'none'};
   transition: all 0.15s ease-in-out;
-  width: 95%;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0; /* 防止内容撑开 */
   flex-grow: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   color: ${vscForeground};
+  box-sizing: border-box;
 `;
 
 const TestContainer = styled.div`

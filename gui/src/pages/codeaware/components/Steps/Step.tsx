@@ -8,31 +8,42 @@ import StepTitleBar from './StepTitleBar';
 
 const StepContainer = styled.div<{ isHovered: boolean }>`
   width: 100%;
+  max-width: 100%;
+  min-width: 0; /* 防止内容撑开 */
   display: flex;
   flex-direction: column;
   background-color: ${vscBackground};
-  margin: 8px 0;
-  transition: all 0.2s ease-in-out;
-  transform: ${({ isHovered }) => isHovered ? 'scale(1.02)' : 'scale(1)'};
-  box-shadow: ${({ isHovered }) => isHovered ? '0 4px 12px rgba(0, 0, 0, 0.15)' : '0 2px 4px rgba(0, 0, 0, 0.1)'};
+  margin: 12px 0px; /* 减少垂直间距 */
+  transition: box-shadow 0.2s ease-in-out;
+  box-shadow: ${({ isHovered }) => isHovered ? '0 6px 16px rgba(0, 0, 0, 0.12)' : '0 2px 4px rgba(0, 0, 0, 0.1)'};
   border-radius: 4px;
+  overflow: hidden;
+  box-sizing: border-box;
 `;
 
 const ContentArea = styled.div<{ isVisible: boolean }>`
-  padding: ${({ isVisible }) => isVisible ? '4px' : '0'};
+  padding: ${({ isVisible }) => isVisible ? '2px' : '0'}; /* 减少内边距 */
   padding-top: 0;
   display: ${({ isVisible }) => isVisible ? 'block' : 'none'};
   transition: all 0.15s ease-in-out;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0; /* 防止内容撑开 */
+  overflow: hidden;
+  box-sizing: border-box;
 `;
 
 const KnowledgeCardsContainer = styled.div<{ isHovered: boolean }>`
   display: flex;
   flex-direction: column;
   align-items: center; /* Center the knowledge cards horizontally */
-  gap: 8px;
-  margin-top: 8px;
-  transition: all 0.2s ease-in-out;
-  transform: ${({ isHovered }) => isHovered ? 'scale(1.01)' : 'scale(1)'};
+  gap: 4px; /* 减少卡片间隙 */
+  margin-top: 4px; /* 减少顶部间距 */
+  width: 100%;
+  max-width: 100%;
+  min-width: 0; /* 防止内容撑开 */
+  overflow: hidden;
+  box-sizing: border-box;
 `;
 
 interface StepProps {
@@ -61,46 +72,16 @@ const Step: React.FC<StepProps> = ({
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const [isFlickering, setIsFlickering] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const [shouldKeepHighlighted, setShouldKeepHighlighted] = useState(false);
   const flickerTimeoutRef = useRef<(NodeJS.Timeout | null)[]>([]);
-  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const exitTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Handle mouse enter/leave for hover effects and highlighting
+  // Handle mouse enter/leave for hover effects only
   const handleMouseEnter = () => {
     setIsHovered(true);
-    
-    // Clear any existing exit timeout
-    if (exitTimeoutRef.current) {
-      clearTimeout(exitTimeoutRef.current);
-      exitTimeoutRef.current = null;
-    }
-    
-    // Only start hover timer if step is expanded
-    if (isExpanded && onHighlightEvent && stepId) {
-      hoverTimeoutRef.current = setTimeout(() => {
-        onHighlightEvent({
-          sourceType: "step",
-          identifier: stepId,
-        });
-      }, 3000); // 3 seconds
-    }
   };
 
   const handleMouseLeave = () => {
     setIsHovered(false);
-    
-    // Clear hover timeout
-    if (hoverTimeoutRef.current) {
-      clearTimeout(hoverTimeoutRef.current);
-      hoverTimeoutRef.current = null;
-    }
-    
-    // Start exit timer to clear highlights after 3 seconds
-    if (onClearHighlight) {
-      exitTimeoutRef.current = setTimeout(() => {
-        onClearHighlight();
-      }, 3000);
-    }
   };
 
   // Handle flickering effect when isHighlighted becomes true
@@ -115,6 +96,7 @@ const Step: React.FC<StepProps> = ({
       // Start flickering when highlighted, regardless of expanded state
       // The title bar should always flicker to indicate highlighting
       setIsFlickering(true);
+      setShouldKeepHighlighted(true); // Mark that we should keep highlighted after flickering
       
       // Create a flickering effect with multiple flashes
       let timeoutIndex = 0;
@@ -132,14 +114,16 @@ const Step: React.FC<StepProps> = ({
         flickerTimeoutRef.current[timeoutIndex++] = timeoutOn;
       }
       
-      // Final timeout to turn off flickering and keep highlighted
+      // Final timeout to turn off flickering but keep highlighted
       const finalTimeout = setTimeout(() => {
         setIsFlickering(false);
+        // Keep shouldKeepHighlighted as true to maintain the highlight
       }, 200 + (3 * 400));
       flickerTimeoutRef.current[timeoutIndex] = finalTimeout;
     } else {
-      // Immediately turn off flickering when not highlighted
+      // When isHighlighted becomes false, clear both flickering and persistent highlight
       setIsFlickering(false);
+      setShouldKeepHighlighted(false);
     }
 
     // Cleanup function to clear timeouts when component unmounts or effect re-runs
@@ -154,12 +138,7 @@ const Step: React.FC<StepProps> = ({
   // Cleanup timeouts on unmount
   useEffect(() => {
     return () => {
-      if (hoverTimeoutRef.current) {
-        clearTimeout(hoverTimeoutRef.current);
-      }
-      if (exitTimeoutRef.current) {
-        clearTimeout(exitTimeoutRef.current);
-      }
+      // Only cleanup flicker timeouts
     };
   }, []);
 
@@ -168,20 +147,11 @@ const Step: React.FC<StepProps> = ({
     const willBeExpanded = !isExpanded;
     setIsExpanded(willBeExpanded);
     
-    // Clear all timeouts when toggling
-    if (hoverTimeoutRef.current) {
-      clearTimeout(hoverTimeoutRef.current);
-      hoverTimeoutRef.current = null;
-    }
-    if (exitTimeoutRef.current) {
-      clearTimeout(exitTimeoutRef.current);
-      exitTimeoutRef.current = null;
-    }
-    
     // If step is being collapsed, clear all highlights and immediately stop flickering
     if (wasExpanded) {
       // Immediately stop any flickering animation
       setIsFlickering(false);
+      setShouldKeepHighlighted(false); // Clear persistent highlight when collapsing
       // Clear all existing timeouts
       flickerTimeoutRef.current.forEach((timeout) => {
         if (timeout) clearTimeout(timeout);
@@ -212,7 +182,7 @@ const Step: React.FC<StepProps> = ({
         title={title} 
         isActive={isActive} 
         isExpanded={isExpanded}
-        isHighlighted={isHighlighted}
+        isHighlighted={isHighlighted || shouldKeepHighlighted}
         isFlickering={isFlickering}
         onToggle={handleToggle}
       />

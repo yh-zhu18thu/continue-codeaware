@@ -32,13 +32,54 @@ import Step from "./components/Steps/Step"; // Import Step
 const CodeAwareDiv = styled.div`
   position: relative;
   background-color: transparent;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow-x: hidden; /* 防止水平滚动 */
 
   & > * {
     position: relative;
+    max-width: 100%;
+    box-sizing: border-box;
   }
 
   .thread-message {
     margin: 0px 0px 0px 1px;
+  }
+  
+  /* 确保所有 markdown 内容都不会溢出 */
+  .wmde-markdown {
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+  }
+  
+  .wmde-markdown pre {
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    white-space: pre-wrap !important;
+    word-wrap: break-word !important;
+  }
+  
+  .wmde-markdown code {
+    max-width: 100% !important;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+  }
+  
+  /* 确保所有表格都能适应容器 */
+  .wmde-markdown table {
+    max-width: 100% !important;
+    table-layout: fixed !important;
+    width: 100% !important;
+  }
+  
+  .wmde-markdown td,
+  .wmde-markdown th {
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
   }
 `;
 
@@ -93,22 +134,6 @@ export const CodeAware = () => {
 
   const steps = useAppSelector((state) => state.codeAwareSession.steps); // Get steps data
 
-  // Get current CodeAware context for IDE synchronization
-  const currentStep = useAppSelector(state => {
-    const currentStepIndex = state.codeAwareSession.currentStepIndex;
-    if (currentStepIndex >= 0 && currentStepIndex < state.codeAwareSession.steps.length) {
-      return state.codeAwareSession.steps[currentStepIndex];
-    }
-    return null;
-  });
-  
-  const nextStep = useAppSelector(state => {
-    const nextStepIndex = state.codeAwareSession.currentStepIndex + 1;
-    if (nextStepIndex >= 0 && nextStepIndex < state.codeAwareSession.steps.length) {
-      return state.codeAwareSession.steps[nextStepIndex];
-    }
-    return null;
-  });
 
   // Add webview listener for new session event to initialize CodeAware session
   useWebviewListener(
@@ -381,7 +406,7 @@ export const CodeAware = () => {
 
       {isStepsGenerated && (
         <div 
-        className={`overflow-y-scroll pt-[8px]" "no-scrollbar" ${steps.length > 0 ? "flex-1" : ""}`}
+          className={`overflow-y-scroll pt-[8px] no-scrollbar ${steps.length > 0 ? "flex-1" : ""}`}
         >
           {steps.map((step: StepItem, index: Key | null | undefined) => (
             <Step

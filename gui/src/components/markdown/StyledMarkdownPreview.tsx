@@ -8,10 +8,10 @@ import styled from "styled-components";
 import { visit } from "unist-util-visit";
 import { v4 as uuidv4 } from "uuid";
 import {
-  defaultBorderRadius,
-  vscBackground,
-  vscEditorBackground,
-  vscForeground,
+    defaultBorderRadius,
+    vscBackground,
+    vscEditorBackground,
+    vscForeground,
 } from "..";
 import useUpdatingRef from "../../hooks/useUpdatingRef";
 import { useAppSelector } from "../../redux/hooks";
@@ -36,13 +36,22 @@ const StyledMarkdown = styled.div<{
   whiteSpace: string;
   bgColor: string;
 }>`
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+
   pre {
     white-space: ${(props) => props.whiteSpace};
     background-color: ${vscEditorBackground};
     border-radius: ${defaultBorderRadius};
 
-    max-width: calc(100vw - 24px);
-    overflow-x: scroll;
+    max-width: 100%;
+    width: 100%;
+    box-sizing: border-box;
+    overflow-x: auto;
     overflow-y: hidden;
 
     padding: 16px 8px;
@@ -53,10 +62,13 @@ const StyledMarkdown = styled.div<{
       display: none;
     }
     word-wrap: break-word;
+    overflow-wrap: break-word;
     border-radius: ${defaultBorderRadius};
     background-color: ${vscEditorBackground};
     font-size: ${getFontSize() - 2}px;
     font-family: var(--vscode-editor-font-family);
+    max-width: 100%;
+    box-sizing: border-box;
   }
 
   code:not(pre > code) {

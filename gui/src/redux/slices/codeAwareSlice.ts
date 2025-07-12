@@ -330,18 +330,20 @@ export const codeAwareSessionSlice = createSlice({
                     }
                 });
 
-                // Update knowledge card highlights
-                knowledgeCardIds.forEach(knowledgeCardId => {
-                    for (const step of state.steps) {
-                        const knowledgeCard = step.knowledgeCards.find(
-                            card => card.id === knowledgeCardId
-                        );
-                        if (knowledgeCard) {
-                            knowledgeCard.isHighlighted = true;
-                            break; // Found the knowledge card, no need to continue searching
+                // Update knowledge card highlights (only for code and knowledgeCard sources)
+                if (sourceType === "code" || sourceType === "knowledgeCard") {
+                    knowledgeCardIds.forEach(knowledgeCardId => {
+                        for (const step of state.steps) {
+                            const knowledgeCard = step.knowledgeCards.find(
+                                card => card.id === knowledgeCardId
+                            );
+                            if (knowledgeCard) {
+                                knowledgeCard.isHighlighted = true;
+                                break; // Found the knowledge card, no need to continue searching
+                            }
                         }
-                    }
-                });
+                    });
+                }
 
                 // Update all matched mappings' highlight status
                 matchedMappings.forEach(mapping => {

@@ -255,8 +255,8 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
       onGenerateContent(stepId, cardId, title, learningGoal, codeContext);
     }
     
-    // Trigger highlight event when expanding/collapsing
-    if (onHighlightEvent && cardId) {
+    // Only trigger highlight event when expanding (not when collapsing)
+    if (!wasExpanded && onHighlightEvent && cardId) {
       onHighlightEvent({
         sourceType: "knowledgeCard",
         identifier: cardId,

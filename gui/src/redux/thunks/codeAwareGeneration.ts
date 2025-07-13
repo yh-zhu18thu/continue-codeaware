@@ -415,10 +415,10 @@ export const analyzeCompletionAndUpdateStep = createAsyncThunk<
                 const tempKnowledgeCards: KnowledgeCardItem[] = [];
                 const tempMappings: CodeAwareMapping[] = [];
 
-                // 确定当前生效的步骤 - 根据LLM返回的步骤标题匹配
+                // 确定当前生效的步骤 - 根据LLM返回的步骤ID匹配
                 let effectiveStep = null;
                 if (currentStepFromLLM && currentStepFromLLM !== "") {
-                    effectiveStep = steps.find(step => step.title === currentStepFromLLM);
+                    effectiveStep = steps.find(step => step.id === currentStepFromLLM);
                 }
                 
                 // 如果没有匹配到步骤，使用当前步骤
@@ -478,24 +478,13 @@ export const analyzeCompletionAndUpdateStep = createAsyncThunk<
                     }
                 }
 
-                // 找到匹配的步骤以获取完整的标题和摘要
-                let currentStepWithAbstract = "";
-                if (currentStepFromLLM && currentStepFromLLM !== "") {
-                    const matchedStep = steps.find(step => step.title === currentStepFromLLM);
-                    if (matchedStep) {
-                        currentStepWithAbstract = `${matchedStep.title}: ${cleanMarkdownText(matchedStep.abstract)}`;
-                    } else {
-                        currentStepWithAbstract = currentStepFromLLM; // 如果没有匹配到，至少保留标题
-                    }
-                }
-
                 // 设置待确认的补全信息
                 dispatch(setPendingCompletion({
                     prefixCode,
                     completionText,
                     range,
                     filePath,
-                    currentStep: currentStepWithAbstract,
+                    currentStepId: currentStepFromLLM, // 直接存储step_id
                     stepFinished,
                     originalStepIndex: state.codeAwareSession.currentStepIndex,
                     knowledgeCardThemes,
@@ -506,7 +495,7 @@ export const analyzeCompletionAndUpdateStep = createAsyncThunk<
 
                 // 根据LLM分析结果高亮对应步骤
                 if (currentStepFromLLM && currentStepFromLLM !== "") {
-                    const matchedStep = steps.find(step => step.title === currentStepFromLLM);
+                    const matchedStep = steps.find(step => step.id === currentStepFromLLM);
                     if (matchedStep) {
                         dispatch(updateHighlight({
                             sourceType: "step",
@@ -534,7 +523,7 @@ export const analyzeCompletionAndUpdateStep = createAsyncThunk<
                 }
 
                 console.log("CodeAware: Successfully analyzed completion and set pending state", {
-                    currentStep: currentStepFromLLM,
+                    currentStepId: currentStepFromLLM,
                     stepFinished,
                     knowledgeCardThemes,
                     effectiveStep: effectiveStep.title

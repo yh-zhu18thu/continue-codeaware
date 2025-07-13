@@ -14,6 +14,7 @@ import {
   newCodeAwareSession, // Add this import
   resetIdeCommFlags,
   resetSessionExceptRequirement, // Add this import
+  selectCodeAwareContext, // Add this import
   selectIsRequirementInEditMode, // Import submitRequirementContent
   selectIsStepsGenerated,
   setUserRequirementStatus,
@@ -135,6 +136,40 @@ export const CodeAware = () => {
 
   const steps = useAppSelector((state) => state.codeAwareSession.steps); // Get steps data
 
+  // 获取当前步骤索引和完成状态，用于监听变化
+  const currentStepIndex = useAppSelector((state) => state.codeAwareSession.currentStepIndex);
+  const stepFinished = useAppSelector((state) => state.codeAwareSession.stepFinished);
+  const codeAwareContext = useAppSelector(selectCodeAwareContext);
+
+  // 监听currentStepIndex和stepFinished的变化，同步给IDE
+  useEffect(() => {
+    // 只有在有步骤的情况下才同步
+    if (steps.length > 0) {
+      const syncToIde = async () => {
+        try {
+          const currentStep = codeAwareContext.currentStep || "";
+          const nextStep = codeAwareContext.nextStep || "";
+
+          await ideMessenger?.request("syncCodeAwareSteps", {
+            currentStep: currentStep,
+            nextStep: nextStep,
+            stepFinished: stepFinished
+          });
+
+          console.log("📡 [CodeAware] Successfully synced steps to IDE:", {
+            currentStepIndex,
+            currentStep: currentStep.substring(0, 50) + (currentStep.length > 50 ? "..." : ""),
+            nextStep: nextStep.substring(0, 50) + (nextStep.length > 50 ? "..." : ""),
+            stepFinished
+          });
+        } catch (error) {
+          console.warn("⚠️ [CodeAware] Failed to sync steps to IDE:", error);
+        }
+      };
+
+      syncToIde();
+    }
+  }, [currentStepIndex, stepFinished, steps.length, codeAwareContext, ideMessenger]);
 
   // Add webview listener for new session event to initialize CodeAware session
   useWebviewListener(

@@ -263,84 +263,72 @@ const holeFillerTemplate: AutocompleteTemplate = {
 ## EXAMPLE QUERY:
 
 <QUERY>
-function sum_evens(lim) {
-  var sum = 0;
-  for (var i = 0; i < lim; ++i) {
-    {{FILL_HERE}}
-  }
-  return sum;
-}
+def sum_list(lst):
+    total = 0
+    for x in lst:
+        {{FILL_HERE}}
+    return total
+
+print(sum_list([1, 2, 3]))
 </QUERY>
 
 TASK: Fill the {{FILL_HERE}} hole.
 
 ## CORRECT COMPLETION
 
-<COMPLETION>if (i % 2 === 0) {
-      sum += i;
-    }</COMPLETION>
+<COMPLETION>total += x</COMPLETION>
 
 ## EXAMPLE QUERY:
 
 <QUERY>
-def sum_list(lst):
-  total = 0
-  for x in lst:
-  {{FILL_HERE}}
-  return total
+def calculate_average(numbers):
+    if not numbers:
+        return 0
+    {{FILL_HERE}}
+    return average
 
-print sum_list([1, 2, 3])
+# 计算平均值
+result = calculate_average([1, 2, 3, 4, 5])
+print(result)
 </QUERY>
 
 ## CORRECT COMPLETION:
 
-<COMPLETION>  total += x</COMPLETION>
+<COMPLETION>total = sum(numbers)
+    average = total / len(numbers)</COMPLETION>
 
 ## EXAMPLE QUERY:
 
 <QUERY>
-// data Tree a = Node (Tree a) (Tree a) | Leaf a
+# 处理用户数据
+def process_user_data(user_info):
+    # 检查用户信息是否有效
+    if not user_info or 'name' not in user_info:
+        return None
+    
+    # 数据处理逻辑
+    {{FILL_HERE}}
+    
+    # 返回处理后的结果
+    return processed_data
 
-// sum :: Tree Int -> Int
-// sum (Node lft rgt) = sum lft + sum rgt
-// sum (Leaf val)     = val
-
-// convert to TypeScript:
-{{FILL_HERE}}
+# 测试函数
+user = {'name': '张三', 'age': 25, 'email': 'zhangsan@example.com'}
+result = process_user_data(user)
 </QUERY>
 
 ## CORRECT COMPLETION:
 
-<COMPLETION>type Tree<T>
-  = {$:"Node", lft: Tree<T>, rgt: Tree<T>}
-  | {$:"Leaf", val: T};
-
-function sum(tree: Tree<number>): number {
-  switch (tree.$) {
-    case "Node":
-      return sum(tree.lft) + sum(tree.rgt);
-    case "Leaf":
-      return tree.val;
-  }
-}</COMPLETION>
-
-## EXAMPLE QUERY:
-
-The 5th {{FILL_HERE}} is Jupiter.
-
-## CORRECT COMPLETION:
-
-<COMPLETION>planet from the Sun</COMPLETION>
-
-## EXAMPLE QUERY:
-
-function hypothenuse(a, b) {
-  return Math.sqrt({{FILL_HERE}}b ** 2);
-}
-
-## CORRECT COMPLETION:
-
-<COMPLETION>a ** 2 + </COMPLETION>`;
+<COMPLETION>name = user_info['name'].strip()
+    age = user_info.get('age', 0)
+    email = user_info.get('email', '').lower()
+    
+    processed_data = {
+        'formatted_name': name.title(),
+        'age': max(0, age),
+        'email': email,
+        'status': 'active'
+    }</COMPLETION>`;
 
     const fullPrompt =
       SYSTEM_MSG +

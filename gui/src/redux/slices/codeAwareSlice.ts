@@ -43,7 +43,7 @@ type PendingCompletion = {
     range: [number, number];
     filePath: string;
     // 分析结果
-    currentStep: string;
+    currentStepId: string; // 改为存储step_id而不是完整描述
     stepFinished: boolean;
     originalStepIndex: number;
     knowledgeCardThemes: string[];
@@ -514,7 +514,7 @@ export const codeAwareSessionSlice = createSlice({
         setPendingCompletion: (state, action: PayloadAction<PendingCompletion>) => {
             console.log("📝 [CodeAware Slice] setPendingCompletion:", {
                 timestamp: new Date().toISOString(),
-                currentStep: action.payload.currentStep,
+                currentStepId: action.payload.currentStepId,
                 stepFinished: action.payload.stepFinished,
                 originalStepIndex: action.payload.originalStepIndex,
                 knowledgeCardCount: action.payload.knowledgeCardThemes.length,
@@ -532,7 +532,7 @@ export const codeAwareSessionSlice = createSlice({
             
             const pending = state.pendingCompletion;
             console.log("💾 [CodeAware Slice] Confirming pending completion:", {
-                currentStep: pending.currentStep,
+                currentStepId: pending.currentStepId,
                 stepFinished: pending.stepFinished,
                 originalStepIndex: pending.originalStepIndex,
                 knowledgeCardCount: pending.tempKnowledgeCards.length,
@@ -540,8 +540,8 @@ export const codeAwareSessionSlice = createSlice({
             });
             
             // 根据分析结果找到对应的步骤并更新当前步骤索引
-            if (pending.currentStep && pending.currentStep !== "") {
-                const matchedStepIndex = state.steps.findIndex(step => step.title === pending.currentStep);
+            if (pending.currentStepId && pending.currentStepId !== "") {
+                const matchedStepIndex = state.steps.findIndex(step => step.id === pending.currentStepId);
                 if (matchedStepIndex !== -1 && matchedStepIndex !== state.currentStepIndex) {
                     console.log(`🔄 [CodeAware Slice] Updating step index: ${state.currentStepIndex} -> ${matchedStepIndex}`);
                     state.currentStepIndex = matchedStepIndex;
@@ -600,14 +600,14 @@ export const codeAwareSessionSlice = createSlice({
             
             const pending = state.pendingCompletion;
             console.log("🔄 [CodeAware Slice] Canceling pending completion:", {
-                currentStep: pending.currentStep,
+                currentStepId: pending.currentStepId,
                 stepFinished: pending.stepFinished,
                 originalStepIndex: pending.originalStepIndex,
                 knowledgeCardCount: pending.tempKnowledgeCards.length
             });
             
             // 如果当前步骤发生了变化，恢复到原来的步骤
-            if (pending.currentStep && pending.currentStep !== "" && state.currentStepIndex !== pending.originalStepIndex) {
+            if (pending.currentStepId && pending.currentStepId !== "" && state.currentStepIndex !== pending.originalStepIndex) {
                 console.log(`🔄 [CodeAware Slice] Restoring step index: ${state.currentStepIndex} -> ${pending.originalStepIndex}`);
                 state.currentStepIndex = pending.originalStepIndex;
                 
@@ -619,7 +619,7 @@ export const codeAwareSessionSlice = createSlice({
                 }
                 
                 // 取消当前步骤的高亮（如果不同的话）
-                const currentMatchedStepIndex = state.steps.findIndex(step => step.title === pending.currentStep);
+                const currentMatchedStepIndex = state.steps.findIndex(step => step.id === pending.currentStepId);
                 if (currentMatchedStepIndex !== -1 && currentMatchedStepIndex !== pending.originalStepIndex) {
                     const currentMatchedStep = state.steps[currentMatchedStepIndex];
                     if (currentMatchedStep) {

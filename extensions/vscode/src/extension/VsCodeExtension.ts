@@ -379,7 +379,7 @@ export class VsCodeExtension {
       void this.core.invoke("didChangeActiveTextEditor", { filepath });
     });
 
-    // CodeAware: 监听选取的变化
+    // CodeAware: 监听代码选择变化
     vscode.window.onDidChangeTextEditorSelection(async (event) => {
       const editor = event.textEditor;
       const document = editor.document;
@@ -392,26 +392,8 @@ export class VsCodeExtension {
       const selection = event.selections[0]; // 取第一个选择区域
       const webviewProtocol = await this.webviewProtocolPromise;
 
-      if (selection.isEmpty) {
-        // 光标位置变化（没有选中内容）
-        const currentLine = selection.active.line;
-        const startLine = Math.max(0, currentLine - 10);
-        const endLine = Math.min(document.lineCount - 1, currentLine + 10);
-        
-        const contextLines: string[] = [];
-        for (let i = startLine; i <= endLine; i++) {
-          contextLines.push(document.lineAt(i).text);
-        }
-
-        void webviewProtocol.request("cursorPositionChanged", {
-          filePath: document.uri.fsPath,
-          lineNumber: currentLine + 1, // VS Code 使用 0 基础索引，转换为 1 基础
-          contextLines,
-          startLine: startLine + 1,
-          endLine: endLine + 1,
-        });
-      } else {
-        // 代码选择变化
+      // 只处理有选中内容的情况
+      if (!selection.isEmpty) {
         const startLine = selection.start.line + 1;
         const endLine = selection.end.line + 1;
         const selectedContent = document.getText(selection);

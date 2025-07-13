@@ -166,6 +166,9 @@ export const codeAwareSessionSlice = createSlice({
             }
         },
         newCodeAwareSession: (state) => {
+            // Clear all highlights first
+            codeAwareSessionSlice.caseReducers.clearAllHighlights(state);
+            
             // Reset the state for a new CodeAware session
             state.currentSessionId = uuidv4();
             state.title = "New CodeAware Session";
@@ -364,7 +367,20 @@ export const codeAwareSessionSlice = createSlice({
             state.codeChunks.push(...action.payload);
         },
         updateCodeAwareMappings: (state, action: PayloadAction<CodeAwareMapping[]>) => {
-            state.codeAwareMappings.push(...action.payload);
+            // 使用 Set 来高效检查重复的 mapping
+            const existingMappingsSet = new Set(
+                state.codeAwareMappings.map(mapping => 
+                    `${mapping.codeChunkId || ''}-${mapping.requirementChunkId || ''}-${mapping.stepId || ''}-${mapping.knowledgeCardId || ''}`
+                )
+            );
+            
+            // 过滤出不重复的 mapping
+            const newMappings = action.payload.filter(newMapping => {
+                const mappingKey = `${newMapping.codeChunkId || ''}-${newMapping.requirementChunkId || ''}-${newMapping.stepId || ''}-${newMapping.knowledgeCardId || ''}`;
+                return !existingMappingsSet.has(mappingKey);
+            });
+            
+            state.codeAwareMappings.push(...newMappings);
         },
         setCodeAwareTitle: (state, action: PayloadAction<string>) => {
             state.title = action.payload;
@@ -549,9 +565,26 @@ export const codeAwareSessionSlice = createSlice({
                 currentStep.knowledgeCards.push(...pending.tempKnowledgeCards);
             }
             
-            // 添加映射
-            console.log(`🔗 [CodeAware Slice] Adding ${pending.tempMappings.length} mappings`);
-            state.codeAwareMappings.push(...pending.tempMappings);
+            // 添加映射（去重处理）
+            if (pending.tempMappings.length > 0) {
+                // 使用 Set 来高效检查重复的 mapping
+                const existingMappingsSet = new Set(
+                    state.codeAwareMappings.map(mapping => 
+                        `${mapping.codeChunkId || ''}-${mapping.requirementChunkId || ''}-${mapping.stepId || ''}-${mapping.knowledgeCardId || ''}`
+                    )
+                );
+                
+                // 过滤出不重复的 mapping
+                const newMappings = pending.tempMappings.filter(newMapping => {
+                    const mappingKey = `${newMapping.codeChunkId || ''}-${newMapping.requirementChunkId || ''}-${newMapping.stepId || ''}-${newMapping.knowledgeCardId || ''}`;
+                    return !existingMappingsSet.has(mappingKey);
+                });
+                
+                console.log(`🔗 [CodeAware Slice] Adding ${newMappings.length} unique mappings (filtered ${pending.tempMappings.length - newMappings.length} duplicates)`);
+                state.codeAwareMappings.push(...newMappings);
+            } else {
+                console.log("🔗 [CodeAware Slice] No mappings to add");
+            }
             
             // 清理待确认状态
             console.log("🧹 [CodeAware Slice] Clearing pending completion state");
@@ -614,6 +647,25 @@ export const codeAwareSessionSlice = createSlice({
             // 清理待确认状态
             console.log("🧹 [CodeAware Slice] Clearing pending completion state");
             state.pendingCompletion = null;
+        },
+        resetSessionExceptRequirement: (state) => {
+            // Clear all highlights first
+            codeAwareSessionSlice.caseReducers.clearAllHighlights(state);
+            
+            // Reset everything except userRequirement and currentSessionId
+            state.steps = [];
+            state.currentStepIndex = 0;
+            state.stepFinished = false;
+            state.codeChunks = [];
+            state.codeAwareMappings = [];
+            state.shouldClearIdeHighlights = false;
+            state.codeChunksToHighlightInIde = [];
+            state.pendingCompletion = null;
+            
+            // Keep userRequirement but ensure highlightChunks is initialized
+            if (state.userRequirement && !state.userRequirement.highlightChunks) {
+                state.userRequirement.highlightChunks = [];
+            }
         }
     },
     selectors:{
@@ -692,6 +744,7 @@ export const {
     updateRequirementHighlightChunks,
     toggleRequirementChunkHighlight,
     newCodeAwareSession,
+    resetSessionExceptRequirement,
     clearAllHighlights,
     updateHighlight,
     updateRequirementChunks,

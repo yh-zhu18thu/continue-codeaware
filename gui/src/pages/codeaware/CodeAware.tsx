@@ -13,6 +13,7 @@ import {
   clearAllHighlights,
   newCodeAwareSession, // Add this import
   resetIdeCommFlags,
+  resetSessionExceptRequirement, // Add this import
   selectIsRequirementInEditMode, // Import submitRequirementContent
   selectIsStepsGenerated,
   setUserRequirementStatus,
@@ -158,6 +159,7 @@ export const CodeAware = () => {
 
   // log all the data for debugging
   useEffect(() => {
+    console.log("All mappings length: ", allMappings.length);
     console.log("All Mappings:", allMappings);
   }, [allMappings]);
 
@@ -207,6 +209,8 @@ export const CodeAware = () => {
         return;
       }
       dispatch(submitRequirementContent(requirement)); // Submit content first
+      // Reset session except requirement first to ensure clean state
+      dispatch(resetSessionExceptRequirement());
       dispatch(setUserRequirementStatus("confirmed"));
       dispatch(generateStepsFromRequirement({ userRequirement: requirement }))
         .then(() => {
@@ -224,8 +228,10 @@ export const CodeAware = () => {
     if (!userRequirement?.requirementDescription) {
       return;
     }
-    // CATODO: Consider if a different status is needed during regeneration
-    dispatch(setUserRequirementStatus("confirmed")); // Or a new status like "regenerating"
+    // Reset session except requirement first
+    dispatch(resetSessionExceptRequirement());
+    // Set status to confirmed for regeneration
+    dispatch(setUserRequirementStatus("confirmed"));
     dispatch(generateStepsFromRequirement({ userRequirement: userRequirement.requirementDescription }))
       .then(() => {
         dispatch(setUserRequirementStatus("finalized"));
@@ -312,14 +318,57 @@ export const CodeAware = () => {
 
   useEffect(() => {
     if (codeChunksToHighlightInIde.length > 0) {
-      // Highlight code chunks in IDE
-      codeChunksToHighlightInIde.forEach(codeChunk => {
+      // Merge multiple code chunks into one for efficient highlighting
+      if (codeChunksToHighlightInIde.length === 1) {
+        // Single chunk, send as is
         try {
-          ideMessenger?.post("highlightCodeChunk", codeChunk);
+          ideMessenger?.post("highlightCodeChunk", codeChunksToHighlightInIde[0]);
         } catch (error) {
           console.error("Failed to highlight code in IDE:", error);
         }
-      });
+      } else {
+        // Multiple chunks, merge them
+        const groupedByFile = codeChunksToHighlightInIde.reduce((acc, chunk) => {
+          if (!acc[chunk.filePath]) {
+            acc[chunk.filePath] = [];
+          }
+          acc[chunk.filePath].push(chunk);
+          return acc;
+        }, {} as Record<string, typeof codeChunksToHighlightInIde>);
+
+        // Process each file separately
+        Object.entries(groupedByFile).forEach(([filePath, chunks]) => {
+          try {
+            if (chunks.length === 1) {
+              // Single chunk in this file
+              ideMessenger?.post("highlightCodeChunk", chunks[0]);
+            } else {
+              // Multiple chunks in same file, merge them
+              const sortedChunks = chunks.sort((a, b) => a.range[0] - b.range[0]);
+              const minLine = Math.min(...sortedChunks.map(chunk => chunk.range[0]));
+              const maxLine = Math.max(...sortedChunks.map(chunk => chunk.range[1]));
+              
+              // Merge content with line breaks between chunks
+              const mergedContent = sortedChunks
+                .map(chunk => chunk.content)
+                .join('\n...\n'); // Add separator between chunks
+
+              const mergedChunk = {
+                id: `merged-${sortedChunks.map(c => c.id).join('-')}`,
+                content: mergedContent,
+                range: [minLine, maxLine] as [number, number],
+                isHighlighted: true,
+                filePath: filePath
+              };
+
+              ideMessenger?.post("highlightCodeChunk", mergedChunk);
+            }
+          } catch (error) {
+            console.error("Failed to highlight code in IDE:", error);
+          }
+        });
+      }
+      
       // Reset the flag
       dispatch(resetIdeCommFlags());
     }

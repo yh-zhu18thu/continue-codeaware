@@ -2,12 +2,12 @@ import { ToIdeFromWebviewOrCoreProtocol } from "./ide";
 import { ToWebviewFromIdeOrCoreProtocol } from "./webview";
 
 import type {
-  ApplyState,
-  CodeChunk,
-  CodeToEdit,
-  EditStatus,
-  MessageContent,
-  RangeInFileWithContents
+    ApplyState,
+    CodeChunk,
+    CodeToEdit,
+    EditStatus,
+    MessageContent,
+    RangeInFileWithContents
 } from "../";
 
 export type ToIdeFromWebviewProtocol = ToIdeFromWebviewOrCoreProtocol & {
@@ -103,14 +103,6 @@ export type ToWebviewFromIdeProtocol = ToWebviewFromIdeOrCoreProtocol & {
   exitEditMode: [undefined, void];
   focusEdit: [undefined, void];
   focusEditWithoutClear: [undefined, void];
-  // CodeAware: 光标位置变化事件
-  cursorPositionChanged: [{
-    filePath: string;
-    lineNumber: number;
-    contextLines: string[];
-    startLine: number;
-    endLine: number;
-  }, void];
   // CodeAware: 代码选择事件
   codeSelectionChanged: [{
     filePath: string;

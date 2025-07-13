@@ -110,6 +110,7 @@ export const generateStepsFromRequirement = createAsyncThunk<
         { dispatch, extra, getState }
     ) => {
         try {
+            
             const state = getState();
             const defaultModel = selectDefaultModel(state);
             if (!defaultModel) {
@@ -187,6 +188,7 @@ export const generateStepsFromRequirement = createAsyncThunk<
             // 更新 Redux 状态
             dispatch(setCodeAwareTitle(title));
             dispatch(setLearningGoal(learningGoal));
+            dispatch(submitRequirementContent(userRequirement)); // 重新设置用户需求内容，因为newCodeAwareSession清空了状态
             dispatch(setGeneratedSteps(parsedSteps));
             dispatch(updateRequirementChunks(requirementChunks));
             dispatch(updateCodeAwareMappings(initialMappings));

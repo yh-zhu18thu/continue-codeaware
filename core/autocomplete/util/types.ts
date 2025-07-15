@@ -1,4 +1,4 @@
-import { CodeAwareContext, Position, Range, RangeInFile, TabAutocompleteOptions } from "../..";
+import { GenerationContext, Position, Range, RangeInFile, TabAutocompleteOptions } from "../..";
 import { AutocompleteCodeSnippet } from "../snippets/types";
 
 export type RecentlyEditedRange = RangeInFile & {
@@ -24,7 +24,7 @@ export interface AutocompleteInput {
   };
   injectDetails?: string;
   // CodeAware: 添加上下文信息
-  codeAwareContext?: CodeAwareContext;
+  codeAwareContext?: GenerationContext;
 }
 
 export interface AutocompleteOutcome extends TabAutocompleteOptions {

@@ -483,11 +483,9 @@ export interface ProgramRequirement {
   highlightChunks?: RequirementChunk[];
 }
 
-//CODEAWARE: 维护mapping是否对应上的状态，对应不上了的话调用LLM重新寻找
-export type MappingStatus = 
-| "mapped"
-| "unmapped"
-| "remapping"
+
+export type StepStatus = "editing" | "confirmed" | "generated";
+
 
 // CODEAWARE: flow步骤
 export interface StepItem {
@@ -495,6 +493,7 @@ export interface StepItem {
   title: string;
   abstract: string;
   knowledgeCards: KnowledgeCardItem[]; //维护该步骤下的知识卡片
+  stepStatus: StepStatus;
   isHighlighted: boolean;
 }
 
@@ -565,11 +564,10 @@ export interface CodeAwareMetadata{
 }
 
 //CodeAware 用于补全的context
-export interface CodeAwareContext{
+export interface GenerationContext{
     userRequirement?: string;
-    currentStep?: string;
-    nextStep?: string;
-    stepFinished?: boolean;
+    orderedSteps?: string[];
+    stopStep?: string;
 }
 
 export interface LLMFullCompletionOptions extends BaseCompletionOptions {

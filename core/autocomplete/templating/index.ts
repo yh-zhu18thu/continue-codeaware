@@ -1,14 +1,14 @@
 import Handlebars from "handlebars";
 
-import { CodeAwareContext, CompletionOptions } from "../..";
+import { CompletionOptions, GenerationContext } from "../..";
 import { getUriPathBasename } from "../../util/uri";
 import { AutocompleteLanguageInfo } from "../constants/AutocompleteLanguageInfo";
 import { SnippetPayload } from "../snippets";
 
 import { HelperVars } from "../util/HelperVars";
 import {
-  AutocompleteTemplate,
-  getTemplateForModel,
+    AutocompleteTemplate,
+    getTemplateForModel,
 } from "./AutocompleteTemplate";
 import { getSnippets } from "./filtering";
 import { formatSnippets } from "./formatting";
@@ -32,7 +32,7 @@ function renderStringTemplate(
   lang: AutocompleteLanguageInfo,
   filepath: string,
   reponame: string,
-  codeAwareContext?: CodeAwareContext,
+  codeAwareContext?: GenerationContext,
 ) {
   const filename = getUriPathBasename(filepath);
   const compiledTemplate = Handlebars.compile(template);
@@ -52,7 +52,7 @@ function renderStringTemplate(
 // CodeAware: 为prefix添加上下文的辅助函数
 function enhancePrefixWithCodeAwareContext(
   prefix: string,
-  codeAwareContext?: CodeAwareContext,
+  codeAwareContext?: GenerationContext,
 ): string {
   if (!codeAwareContext || !codeAwareContext.userRequirement) {
     return prefix;
@@ -98,7 +98,7 @@ function enhancePrefixWithCodeAwareContext(
 // CodeAware: 为suffix添加上下文的辅助函数
 function enhanceSuffixWithCodeAwareContext(
   suffix: string,
-  codeAwareContext?: CodeAwareContext,
+  codeAwareContext?: GenerationContext,
 ): string {
   if (!codeAwareContext || !codeAwareContext.userRequirement) {
     return suffix;

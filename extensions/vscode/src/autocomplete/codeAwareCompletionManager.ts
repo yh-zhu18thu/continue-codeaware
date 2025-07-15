@@ -1,7 +1,7 @@
-import { CodeAwareContext } from "core";
+import { GenerationContext } from "core";
 
 export class CodeAwareCompletionManager {
-  private context: CodeAwareContext = {
+  private context: GenerationContext = {
     userRequirement: "",
     currentStep: "",
     nextStep: "",
@@ -30,7 +30,7 @@ export class CodeAwareCompletionManager {
     this.context.stepFinished = finished;
   }
 
-  public async getContext(): Promise<CodeAwareContext> {
+  public async getContext(): Promise<GenerationContext> {
     // 只有在本地context为空时，才尝试从webview获取最新的上下文
     if (this.webviewProtocol && !this.hasContext()) {
       try {

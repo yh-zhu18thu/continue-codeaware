@@ -1,7 +1,7 @@
 import { CompletionProvider } from "core/autocomplete/CompletionProvider";
 import {
-  type AutocompleteInput,
-  type AutocompleteOutcome,
+    type AutocompleteInput,
+    type AutocompleteOutcome,
 } from "core/autocomplete/util/types";
 import { ConfigHandler } from "core/config/ConfigHandler";
 import { startLocalOllama } from "core/util/ollamaHelper";
@@ -17,13 +17,13 @@ import { getDefinitionsFromLsp } from "./lsp";
 import { RecentlyEditedTracker } from "./recentlyEdited";
 import { RecentlyVisitedRangesService } from "./RecentlyVisitedRangesService";
 import {
-  StatusBarStatus,
-  getStatusBarStatus,
-  setupStatusBar,
-  stopStatusBarLoading,
+    StatusBarStatus,
+    getStatusBarStatus,
+    setupStatusBar,
+    stopStatusBarLoading,
 } from "./statusBar";
 
-import type { CodeAwareContext, IDE } from "core";
+import type { GenerationContext, IDE } from "core";
 
 const Diff = require("diff");
 
@@ -222,7 +222,7 @@ export class ContinueCompletionProvider
       let manuallyPassPrefix: string | undefined = undefined;
 
       // CodeAware: 获取上下文信息
-      let codeAwareContext: CodeAwareContext | undefined = undefined;
+      let codeAwareContext: GenerationContext | undefined = undefined;
       try {
           const context = await this.codeAwareManager.getContext();
           console.log("CodeAware: Retrieved context:", context);

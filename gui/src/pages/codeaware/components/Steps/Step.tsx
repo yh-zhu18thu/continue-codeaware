@@ -1,9 +1,10 @@
-import { HighlightEvent } from "core";
+import { HighlightEvent, StepStatus } from "core";
 import React, { useEffect, useRef, useState } from 'react';
 import styled from "styled-components";
 import { vscBackground } from "../../../../components";
 import KnowledgeCard, { KnowledgeCardProps } from '../KnowledgeCard/KnowledgeCard';
 import StepDescription from './StepDescription';
+import StepEditor from './StepEditor';
 import StepTitleBar from './StepTitleBar';
 
 const StepContainer = styled.div<{ isHovered: boolean }>`
@@ -54,10 +55,12 @@ interface StepProps {
   defaultExpanded?: boolean;
   isHighlighted?: boolean;
   stepId?: string;
+  stepStatus?: StepStatus; // Use StepStatus type from core
   onHighlightEvent?: (event: HighlightEvent) => void;
   onClearHighlight?: () => void;
   onExecuteUntilStep?: (stepId: string) => void;
-  onWrenchStep?: (stepId: string) => void;
+  onStepEdit?: (stepId: string, newContent: string) => void; // Callback for step edit
+  onStepStatusChange?: (stepId: string, newStatus: StepStatus) => void; // Callback for status change
 }
 
 const Step: React.FC<StepProps> = ({
@@ -68,16 +71,21 @@ const Step: React.FC<StepProps> = ({
   defaultExpanded = false, // Changed to false for collapsed by default
   isHighlighted = false,
   stepId,
+  stepStatus = "confirmed", // Default to confirmed for backward compatibility
   onHighlightEvent,
   onClearHighlight,
   onExecuteUntilStep,
-  onWrenchStep,
+  onStepEdit,
+  onStepStatusChange,
 }) => {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const [isFlickering, setIsFlickering] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [shouldKeepHighlighted, setShouldKeepHighlighted] = useState(false);
   const flickerTimeoutRef = useRef<(NodeJS.Timeout | null)[]>([]);
+
+  // Check if step is in editing mode based on stepStatus
+  const isEditing = stepStatus === "editing";
 
   // Handle mouse enter/leave for hover effects only
   const handleMouseEnter = () => {
@@ -182,9 +190,20 @@ const Step: React.FC<StepProps> = ({
     }
   };
 
-  const handleWrenchStep = () => {
-    if (stepId && onWrenchStep) {
-      onWrenchStep(stepId);
+  const handleEditStep = () => {
+    // Trigger edit mode by changing status to "editing"
+    if (stepId && onStepStatusChange) {
+      onStepStatusChange(stepId, "editing");
+    }
+  };
+
+  const handleConfirmEdit = (newContent: string) => {
+    if (stepId && onStepEdit) {
+      onStepEdit(stepId, newContent);
+    }
+    // Change status back to "confirmed" after editing
+    if (stepId && onStepStatusChange) {
+      onStepStatusChange(stepId, "confirmed");
     }
   };
 
@@ -202,13 +221,21 @@ const Step: React.FC<StepProps> = ({
         isFlickering={isFlickering}
         onToggle={handleToggle}
         onExecuteUntilStep={handleExecuteUntilStep}
-        onWrenchStep={handleWrenchStep}
       />
       <ContentArea isVisible={isExpanded}>
-        <StepDescription 
-          markdownContent={description} 
-          isVisible={isExpanded}
-        />
+        {isEditing ? (
+          <StepEditor 
+            markdownContent={description} 
+            isVisible={isExpanded}
+            onConfirm={handleConfirmEdit}
+          />
+        ) : (
+          <StepDescription 
+            markdownContent={description} 
+            isVisible={isExpanded}
+            onEdit={stepStatus === "confirmed" ? handleEditStep : undefined}
+          />
+        )}
         {knowledgeCards.length > 0 && (
           <KnowledgeCardsContainer isHovered={isHovered}>
             {knowledgeCards.map((cardProps, index) => (

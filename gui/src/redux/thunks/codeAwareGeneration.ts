@@ -1,31 +1,24 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import {
     CodeAwareMapping,
-    CodeChunk,
-    KnowledgeCardItem,
     ProgramRequirement,
     RequirementChunk,
-    StepItem,
+    StepItem
 } from "core";
 import {
-    constructAnalyzeCompletionStepPrompt,
     constructGenerateKnowledgeCardDetailPrompt,
     constructGenerateStepsPrompt,
     constructParaphraseUserIntentPrompt
 } from "core/llm/codeAwarePrompts";
 import {
-    createKnowledgeCard,
-    selectLearningGoal,
     setCodeAwareTitle,
     setGeneratedSteps,
     setKnowledgeCardError,
     setKnowledgeCardLoading,
     setLearningGoal,
-    setPendingCompletion,
     setUserRequirementStatus,
     submitRequirementContent,
     updateCodeAwareMappings,
-    updateHighlight,
     updateKnowledgeCardContent,
     updateRequirementChunks
 } from "../slices/codeAwareSlice";
@@ -158,7 +151,8 @@ export const generateStepsFromRequirement = createAsyncThunk<
                             title: stepTitle,
                             abstract: stepAbstract,
                             knowledgeCards:[],
-                            isHighlighted:false
+                            isHighlighted:false,
+                            stepStatus: "confirmed", // 默认状态为 confirmed
                         });
                     } else {
                         console.warn("Step is missing title or abstract:", step);
@@ -311,230 +305,6 @@ export const generateKnowledgeCardDetail = createAsyncThunk<
                 cardId: knowledgeCardId,
                 error: errorMessage
             }));
-        }
-    }
-);
-
-//异步分析代码补全并决定是否进入下一步骤
-export const analyzeCompletionAndUpdateStep = createAsyncThunk<
-    void,
-    {
-        prefixCode: string;
-        completionText: string;
-        range: [number, number];
-        filePath: string;
-    },
-    ThunkApiType
->(
-    "codeAware/analyzeCompletionAndUpdateStep",
-    async (
-        { prefixCode, completionText, range, filePath },
-        { dispatch, extra, getState }
-    ) => {
-        console.log("🔄 [CodeAware Thunk] analyzeCompletionAndUpdateStep started:", {
-            timestamp: new Date().toISOString(),
-            prefixLength: prefixCode.length,
-            completionLength: completionText.length,
-            range,
-            fileName: filePath.split('/').pop()
-        });
-        
-        try {
-            const state = getState();
-            const defaultModel = selectDefaultModel(state);
-            const steps = state.codeAwareSession.steps;
-            const learningGoal = selectLearningGoal(state);
-
-            console.log("📊 [CodeAware Thunk] Current state:", {
-                hasDefaultModel: !!defaultModel,
-                stepsCount: steps.length,
-                learningGoal: learningGoal.substring(0, 50) + (learningGoal.length > 50 ? "..." : "")
-            });
-
-            if (!defaultModel) {
-                console.error("❌ [CodeAware Thunk] Default model not defined");
-                throw new Error("Default model not defined");
-            }
-
-            // 如果没有步骤，直接返回
-            if (steps.length === 0) {
-                console.log("⚠️ [CodeAware Thunk] No steps available, skipping analysis");
-                return;
-            }
-
-            // 构造简化的步骤列表用于LLM分析
-            const simplifiedSteps = steps.map(step => ({
-                id: step.id,
-                title: step.title,
-                abstract: step.abstract
-            }));
-
-            // 构造并发送LLM请求
-            const prompt = constructAnalyzeCompletionStepPrompt(
-                prefixCode,
-                completionText,
-                simplifiedSteps,
-                learningGoal
-            );
-
-            console.log("analyzeCompletionAndUpdateStep called with prompt:", prompt);
-
-            const result = await extra.ideMessenger.request("llm/complete", {
-                prompt: prompt,
-                completionOptions: {},
-                title: defaultModel.title
-            });
-
-            if (result.status !== "success" || !result.content) {
-                throw new Error("LLM request failed or returned empty content");
-            }
-
-            // 解析LLM响应
-            try {
-                const jsonResponse = JSON.parse(result.content);
-                const currentStepFromLLM = jsonResponse.current_step || "";
-                const stepFinished = jsonResponse.step_finished || false;
-                const knowledgeCardThemes = jsonResponse.knowledge_card_themes || [];
-
-                console.log("LLM response for completion analysis:", {
-                    currentStep: currentStepFromLLM,
-                    stepFinished,
-                    knowledgeCardThemes
-                });
-
-                // 创建临时代码块
-                const tempCodeChunk: CodeChunk = {
-                    id: `c-${state.codeAwareSession.codeChunks.length + 1}`,
-                    content: completionText,
-                    range: range,
-                    isHighlighted: false,
-                    filePath: filePath
-                };
-
-                // 创建临时知识卡片
-                const tempKnowledgeCards: KnowledgeCardItem[] = [];
-                const tempMappings: CodeAwareMapping[] = [];
-
-                // 确定当前生效的步骤 - 根据LLM返回的步骤ID匹配
-                let effectiveStep = null;
-                if (currentStepFromLLM && currentStepFromLLM !== "") {
-                    effectiveStep = steps.find(step => step.id === currentStepFromLLM);
-                }
-                
-                // 如果没有匹配到步骤，使用当前步骤
-                if (!effectiveStep) {
-                    const currentStepIndex = state.codeAwareSession.currentStepIndex;
-                    if (currentStepIndex >= 0 && currentStepIndex < steps.length) {
-                        effectiveStep = steps[currentStepIndex];
-                    }
-                }
-
-                // 如果没有找到有效步骤，跳过处理
-                if (!effectiveStep) {
-                    console.log("⚠️ [CodeAware Thunk] No effective step found, skipping knowledge card generation");
-                    return;
-                }
-
-                for (let i = 0; i < knowledgeCardThemes.length; i++) {
-                    const theme = knowledgeCardThemes[i];
-                    const cardId = `${effectiveStep.id}-k-${effectiveStep.knowledgeCards.length + i + 1}`;
-
-                    // 创建临时知识卡片
-                    const tempCard: KnowledgeCardItem = {
-                        id: cardId,
-                        title: theme,
-                        content: "",
-                        tests: [],
-                        isHighlighted: true // 临时状态时高亮显示
-                    };
-                    tempKnowledgeCards.push(tempCard);
-
-                    // 创建临时mapping关系
-                    // 需要找到相关的requirement chunk
-                    const relatedRequirementChunks = state.codeAwareSession.codeAwareMappings
-                        .filter((mapping: CodeAwareMapping) => mapping.stepId === effectiveStep.id)
-                        .map((mapping: CodeAwareMapping) => mapping.requirementChunkId)
-                        .filter((id: string | undefined) => id);
-
-                    // 为每个相关的requirement chunk创建mapping
-                    for (const reqChunkId of relatedRequirementChunks) {
-                        tempMappings.push({
-                            codeChunkId: tempCodeChunk.id,
-                            requirementChunkId: reqChunkId,
-                            stepId: effectiveStep.id,
-                            knowledgeCardId: cardId,
-                            isHighlighted: true // 临时状态时高亮显示
-                        });
-                    }
-
-                    // 如果没有相关的requirement chunk，至少创建code-step-card的mapping
-                    if (relatedRequirementChunks.length === 0) {
-                        tempMappings.push({
-                            codeChunkId: tempCodeChunk.id,
-                            stepId: effectiveStep.id,
-                            knowledgeCardId: cardId,
-                            isHighlighted: true // 临时状态时高亮显示
-                        });
-                    }
-                }
-
-                // 设置待确认的补全信息
-                dispatch(setPendingCompletion({
-                    prefixCode,
-                    completionText,
-                    range,
-                    filePath,
-                    currentStepId: currentStepFromLLM, // 直接存储step_id
-                    stepFinished,
-                    originalStepIndex: state.codeAwareSession.currentStepIndex,
-                    knowledgeCardThemes,
-                    tempCodeChunk,
-                    tempKnowledgeCards,
-                    tempMappings
-                }));
-
-                // 根据LLM分析结果高亮对应步骤
-                if (currentStepFromLLM && currentStepFromLLM !== "") {
-                    const matchedStep = steps.find(step => step.id === currentStepFromLLM);
-                    if (matchedStep) {
-                        dispatch(updateHighlight({
-                            sourceType: "step",
-                            identifier: matchedStep.id
-                        }));
-                    }
-                } else {
-                    // 如果没有匹配的步骤，高亮当前步骤
-                    const currentStepIndex = state.codeAwareSession.currentStepIndex;
-                    if (currentStepIndex >= 0 && currentStepIndex < steps.length) {
-                        dispatch(updateHighlight({
-                            sourceType: "step",
-                            identifier: steps[currentStepIndex].id
-                        }));
-                    }
-                }
-
-                // 将临时知识卡片添加到对应步骤中用于显示
-                for (const tempCard of tempKnowledgeCards) {
-                    dispatch(createKnowledgeCard({
-                        stepId: effectiveStep.id,
-                        cardId: tempCard.id,
-                        theme: tempCard.title
-                    }));
-                }
-
-                console.log("CodeAware: Successfully analyzed completion and set pending state", {
-                    currentStepId: currentStepFromLLM,
-                    stepFinished,
-                    knowledgeCardThemes,
-                    effectiveStep: effectiveStep.title
-                });
-
-            } catch (parseError) {
-                console.error("Error parsing LLM response for completion analysis:", parseError);
-            }
-
-        } catch (error) {
-            console.error("Error during completion analysis:", error);
         }
     }
 );

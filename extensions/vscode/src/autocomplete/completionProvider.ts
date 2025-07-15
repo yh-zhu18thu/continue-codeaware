@@ -1,7 +1,7 @@
 import { CompletionProvider } from "core/autocomplete/CompletionProvider";
 import {
-    type AutocompleteInput,
-    type AutocompleteOutcome,
+  type AutocompleteInput,
+  type AutocompleteOutcome,
 } from "core/autocomplete/util/types";
 import { ConfigHandler } from "core/config/ConfigHandler";
 import { startLocalOllama } from "core/util/ollamaHelper";
@@ -12,18 +12,17 @@ import * as vscode from "vscode";
 import { showFreeTrialLoginMessage } from "../util/messages";
 import { VsCodeWebviewProtocol } from "../webviewProtocol";
 
-import { CodeAwareCompletionManager } from "./codeAwareCompletionManager";
 import { getDefinitionsFromLsp } from "./lsp";
 import { RecentlyEditedTracker } from "./recentlyEdited";
 import { RecentlyVisitedRangesService } from "./RecentlyVisitedRangesService";
 import {
-    StatusBarStatus,
-    getStatusBarStatus,
-    setupStatusBar,
-    stopStatusBarLoading,
+  StatusBarStatus,
+  getStatusBarStatus,
+  setupStatusBar,
+  stopStatusBarLoading,
 } from "./statusBar";
 
-import type { GenerationContext, IDE } from "core";
+import type { IDE } from "core";
 
 const Diff = require("diff");
 
@@ -83,8 +82,7 @@ export class ContinueCompletionProvider
   constructor(
     private readonly configHandler: ConfigHandler,
     private readonly ide: IDE,
-    private readonly webviewProtocol: VsCodeWebviewProtocol,
-    private readonly codeAwareManager: CodeAwareCompletionManager,
+    private readonly webviewProtocol: VsCodeWebviewProtocol
   ) {
     console.log("ContinueCompletionProvider: Initializing...");
     async function getAutocompleteModel() {
@@ -221,15 +219,7 @@ export class ContinueCompletionProvider
       // Handle commit message input box
       let manuallyPassPrefix: string | undefined = undefined;
 
-      // CodeAware: 获取上下文信息
-      let codeAwareContext: GenerationContext | undefined = undefined;
-      try {
-          const context = await this.codeAwareManager.getContext();
-          console.log("CodeAware: Retrieved context:", context);
-          codeAwareContext = context;
-      }catch (error) {
-        console.warn("CodeAware: Failed to get context for autocomplete:", error);
-      }
+      
 
       const input: AutocompleteInput = {
         pos,
@@ -243,7 +233,6 @@ export class ContinueCompletionProvider
         recentlyVisitedRanges: this.recentlyVisitedRanges.getSnippets(),
         recentlyEditedRanges:
           await this.recentlyEditedTracker.getRecentlyEditedRanges(),
-        codeAwareContext, // CodeAware: 添加上下文
       };
 
       setupStatusBar(undefined, true);

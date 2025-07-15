@@ -1,29 +1,30 @@
-import { HighlightEvent, KnowledgeCardItem, StepItem } from "core";
+import { HighlightEvent, KnowledgeCardItem, StepItem, StepStatus } from "core";
 import { Key, useCallback, useContext, useEffect, useRef, useState } from "react";
 import styled from "styled-components";
 import {
-    defaultBorderRadius,
-    lightGray,
-    vscForeground
+  defaultBorderRadius,
+  lightGray,
+  vscForeground
 } from "../../components";
 import { IdeMessengerContext } from "../../context/IdeMessenger";
 import { useWebviewListener } from "../../hooks/useWebviewListener";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks";
 import {
-    clearAllHighlights,
-    newCodeAwareSession, // Add this import
-    resetIdeCommFlags,
-    resetSessionExceptRequirement, // Add this import
-    selectCodeAwareContext, // Add this import
-    selectIsRequirementInEditMode, // Import submitRequirementContent
-    selectIsStepsGenerated,
-    setUserRequirementStatus,
-    submitRequirementContent,
-    updateHighlight
+  clearAllHighlights,
+  newCodeAwareSession, // Add this import
+  resetIdeCommFlags,
+  resetSessionExceptRequirement, // Add this import
+  selectIsRequirementInEditMode, // Import submitRequirementContent
+  selectIsStepsGenerated,
+  setStepAbstract, // Add this import for step editing
+  setStepStatus, // Add this import for step status change
+  setUserRequirementStatus,
+  submitRequirementContent,
+  updateHighlight
 } from "../../redux/slices/codeAwareSlice";
 import {
-    generateKnowledgeCardDetail, generateStepsFromRequirement,
-    paraphraseUserIntent
+  generateKnowledgeCardDetail, generateStepsFromRequirement,
+  paraphraseUserIntent
 } from "../../redux/thunks/codeAwareGeneration";
 import "./CodeAware.css";
 import RequirementDisplay from "./components/Requirements/RequirementDisplay"; // Import RequirementDisplay
@@ -136,31 +137,20 @@ export const CodeAware = () => {
 
   const steps = useAppSelector((state) => state.codeAwareSession.steps); // Get steps data
 
-  // 获取当前步骤索引和完成状态，用于监听变化
-  const currentStepIndex = useAppSelector((state) => state.codeAwareSession.currentStepIndex);
-  const stepFinished = useAppSelector((state) => state.codeAwareSession.stepFinished);
-  const codeAwareContext = useAppSelector(selectCodeAwareContext);
-
-  // 监听currentStepIndex和stepFinished的变化，同步给IDE
+  // 监听steps变化，同步给IDE
   useEffect(() => {
     // 只有在有步骤的情况下才同步
     if (steps.length > 0) {
       const syncToIde = async () => {
         try {
-          const currentStep = codeAwareContext.currentStep || "";
-          const nextStep = codeAwareContext.nextStep || "";
-
           await ideMessenger?.request("syncCodeAwareSteps", {
-            currentStep: currentStep,
-            nextStep: nextStep,
-            stepFinished: stepFinished
+            currentStep: "",
+            nextStep: "",
+            stepFinished: false
           });
 
           console.log("📡 [CodeAware] Successfully synced steps to IDE:", {
-            currentStepIndex,
-            currentStep: currentStep.substring(0, 50) + (currentStep.length > 50 ? "..." : ""),
-            nextStep: nextStep.substring(0, 50) + (nextStep.length > 50 ? "..." : ""),
-            stepFinished
+            stepsCount: steps.length
           });
         } catch (error) {
           console.warn("⚠️ [CodeAware] Failed to sync steps to IDE:", error);
@@ -169,7 +159,7 @@ export const CodeAware = () => {
 
       syncToIde();
     }
-  }, [currentStepIndex, stepFinished, steps.length, codeAwareContext, ideMessenger]);
+  }, [steps.length, ideMessenger]);
 
   // Add webview listener for new session event to initialize CodeAware session
   useWebviewListener(
@@ -330,11 +320,17 @@ export const CodeAware = () => {
     // 这里可以调用相应的API或者更新Redux状态
   }, []);
 
-  const wrenchStep = useCallback((stepId: string) => {
-    console.log(`修改步骤: ${stepId}`);
-    // TODO: 实现修改步骤的逻辑
-    // 可能会打开一个编辑器或者弹出修改对话框
-  }, []);
+  const handleStepEdit = useCallback((stepId: string, newContent: string) => {
+    console.log(`修改步骤: ${stepId}, 新内容: ${newContent}`);
+    // Update step abstract in Redux store
+    dispatch(setStepAbstract({ stepId, abstract: newContent }));
+  }, [dispatch]);
+
+  const handleStepStatusChange = useCallback((stepId: string, newStatus: StepStatus) => {
+    console.log(`修改步骤状态: ${stepId}, 新状态: ${newStatus}`);
+    // Update step status in Redux store
+    dispatch(setStepStatus({ stepId, status: newStatus }));
+  }, [dispatch]);
 
   const confirmStep = useCallback((stepId: string) => {
     console.log(`确认步骤: ${stepId}`);
@@ -518,10 +514,12 @@ export const CodeAware = () => {
               content={step.abstract}
               isHighlighted={step.isHighlighted}
               stepId={step.id}
+              stepStatus={step.stepStatus}
               onHighlightEvent={handleHighlightEvent}
               onClearHighlight={removeHighlightEvent} // Pass the clear highlight function
               onExecuteUntilStep={executeUntilStep} // Pass execute until step function
-              onWrenchStep={wrenchStep} // Pass wrench step function
+              onStepEdit={handleStepEdit} // Pass step edit function
+              onStepStatusChange={handleStepStatusChange} // Pass step status change function
               knowledgeCards={step.knowledgeCards.map((kc: KnowledgeCardItem, kcIndex: number) => {
                 // 从 KnowledgeCardItem.tests 转换为 TestItem[]
                 const testItems = kc.tests?.map(test => ({

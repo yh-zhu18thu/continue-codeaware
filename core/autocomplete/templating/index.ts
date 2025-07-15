@@ -7,8 +7,8 @@ import { SnippetPayload } from "../snippets";
 
 import { HelperVars } from "../util/HelperVars";
 import {
-    AutocompleteTemplate,
-    getTemplateForModel,
+  AutocompleteTemplate,
+  getTemplateForModel,
 } from "./AutocompleteTemplate";
 import { getSnippets } from "./filtering";
 import { formatSnippets } from "./formatting";
@@ -44,84 +44,10 @@ function renderStringTemplate(
     reponame,
     language: lang.name,
     userRequirement: codeAwareContext?.userRequirement || "",
-    currentStep: codeAwareContext?.currentStep || "",
-    nextStep: codeAwareContext?.nextStep || "",
   });
 }
 
-// CodeAware: 为prefix添加上下文的辅助函数
-function enhancePrefixWithCodeAwareContext(
-  prefix: string,
-  codeAwareContext?: GenerationContext,
-): string {
-  if (!codeAwareContext || !codeAwareContext.userRequirement) {
-    return prefix;
-  }
 
-  const taskParts: string[] = [];
-  
-  if (codeAwareContext.userRequirement) {
-    taskParts.push(`# Task: ${codeAwareContext.userRequirement}`);
-  }
-
-  const taskString = taskParts.join("\n");
-
-  const stepParts: string[] = [];
-
-  console.log("CodeAware: Enhancing prefix with context", codeAwareContext);
-
-  // 根据stepFinished状态决定在prefix末尾添加什么步骤信息
-  if (codeAwareContext.stepFinished) {
-    // 当前步骤已完成，提示生成下一步的代码
-    if (codeAwareContext.nextStep) {
-      stepParts.push(`#  ${codeAwareContext.nextStep}`);
-    }
-  } else {
-    // 当前步骤未完成，提示继续当前步骤的代码
-    if (codeAwareContext.currentStep) {
-      stepParts.push(`# ${codeAwareContext.currentStep}`);
-    }
-  }
-
-  const stepString = stepParts.join("\n");
-
-  // 将任务信息添加到prefix的开头，步骤信息添加到prefix的末尾
-  if (taskString) {
-    prefix = `${taskString}\n${prefix}`;
-  }
-  if (stepString) {
-    prefix = `${prefix}\n\n${stepString}\n\n`;
-  }
-  return prefix;
-}
-
-// CodeAware: 为suffix添加上下文的辅助函数
-function enhanceSuffixWithCodeAwareContext(
-  suffix: string,
-  codeAwareContext?: GenerationContext,
-): string {
-  if (!codeAwareContext || !codeAwareContext.userRequirement) {
-    return suffix;
-  }
-
-  console.log("CodeAware: Enhancing suffix with context", codeAwareContext);
-
-  const stepParts: string[] = [];
-
-  // 只有当前步骤未完成时，才在suffix开头添加下一步信息作为边界
-  if (!codeAwareContext.stepFinished && codeAwareContext.nextStep) {
-    stepParts.push(`# ${codeAwareContext.nextStep}`);
-  }
-
-  const stepString = stepParts.join("\n");
-
-  // 将步骤信息添加到suffix的开头
-  if (stepString) {
-    suffix = `\n${stepString}\n${suffix}`;
-  }
-  
-  return suffix;
-}
 
 export function renderPrompt({
   snippetPayload,
@@ -165,12 +91,6 @@ export function renderPrompt({
   } else {
     const formattedSnippets = formatSnippets(helper, snippets, workspaceDirs);
     prefix = [formattedSnippets, prefix].join("\n");
-  }
-
-  // CodeAware: 如果有上下文信息，增强prefix和suffix
-  if (helper.input.codeAwareContext) {
-    prefix = enhancePrefixWithCodeAwareContext(prefix, helper.input.codeAwareContext);
-    suffix = enhanceSuffixWithCodeAwareContext(suffix, helper.input.codeAwareContext);
   }
 
   const prompt =

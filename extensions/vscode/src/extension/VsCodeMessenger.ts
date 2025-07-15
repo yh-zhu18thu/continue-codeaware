@@ -19,7 +19,6 @@ import { stripImages } from "core/util/messageContent";
 import { getUriPathBasename } from "core/util/uri";
 import * as vscode from "vscode";
 
-import { CodeAwareCompletionManager } from "../autocomplete/codeAwareCompletionManager";
 import { VerticalDiffManager } from "../diff/vertical/manager";
 import EditDecorationManager from "../quickEdit/EditDecorationManager";
 import {
@@ -86,8 +85,7 @@ export class VsCodeMessenger {
     private readonly configHandlerPromise: Promise<ConfigHandler>,
     private readonly workOsAuthProvider: WorkOsAuthProvider,
     private readonly editDecorationManager: EditDecorationManager,
-    private readonly highlightCodeManager: HighlightCodeManager,
-    private readonly codeAwareManager: CodeAwareCompletionManager,
+    private readonly highlightCodeManager: HighlightCodeManager
   ) {
     /** WEBVIEW ONLY LISTENERS **/
     this.onWebview("showFile", (msg) => {
@@ -330,22 +328,6 @@ export class VsCodeMessenger {
 
     this.onWebview("clearCodeHighlight", async (msg) => {
       this.highlightCodeManager.clearAllHighlights();
-    });
-
-    //CodeAware: 处理用户需求同步
-    this.onWebview("syncCodeAwareRequirement", async (msg) => {
-      this.codeAwareManager.setUserRequirement(msg.data.userRequirement);
-      console.log("CodeAware: User requirement synced:", msg.data.userRequirement);
-    });
-
-    //CodeAware: 处理步骤信息同步
-    this.onWebview("syncCodeAwareSteps", async (msg) => {
-      this.codeAwareManager.setCurrentStep(msg.data.currentStep);
-      this.codeAwareManager.setNextStep(msg.data.nextStep);
-      if (msg.data.stepFinished !== undefined) {
-        this.codeAwareManager.setStepFinished(msg.data.stepFinished);
-      }
-      console.log("CodeAware: Steps synced - Current:", msg.data.currentStep, "Next:", msg.data.nextStep, "Finished:", msg.data.stepFinished);
     });
 
     /** PASS THROUGH FROM WEBVIEW TO CORE AND BACK **/

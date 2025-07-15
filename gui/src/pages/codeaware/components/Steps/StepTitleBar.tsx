@@ -1,4 +1,4 @@
-import { ChevronDownIcon, PlayIcon, WrenchIcon } from '@heroicons/react/24/outline';
+import { ChevronDownIcon, PlayIcon } from '@heroicons/react/24/outline';
 import React from 'react';
 import styled from "styled-components";
 import {
@@ -96,7 +96,6 @@ interface StepTitleBarProps {
   isFlickering?: boolean; // Optional prop to indicate if the step is flickering
   onToggle?: () => void; // Optional callback for toggle functionality
   onExecuteUntilStep?: () => void; // Optional callback for execute until step
-  onWrenchStep?: () => void; // Optional callback for wrench step
 }
 
 const StepTitleBar: React.FC<StepTitleBarProps> = ({ 
@@ -107,16 +106,10 @@ const StepTitleBar: React.FC<StepTitleBarProps> = ({
   isFlickering = false,
   onToggle,
   onExecuteUntilStep,
-  onWrenchStep
 }) => {
   const handlePlayClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     onExecuteUntilStep?.();
-  };
-
-  const handleWrenchClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onWrenchStep?.();
   };
 
   return (
@@ -133,9 +126,6 @@ const StepTitleBar: React.FC<StepTitleBarProps> = ({
       <IconContainer>
         <IconButton onClick={handlePlayClick} title="执行到此步骤">
           <PlayIcon width={16} height={16} />
-        </IconButton>
-        <IconButton onClick={handleWrenchClick} title="修改此步骤">
-          <WrenchIcon width={16} height={16} />
         </IconButton>
         <ChevronContainer isExpanded={isExpanded}>
           <ChevronDownIcon width={16} height={16} />

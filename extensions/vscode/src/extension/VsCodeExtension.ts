@@ -14,13 +14,10 @@ import {
 import { v4 as uuidv4 } from "uuid";
 import * as vscode from "vscode";
 
-import { CodeAwareCompletionManager } from "../autocomplete/codeAwareCompletionManager";
-import { ContinueCompletionProvider } from "../autocomplete/completionProvider";
 import { MetaCompleteProvider } from "../autocomplete/metacomplete";
 import {
   monitorBatteryChanges,
-  setupStatusBar,
-  StatusBarStatus,
+  setupStatusBar
 } from "../autocomplete/statusBar";
 import { registerAllCommands } from "../commands";
 import { ContinueGUIWebviewViewProvider } from "../ContinueGUIWebviewViewProvider";
@@ -60,7 +57,6 @@ export class VsCodeExtension {
   private workOsAuthProvider: WorkOsAuthProvider;
   private fileSearch: FileSearch;
   private metacompleteProvider: MetaCompleteProvider;
-  private codeAwareManager: CodeAwareCompletionManager;
 
   constructor(context: vscode.ExtensionContext) {
     console.log("VsCodeExtension: Initializing...");
@@ -79,8 +75,6 @@ export class VsCodeExtension {
       },
     );
     this.ide = new VsCodeIde(this.webviewProtocolPromise, context);
-    // CodeAware manager will be initialized later with webview protocol
-    this.codeAwareManager = new CodeAwareCompletionManager(this.webviewProtocolPromise);
 
     this.extensionContext = context;
     this.windowId = uuidv4();
@@ -114,8 +108,6 @@ export class VsCodeExtension {
     );
     resolveWebviewProtocol(this.sidebar.webviewProtocol);
 
-    // Update CodeAware manager with webview protocol
-    this.codeAwareManager = new CodeAwareCompletionManager(this.sidebar.webviewProtocol);
 
     // Config Handler with output channel
     const outputChannel = vscode.window.createOutputChannel(
@@ -134,8 +126,7 @@ export class VsCodeExtension {
       configHandlerPromise,
       this.workOsAuthProvider,
       this.editDecorationManager,
-      this.highlightCodeManager,
-      this.codeAwareManager,
+      this.highlightCodeManager
     );
 
     this.core = new Core(inProcessMessenger, this.ide, async (log: string) => {
@@ -194,7 +185,7 @@ export class VsCodeExtension {
     const config = vscode.workspace.getConfiguration(EXTENSION_NAME);
     const enabled = config.get<boolean>("enableTabAutocomplete");
 
-    // Register inline completion provider
+    /* Register inline completion provider
     setupStatusBar(
       enabled ? StatusBarStatus.Enabled : StatusBarStatus.Disabled,
     );
@@ -204,11 +195,10 @@ export class VsCodeExtension {
         new ContinueCompletionProvider(
           this.configHandler,
           this.ide,
-          this.sidebar.webviewProtocol,
-          this.codeAwareManager,
+          this.sidebar.webviewProtocol
         ),
       ),
-    );
+    );*/
 
     // Battery
     this.battery = new Battery();

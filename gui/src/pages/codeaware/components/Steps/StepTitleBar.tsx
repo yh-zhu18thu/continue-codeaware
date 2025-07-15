@@ -1,12 +1,12 @@
-import { ChevronDownIcon } from '@heroicons/react/24/outline';
+import { ChevronDownIcon, PlayIcon, WrenchIcon } from '@heroicons/react/24/outline';
 import React from 'react';
 import styled from "styled-components";
 import {
-    defaultBorderRadius,
-    lightGray,
-    vscForeground,
-    vscInputBackground,
-    vscListActiveBackground
+  defaultBorderRadius,
+  lightGray,
+  vscForeground,
+  vscInputBackground,
+  vscListActiveBackground
 } from "../../../../components";
 
 const TitleBarContainer = styled.div<{ 
@@ -61,6 +61,33 @@ const ChevronContainer = styled.div<{ isExpanded: boolean }>`
   transform: ${({ isExpanded }) => isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)'};
 `;
 
+const IconContainer = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`;
+
+const IconButton = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: ${vscForeground};
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: background-color 0.15s ease-in-out;
+
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+
+  &:active {
+    background-color: rgba(255, 255, 255, 0.2);
+  }
+`;
+
 interface StepTitleBarProps {
   title: string;
   isActive?: boolean; // Optional prop to indicate if the step is active
@@ -68,6 +95,8 @@ interface StepTitleBarProps {
   isHighlighted?: boolean; // Optional prop to indicate if the step is highlighted
   isFlickering?: boolean; // Optional prop to indicate if the step is flickering
   onToggle?: () => void; // Optional callback for toggle functionality
+  onExecuteUntilStep?: () => void; // Optional callback for execute until step
+  onWrenchStep?: () => void; // Optional callback for wrench step
 }
 
 const StepTitleBar: React.FC<StepTitleBarProps> = ({ 
@@ -76,8 +105,20 @@ const StepTitleBar: React.FC<StepTitleBarProps> = ({
   isExpanded = true,
   isHighlighted = false,
   isFlickering = false,
-  onToggle 
+  onToggle,
+  onExecuteUntilStep,
+  onWrenchStep
 }) => {
+  const handlePlayClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onExecuteUntilStep?.();
+  };
+
+  const handleWrenchClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onWrenchStep?.();
+  };
+
   return (
     <TitleBarContainer 
       isActive={isActive} 
@@ -89,9 +130,17 @@ const StepTitleBar: React.FC<StepTitleBarProps> = ({
       <TitleContent>
         <span>{title}</span>
       </TitleContent>
-      <ChevronContainer isExpanded={isExpanded}>
-        <ChevronDownIcon width={16} height={16} />
-      </ChevronContainer>
+      <IconContainer>
+        <IconButton onClick={handlePlayClick} title="执行到此步骤">
+          <PlayIcon width={16} height={16} />
+        </IconButton>
+        <IconButton onClick={handleWrenchClick} title="修改此步骤">
+          <WrenchIcon width={16} height={16} />
+        </IconButton>
+        <ChevronContainer isExpanded={isExpanded}>
+          <ChevronDownIcon width={16} height={16} />
+        </ChevronContainer>
+      </IconContainer>
     </TitleBarContainer>
   );
 };

@@ -56,6 +56,8 @@ interface StepProps {
   stepId?: string;
   onHighlightEvent?: (event: HighlightEvent) => void;
   onClearHighlight?: () => void;
+  onExecuteUntilStep?: (stepId: string) => void;
+  onWrenchStep?: (stepId: string) => void;
 }
 
 const Step: React.FC<StepProps> = ({
@@ -68,6 +70,8 @@ const Step: React.FC<StepProps> = ({
   stepId,
   onHighlightEvent,
   onClearHighlight,
+  onExecuteUntilStep,
+  onWrenchStep,
 }) => {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const [isFlickering, setIsFlickering] = useState(false);
@@ -172,6 +176,18 @@ const Step: React.FC<StepProps> = ({
     }
   };
 
+  const handleExecuteUntilStep = () => {
+    if (stepId && onExecuteUntilStep) {
+      onExecuteUntilStep(stepId);
+    }
+  };
+
+  const handleWrenchStep = () => {
+    if (stepId && onWrenchStep) {
+      onWrenchStep(stepId);
+    }
+  };
+
   return (
     <StepContainer 
       isHovered={isHovered}
@@ -185,6 +201,8 @@ const Step: React.FC<StepProps> = ({
         isHighlighted={isHighlighted || shouldKeepHighlighted}
         isFlickering={isFlickering}
         onToggle={handleToggle}
+        onExecuteUntilStep={handleExecuteUntilStep}
+        onWrenchStep={handleWrenchStep}
       />
       <ContentArea isVisible={isExpanded}>
         <StepDescription 

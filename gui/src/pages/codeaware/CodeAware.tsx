@@ -2,28 +2,28 @@ import { HighlightEvent, KnowledgeCardItem, StepItem } from "core";
 import { Key, useCallback, useContext, useEffect, useRef, useState } from "react";
 import styled from "styled-components";
 import {
-  defaultBorderRadius,
-  lightGray,
-  vscForeground
+    defaultBorderRadius,
+    lightGray,
+    vscForeground
 } from "../../components";
 import { IdeMessengerContext } from "../../context/IdeMessenger";
 import { useWebviewListener } from "../../hooks/useWebviewListener";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks";
 import {
-  clearAllHighlights,
-  newCodeAwareSession, // Add this import
-  resetIdeCommFlags,
-  resetSessionExceptRequirement, // Add this import
-  selectCodeAwareContext, // Add this import
-  selectIsRequirementInEditMode, // Import submitRequirementContent
-  selectIsStepsGenerated,
-  setUserRequirementStatus,
-  submitRequirementContent,
-  updateHighlight
+    clearAllHighlights,
+    newCodeAwareSession, // Add this import
+    resetIdeCommFlags,
+    resetSessionExceptRequirement, // Add this import
+    selectCodeAwareContext, // Add this import
+    selectIsRequirementInEditMode, // Import submitRequirementContent
+    selectIsStepsGenerated,
+    setUserRequirementStatus,
+    submitRequirementContent,
+    updateHighlight
 } from "../../redux/slices/codeAwareSlice";
 import {
-  generateKnowledgeCardDetail, generateStepsFromRequirement,
-  paraphraseUserIntent
+    generateKnowledgeCardDetail, generateStepsFromRequirement,
+    paraphraseUserIntent
 } from "../../redux/thunks/codeAwareGeneration";
 import "./CodeAware.css";
 import RequirementDisplay from "./components/Requirements/RequirementDisplay"; // Import RequirementDisplay
@@ -323,6 +323,25 @@ export const CodeAware = () => {
     dispatch(clearAllHighlights());
   }, [dispatch]);
 
+  // Add new functions for step operations
+  const executeUntilStep = useCallback((stepId: string) => {
+    console.log(`执行到步骤: ${stepId}`);
+    // TODO: 实现执行到指定步骤的逻辑
+    // 这里可以调用相应的API或者更新Redux状态
+  }, []);
+
+  const wrenchStep = useCallback((stepId: string) => {
+    console.log(`修改步骤: ${stepId}`);
+    // TODO: 实现修改步骤的逻辑
+    // 可能会打开一个编辑器或者弹出修改对话框
+  }, []);
+
+  const confirmStep = useCallback((stepId: string) => {
+    console.log(`确认步骤: ${stepId}`);
+    // TODO: 实现确认步骤的逻辑
+    // 可能会标记步骤为已完成状态
+  }, []);
+
   // Add keyboard event listener for Escape key to clear highlights
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -501,6 +520,8 @@ export const CodeAware = () => {
               stepId={step.id}
               onHighlightEvent={handleHighlightEvent}
               onClearHighlight={removeHighlightEvent} // Pass the clear highlight function
+              onExecuteUntilStep={executeUntilStep} // Pass execute until step function
+              onWrenchStep={wrenchStep} // Pass wrench step function
               knowledgeCards={step.knowledgeCards.map((kc: KnowledgeCardItem, kcIndex: number) => {
                 // 从 KnowledgeCardItem.tests 转换为 TestItem[]
                 const testItems = kc.tests?.map(test => ({

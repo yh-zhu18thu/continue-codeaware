@@ -104,6 +104,7 @@ export class ContinueCompletionProvider
           if (eventType === "codeCompletionRejected") {
             await this.webviewProtocol.request("codeCompletionRejected", undefined);
           } else if (eventType === "codeCompletionAccepted") {
+            vscode.commands.executeCommand('codeaware.metacomplete.trigger');
             await this.webviewProtocol.request("codeCompletionAccepted", data);
           }
         } catch (error) {

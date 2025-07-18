@@ -59,15 +59,25 @@ export class MetaCompleteProvider {
             this.clearMetaCompletions();
         }, null, context.subscriptions);
 
-        vscode.workspace.onDidChangeTextDocument(event => {
-            clearTimeout(this.typingTimeout);
-            this.clearMetaCompletions();
+        // vscode.workspace.onDidChangeTextDocument(event => {
+        //     clearTimeout(this.typingTimeout);
+        //     this.clearMetaCompletions();
 
-            this.trigger_position = vscode.window.activeTextEditor?.selection.active;
-            this.typingTimeout = setTimeout(() => {
-                this.provideMetaCompletions();
-            }, 500);
-        }, null, context.subscriptions);
+        //     this.trigger_position = vscode.window.activeTextEditor?.selection.active;
+        //     this.typingTimeout = setTimeout(() => {
+        //         this.provideMetaCompletions();
+        //     }, 500);
+        // }, null, context.subscriptions);
+
+        vscode.commands.registerCommand(
+            'codeaware.metacomplete.trigger',
+            async () => {
+                this.clearMetaCompletions();
+                this.trigger_position = vscode.window.activeTextEditor?.selection.active;
+                await this.provideMetaCompletions();
+                console.log("[CodeAware MetaComplete] Triggered metacomplete.");
+            }
+        )
     }
 
     public async provideMetaCompletions() {

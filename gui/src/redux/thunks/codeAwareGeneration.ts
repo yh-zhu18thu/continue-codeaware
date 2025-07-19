@@ -23,6 +23,7 @@ import {
     setKnowledgeCardGenerationStatus,
     setKnowledgeCardLoading,
     setLearningGoal,
+    setStepStatus,
     setUserRequirementStatus,
     submitRequirementContent,
     updateCodeAwareMappings,
@@ -793,6 +794,43 @@ export const generateCodeFromSteps = createAsyncThunk<
                 if (createdMappings.length > 0) {
                     dispatch(updateCodeAwareMappings(createdMappings));
                     console.log(`🔗 已添加 ${createdMappings.length} 个新映射关系到状态中`);
+                }
+
+                // 尝试将生成的代码应用到当前文件
+                try {
+                    console.log("🚀 开始将生成的代码应用到IDE文件...");
+                    
+                    // 获取当前文件信息
+                    const currentFileResponse = await extra.ideMessenger.request("getCurrentFile", undefined);
+                    
+                    if (currentFileResponse && typeof currentFileResponse === 'object' && 'status' in currentFileResponse && 'content' in currentFileResponse) {
+                        // 响应被包装在 status/content 结构中
+                        if (currentFileResponse.status === "success" && currentFileResponse.content) {
+                            const currentFile = currentFileResponse.content;
+                            
+                            // 使用新的协议方法应用diff到IDE
+                            await extra.ideMessenger.request("applyDiffChanges", {
+                                filepath: currentFile.path,
+                                oldCode: existingCode,
+                                newCode: changedCode
+                            });
+                            
+                            console.log("✅ 代码已成功应用到IDE文件");
+                            
+                            // 标记所有相关步骤为已生成
+                            orderedSteps.forEach(step => {
+                                dispatch(setStepStatus({ stepId: step.id, status: 'generated' }));
+                            });
+                        } else {
+                            console.warn("⚠️ getCurrentFile 响应状态不成功:", currentFileResponse.status);
+                        }
+                    } else {
+                        console.warn("⚠️ 无法获取当前文件信息，跳过代码应用");
+                    }
+                } catch (applyError) {
+                    console.error("❌ 应用代码到IDE失败:", applyError);
+                    // 不抛出错误，因为Redux状态已经更新成功
+                    // 用户仍然可以看到生成的代码和映射关系
                 }
 
                 return {

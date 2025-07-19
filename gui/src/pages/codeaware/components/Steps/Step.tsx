@@ -63,7 +63,7 @@ const AddQuestionButtonContainer = styled.div`
   justify-content: center;
   align-items: center;
   margin-top: 8px;
-  padding: 8px 0;
+  padding: 0px 0;
 `;
 
 const AddQuestionButton = styled.button`

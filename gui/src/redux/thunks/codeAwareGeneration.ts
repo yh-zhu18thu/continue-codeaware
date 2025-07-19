@@ -7,6 +7,7 @@ import {
 } from "core";
 import {
     constructGenerateKnowledgeCardDetailPrompt,
+    constructGenerateKnowledgeCardThemesFromQueryPrompt,
     constructGenerateKnowledgeCardThemesPrompt,
     constructGenerateStepsPrompt,
     constructParaphraseUserIntentPrompt
@@ -375,6 +376,12 @@ export const generateKnowledgeCardThemes = createAsyncThunk<
                 const themes = JSON.parse(result.content);
                 
                 if (Array.isArray(themes) && themes.length > 0) {
+                    // 获取当前步骤相关的现有映射
+                    const state = getState();
+                    const existingMappings = state.codeAwareSession.codeAwareMappings.filter(
+                        mapping => mapping.stepId === stepId
+                    );
+                    
                     // 为每个主题创建知识卡片
                     themes.forEach((theme: string, index: number) => {
                         const cardId = `${stepId}-kc-${index + 1}`;
@@ -386,12 +393,25 @@ export const generateKnowledgeCardThemes = createAsyncThunk<
                             theme
                         }));
 
-                        // 创建映射关系
-                        dispatch(createCodeAwareMapping({
-                            stepId,
-                            knowledgeCardId: cardId,
-                            isHighlighted: false
-                        }));
+                        // 为每个现有映射创建包含新知识卡片的映射关系
+                        if (existingMappings.length > 0) {
+                            existingMappings.forEach(existingMapping => {
+                                dispatch(createCodeAwareMapping({
+                                    codeChunkId: existingMapping.codeChunkId,
+                                    requirementChunkId: existingMapping.requirementChunkId,
+                                    stepId,
+                                    knowledgeCardId: cardId,
+                                    isHighlighted: false
+                                }));
+                            });
+                        } else {
+                            // 如果没有现有映射，创建基础映射关系
+                            dispatch(createCodeAwareMapping({
+                                stepId,
+                                knowledgeCardId: cardId,
+                                isHighlighted: false
+                            }));
+                        }
                     });
 
                     // 设置生成完成状态
@@ -411,6 +431,143 @@ export const generateKnowledgeCardThemes = createAsyncThunk<
 
         } catch (error) {
             console.error("Error during knowledge card themes generation:", error);
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            dispatch(setKnowledgeCardGenerationStatus({ stepId, status: "empty" }));
+            // 可以在这里添加错误提示给用户
+        }
+    }
+);
+
+// 异步根据用户问题生成相关的知识卡片主题
+export const generateKnowledgeCardThemesFromQuery = createAsyncThunk<
+    void,
+    {
+        stepId: string;
+        queryContext: {
+            selectedCode: string;
+            selectedText: string;
+            query: string;
+        };
+        currentStep: {
+            title: string;
+            abstract: string;
+        };
+        existingThemes: string[];
+        learningGoal: string;
+        task: string;
+    },
+    ThunkApiType
+>(
+    "codeAware/generateKnowledgeCardThemesFromQuery",
+    async (
+        { stepId, queryContext, currentStep, existingThemes, learningGoal, task },
+        { dispatch, extra, getState }
+    ) => {
+        try {
+            const state = getState();
+            const defaultModel = selectDefaultModel(state);
+            if (!defaultModel) {
+                throw new Error("Default model not defined");
+            }
+
+            // 设置生成状态
+            dispatch(setKnowledgeCardGenerationStatus({ stepId, status: "generating" }));
+
+            // 构造提示词并发送请求
+            const prompt = constructGenerateKnowledgeCardThemesFromQueryPrompt(
+                queryContext,
+                currentStep,
+                existingThemes,
+                learningGoal,
+                task
+            );
+
+            console.log("generateKnowledgeCardThemesFromQuery called with:", {
+                stepId,
+                queryContext,
+                currentStep,
+                existingThemes,
+                learningGoal,
+                task
+            });
+
+            const result = await extra.ideMessenger.request("llm/complete", {
+                prompt: prompt,
+                completionOptions: {},
+                title: defaultModel.title
+            });
+
+            if (result.status !== "success" || !result.content) {
+                throw new Error("LLM request failed or returned empty content");
+            }
+
+            console.log("LLM response for knowledge card themes from query:", result.content);
+
+            // 解析 LLM 返回的 JSON 内容
+            try {
+                const themes = JSON.parse(result.content);
+                
+                if (Array.isArray(themes) && themes.length > 0) {
+                    // 获取当前步骤相关的现有映射
+                    const currentState = getState();
+                    const existingMappings = currentState.codeAwareSession.codeAwareMappings.filter(
+                        mapping => mapping.stepId === stepId
+                    );
+                    
+                    // 为每个新主题创建知识卡片
+                    const stepIndex = state.codeAwareSession.steps.findIndex(step => step.id === stepId);
+                    if (stepIndex !== -1) {
+                        const existingCardCount = state.codeAwareSession.steps[stepIndex].knowledgeCards.length;
+                        
+                        themes.forEach((theme: string, index: number) => {
+                            const cardId = `${stepId}-kc-${existingCardCount + index + 1}`;
+                            
+                            // 创建新的知识卡片
+                            dispatch(createKnowledgeCard({
+                                stepId,
+                                cardId,
+                                theme
+                            }));
+                            
+                            // 为每个现有映射创建包含新知识卡片的映射关系
+                            if (existingMappings.length > 0) {
+                                existingMappings.forEach(existingMapping => {
+                                    dispatch(createCodeAwareMapping({
+                                        codeChunkId: existingMapping.codeChunkId,
+                                        requirementChunkId: existingMapping.requirementChunkId,
+                                        stepId,
+                                        knowledgeCardId: cardId,
+                                        isHighlighted: false
+                                    }));
+                                });
+                            } else {
+                                // 如果没有现有映射，创建基础映射关系
+                                dispatch(createCodeAwareMapping({
+                                    stepId,
+                                    knowledgeCardId: cardId,
+                                    isHighlighted: false
+                                }));
+                            }
+                        });
+                    }
+
+                    // 设置生成完成状态
+                    dispatch(setKnowledgeCardGenerationStatus({ stepId, status: "checked" }));
+                    
+                    console.log(`Generated ${themes.length} knowledge card themes from query for step ${stepId}`);
+                } else {
+                    console.warn("No valid themes returned from LLM");
+                    dispatch(setKnowledgeCardGenerationStatus({ stepId, status: "checked" }));
+                }
+                
+            } catch (parseError) {
+                console.error("Error parsing LLM response:", parseError);
+                dispatch(setKnowledgeCardGenerationStatus({ stepId, status: "empty" }));
+                throw new Error("解析LLM响应失败");
+            }
+
+        } catch (error) {
+            console.error("Error during knowledge card themes generation from query:", error);
             const errorMessage = error instanceof Error ? error.message : String(error);
             dispatch(setKnowledgeCardGenerationStatus({ stepId, status: "empty" }));
             // 可以在这里添加错误提示给用户

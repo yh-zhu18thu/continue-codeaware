@@ -562,6 +562,10 @@ export const codeAwareSessionSlice = createSlice({
         selectLearningGoal: (state: CodeAwareSessionState) => {
             return state.learningGoal;
         },
+        selectTask: (state: CodeAwareSessionState) => {
+            // 返回session的任务信息
+            return state.userRequirement;
+        },
         selectGenerationContextUntilStep: (state: CodeAwareSessionState, stepId: string) => {
             // 获取当前步骤之前所有的未生成步骤（stepstatus==confirmed）
             const stepIndex = state.steps.findIndex(step => step.id === stepId);
@@ -581,6 +585,13 @@ export const codeAwareSessionSlice = createSlice({
                 orderedSteps: orderedSteps,
                 stopStep: state.steps[stepIndex].title
             } as GenerationContext;
+        },
+        selectStepKnowledgeCardThemes: (state: CodeAwareSessionState, stepId: string) => {
+            const step = state.steps.find(step => step.id === stepId);
+            if (!step) {
+                return [];
+            }
+            return step.knowledgeCards.map(card => card.title);
         }
     }
 });
@@ -632,8 +643,10 @@ export const {
     selectIsStepsGenerated,
     selectCurrentStep,
     selectLearningGoal,
+    selectTask,
     selectCanExecuteUntilStep,
-    selectGenerationContextUntilStep
+    selectGenerationContextUntilStep,
+    selectStepKnowledgeCardThemes
 } = codeAwareSessionSlice.selectors
 
 export default codeAwareSessionSlice.reducer;

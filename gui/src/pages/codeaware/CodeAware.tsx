@@ -17,6 +17,7 @@ import {
   selectIsRequirementInEditMode, // Import submitRequirementContent
   selectIsStepsGenerated,
   selectLearningGoal, // Add this import
+  selectTask,
   setKnowledgeCardDisabled, // Add this import for knowledge card disable
   setStepAbstract, // Add this import for step editing
   setStepStatus, // Add this import for step status change
@@ -27,6 +28,7 @@ import {
 import {
   generateKnowledgeCardDetail,
   generateKnowledgeCardThemes,
+  generateKnowledgeCardThemesFromQuery,
   generateStepsFromRequirement,
   paraphraseUserIntent
 } from "../../redux/thunks/codeAwareGeneration";
@@ -270,6 +272,7 @@ export const CodeAware = () => {
 
   // CodeAware: 获取学习目标和代码上下文
   const learningGoal = useAppSelector(selectLearningGoal);
+  const task = useAppSelector(selectTask);
 
   // 处理生成知识卡片内容
   const handleGenerateKnowledgeCardContent = useCallback(
@@ -373,44 +376,30 @@ export const CodeAware = () => {
       return;
     }
 
-    // 获取步骤相关信息
-    const stepInfo = {
+    // 获取现有的知识卡片主题（直接从step中获取）
+    const existingThemes = step.knowledgeCards.map(kc => kc.title);
+
+    // 获取学习目标和任务描述
+    const taskDescription = task?.requirementDescription || '';
+
+    // 调用新的 thunk 来生成知识卡片主题
+    dispatch(generateKnowledgeCardThemesFromQuery({
       stepId,
-      stepTitle: step.title,
-      stepAbstract: step.abstract,
-      knowledgeCardTitles: step.knowledgeCards.map(kc => kc.title),
-      learningGoal: learningGoal || '提升编程技能和理解相关概念',
-      selectedText: selectedText || '', // Support empty selectedText
-      question
-    };
+      queryContext: {
+        selectedCode: '', // 可以后续扩展从IDE获取选中的代码
+        selectedText: selectedText || '',
+        query: question
+      },
+      currentStep: {
+        title: step.title,
+        abstract: step.abstract
+      },
+      existingThemes,
+      learningGoal: learningGoal || '',
+      task: taskDescription
+    }));
 
-    console.log('步骤相关信息:', stepInfo);
-
-    // TODO: 实现问题处理逻辑
-    // 可能的实现方向：
-    // 1. 调用AI服务来回答问题
-    // 2. 将问题和答案保存到Redux state
-    // 3. 在UI中显示问题和答案
-    // 4. 可能需要添加新的Redux action和thunk
-    
-    // 示例：可以创建一个新的thunk来处理问题
-    // dispatch(handleStepQuestion({
-    //   stepId,
-    //   stepTitle: step.title,
-    //   stepAbstract: step.abstract,
-    //   knowledgeCardTitles: step.knowledgeCards.map(kc => kc.title),
-    //   learningGoal: learningGoal || '提升编程技能和理解相关概念',
-    //   selectedText: selectedText || '',
-    //   question
-    // }));
-
-  }, [steps, learningGoal]);
-
-  const confirmStep = useCallback((stepId: string) => {
-    console.log(`确认步骤: ${stepId}`);
-    // TODO: 实现确认步骤的逻辑
-    // 可能会标记步骤为已完成状态
-  }, []);
+  }, [steps, learningGoal, task, dispatch]);
 
   // Add keyboard event listener for Escape key to clear highlights
   useEffect(() => {

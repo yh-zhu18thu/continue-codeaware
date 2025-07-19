@@ -109,3 +109,41 @@ export function constructGenerateKnowledgeCardThemesPrompt(
         "learning_goal": "${learningGoal}"
     }`;
 }
+
+export function constructGenerateKnowledgeCardThemesFromQueryPrompt(
+    queryContext: {
+        selectedCode: string;
+        selectedText: string;
+        query: string;
+    },
+    currentStep: { title: string, abstract: string },
+    existingThemes: string[],
+    learningGoal: string,
+    task: string
+): string {
+    return `{
+        "task": "You are given a user query in the context of a programming learning session. Based on the query, current step information, existing knowledge card themes, and learning goals, generate new knowledge card themes that address the user's question and complement existing ones.",
+        "requirements": [
+            "Generate 1-3 new knowledge card themes that directly address the user's query",
+            "The themes should complement, not duplicate, the existing themes",
+            "Consider why the existing themes might not fully address the user's question",
+            "The themes should be relevant to the current step and align with the learning goals",
+            "Each theme should be a concise phrase or question (no more than 15 words)",
+            "Respond in the same language as the task description",
+            "You must follow this JSON format in your response: [\\"(theme 1)\\", \\"(theme 2)\\", ...]",
+            "Please do not use invalid \`\`\`json character to envelope the JSON response, just return the JSON array directly."
+        ],
+        "query_context": {
+            "selected_code": "${queryContext.selectedCode}",
+            "selected_text": "${queryContext.selectedText}",
+            "query": "${queryContext.query}"
+        },
+        "current_step": {
+            "title": "${currentStep.title}",
+            "abstract": "${currentStep.abstract}"
+        },
+        "existing_themes": [${existingThemes.map(theme => `"${theme}"`).join(", ")}],
+        "learning_goal": "${learningGoal}",
+        "task": "${task}"
+    }`;
+}

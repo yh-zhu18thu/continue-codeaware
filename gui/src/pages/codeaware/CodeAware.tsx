@@ -380,7 +380,7 @@ export const CodeAware = () => {
       stepAbstract: step.abstract,
       knowledgeCardTitles: step.knowledgeCards.map(kc => kc.title),
       learningGoal: learningGoal || '提升编程技能和理解相关概念',
-      selectedText,
+      selectedText: selectedText || '', // Support empty selectedText
       question
     };
 
@@ -400,7 +400,7 @@ export const CodeAware = () => {
     //   stepAbstract: step.abstract,
     //   knowledgeCardTitles: step.knowledgeCards.map(kc => kc.title),
     //   learningGoal: learningGoal || '提升编程技能和理解相关概念',
-    //   selectedText,
+    //   selectedText: selectedText || '',
     //   question
     // }));
 

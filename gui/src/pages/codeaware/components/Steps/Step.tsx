@@ -1,9 +1,11 @@
+import { PlusIcon } from '@heroicons/react/24/outline';
 import { HighlightEvent, KnowledgeCardGenerationStatus, StepStatus } from "core";
 import React, { useEffect, useRef, useState } from 'react';
 import styled from "styled-components";
-import { vscBackground } from "../../../../components";
+import { vscBackground, vscForeground, vscInputBorder } from "../../../../components";
 import KnowledgeCard, { KnowledgeCardProps } from '../KnowledgeCard/KnowledgeCard';
 import KnowledgeCardLoader from '../KnowledgeCard/KnowledgeCardLoader';
+import QuestionPopup from '../QuestionPopup/QuestionPopup';
 import StepDescription from './StepDescription';
 import StepEditor from './StepEditor';
 import StepTitleBar from './StepTitleBar';
@@ -55,6 +57,38 @@ const KnowledgeCardLoaderContainer = styled.div`
   align-items: center;
 `;
 
+const AddQuestionButtonContainer = styled.div`
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 8px;
+  padding: 8px 0;
+`;
+
+const AddQuestionButton = styled.button`
+  background-color: transparent;
+  color: ${vscForeground};
+  border: 1px solid ${vscInputBorder};
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-color: #007acc;
+  }
+  
+  &:active {
+    background-color: rgba(255, 255, 255, 0.2);
+  }
+`;
+
 interface StepProps {
   title: string;
   content: string;
@@ -98,6 +132,7 @@ const Step: React.FC<StepProps> = ({
   const [isFlickering, setIsFlickering] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [shouldKeepHighlighted, setShouldKeepHighlighted] = useState(false);
+  const [showQuestionPopup, setShowQuestionPopup] = useState(false);
   const flickerTimeoutRef = useRef<(NodeJS.Timeout | null)[]>([]);
 
   // Check if step is in editing mode based on stepStatus
@@ -235,6 +270,21 @@ const Step: React.FC<StepProps> = ({
     }
   };
 
+  const handleAddQuestionClick = () => {
+    setShowQuestionPopup(true);
+  };
+
+  const handleQuestionSubmit = (question: string) => {
+    if (stepId && onQuestionSubmit) {
+      onQuestionSubmit(stepId, '', question); // Empty string for selectedText
+    }
+    setShowQuestionPopup(false);
+  };
+
+  const handleQuestionCancel = () => {
+    setShowQuestionPopup(false);
+  };
+
   return (
     <StepContainer 
       isHovered={isHovered}
@@ -291,7 +341,24 @@ const Step: React.FC<StepProps> = ({
             <KnowledgeCardLoader text="正在生成知识卡片主题..." />
           </KnowledgeCardLoaderContainer>
         )}
+        
+        {/* Add Question Button - only show when not editing and knowledgeCardGenerationStatus is "checked" */}
+        {knowledgeCardGenerationStatus === "checked" && (
+          <AddQuestionButtonContainer>
+            <AddQuestionButton onClick={handleAddQuestionClick}>
+              <PlusIcon width={16} height={16} />
+            </AddQuestionButton>
+          </AddQuestionButtonContainer>
+        )}
       </ContentArea>
+      
+      {/* Question Popup */}
+      {showQuestionPopup && (
+        <QuestionPopup
+          onSubmit={handleQuestionSubmit}
+          onCancel={handleQuestionCancel}
+        />
+      )}
     </StepContainer>
   );
 };

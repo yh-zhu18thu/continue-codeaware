@@ -8,7 +8,6 @@ import {
     CodeAwareMapping,
     CodeChunk,
     CollaborationStatus,
-    GenerationContext,
     HighlightEvent,
     KnowledgeCardGenerationStatus,
     KnowledgeCardItem,
@@ -565,33 +564,6 @@ export const codeAwareSessionSlice = createSlice({
         selectTask: (state: CodeAwareSessionState) => {
             // 返回session的任务信息
             return state.userRequirement;
-        },
-        selectGenerationContextUntilStep: (state: CodeAwareSessionState, stepId: string) => {
-            // 获取当前步骤之前所有的未生成步骤（stepstatus==confirmed）
-            const stepIndex = state.steps.findIndex(step => step.id === stepId);
-            if (stepIndex === -1) {
-                return null; // 如果没有找到该步骤，则返回null
-            }
-            const startIndex = state.steps.findIndex(step => step.stepStatus === "confirmed");
-            if (startIndex === -1 || startIndex > stepIndex) {
-                return null; // 如果没有找到已确认的步骤，或者已确认的步骤在当前步骤之后，则返回null
-            }
-            //返回generation context, 其中包含step title和abstract，形式为1. title: abstract 2. title: abstract
-            const orderedSteps = state.steps.slice(startIndex, stepIndex + 1).map(step => {
-                return `${step.title}: ${cleanMarkdownText(step.abstract)}`;
-            });
-            return {
-                userRequirement: state.userRequirement?.requirementDescription || "",
-                orderedSteps: orderedSteps,
-                stopStep: state.steps[stepIndex].title
-            } as GenerationContext;
-        },
-        selectStepKnowledgeCardThemes: (state: CodeAwareSessionState, stepId: string) => {
-            const step = state.steps.find(step => step.id === stepId);
-            if (!step) {
-                return [];
-            }
-            return step.knowledgeCards.map(card => card.title);
         }
     }
 });

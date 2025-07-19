@@ -348,11 +348,74 @@ export const CodeAware = () => {
   }, [dispatch]);
 
   // Add new functions for step operations
-  const executeUntilStep = useCallback((stepId: string) => {
+  const executeUntilStep = useCallback(async (stepId: string) => {
     console.log(`执行到步骤: ${stepId}`);
-    // TODO: 实现执行到指定步骤的逻辑
-    // 这里可以调用相应的API或者更新Redux状态
-  }, []);
+    
+    try {
+      // 1. 根据step_id获取截止到该步骤的所有未执行步骤信息
+      const targetStepIndex = steps.findIndex(step => step.id === stepId);
+      if (targetStepIndex === -1) {
+        console.error(`Step with id ${stepId} not found`);
+        return;
+      }
+
+      // 获取从开始到目标步骤的所有未执行步骤（stepStatus 不是 "generated"）
+      const unexecutedSteps = steps.slice(0, targetStepIndex + 1).filter(step => 
+        step.stepStatus !== "generated"
+      );
+
+      // 提取步骤信息
+      const stepsInfo = unexecutedSteps.map(step => ({
+        id: step.id,
+        title: step.title,
+        abstract: step.abstract,
+        knowledgeCards: step.knowledgeCards.map(card => ({
+          id: card.id,
+          title: card.title
+        }))
+      }));
+
+      console.log("📋 未执行的步骤信息:", stepsInfo);
+
+      // 2. 通过ideMessenger获取当前文件的所有代码
+      const currentFileResponse = await ideMessenger?.request("getCurrentFile", undefined);
+      
+      // 检查响应是否成功并提取内容
+      if (!currentFileResponse || currentFileResponse.status !== "success") {
+        console.warn("⚠️ 无法获取当前文件信息");
+        return;
+      }
+
+      const currentFile = currentFileResponse.content;
+      
+      if (!currentFile) {
+        console.warn("⚠️ 当前没有打开的文件");
+        return;
+      }
+
+      console.log("📁 当前文件信息:", {
+        path: currentFile.path,
+        isUntitled: currentFile.isUntitled,
+        contentLength: currentFile.contents?.length || 0,
+      });
+      
+      // 准备数据供后续使用
+      const executionData = {
+        targetStepId: stepId,
+        unexecutedSteps: stepsInfo,
+        currentFile: {
+          path: currentFile.path,
+          contents: currentFile.contents,
+          isUntitled: currentFile.isUntitled
+        }
+      };
+
+      
+
+    } catch (error) {
+      console.error("❌ 执行到步骤时发生错误:", error);
+    }
+  }, [steps, ideMessenger]);
 
   const handleStepEdit = useCallback((stepId: string, newContent: string) => {
     console.log(`修改步骤: ${stepId}, 新内容: ${newContent}`);

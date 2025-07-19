@@ -133,7 +133,7 @@ const Button = styled.button<{ variant: 'primary' | 'secondary' }>`
 `;
 
 interface QuestionPopupProps {
-  selectedText: string;
+  selectedText?: string;
   onSubmit: (question: string) => void;
   onCancel: () => void;
 }
@@ -186,9 +186,11 @@ const QuestionPopup: React.FC<QuestionPopupProps> = ({
   return (
     <PopupOverlay onClick={handleOverlayClick}>
       <PopupContainer onKeyDown={handleKeyDown}>
-        <SelectedTextContainer>
-          {selectedText || '(未选中任何文本)'}
-        </SelectedTextContainer>
+        {selectedText && selectedText.trim() && (
+          <SelectedTextContainer>
+            {selectedText}
+          </SelectedTextContainer>
+        )}
 
         <QuestionInput
           ref={questionInputRef}

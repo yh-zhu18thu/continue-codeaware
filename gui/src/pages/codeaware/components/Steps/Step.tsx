@@ -72,6 +72,7 @@ interface StepProps {
   onStepStatusChange?: (stepId: string, newStatus: StepStatus) => void; // Callback for status change
   onGenerateKnowledgeCardThemes?: (stepId: string, stepTitle: string, stepAbstract: string, learningGoal: string) => void; // Callback for generating knowledge card themes
   onDisableKnowledgeCard?: (stepId: string, cardId: string) => void; // Callback for disabling knowledge card
+  onQuestionSubmit?: (stepId: string, selectedText: string, question: string) => void; // Callback for question submission
 }
 
 const Step: React.FC<StepProps> = ({
@@ -91,6 +92,7 @@ const Step: React.FC<StepProps> = ({
   onStepStatusChange,
   onGenerateKnowledgeCardThemes,
   onDisableKnowledgeCard,
+  onQuestionSubmit,
 }) => {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const [isFlickering, setIsFlickering] = useState(false);
@@ -260,6 +262,11 @@ const Step: React.FC<StepProps> = ({
             markdownContent={description} 
             isVisible={isExpanded}
             onEdit={stepStatus === "confirmed" ? handleEditStep : undefined}
+            onQuestionSubmit={(selectedText, question) => {
+              if (stepId) {
+                onQuestionSubmit?.(stepId, selectedText, question);
+              }
+            }}
           />
         )}
         {knowledgeCards.filter(card => !card.disabled).length > 0 && (

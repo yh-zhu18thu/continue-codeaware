@@ -363,6 +363,49 @@ export const CodeAware = () => {
     dispatch(setStepStatus({ stepId, status: newStatus }));
   }, [dispatch]);
 
+  const handleQuestionSubmit = useCallback((stepId: string, selectedText: string, question: string) => {
+    console.log('处理步骤问题提交:', { stepId, selectedText, question });
+    
+    // 通过stepId查找对应的步骤信息
+    const step = steps.find(s => s.id === stepId);
+    if (!step) {
+      console.error('未找到对应的步骤:', stepId);
+      return;
+    }
+
+    // 获取步骤相关信息
+    const stepInfo = {
+      stepId,
+      stepTitle: step.title,
+      stepAbstract: step.abstract,
+      knowledgeCardTitles: step.knowledgeCards.map(kc => kc.title),
+      learningGoal: learningGoal || '提升编程技能和理解相关概念',
+      selectedText,
+      question
+    };
+
+    console.log('步骤相关信息:', stepInfo);
+
+    // TODO: 实现问题处理逻辑
+    // 可能的实现方向：
+    // 1. 调用AI服务来回答问题
+    // 2. 将问题和答案保存到Redux state
+    // 3. 在UI中显示问题和答案
+    // 4. 可能需要添加新的Redux action和thunk
+    
+    // 示例：可以创建一个新的thunk来处理问题
+    // dispatch(handleStepQuestion({
+    //   stepId,
+    //   stepTitle: step.title,
+    //   stepAbstract: step.abstract,
+    //   knowledgeCardTitles: step.knowledgeCards.map(kc => kc.title),
+    //   learningGoal: learningGoal || '提升编程技能和理解相关概念',
+    //   selectedText,
+    //   question
+    // }));
+
+  }, [steps, learningGoal]);
+
   const confirmStep = useCallback((stepId: string) => {
     console.log(`确认步骤: ${stepId}`);
     // TODO: 实现确认步骤的逻辑
@@ -554,6 +597,7 @@ export const CodeAware = () => {
               onStepStatusChange={handleStepStatusChange} // Pass step status change function
               onGenerateKnowledgeCardThemes={handleGenerateKnowledgeCardThemes} // Pass knowledge card themes generation function
               onDisableKnowledgeCard={handleDisableKnowledgeCard} // Pass knowledge card disable function
+              onQuestionSubmit={handleQuestionSubmit} // Pass question submit function
               knowledgeCards={step.knowledgeCards.map((kc: KnowledgeCardItem, kcIndex: number) => {
                 // 从 KnowledgeCardItem.tests 转换为 TestItem[]
                 const testItems = kc.tests?.map(test => ({

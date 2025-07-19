@@ -85,6 +85,47 @@ export function constructAnalyzeCompletionStepPrompt(
 }
 
 
+export function constructGenerateCodeFromStepsPrompt(
+    existingCode: string,
+    orderedSteps: Array<{
+        id: string;
+        title: string;
+        abstract: string;
+        knowledge_cards: Array<{
+            id: string;
+            title: string;
+        }>;
+    }>
+): string {
+    const stepsText = orderedSteps.map(step => {
+        const knowledgeCardsText = step.knowledge_cards.map(kc => 
+            `{"id": "${kc.id}", "title": "${kc.title}"}`
+        ).join(", ");
+        return `{"id": "${step.id}", "title": "${step.title}", "abstract": "${step.abstract}", "knowledge_cards": [${knowledgeCardsText}]}`;
+    }).join(",\n        ");
+    
+    return `{
+        "task": "You are given existing code and a list of ordered steps to implement. Generate new code that completes exactly what is required by the abstract of each step - no more, no less. Then identify the correspondence between new code chunks and steps/knowledge cards.",
+        "requirements": [
+            "Generate code that implements exactly what each step's abstract requires",
+            "Do not generate excessive code beyond what is needed for the current steps",
+            "Do not skip any required functionality mentioned in the abstracts",
+            "Include proper comments in the generated code to explain what each part does",
+            "Identify which parts of the new code correspond to which steps and knowledge cards",
+            "The changed_code should include both existing code and newly generated code",
+            "Each new_code_chunks item should contain only the newly added code for that specific functionality",
+            "Respond in the same language as the step descriptions",
+            "You must follow this JSON format in your response: {\\"changed_code\\": \\"(complete code with both existing and new parts)\\", \\"new_code_chunks\\": [{\\"code\\": \\"(newly added code chunk)\\", \\"corresponding_steps\\": [\\"step_id1\\", \\"step_id2\\"], \\"corresponding_knowledge_cards\\": [\\"card_id1\\", \\"card_id2\\"]}]}",
+            "Please do not use invalid \`\`\`json character to envelope the JSON response, just return the JSON object directly."
+        ],
+        "existing_code": "${existingCode}",
+        "ordered_steps": [
+        ${stepsText}
+        ]
+    }`;
+}
+
+
 export function constructGenerateKnowledgeCardThemesPrompt(
     taskDescription: string,
     currentStep: { title: string, abstract: string },

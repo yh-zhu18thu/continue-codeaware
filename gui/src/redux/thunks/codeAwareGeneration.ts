@@ -6,6 +6,7 @@ import {
     StepItem
 } from "core";
 import {
+    constructGenerateCodeFromStepsPrompt,
     constructGenerateKnowledgeCardDetailPrompt,
     constructGenerateKnowledgeCardThemesFromQueryPrompt,
     constructGenerateKnowledgeCardThemesPrompt,
@@ -571,6 +572,112 @@ export const generateKnowledgeCardThemesFromQuery = createAsyncThunk<
             const errorMessage = error instanceof Error ? error.message : String(error);
             dispatch(setKnowledgeCardGenerationStatus({ stepId, status: "empty" }));
             // 可以在这里添加错误提示给用户
+        }
+    }
+);
+
+// 异步根据现有代码和步骤生成新代码
+export const generateCodeFromSteps = createAsyncThunk<
+    {
+        changedCode: string;
+        newCodeChunks: Array<{
+            code: string;
+            corresponding_steps: string[];
+            corresponding_knowledge_cards: string[];
+        }>;
+    },
+    {
+        existingCode: string;
+        orderedSteps: Array<{
+            id: string;
+            title: string;
+            abstract: string;
+            knowledge_cards: Array<{
+                id: string;
+                title: string;
+            }>;
+        }>;
+    },
+    ThunkApiType
+>(
+    "codeAware/generateCodeFromSteps",
+    async (
+        { existingCode, orderedSteps },
+        { dispatch, extra, getState }
+    ) => {
+        try {
+            const state = getState();
+            const defaultModel = selectDefaultModel(state);
+            if (!defaultModel) {
+                throw new Error("Default model not defined");
+            }
+
+            console.log("generateCodeFromSteps called with:", {
+                existingCodeLength: existingCode.length,
+                stepsCount: orderedSteps.length,
+                steps: orderedSteps.map(s => ({ id: s.id, title: s.title }))
+            });
+
+            // 构造提示词并发送请求
+            const prompt = constructGenerateCodeFromStepsPrompt(existingCode, orderedSteps);
+
+            const result = await extra.ideMessenger.request("llm/complete", {
+                prompt: prompt,
+                completionOptions: {},
+                title: defaultModel.title
+            });
+
+            if (result.status !== "success" || !result.content) {
+                throw new Error("LLM request failed or returned empty content");
+            }
+
+            console.log("LLM response for code generation:", result.content);
+
+            // 解析 LLM 返回的 JSON 内容
+            try {
+                const jsonResponse = JSON.parse(result.content);
+                const changedCode = jsonResponse.changed_code || "";
+                const newCodeChunks = jsonResponse.new_code_chunks || [];
+
+                console.log("✅ 代码生成成功:", {
+                    changedCodeLength: changedCode.length,
+                    newChunksCount: newCodeChunks.length,
+                    chunks: newCodeChunks.map((chunk: any) => ({
+                        codeLength: chunk.code?.length || 0,
+                        correspondingSteps: chunk.corresponding_steps || [],
+                        correspondingKnowledgeCards: chunk.corresponding_knowledge_cards || []
+                    }))
+                });
+
+                // 打印生成的内容供调试
+                console.log("📝 完整生成代码:");
+                console.log(changedCode);
+                
+                console.log("🧩 新代码块详情:");
+                newCodeChunks.forEach((chunk: any, index: number) => {
+                    console.log(`--- 代码块 ${index + 1} ---`);
+                    console.log("代码:", chunk.code);
+                    console.log("对应步骤:", chunk.corresponding_steps);
+                    console.log("对应知识卡片:", chunk.corresponding_knowledge_cards);
+                });
+
+                // TODO: 这里可以添加更新Redux状态的逻辑
+                // 例如：更新代码状态、步骤完成状态、知识卡片映射等
+
+                return {
+                    changedCode,
+                    newCodeChunks
+                };
+
+            } catch (parseError) {
+                console.error("Error parsing LLM response:", parseError);
+                throw new Error("解析LLM代码生成响应失败");
+            }
+
+        } catch (error) {
+            console.error("Error during code generation from steps:", error);
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            throw new Error(`代码生成失败: ${errorMessage}`);
         }
     }
 );

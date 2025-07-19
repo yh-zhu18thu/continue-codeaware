@@ -26,6 +26,7 @@ import {
   updateHighlight
 } from "../../redux/slices/codeAwareSlice";
 import {
+  generateCodeFromSteps,
   generateKnowledgeCardDetail,
   generateKnowledgeCardThemes,
   generateKnowledgeCardThemesFromQuery,
@@ -410,14 +411,37 @@ export const CodeAware = () => {
         }
       };
 
-      
+      // 3. 调用新的代码生成thunk
+      const orderedSteps = stepsInfo.map(step => ({
+        id: step.id,
+        title: step.title,
+        abstract: step.abstract,
+        knowledge_cards: step.knowledgeCards.map(kc => ({
+          id: kc.id,
+          title: kc.title
+        }))
+      }));
+
+      console.log("🚀 开始生成代码...");
+      const result = await dispatch(generateCodeFromSteps({
+        existingCode: currentFile.contents || "",
+        orderedSteps: orderedSteps
+      }));
+
+      if (generateCodeFromSteps.fulfilled.match(result)) {
+        console.log("✅ 代码生成完成!", result.payload);
+        // TODO: 后续处理生成的代码，例如：
+        // - 将生成的代码应用到IDE中
+        // - 更新步骤状态
+        // - 更新代码映射关系
+      } else if (generateCodeFromSteps.rejected.match(result)) {
+        console.error("❌ 代码生成失败:", result.error.message);
+      }
 
     } catch (error) {
       console.error("❌ 执行到步骤时发生错误:", error);
     }
-  }, [steps, ideMessenger]);
-
-  const handleStepEdit = useCallback((stepId: string, newContent: string) => {
+  }, [steps, ideMessenger, dispatch]);  const handleStepEdit = useCallback((stepId: string, newContent: string) => {
     console.log(`修改步骤: ${stepId}, 新内容: ${newContent}`);
     // Update step abstract in Redux store
     dispatch(setStepAbstract({ stepId, abstract: newContent }));

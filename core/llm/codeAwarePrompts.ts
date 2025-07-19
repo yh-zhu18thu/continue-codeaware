@@ -83,3 +83,29 @@ export function constructAnalyzeCompletionStepPrompt(
         "learning_goal": "${learningGoal}"
     }`;
 }
+
+
+export function constructGenerateKnowledgeCardThemesPrompt(
+    taskDescription: string,
+    currentStep: { title: string, abstract: string },
+    learningGoal: string
+): string {
+    return `{
+        "task": "You are given a programming task, information about the current step, and learning goals. Generate a list of potential knowledge card themes that would be helpful for the user to understand this step better.",
+        "requirements": [
+            "Generate 2-4 knowledge card themes that are relevant to the current step",
+            "The themes should be focused on concepts, techniques, or common questions that learners might have when working on this step",
+            "The themes should align with the learning goals provided",
+            "Each theme should be a concise phrase or question (no more than 10-15 words)",
+            "Respond in the same language as the task description",
+            "You must follow this JSON format in your response: [\\"(theme 1)\\", \\"(theme 2)\\", \\"(theme 3)\\", ...]",
+            "Please do not use invalid \`\`\`json character to envelope the JSON response, just return the JSON array directly."
+        ],
+        "task_description": "${taskDescription}",
+        "current_step": {
+            "title": "${currentStep.title}",
+            "abstract": "${currentStep.abstract}"
+        },
+        "learning_goal": "${learningGoal}"
+    }`;
+}

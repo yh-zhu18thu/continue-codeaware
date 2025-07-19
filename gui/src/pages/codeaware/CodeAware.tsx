@@ -16,6 +16,7 @@ import {
   resetSessionExceptRequirement, // Add this import
   selectIsRequirementInEditMode, // Import submitRequirementContent
   selectIsStepsGenerated,
+  selectLearningGoal, // Add this import
   setStepAbstract, // Add this import for step editing
   setStepStatus, // Add this import for step status change
   setUserRequirementStatus,
@@ -23,7 +24,9 @@ import {
   updateHighlight
 } from "../../redux/slices/codeAwareSlice";
 import {
-  generateKnowledgeCardDetail, generateStepsFromRequirement,
+  generateKnowledgeCardDetail,
+  generateKnowledgeCardThemes,
+  generateStepsFromRequirement,
   paraphraseUserIntent
 } from "../../redux/thunks/codeAwareGeneration";
 import "./CodeAware.css";
@@ -265,7 +268,7 @@ export const CodeAware = () => {
 
 
   // CodeAware: 获取学习目标和代码上下文
-  const learningGoal = useAppSelector((state) => state.codeAwareSession.learningGoal);
+  const learningGoal = useAppSelector(selectLearningGoal);
 
   // 处理生成知识卡片内容
   const handleGenerateKnowledgeCardContent = useCallback(
@@ -288,6 +291,24 @@ export const CodeAware = () => {
       }));
     },
     [dispatch]
+  );
+
+  // 处理生成知识卡片主题列表
+  const handleGenerateKnowledgeCardThemes = useCallback(
+    (stepId: string, stepTitle: string, stepAbstract: string, learningGoalFromProps: string) => {
+      // 使用 Redux state 中的学习目标，如果提供了参数则使用参数
+      const learningGoalToUse = learningGoalFromProps || learningGoal || "提升编程技能和理解相关概念";
+      
+      console.log("Generating knowledge card themes for:", { stepId, stepTitle, stepAbstract, learningGoalToUse });
+      
+      dispatch(generateKnowledgeCardThemes({
+        stepId,
+        stepTitle,
+        stepAbstract,
+        learningGoal: learningGoalToUse
+      }));
+    },
+    [dispatch, learningGoal]
   );
 
   const handleHighlightEvent = useCallback((e: HighlightEvent) => {
@@ -515,11 +536,13 @@ export const CodeAware = () => {
               isHighlighted={step.isHighlighted}
               stepId={step.id}
               stepStatus={step.stepStatus}
+              knowledgeCardGenerationStatus={step.knowledgeCardGenerationStatus} // Pass knowledge card generation status
               onHighlightEvent={handleHighlightEvent}
               onClearHighlight={removeHighlightEvent} // Pass the clear highlight function
               onExecuteUntilStep={executeUntilStep} // Pass execute until step function
               onStepEdit={handleStepEdit} // Pass step edit function
               onStepStatusChange={handleStepStatusChange} // Pass step status change function
+              onGenerateKnowledgeCardThemes={handleGenerateKnowledgeCardThemes} // Pass knowledge card themes generation function
               knowledgeCards={step.knowledgeCards.map((kc: KnowledgeCardItem, kcIndex: number) => {
                 // 从 KnowledgeCardItem.tests 转换为 TestItem[]
                 const testItems = kc.tests?.map(test => ({

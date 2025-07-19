@@ -486,6 +486,8 @@ export interface ProgramRequirement {
 
 export type StepStatus = "editing" | "confirmed" | "generated";
 
+export type KnowledgeCardGenerationStatus = "empty" | "generating" | "checked";
+
 
 // CODEAWARE: flow步骤
 export interface StepItem {
@@ -494,10 +496,10 @@ export interface StepItem {
   abstract: string;
   knowledgeCards: KnowledgeCardItem[]; //维护该步骤下的知识卡片
   stepStatus: StepStatus;
+  knowledgeCardGenerationStatus: KnowledgeCardGenerationStatus;
   isHighlighted: boolean;
 }
 
-export type KnowledgeStatus = "covered" | "explored" | "examined";
 
 // CODEAWARE: 知识卡片
 export interface KnowledgeCardItem {

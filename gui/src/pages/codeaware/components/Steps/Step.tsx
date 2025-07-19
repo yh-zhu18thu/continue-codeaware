@@ -1,8 +1,9 @@
-import { HighlightEvent, StepStatus } from "core";
+import { HighlightEvent, KnowledgeCardGenerationStatus, StepStatus } from "core";
 import React, { useEffect, useRef, useState } from 'react';
 import styled from "styled-components";
 import { vscBackground } from "../../../../components";
 import KnowledgeCard, { KnowledgeCardProps } from '../KnowledgeCard/KnowledgeCard';
+import KnowledgeCardLoader from '../KnowledgeCard/KnowledgeCardLoader';
 import StepDescription from './StepDescription';
 import StepEditor from './StepEditor';
 import StepTitleBar from './StepTitleBar';
@@ -47,6 +48,13 @@ const KnowledgeCardsContainer = styled.div<{ isHovered: boolean }>`
   box-sizing: border-box;
 `;
 
+const KnowledgeCardLoaderContainer = styled.div`
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+`;
+
 interface StepProps {
   title: string;
   content: string;
@@ -56,11 +64,13 @@ interface StepProps {
   isHighlighted?: boolean;
   stepId?: string;
   stepStatus?: StepStatus; // Use StepStatus type from core
+  knowledgeCardGenerationStatus?: KnowledgeCardGenerationStatus; // Add knowledge card generation status
   onHighlightEvent?: (event: HighlightEvent) => void;
   onClearHighlight?: () => void;
   onExecuteUntilStep?: (stepId: string) => void;
   onStepEdit?: (stepId: string, newContent: string) => void; // Callback for step edit
   onStepStatusChange?: (stepId: string, newStatus: StepStatus) => void; // Callback for status change
+  onGenerateKnowledgeCardThemes?: (stepId: string, stepTitle: string, stepAbstract: string, learningGoal: string) => void; // Callback for generating knowledge card themes
 }
 
 const Step: React.FC<StepProps> = ({
@@ -72,11 +82,13 @@ const Step: React.FC<StepProps> = ({
   isHighlighted = false,
   stepId,
   stepStatus = "confirmed", // Default to confirmed for backward compatibility
+  knowledgeCardGenerationStatus = "empty", // Default to empty for backward compatibility
   onHighlightEvent,
   onClearHighlight,
   onExecuteUntilStep,
   onStepEdit,
   onStepStatusChange,
+  onGenerateKnowledgeCardThemes,
 }) => {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const [isFlickering, setIsFlickering] = useState(false);
@@ -182,6 +194,18 @@ const Step: React.FC<StepProps> = ({
         identifier: stepId,
       });
     }
+
+    // Trigger knowledge card theme generation when expanding for the first time 
+    // and knowledge card generation status is "empty"
+    if (willBeExpanded && !wasExpanded && 
+        knowledgeCardGenerationStatus === "empty" && 
+        knowledgeCards.length === 0 &&
+        stepId && onGenerateKnowledgeCardThemes) {
+      // Use setTimeout to ensure UI update happens first
+      setTimeout(() => {
+        onGenerateKnowledgeCardThemes(stepId, title, description, ""); // learningGoal will be passed from parent
+      }, 100);
+    }
   };
 
   const handleExecuteUntilStep = () => {
@@ -248,6 +272,12 @@ const Step: React.FC<StepProps> = ({
               />
             ))}
           </KnowledgeCardsContainer>
+        )}
+        {/* Show loading animation when generating knowledge card themes */}
+        {knowledgeCardGenerationStatus === "generating" && (
+          <KnowledgeCardLoaderContainer>
+            <KnowledgeCardLoader text="正在生成知识卡片主题..." />
+          </KnowledgeCardLoaderContainer>
         )}
       </ContentArea>
     </StepContainer>

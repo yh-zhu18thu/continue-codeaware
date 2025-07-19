@@ -10,6 +10,7 @@ import {
     CollaborationStatus,
     GenerationContext,
     HighlightEvent,
+    KnowledgeCardGenerationStatus,
     KnowledgeCardItem,
     ProgramRequirement,
     RequirementChunk,
@@ -118,6 +119,13 @@ export const codeAwareSessionSlice = createSlice({
             const stepIndex = state.steps.findIndex(step => step.id === stepId);
             for (let i = 0; i < stepIndex+1; i++) {
                 state.steps[i].stepStatus = "generated";
+            }
+        },
+        setKnowledgeCardGenerationStatus: (state, action: PayloadAction<{ stepId: string; status: KnowledgeCardGenerationStatus }>) => {
+            const { stepId, status } = action.payload;
+            const stepIndex = state.steps.findIndex(step => step.id === stepId);
+            if (stepIndex !== -1) {
+                state.steps[stepIndex].knowledgeCardGenerationStatus = status;
             }
         },
         updateRequirementHighlightChunks: (state, action: PayloadAction<RequirementChunk[]>) => {
@@ -600,6 +608,7 @@ export const {
     createCodeAwareMapping,
     setStepStatus,
     setStepGeneratedUntil,
+    setKnowledgeCardGenerationStatus,
     setStepAbstract
 } = codeAwareSessionSlice.actions
 

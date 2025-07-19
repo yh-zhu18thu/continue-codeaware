@@ -1,6 +1,7 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import {
     CodeAwareMapping,
+    CodeChunk,
     ProgramRequirement,
     RequirementChunk,
     StepItem
@@ -25,6 +26,7 @@ import {
     setUserRequirementStatus,
     submitRequirementContent,
     updateCodeAwareMappings,
+    updateCodeChunks,
     updateKnowledgeCardContent,
     updateRequirementChunks
 } from "../slices/codeAwareSlice";
@@ -46,6 +48,56 @@ function cleanMarkdownText(text: string): string {
         .replace(/[-*+]\s*/g, '')         // 去掉列表标记 - * +
         .replace(/\d+\.\s*/g, '')         // 去掉有序列表标记 1. 2. 等
         .trim();                          // 去掉首尾空白
+}
+
+// 辅助函数：计算代码块在完整代码中的行号范围
+function calculateCodeChunkRange(fullCode: string, chunkCode: string): [number, number] {
+    const fullCodeLines = fullCode.split('\n');
+    const chunkLines = chunkCode.split('\n');
+    
+    // 如果代码块只有一行
+    if (chunkLines.length === 1) {
+        const chunkLine = chunkLines[0].trim();
+        for (let i = 0; i < fullCodeLines.length; i++) {
+            if (fullCodeLines[i].trim() === chunkLine) {
+                return [i + 1, i + 1]; // 转换为1基索引
+            }
+        }
+    }
+    
+    // 如果代码块有多行，尝试找到连续匹配的行
+    const firstChunkLine = chunkLines[0].trim();
+    const lastChunkLine = chunkLines[chunkLines.length - 1].trim();
+    
+    for (let i = 0; i <= fullCodeLines.length - chunkLines.length; i++) {
+        if (fullCodeLines[i].trim() === firstChunkLine) {
+            // 检查是否所有行都匹配
+            let allMatch = true;
+            for (let j = 0; j < chunkLines.length; j++) {
+                if (fullCodeLines[i + j].trim() !== chunkLines[j].trim()) {
+                    allMatch = false;
+                    break;
+                }
+            }
+            
+            if (allMatch) {
+                return [i + 1, i + chunkLines.length]; // 转换为1基索引
+            }
+        }
+    }
+    
+    // 如果无法精确匹配，尝试部分匹配
+    for (let i = 0; i < fullCodeLines.length; i++) {
+        if (fullCodeLines[i].includes(firstChunkLine) || firstChunkLine.includes(fullCodeLines[i].trim())) {
+            // 找到可能的开始位置，估算结束位置
+            const estimatedEnd = Math.min(i + chunkLines.length, fullCodeLines.length);
+            return [i + 1, estimatedEnd]; // 转换为1基索引
+        }
+    }
+    
+    // 如果都无法匹配，返回默认范围
+    console.warn("无法为代码块计算精确的行号范围，使用默认范围");
+    return [1, Math.min(chunkLines.length, fullCodeLines.length)];
 }
 
 //异步对用户需求和当前知识状态进行生成
@@ -661,8 +713,87 @@ export const generateCodeFromSteps = createAsyncThunk<
                     console.log("对应知识卡片:", chunk.corresponding_knowledge_cards);
                 });
 
-                // TODO: 这里可以添加更新Redux状态的逻辑
-                // 例如：更新代码状态、步骤完成状态、知识卡片映射等
+                // 创建新的代码块和映射关系
+                const createdCodeChunks: CodeChunk[] = [];
+                const createdMappings: CodeAwareMapping[] = [];
+                
+                // 获取当前状态中的代码块数量，用于生成新的ID
+                const currentState = getState();
+                const existingCodeChunksCount = currentState.codeAwareSession.codeChunks.length;
+                
+                // 为每个新代码块创建 CodeChunk 对象
+                newCodeChunks.forEach((chunk: any, index: number) => {
+                    if (!chunk.code || chunk.code.trim() === '') {
+                        console.warn(`代码块 ${index + 1} 为空，跳过创建`);
+                        return;
+                    }
+                    
+                    // 计算代码块的行号范围
+                    const range = calculateCodeChunkRange(changedCode, chunk.code);
+                    
+                    // 创建新的 CodeChunk
+                    const codeChunkId = `c-${existingCodeChunksCount + index + 1}`;
+                    const newCodeChunk: CodeChunk = {
+                        id: codeChunkId,
+                        content: chunk.code.trim(),
+                        range: range,
+                        isHighlighted: false,
+                        filePath: "" // 这里可能需要从上下文中获取文件路径
+                    };
+                    
+                    createdCodeChunks.push(newCodeChunk);
+                    
+                    console.log(`✅ 创建代码块 ${codeChunkId}:`, {
+                        contentLength: newCodeChunk.content.length,
+                        range: newCodeChunk.range
+                    });
+                    
+                    // 为步骤创建映射关系
+                    if (chunk.corresponding_steps && Array.isArray(chunk.corresponding_steps)) {
+                        chunk.corresponding_steps.forEach((stepId: string) => {
+                            const mapping: CodeAwareMapping = {
+                                codeChunkId: codeChunkId,
+                                stepId: stepId,
+                                isHighlighted: false
+                            };
+                            createdMappings.push(mapping);
+                            
+                            console.log(`🔗 创建步骤映射: ${codeChunkId} -> ${stepId}`);
+                        });
+                    }
+                    
+                    // 为知识卡片创建映射关系
+                    if (chunk.corresponding_knowledge_cards && Array.isArray(chunk.corresponding_knowledge_cards)) {
+                        chunk.corresponding_knowledge_cards.forEach((knowledgeCardId: string) => {
+                            // 找到对应的步骤ID
+                            let correspondingStepId = null;
+                            if (chunk.corresponding_steps && chunk.corresponding_steps.length > 0) {
+                                correspondingStepId = chunk.corresponding_steps[0]; // 使用第一个对应的步骤
+                            }
+                            
+                            const mapping: CodeAwareMapping = {
+                                codeChunkId: codeChunkId,
+                                stepId: correspondingStepId,
+                                knowledgeCardId: knowledgeCardId,
+                                isHighlighted: false
+                            };
+                            createdMappings.push(mapping);
+                            
+                            console.log(`🔗 创建知识卡片映射: ${codeChunkId} -> ${knowledgeCardId} (步骤: ${correspondingStepId})`);
+                        });
+                    }
+                });
+                
+                // 批量更新 Redux 状态
+                if (createdCodeChunks.length > 0) {
+                    dispatch(updateCodeChunks(createdCodeChunks));
+                    console.log(`📦 已添加 ${createdCodeChunks.length} 个新代码块到状态中`);
+                }
+                
+                if (createdMappings.length > 0) {
+                    dispatch(updateCodeAwareMappings(createdMappings));
+                    console.log(`🔗 已添加 ${createdMappings.length} 个新映射关系到状态中`);
+                }
 
                 return {
                     changedCode,

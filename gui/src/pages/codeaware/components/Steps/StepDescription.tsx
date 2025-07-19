@@ -18,17 +18,15 @@ const ContentArea = styled.div`
 `;
 
 const EditButton = styled.button`
-  position: absolute;
-  bottom: 8px;
-  right: 8px;
-  background: none;
-  border: none;
+  position: relative;
   color: ${vscForeground};
   cursor: pointer;
   padding: 4px;
   border-radius: 4px;
   transition: background-color 0.15s ease-in-out;
   opacity: 0.7;
+  align-self: flex-end;
+  margin-top: 4px;
 
   &:hover {
     background-color: rgba(255, 255, 255, 0.1);
@@ -61,18 +59,20 @@ const StepDescription: React.FC<StepDescriptionProps> = ({
   };
 
   return (
-    <div className="px-1">
+    <div className="px-1 flex flex-col">
       <ContentArea>
         <StyledMarkdownPreview
           source={markdownContent}
           useParentBackgroundColor={true}
         />
-        {onEdit && (
+      </ContentArea>
+      {onEdit && (
+        <div className="flex justify-end">
           <EditButton onClick={handleEditClick} title="修改此步骤">
             <WrenchIcon width={16} height={16} />
           </EditButton>
-        )}
-      </ContentArea>
+        </div>
+      )}
     </div>
   );
 };

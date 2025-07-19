@@ -1,4 +1,4 @@
-import { ChatBubbleLeftRightIcon, ChevronDownIcon, PlusIcon, QuestionMarkCircleIcon } from '@heroicons/react/24/outline';
+import { ChevronDownIcon, QuestionMarkCircleIcon, XCircleIcon } from '@heroicons/react/24/outline';
 import React from 'react';
 import styled from "styled-components";
 import {
@@ -11,7 +11,7 @@ import HoverItem from '../../../../components/mainInput/InputToolbar/HoverItem';
 
 const ToolBarContainer = styled.div<{ isHighlighted?: boolean; isFlickering?: boolean }>`
   width: 95%;
-  padding: 4px 16px;
+  padding: 4px 10px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -22,6 +22,15 @@ const ToolBarContainer = styled.div<{ isHighlighted?: boolean; isFlickering?: bo
     isHighlighted ? '#4ade80' : 
     `${lightGray}33`};
   transition: border-color 0.15s ease-in-out;
+`;
+
+const DisableButtonContainer = styled.div`
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  margin-left: 0px;
+  margin-right: 8px;
+  margin-top: 2px; /* Align with the title */
 `;
 
 const TitleSection = styled.div`
@@ -43,18 +52,20 @@ const Title = styled.span`
   max-width: 100%; /* Ensure it doesn't overflow */
 `;
 
+const QuestionButtonContainer = styled.div`
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  margin-right: 8px;
+  margin-top: 2px; /* Align with the title */
+`;
+
 const ChevronContainer = styled.div<{ isExpanded: boolean }>`
   display: flex;
   align-items: center;
+  flex-shrink: 0;
   transition: transform 0.15s ease-in-out;
   transform: ${({ isExpanded }) => isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)'};
-`;
-
-const ButtonGroup = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  flex-shrink: 0;
 `;
 
 interface KnowledgeCardToolBarProps {
@@ -62,11 +73,8 @@ interface KnowledgeCardToolBarProps {
   isExpanded?: boolean;
   onToggle?: () => void;
   onQuestionClick?: () => void;
-  onChatClick?: () => void;
-  onAddToCollectionClick?: () => void;
+  onDisableClick?: () => void; // Replace chat and add to collection with disable
   isQuestionDisabled?: boolean;
-  isChatDisabled?: boolean;
-  isAddToCollectionDisabled?: boolean;
   isHighlighted?: boolean;
   isFlickering?: boolean;
 }
@@ -76,26 +84,36 @@ const KnowledgeCardToolBar: React.FC<KnowledgeCardToolBarProps> = ({
   isExpanded = true,
   onToggle,
   onQuestionClick,
-  onChatClick, // use UseNavigate to navigate to the chat page
-  onAddToCollectionClick,
+  onDisableClick,
   isQuestionDisabled = false,
-  isChatDisabled = false,
-  isAddToCollectionDisabled = false,
   isHighlighted = false,
   isFlickering = false,
 }) => {
   return (
     <ToolBarContainer isHighlighted={isHighlighted} isFlickering={isFlickering}>
+      {/* Disable button on the left */}
+      <DisableButtonContainer>
+        <HoverItem>
+          <XCircleIcon
+            className="w-5 h-5 hover:brightness-125 cursor-pointer text-red-400"
+            onClick={onDisableClick}
+          >
+            <ToolTip text="Remove Card" position="top">
+              Remove Card
+            </ToolTip>
+          </XCircleIcon>
+        </HoverItem>
+      </DisableButtonContainer>
+
+      {/* Title section in the middle */}
       <TitleSection onClick={onToggle}>
         <Title title={title}>
           {title}
         </Title>
-        <ChevronContainer isExpanded={isExpanded}>
-          <ChevronDownIcon width={16} height={16} />
-        </ChevronContainer>
       </TitleSection>
 
-      <ButtonGroup>
+      {/* Question button */}
+      <QuestionButtonContainer>
         <HoverItem>
           <QuestionMarkCircleIcon
             className={`w-5 h-5 ${isQuestionDisabled ? 'opacity-50 cursor-not-allowed' : 'hover:brightness-125 cursor-pointer'}`}
@@ -106,29 +124,12 @@ const KnowledgeCardToolBar: React.FC<KnowledgeCardToolBarProps> = ({
             </ToolTip>
           </QuestionMarkCircleIcon>
         </HoverItem>
+      </QuestionButtonContainer>
 
-        <HoverItem>
-          <ChatBubbleLeftRightIcon
-            className={`w-5 h-5 ${isChatDisabled ? 'opacity-50 cursor-not-allowed' : 'hover:brightness-125 cursor-pointer'}`}
-            onClick={!isChatDisabled ? onChatClick : undefined}
-          >
-            <ToolTip text="Discuss more" position="top">
-              Discuss more
-            </ToolTip>
-          </ChatBubbleLeftRightIcon>
-        </HoverItem>
-
-        <HoverItem>
-          <PlusIcon
-            className={`w-5 h-5 ${isAddToCollectionDisabled ? 'opacity-50 cursor-not-allowed' : 'hover:brightness-125 cursor-pointer'}`}
-            onClick={!isAddToCollectionDisabled ? onAddToCollectionClick : undefined}
-          >
-            <ToolTip text="Mark as keypoint" position="top">
-              Mark as keypoint
-            </ToolTip>
-          </PlusIcon>
-        </HoverItem>
-      </ButtonGroup>
+      {/* Chevron button on the right */}
+      <ChevronContainer isExpanded={isExpanded} onClick={onToggle}>
+        <ChevronDownIcon width={16} height={16} />
+      </ChevronContainer>
     </ToolBarContainer>
   );
 };

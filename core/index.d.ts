@@ -508,6 +508,7 @@ export interface KnowledgeCardItem {
   content?: string;
   tests?: SelfTestItem[]; //维护该知识卡片下的自测题目
   isHighlighted: boolean;
+  disabled: boolean;
   codeContext?: string; // 代码上下文，在触发knowledge card item生成时一并存储。
 }
 

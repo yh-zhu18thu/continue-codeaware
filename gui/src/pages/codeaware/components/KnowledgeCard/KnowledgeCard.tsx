@@ -143,6 +143,10 @@ export interface KnowledgeCardProps {
   learningGoal?: string;
   codeContext?: string;
   onGenerateContent?: (stepId: string, cardId: string, theme: string, learningGoal: string, codeContext: string) => void;
+  
+  // Disable functionality
+  disabled?: boolean;
+  onDisable?: (stepId: string, cardId: string) => void;
 }
 
 const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
@@ -163,6 +167,8 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
   learningGoal = "",
   codeContext = "",
   onGenerateContent,
+  disabled = false,
+  onDisable,
 }) => {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const [isTestMode, setIsTestMode] = useState(defaultTestMode);
@@ -293,6 +299,13 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
 
   const currentTest = testItems[currentTestIndex];
 
+  // Handle disable card
+  const handleDisableCard = () => {
+    if (stepId && cardId && onDisable) {
+      onDisable(stepId, cardId);
+    }
+  };
+
   return (
     <KnowledgeCardContainer 
       isHighlighted={isHighlighted} 
@@ -306,8 +319,7 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
         isExpanded={isExpanded}
         onToggle={handleToggle}
         onQuestionClick={onQuestionMarkClick} // Pass to the actual prop name in KnowledgeCardToolBar
-        onChatClick={onChatClick}
-        onAddToCollectionClick={onAddToCollectionClick}
+        onDisableClick={handleDisableCard} // Add disable functionality
         isQuestionDisabled={testItems.length === 0} // 没有测试项目时禁用问号按钮
         isHighlighted={isHighlighted}
         isFlickering={isFlickering}

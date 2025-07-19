@@ -17,6 +17,7 @@ import {
   selectIsRequirementInEditMode, // Import submitRequirementContent
   selectIsStepsGenerated,
   selectLearningGoal, // Add this import
+  setKnowledgeCardDisabled, // Add this import for knowledge card disable
   setStepAbstract, // Add this import for step editing
   setStepStatus, // Add this import for step status change
   setUserRequirementStatus,
@@ -311,6 +312,15 @@ export const CodeAware = () => {
     [dispatch, learningGoal]
   );
 
+  // 处理禁用知识卡片
+  const handleDisableKnowledgeCard = useCallback(
+    (stepId: string, cardId: string) => {
+      console.log("Disabling knowledge card:", { stepId, cardId });
+      dispatch(setKnowledgeCardDisabled({ stepId, cardId, disabled: true }));
+    },
+    [dispatch]
+  );
+
   const handleHighlightEvent = useCallback((e: HighlightEvent) => {
     // Dispatch highlight event to trigger mapping-based highlighting
     if (!e.additionalInfo){
@@ -543,6 +553,7 @@ export const CodeAware = () => {
               onStepEdit={handleStepEdit} // Pass step edit function
               onStepStatusChange={handleStepStatusChange} // Pass step status change function
               onGenerateKnowledgeCardThemes={handleGenerateKnowledgeCardThemes} // Pass knowledge card themes generation function
+              onDisableKnowledgeCard={handleDisableKnowledgeCard} // Pass knowledge card disable function
               knowledgeCards={step.knowledgeCards.map((kc: KnowledgeCardItem, kcIndex: number) => {
                 // 从 KnowledgeCardItem.tests 转换为 TestItem[]
                 const testItems = kc.tests?.map(test => ({
@@ -571,6 +582,9 @@ export const CodeAware = () => {
                   isHighlighted: kc.isHighlighted,
                   cardId: kc.id || `${step.id}-card-${kcIndex}`,
                   
+                  // Disabled state
+                  disabled: kc.disabled,
+                  
                   // 事件处理函数
                   onMcqSubmit: (testId: string, isCorrect: boolean, selectedOption: string) => {
                     console.log(`MCQ Result for ${kc.title} (Test ${testId}): ${isCorrect ? 'Correct' : 'Incorrect'}, Selected: ${selectedOption}`);
@@ -580,17 +594,6 @@ export const CodeAware = () => {
                   onSaqSubmit: (testId: string, answer: string) => {
                     console.log(`SAQ Answer for ${kc.title} (Test ${testId}): ${answer}`);
                     // TODO: 实现 SAQ 提交逻辑，更新测试结果到 Redux store
-                  },
-                  
-                  // Toolbar event handlers
-                  onChatClick: () => {
-                    console.log(`Chat clicked for knowledge card: ${kc.title}`);
-                    // TODO: 实现聊天功能，可能导航到聊天页面或打开聊天对话框
-                  },
-                  
-                  onAddToCollectionClick: () => {
-                    console.log(`Add to collection clicked for knowledge card: ${kc.title}`);
-                    // TODO: 实现添加到收藏或重点标记功能
                   },
                   
                   // Default states - 只有title时默认折叠

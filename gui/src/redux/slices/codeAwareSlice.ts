@@ -451,6 +451,17 @@ export const codeAwareSessionSlice = createSlice({
                 }
             }
         },
+        // 设置知识卡片的禁用状态
+        setKnowledgeCardDisabled: (state, action: PayloadAction<{stepId: string, cardId: string, disabled: boolean}>) => {
+            const { stepId, cardId, disabled } = action.payload;
+            const step = state.steps.find(s => s.id === stepId);
+            if (step) {
+                const card = step.knowledgeCards.find(c => c.id === cardId);
+                if (card) {
+                    card.disabled = disabled;
+                }
+            }
+        },
         // 添加新的代码块（从autocomplete生成）
         addCodeChunkFromCompletion: (state, action: PayloadAction<{
             prefixCode: string;
@@ -482,7 +493,8 @@ export const codeAwareSessionSlice = createSlice({
                     title: theme,
                     content: "",
                     tests: [],
-                    isHighlighted: false
+                    isHighlighted: false,
+                    disabled: false
                 };
                 step.knowledgeCards.push(newCard);
             }
@@ -603,6 +615,7 @@ export const {
     setKnowledgeCardLoading,
     updateKnowledgeCardContent,
     setKnowledgeCardError,
+    setKnowledgeCardDisabled,
     addCodeChunkFromCompletion,
     createKnowledgeCard,
     createCodeAwareMapping,

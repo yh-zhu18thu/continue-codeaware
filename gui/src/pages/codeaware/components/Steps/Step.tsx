@@ -71,6 +71,7 @@ interface StepProps {
   onStepEdit?: (stepId: string, newContent: string) => void; // Callback for step edit
   onStepStatusChange?: (stepId: string, newStatus: StepStatus) => void; // Callback for status change
   onGenerateKnowledgeCardThemes?: (stepId: string, stepTitle: string, stepAbstract: string, learningGoal: string) => void; // Callback for generating knowledge card themes
+  onDisableKnowledgeCard?: (stepId: string, cardId: string) => void; // Callback for disabling knowledge card
 }
 
 const Step: React.FC<StepProps> = ({
@@ -89,6 +90,7 @@ const Step: React.FC<StepProps> = ({
   onStepEdit,
   onStepStatusChange,
   onGenerateKnowledgeCardThemes,
+  onDisableKnowledgeCard,
 }) => {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const [isFlickering, setIsFlickering] = useState(false);
@@ -260,17 +262,20 @@ const Step: React.FC<StepProps> = ({
             onEdit={stepStatus === "confirmed" ? handleEditStep : undefined}
           />
         )}
-        {knowledgeCards.length > 0 && (
+        {knowledgeCards.filter(card => !card.disabled).length > 0 && (
           <KnowledgeCardsContainer isHovered={isHovered}>
-            {knowledgeCards.map((cardProps, index) => (
-              <KnowledgeCard 
-                key={index} 
-                {...cardProps} 
-                cardId={cardProps.cardId || `card-${index}`}
-                onHighlightEvent={onHighlightEvent}
-                onClearHighlight={onClearHighlight}
-              />
-            ))}
+            {knowledgeCards
+              .filter(cardProps => !cardProps.disabled)
+              .map((cardProps, index) => (
+                <KnowledgeCard 
+                  key={cardProps.cardId || `card-${index}`} 
+                  {...cardProps} 
+                  cardId={cardProps.cardId || `card-${index}`}
+                  onHighlightEvent={onHighlightEvent}
+                  onClearHighlight={onClearHighlight}
+                  onDisable={onDisableKnowledgeCard}
+                />
+              ))}
           </KnowledgeCardsContainer>
         )}
         {/* Show loading animation when generating knowledge card themes */}

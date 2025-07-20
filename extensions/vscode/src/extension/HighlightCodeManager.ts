@@ -17,35 +17,56 @@ export class HighlightCodeManager {
     const filepath = codeChunk.filePath;
     
     try {
-      // Open the file if it's not already open
-      /* CATODO: open the directed file in the editor 
-      const uri = vscode.Uri.parse(filepath);
-      const document = await vscode.workspace.openTextDocument(uri);
-      const editor = await vscode.window.showTextDocument(document);*/
-       
-
-      // Create the range from the CodeChunk lineRange
-        const editor = vscode.window.activeTextEditor;
-        const [startLine, endLine] = codeChunk.range;
-        if (!editor) {
-          console.warn(`No active editor found for file ${filepath}`);
+      // Normalize the filepath for comparison
+      const normalizedFilepath = this.normalizeFilePath(filepath);
+      
+      // First try to find an existing editor for the file
+      let editor = vscode.window.visibleTextEditors.find(e => 
+        this.normalizeFilePath(e.document.fileName) === normalizedFilepath ||
+        this.normalizeFilePath(e.document.uri.fsPath) === normalizedFilepath
+      );
+      
+      // If no editor is found, try to open the file
+      if (!editor) {
+        try {
+          const uri = vscode.Uri.file(filepath);
+          const document = await vscode.workspace.openTextDocument(uri);
+          editor = await vscode.window.showTextDocument(document);
+        } catch (openError) {
+          console.warn(`Failed to open file ${filepath}:`, openError);
           return;
         }
+      }
       
-        // Validate line numbers
-        if (startLine < 0 || startLine >= editor.document.lineCount ||
-            endLine < 0 || endLine >= editor.document.lineCount ||
-            startLine > endLine) {
-            console.warn(`Invalid line range [${startLine}, ${endLine}] for file ${filepath}`);
-            return;
+      if (!editor) {
+        console.warn(`No editor available for file ${filepath}`);
+        return;
+      }
+        
+      const [startLine, endLine] = codeChunk.range;
+      
+      // Check if file is empty
+      if (editor.document.lineCount === 0) {
+        console.warn(`Cannot highlight in empty file ${filepath}`);
+        return;
+      }
+      
+      // Convert from 1-based to 0-based line numbers if needed
+      const adjustedStartLine = Math.max(0, startLine - 1);
+      const adjustedEndLine = Math.max(0, endLine - 1);
+      
+      // Validate line numbers (now 0-based)
+      if (adjustedStartLine < 0 || adjustedStartLine >= editor.document.lineCount ||
+          adjustedEndLine < 0 || adjustedEndLine >= editor.document.lineCount ||
+          adjustedStartLine > adjustedEndLine) {
+          console.warn(`Invalid line range [${startLine}, ${endLine}] (0-based: [${adjustedStartLine}, ${adjustedEndLine}]) for file ${filepath}. File has ${editor.document.lineCount} lines.`);
+          return;
         }
         
         const range = new vscode.Range(
-            new vscode.Position(startLine, 0),
-            new vscode.Position(endLine, editor.document.lineAt(endLine).text.length)
-        );
-        
-        // Create decoration type for highlighting with better visual feedback
+            new vscode.Position(adjustedStartLine, 0),
+            new vscode.Position(adjustedEndLine, editor.document.lineAt(adjustedEndLine).text.length)
+        );        // Create decoration type for highlighting with better visual feedback
         const permanentDecorationType = vscode.window.createTextEditorDecorationType({
             backgroundColor: new vscode.ThemeColor('editor.wordHighlightBackground'),
             border: '1px solid',
@@ -66,13 +87,13 @@ export class HighlightCodeManager {
         });
         
         // Clear any existing highlights for this file before applying new one
-        this.clearHighlightForFile(filepath);
+        this.clearHighlightForFile(normalizedFilepath);
         
         // Apply blinking effect first
         await this.applyBlinkEffect(editor, range, blinkDecorationType, permanentDecorationType);
         
-        // Store permanent decoration for management
-        this.activeDecorations.set(filepath, permanentDecorationType);
+        // Store permanent decoration for management using normalized path
+        this.activeDecorations.set(normalizedFilepath, permanentDecorationType);
         
         // Reveal the range in the editor
         editor.revealRange(range, vscode.TextEditorRevealType.InCenter);
@@ -88,18 +109,22 @@ export class HighlightCodeManager {
    * @param filepath The file path to clear highlights for
    */
   clearHighlightForFile(filepath: string): void {
-    // Clear any active timeouts
-    const timeouts = this.blinkTimeouts.get(filepath);
+    const normalizedFilepath = this.normalizeFilePath(filepath);
+    
+    // Clear any active timeouts - check both original and normalized paths
+    const timeouts = this.blinkTimeouts.get(filepath) || this.blinkTimeouts.get(normalizedFilepath);
     if (timeouts) {
       timeouts.forEach(timeout => clearTimeout(timeout));
       this.blinkTimeouts.delete(filepath);
+      this.blinkTimeouts.delete(normalizedFilepath);
     }
     
-    // Clear decoration
-    const decoration = this.activeDecorations.get(filepath);
+    // Clear decoration - check both original and normalized paths
+    const decoration = this.activeDecorations.get(filepath) || this.activeDecorations.get(normalizedFilepath);
     if (decoration) {
       decoration.dispose();
       this.activeDecorations.delete(filepath);
+      this.activeDecorations.delete(normalizedFilepath);
     }
   }
 
@@ -128,6 +153,24 @@ export class HighlightCodeManager {
   }
 
   /**
+   * Normalizes file paths for comparison by converting to lowercase on case-insensitive systems
+   * and resolving to absolute path
+   * @param filepath The file path to normalize
+   * @returns The normalized file path
+   */
+  private normalizeFilePath(filepath: string): string {
+    // Convert to absolute path using VS Code's URI system
+    const uri = vscode.Uri.file(filepath);
+    const normalizedPath = uri.fsPath;
+    
+    // On case-insensitive file systems (like macOS and Windows), convert to lowercase
+    // for consistent comparison
+    return process.platform === 'win32' || process.platform === 'darwin' 
+      ? normalizedPath.toLowerCase() 
+      : normalizedPath;
+  }
+
+  /**
    * Applies a blinking effect before setting permanent highlight
    * @param editor The text editor
    * @param range The range to highlight
@@ -140,7 +183,7 @@ export class HighlightCodeManager {
     blinkDecorationType: vscode.TextEditorDecorationType,
     permanentDecorationType: vscode.TextEditorDecorationType
   ): Promise<void> {
-    const filepath = editor.document.uri.toString();
+    const filepath = this.normalizeFilePath(editor.document.uri.fsPath);
     const timeouts: NodeJS.Timeout[] = [];
     
     // Clear any existing timeouts for this file

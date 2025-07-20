@@ -257,9 +257,13 @@ function useSetup() {
     let bestMatch = null;
     let maxOverlapLines = 0;
 
-    for (const chunk of codeChunks) {
 
-      
+
+    for (const chunk of codeChunks) {
+      // 如果 CodeChunk 的文件路径不匹配，跳过
+      if (chunk.filePath !== filePath) {
+        continue;
+      }
       // 计算重叠的行数
       const overlapStart = Math.max(selectedLines[0], chunk.range[0]);
       const overlapEnd = Math.min(selectedLines[1], chunk.range[1]);

@@ -641,6 +641,7 @@ export const generateCodeFromSteps = createAsyncThunk<
     },
     {
         existingCode: string;
+        filepath: string;
         orderedSteps: Array<{
             id: string;
             title: string;
@@ -655,7 +656,7 @@ export const generateCodeFromSteps = createAsyncThunk<
 >(
     "codeAware/generateCodeFromSteps",
     async (
-        { existingCode, orderedSteps },
+        { existingCode, filepath, orderedSteps },
         { dispatch, extra, getState }
     ) => {
         try {
@@ -667,6 +668,7 @@ export const generateCodeFromSteps = createAsyncThunk<
 
             console.log("generateCodeFromSteps called with:", {
                 existingCodeLength: existingCode.length,
+                filepath: filepath,
                 stepsCount: orderedSteps.length,
                 steps: orderedSteps.map(s => ({ id: s.id, title: s.title }))
             });
@@ -739,7 +741,7 @@ export const generateCodeFromSteps = createAsyncThunk<
                         content: chunk.code.trim(),
                         range: range,
                         isHighlighted: false,
-                        filePath: "" // 这里可能需要从上下文中获取文件路径
+                        filePath: filepath // 使用传入的文件路径
                     };
                     
                     createdCodeChunks.push(newCodeChunk);

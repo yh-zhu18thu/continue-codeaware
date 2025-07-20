@@ -430,6 +430,7 @@ export const CodeAware = () => {
       console.log("🚀 开始生成代码...");
       const result = await dispatch(generateCodeFromSteps({
         existingCode: currentFile.contents || "",
+        filepath: currentFile.path,
         orderedSteps: orderedSteps
       }));
 

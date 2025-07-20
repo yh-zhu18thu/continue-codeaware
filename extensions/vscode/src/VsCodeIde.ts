@@ -101,7 +101,14 @@ class VsCodeIde implements IDE {
   onDidChangeActiveTextEditor(callback: (uri: string) => void): void {
     vscode.window.onDidChangeActiveTextEditor((editor) => {
       if (editor) {
-        callback(editor.document.uri.toString());
+        let filePath = editor.document.uri.fsPath;
+        
+        // 确保移除 file:// 前缀（如果存在）
+        if (filePath.startsWith('file://')) {
+          filePath = filePath.replace('file://', '');
+        }
+        
+        callback(filePath);
       }
     });
   }
@@ -519,9 +526,17 @@ class VsCodeIde implements IDE {
     if (!vscode.window.activeTextEditor) {
       return undefined;
     }
+    const uri = vscode.window.activeTextEditor.document.uri;
+    let filePath = uri.fsPath;
+    
+    // 确保移除 file:// 前缀（如果存在）
+    if (filePath.startsWith('file://')) {
+      filePath = filePath.replace('file://', '');
+    }
+    
     return {
       isUntitled: vscode.window.activeTextEditor.document.isUntitled,
-      path: vscode.window.activeTextEditor.document.uri.toString(),
+      path: filePath, // 使用处理后的绝对文件系统路径
       contents: vscode.window.activeTextEditor.document.getText(),
     };
   }
@@ -683,7 +698,7 @@ class VsCodeIde implements IDE {
       
       // Create WorkspaceEdit
       const edit = new vscode.WorkspaceEdit();
-      const uri = vscode.Uri.parse(filepath);
+      const uri = vscode.Uri.file(filepath); // 使用 Uri.file() 从绝对路径创建 URI
       
       let lineNumber = 0;
       const edits: vscode.TextEdit[] = [];
@@ -736,7 +751,9 @@ class VsCodeIde implements IDE {
           "查看文件"
         ).then(selection => {
           if (selection === "查看文件") {
-            this.openFile(filepath);
+            // 将绝对路径转换为 URI 格式
+            const fileUri = vscode.Uri.file(filepath).toString();
+            this.openFile(fileUri);
           }
         });
       } else {

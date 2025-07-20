@@ -616,9 +616,7 @@ export const {
     selectCurrentStep,
     selectLearningGoal,
     selectTask,
-    selectCanExecuteUntilStep,
-    selectGenerationContextUntilStep,
-    selectStepKnowledgeCardThemes
+    selectCanExecuteUntilStep
 } = codeAwareSessionSlice.selectors
 
 export default codeAwareSessionSlice.reducer;

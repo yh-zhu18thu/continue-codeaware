@@ -14,7 +14,7 @@ import {
 import { v4 as uuidv4 } from "uuid";
 import * as vscode from "vscode";
 
-import { MetaCompleteProvider } from "../autocomplete/metacomplete";
+// import { MetaCompleteProvider } from "../autocomplete/metacomplete";
 import {
   monitorBatteryChanges,
   setupStatusBar
@@ -56,7 +56,7 @@ export class VsCodeExtension {
   private battery: Battery;
   private workOsAuthProvider: WorkOsAuthProvider;
   private fileSearch: FileSearch;
-  private metacompleteProvider: MetaCompleteProvider;
+  // private metacompleteProvider: MetaCompleteProvider;
 
   constructor(context: vscode.ExtensionContext) {
     console.log("VsCodeExtension: Initializing...");
@@ -406,7 +406,7 @@ export class VsCodeExtension {
       }
     });
 
-    this.metacompleteProvider = new MetaCompleteProvider(context, this.ide, this.configHandler);
+    // this.metacompleteProvider = new MetaCompleteProvider(context, this.ide, this.configHandler);
   }
 
   static continueVirtualDocumentScheme = EXTENSION_NAME;

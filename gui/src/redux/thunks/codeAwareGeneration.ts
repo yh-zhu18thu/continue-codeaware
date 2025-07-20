@@ -749,38 +749,113 @@ export const generateCodeFromSteps = createAsyncThunk<
                         range: newCodeChunk.range
                     });
                     
-                    // 为步骤创建映射关系
-                    if (chunk.corresponding_steps && Array.isArray(chunk.corresponding_steps)) {
-                        chunk.corresponding_steps.forEach((stepId: string) => {
-                            const mapping: CodeAwareMapping = {
-                                codeChunkId: codeChunkId,
-                                stepId: stepId,
-                                isHighlighted: false
-                            };
-                            createdMappings.push(mapping);
+                    // 获取现有的所有映射关系
+                    const existingMappings = currentState.codeAwareSession.codeAwareMappings;
+                    
+                    // 优先处理知识卡片映射关系
+                    if (chunk.corresponding_knowledge_cards && Array.isArray(chunk.corresponding_knowledge_cards)) {
+                        chunk.corresponding_knowledge_cards.forEach((knowledgeCardId: string) => {
+                            // 1. 首先查找包含该知识卡片ID的完整映射（包含step、requirement chunk、knowledge card id）
+                            const existingKnowledgeCardMapping = existingMappings.find(mapping => 
+                                mapping.knowledgeCardId === knowledgeCardId &&
+                                mapping.stepId &&
+                                mapping.requirementChunkId
+                            );
                             
-                            console.log(`🔗 创建步骤映射: ${codeChunkId} -> ${stepId}`);
+                            if (existingKnowledgeCardMapping) {
+                                // 基于已有的完整映射创建新映射，添加code chunk id
+                                const mapping: CodeAwareMapping = {
+                                    codeChunkId: codeChunkId,
+                                    stepId: existingKnowledgeCardMapping.stepId,
+                                    requirementChunkId: existingKnowledgeCardMapping.requirementChunkId,
+                                    knowledgeCardId: knowledgeCardId,
+                                    isHighlighted: false
+                                };
+                                createdMappings.push(mapping);
+                                
+                                console.log(`🔗 基于已有知识卡片映射创建: ${codeChunkId} -> ${knowledgeCardId} (步骤: ${existingKnowledgeCardMapping.stepId}, 需求块: ${existingKnowledgeCardMapping.requirementChunkId})`);
+                            } else {
+                                // 2. 如果找不到知识卡片的完整映射，查找对应步骤的映射
+                                let stepBasedMapping = null;
+                                
+                                // 从对应的步骤中查找
+                                if (chunk.corresponding_steps && chunk.corresponding_steps.length > 0) {
+                                    const correspondingStepId = chunk.corresponding_steps[0];
+                                    stepBasedMapping = existingMappings.find(mapping => 
+                                        mapping.stepId === correspondingStepId &&
+                                        mapping.requirementChunkId // 确保有requirement chunk信息
+                                    );
+                                }
+                                
+                                if (stepBasedMapping) {
+                                    // 基于步骤映射创建新映射，添加knowledge card id和code chunk id
+                                    const mapping: CodeAwareMapping = {
+                                        codeChunkId: codeChunkId,
+                                        stepId: stepBasedMapping.stepId,
+                                        requirementChunkId: stepBasedMapping.requirementChunkId,
+                                        knowledgeCardId: knowledgeCardId,
+                                        isHighlighted: false
+                                    };
+                                    createdMappings.push(mapping);
+                                    
+                                    console.log(`🔗 基于已有步骤映射创建: ${codeChunkId} -> ${knowledgeCardId} (步骤: ${stepBasedMapping.stepId}, 需求块: ${stepBasedMapping.requirementChunkId})`);
+                                } else {
+                                    // 3. 如果都找不到，创建最基本的映射
+                                    const correspondingStepId = chunk.corresponding_steps?.[0] || null;
+                                    const mapping: CodeAwareMapping = {
+                                        codeChunkId: codeChunkId,
+                                        stepId: correspondingStepId,
+                                        knowledgeCardId: knowledgeCardId,
+                                        isHighlighted: false
+                                    };
+                                    createdMappings.push(mapping);
+                                    
+                                    console.log(`🔗 创建基本知识卡片映射: ${codeChunkId} -> ${knowledgeCardId} (步骤: ${correspondingStepId})`);
+                                }
+                            }
                         });
                     }
                     
-                    // 为知识卡片创建映射关系
-                    if (chunk.corresponding_knowledge_cards && Array.isArray(chunk.corresponding_knowledge_cards)) {
-                        chunk.corresponding_knowledge_cards.forEach((knowledgeCardId: string) => {
-                            // 找到对应的步骤ID
-                            let correspondingStepId = null;
-                            if (chunk.corresponding_steps && chunk.corresponding_steps.length > 0) {
-                                correspondingStepId = chunk.corresponding_steps[0]; // 使用第一个对应的步骤
+                    // 处理仅有步骤对应关系的情况（没有知识卡片对应关系）
+                    if (chunk.corresponding_steps && Array.isArray(chunk.corresponding_steps)) {
+                        chunk.corresponding_steps.forEach((stepId: string) => {
+                            // 检查是否已经为这个步骤创建了知识卡片相关的映射
+                            const alreadyHasKnowledgeCardMapping = createdMappings.some(mapping => 
+                                mapping.codeChunkId === codeChunkId && 
+                                mapping.stepId === stepId && 
+                                mapping.knowledgeCardId
+                            );
+                            
+                            // 只有当没有知识卡片映射时，才创建纯步骤映射
+                            if (!alreadyHasKnowledgeCardMapping) {
+                                // 查找该步骤的已有映射，优先使用包含requirement chunk的映射
+                                const existingStepMapping = existingMappings.find(mapping => 
+                                    mapping.stepId === stepId && mapping.requirementChunkId
+                                );
+                                
+                                if (existingStepMapping) {
+                                    // 基于已有步骤映射创建新映射
+                                    const mapping: CodeAwareMapping = {
+                                        codeChunkId: codeChunkId,
+                                        stepId: stepId,
+                                        requirementChunkId: existingStepMapping.requirementChunkId,
+                                        isHighlighted: false
+                                    };
+                                    createdMappings.push(mapping);
+                                    
+                                    console.log(`🔗 基于已有步骤映射创建: ${codeChunkId} -> ${stepId} (需求块: ${existingStepMapping.requirementChunkId})`);
+                                } else {
+                                    // 创建基本的步骤映射
+                                    const mapping: CodeAwareMapping = {
+                                        codeChunkId: codeChunkId,
+                                        stepId: stepId,
+                                        isHighlighted: false
+                                    };
+                                    createdMappings.push(mapping);
+                                    
+                                    console.log(`🔗 创建基本步骤映射: ${codeChunkId} -> ${stepId}`);
+                                }
                             }
-                            
-                            const mapping: CodeAwareMapping = {
-                                codeChunkId: codeChunkId,
-                                stepId: correspondingStepId,
-                                knowledgeCardId: knowledgeCardId,
-                                isHighlighted: false
-                            };
-                            createdMappings.push(mapping);
-                            
-                            console.log(`🔗 创建知识卡片映射: ${codeChunkId} -> ${knowledgeCardId} (步骤: ${correspondingStepId})`);
                         });
                     }
                 });

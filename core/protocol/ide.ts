@@ -98,6 +98,16 @@ export type ToIdeFromWebviewOrCoreProtocol = {
     ControlPlaneSessionInfo | undefined,
   ];
   logoutOfControlPlane: [undefined, void];
+  
+  // CodeAware: Apply diff changes using WorkspaceEdit
+  applyDiffChanges: [
+    {
+      filepath: string;
+      oldCode: string;
+      newCode: string;
+    },
+    void,
+  ];
 };
 
 export type ToWebviewOrCoreFromIdeProtocol = {

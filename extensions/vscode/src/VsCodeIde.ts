@@ -663,6 +663,97 @@ class VsCodeIde implements IDE {
     const ideSettings = this.getIdeSettingsSync();
     return ideSettings;
   }
+
+  // CodeAware: Apply diff changes using WorkspaceEdit
+  async applyDiffChanges(args: {
+    filepath: string;
+    oldCode: string;
+    newCode: string;
+  }): Promise<void> {
+    const { filepath, oldCode, newCode } = args;
+    
+    try {
+      console.log("apply! diff changes!");
+      // Import diff library with proper typing
+      // @ts-ignore - diff library provides its own types but TypeScript doesn't detect them
+      const diff = await import('diff');
+      
+      // Calculate diff
+      const changes = diff.diffLines(oldCode, newCode);
+      
+      // Create WorkspaceEdit
+      const edit = new vscode.WorkspaceEdit();
+      const uri = vscode.Uri.parse(filepath);
+      
+      let lineNumber = 0;
+      const edits: vscode.TextEdit[] = [];
+      
+      // Process each change
+      changes.forEach((change: any) => {
+        if (change.removed) {
+          // Delete operation
+          const lines = change.value.split('\n');
+          const linesCount = lines.length - 1; // Last element is empty after split
+          
+          const startPos = new vscode.Position(lineNumber, 0);
+          const endPos = new vscode.Position(lineNumber + linesCount, 0);
+          
+          edits.push(vscode.TextEdit.delete(new vscode.Range(startPos, endPos)));
+          
+          // Don't increment lineNumber for deleted lines
+        } else if (change.added) {
+          // Insert operation
+          const insertPos = new vscode.Position(lineNumber, 0);
+          edits.push(vscode.TextEdit.insert(insertPos, change.value));
+          
+          // Increment line number for added lines
+          const lines = change.value.split('\n');
+          lineNumber += lines.length - 1;
+        } else {
+          // Unchanged lines
+          const lines = change.value.split('\n');
+          lineNumber += lines.length - 1;
+        }
+      });
+
+      if (edits.length === 0) {
+        console.log("No changes to apply.");
+        return;
+      }
+      
+      // Apply all edits at once
+      edit.set(uri, edits);
+      
+      // Apply the edit
+      const success = await vscode.workspace.applyEdit(edit);
+      
+      if (success) {
+        console.log(`✅ 代码差异已成功应用到文件: ${filepath}`);
+        
+        // Show success notification
+        vscode.window.showInformationMessage(
+          `代码已更新: ${filepath.split('/').pop()}`,
+          "查看文件"
+        ).then(selection => {
+          if (selection === "查看文件") {
+            this.openFile(filepath);
+          }
+        });
+      } else {
+        throw new Error("WorkspaceEdit application failed");
+      }
+      
+    } catch (error) {
+      console.error("应用代码差异失败:", error);
+      
+      // Show error notification
+      vscode.window.showErrorMessage(
+        `代码更新失败: ${error instanceof Error ? error.message : String(error)}`
+      );
+      
+      throw error;
+    }
+  }
 }
 
 export { VsCodeIde };

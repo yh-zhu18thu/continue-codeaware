@@ -253,30 +253,34 @@ function useSetup() {
   useWebviewListener("codeSelectionChanged", async (data) => {
     const { filePath, selectedLines, selectedContent } = data;
 
-    // 检查选中的代码是否属于某个 CodeChunk
-    const matchedChunks: string[] = [];
+    // 查找与选中范围重叠最多的 CodeChunk
+    let bestMatch = null;
+    let maxOverlapLines = 0;
 
     for (const chunk of codeChunks) {
-      // 检查文件路径和行号范围是否有重叠
-      if (chunk.filePath === filePath) {
-        const hasOverlap =
-          selectedLines[0] <= chunk.range[1] &&
-          selectedLines[1] >= chunk.range[0];
 
-        if (hasOverlap) {
-          matchedChunks.push(chunk.id);
+      
+      // 计算重叠的行数
+      const overlapStart = Math.max(selectedLines[0], chunk.range[0]);
+      const overlapEnd = Math.min(selectedLines[1], chunk.range[1]);
+      const overlapLines = overlapEnd - overlapStart + 1;
 
-          // 触发高亮更新
-          dispatch(
-            updateHighlight({
-              sourceType: "code",
-              identifier: chunk.id,
-              additionalInfo: chunk,
-            }),
-          );
-          break;
-        }
+      // 至少有一行重叠且重叠行数最多
+      if (overlapLines > 0 && overlapLines > maxOverlapLines) {
+        maxOverlapLines = overlapLines;
+        bestMatch = chunk;
       }
+    }
+
+    // 如果找到最佳匹配的 CodeChunk，触发高亮更新
+    if (bestMatch) {
+      dispatch(
+        updateHighlight({
+          sourceType: "code",
+          identifier: bestMatch.id,
+          additionalInfo: bestMatch,
+        }),
+      );
     }
 
     // 发送调试信息到控制台
@@ -284,8 +288,9 @@ function useSetup() {
       filePath,
       selectedLines,
       selectedContent: selectedContent.substring(0, 100) + "...", // 只显示前100个字符
-      matchedChunks,
-      totalCodeChunks: codeChunks.length,
+      bestMatchId: bestMatch?.id || null,
+      maxOverlapLines,
+      CodeChunks: codeChunks,
     });
   }, [codeChunks, dispatch]);
 }

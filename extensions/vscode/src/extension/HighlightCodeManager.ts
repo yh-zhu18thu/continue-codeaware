@@ -68,20 +68,18 @@ export class HighlightCodeManager {
             new vscode.Position(adjustedEndLine, editor.document.lineAt(adjustedEndLine).text.length)
         );        // Create decoration type for highlighting with better visual feedback
         const permanentDecorationType = vscode.window.createTextEditorDecorationType({
-            backgroundColor: new vscode.ThemeColor('editor.wordHighlightBackground'),
-            border: '1px solid',
-            borderColor: new vscode.ThemeColor('editor.wordHighlightBorder'),
+            backgroundColor: 'rgba(255, 255, 0, 0.15)', // 淡黄色背景，透明度15%
+            border: '1px solid rgba(255, 255, 0, 0.3)', // 淡黄色边框，透明度30%
             borderRadius: '3px',
-            overviewRulerColor: new vscode.ThemeColor('editor.wordHighlightBorder'),
+            overviewRulerColor: 'rgba(255, 255, 0, 0.5)',
             overviewRulerLane: vscode.OverviewRulerLane.Right,
             isWholeLine: false,
         });
 
         // Create decoration type for blinking effect
         const blinkDecorationType = vscode.window.createTextEditorDecorationType({
-            backgroundColor: new vscode.ThemeColor('editor.findMatchHighlightBackground'),
-            border: '2px solid',
-            borderColor: new vscode.ThemeColor('editor.findMatchBorder'),
+            backgroundColor: 'rgba(0, 120, 215, 0.2)', // 淡蓝色背景，透明度20%
+            border: '1px solid rgba(0, 120, 215, 0.4)', // 淡蓝色边框，透明度40%
             borderRadius: '3px',
             isWholeLine: false,
         });

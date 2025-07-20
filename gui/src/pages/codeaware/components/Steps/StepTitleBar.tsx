@@ -67,26 +67,28 @@ const IconContainer = styled.div`
   gap: 8px;
 `;
 
-const IconButton = styled.button`
+const IconButton = styled.button<{ disabled?: boolean }>`
   display: flex;
   align-items: center;
   justify-content: center;
   background: none;
   border: none;
-  color: ${vscForeground};
-  cursor: pointer;
+  color: ${({ disabled }) => disabled ? 'rgba(255, 255, 255, 0.4)' : vscForeground};
+  cursor: ${({ disabled }) => disabled ? 'not-allowed' : 'pointer'};
   padding: 4px;
   border-radius: 4px;
   transition: background-color 0.15s ease-in-out;
 
   &:hover {
-    background-color: rgba(255, 255, 255, 0.1);
+    background-color: ${({ disabled }) => disabled ? 'transparent' : 'rgba(255, 255, 255, 0.1)'};
   }
 
   &:active {
-    background-color: rgba(255, 255, 255, 0.2);
+    background-color: ${({ disabled }) => disabled ? 'transparent' : 'rgba(255, 255, 255, 0.2)'};
   }
 `;
+
+import { StepStatus } from "core";
 
 interface StepTitleBarProps {
   title: string;
@@ -94,6 +96,7 @@ interface StepTitleBarProps {
   isExpanded?: boolean; // Optional prop to indicate if the step is expanded
   isHighlighted?: boolean; // Optional prop to indicate if the step is highlighted
   isFlickering?: boolean; // Optional prop to indicate if the step is flickering
+  stepStatus?: StepStatus; // Add step status to control button availability
   onToggle?: () => void; // Optional callback for toggle functionality
   onExecuteUntilStep?: () => void; // Optional callback for execute until step
 }
@@ -104,13 +107,19 @@ const StepTitleBar: React.FC<StepTitleBarProps> = ({
   isExpanded = true,
   isHighlighted = false,
   isFlickering = false,
+  stepStatus = "confirmed",
   onToggle,
   onExecuteUntilStep,
 }) => {
   const handlePlayClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onExecuteUntilStep?.();
+    // Only allow execution if not in generating state
+    if (stepStatus !== "generating" && onExecuteUntilStep) {
+      onExecuteUntilStep();
+    }
   };
+
+  const isExecuteDisabled = stepStatus === "generating";
 
   return (
     <TitleBarContainer 
@@ -124,7 +133,11 @@ const StepTitleBar: React.FC<StepTitleBarProps> = ({
         <span>{title}</span>
       </TitleContent>
       <IconContainer>
-        <IconButton onClick={handlePlayClick} title="执行到此步骤">
+        <IconButton 
+          onClick={handlePlayClick} 
+          disabled={isExecuteDisabled}
+          title={isExecuteDisabled ? "代码正在生成中..." : "执行到此步骤"}
+        >
           <PlayIcon width={16} height={16} />
         </IconButton>
         <ChevronContainer isExpanded={isExpanded}>

@@ -188,6 +188,9 @@ export const CodeAware = () => {
 
   // Check if we should show loading overlay
   const isGeneratingSteps = userRequirementStatus === "confirmed";
+  
+  // Check if any step is in generating state
+  const hasGeneratingSteps = steps.some(step => step.stepStatus === "generating");
 
   // log all the data for debugging
   useEffect(() => {
@@ -365,6 +368,11 @@ export const CodeAware = () => {
         step.stepStatus !== "generated"
       );
 
+      // 设置未执行步骤的状态为"generating"
+      for (const step of unexecutedSteps) {
+        dispatch(setStepStatus({ stepId: step.id, status: "generating" }));
+      }
+
       // 提取步骤信息
       const stepsInfo = unexecutedSteps.map(step => ({
         id: step.id,
@@ -384,6 +392,10 @@ export const CodeAware = () => {
       // 检查响应是否成功并提取内容
       if (!currentFileResponse || currentFileResponse.status !== "success") {
         console.warn("⚠️ 无法获取当前文件信息");
+        // 恢复步骤状态为"confirmed"
+        for (const step of unexecutedSteps) {
+          dispatch(setStepStatus({ stepId: step.id, status: "confirmed" }));
+        }
         return;
       }
 
@@ -391,6 +403,10 @@ export const CodeAware = () => {
       
       if (!currentFile) {
         console.warn("⚠️ 当前没有打开的文件");
+        // 恢复步骤状态为"confirmed"
+        for (const step of unexecutedSteps) {
+          dispatch(setStepStatus({ stepId: step.id, status: "confirmed" }));
+        }
         return;
       }
 
@@ -399,17 +415,6 @@ export const CodeAware = () => {
         isUntitled: currentFile.isUntitled,
         contentLength: currentFile.contents?.length || 0,
       });
-      
-      // 准备数据供后续使用
-      const executionData = {
-        targetStepId: stepId,
-        unexecutedSteps: stepsInfo,
-        currentFile: {
-          path: currentFile.path,
-          contents: currentFile.contents,
-          isUntitled: currentFile.isUntitled
-        }
-      };
 
       // 3. 调用新的代码生成thunk
       const orderedSteps = stepsInfo.map(step => ({
@@ -430,16 +435,37 @@ export const CodeAware = () => {
 
       if (generateCodeFromSteps.fulfilled.match(result)) {
         console.log("✅ 代码生成完成!", result.payload);
+        // 设置步骤状态为"generated"
+        for (const step of unexecutedSteps) {
+          dispatch(setStepStatus({ stepId: step.id, status: "generated" }));
+        }
         // TODO: 后续处理生成的代码，例如：
         // - 将生成的代码应用到IDE中
-        // - 更新步骤状态
         // - 更新代码映射关系
       } else if (generateCodeFromSteps.rejected.match(result)) {
         console.error("❌ 代码生成失败:", result.error.message);
+        // 恢复步骤状态为"confirmed"并显示错误提示
+        for (const step of unexecutedSteps) {
+          dispatch(setStepStatus({ stepId: step.id, status: "confirmed" }));
+        }
+        // 显示错误提示
+        ideMessenger?.post("showToast", ["error", "代码生成失败，请重试。"]);
       }
 
     } catch (error) {
       console.error("❌ 执行到步骤时发生错误:", error);
+      // 恢复相关步骤状态为"confirmed"
+      const targetStepIndex = steps.findIndex(step => step.id === stepId);
+      if (targetStepIndex !== -1) {
+        const unexecutedSteps = steps.slice(0, targetStepIndex + 1).filter(step => 
+          step.stepStatus !== "generated"
+        );
+        for (const step of unexecutedSteps) {
+          dispatch(setStepStatus({ stepId: step.id, status: "confirmed" }));
+        }
+      }
+      // 显示错误提示
+      ideMessenger?.post("showToast", ["error", "代码生成过程中发生错误，请重试。"]);
     }
   }, [steps, ideMessenger, dispatch]);  const handleStepEdit = useCallback((stepId: string, newContent: string) => {
     console.log(`修改步骤: ${stepId}, 新内容: ${newContent}`);
@@ -586,7 +612,7 @@ export const CodeAware = () => {
       }}
     >
       {/* Loading Overlay */}
-      {isGeneratingSteps && (
+      {(isGeneratingSteps || hasGeneratingSteps) && (
         <LoadingOverlay>
           <SpinnerIcon />
         </LoadingOverlay>
@@ -735,7 +761,7 @@ export const CodeAware = () => {
       )}
 
       {/* Loading Overlay */}
-      {isGeneratingSteps && (
+      {(isGeneratingSteps || hasGeneratingSteps) && (
         <LoadingOverlay>
           <SpinnerIcon />
         </LoadingOverlay>

@@ -297,6 +297,7 @@ const Step: React.FC<StepProps> = ({
         isExpanded={isExpanded}
         isHighlighted={isHighlighted || shouldKeepHighlighted}
         isFlickering={isFlickering}
+        stepStatus={stepStatus}
         onToggle={handleToggle}
         onExecuteUntilStep={handleExecuteUntilStep}
       />

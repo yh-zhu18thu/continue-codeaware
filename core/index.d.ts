@@ -484,7 +484,7 @@ export interface ProgramRequirement {
 }
 
 
-export type StepStatus = "editing" | "confirmed" | "generated";
+export type StepStatus = "editing" | "confirmed" | "generating" | "generated";
 
 export type KnowledgeCardGenerationStatus = "empty" | "generating" | "checked";
 

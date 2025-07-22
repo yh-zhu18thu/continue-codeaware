@@ -105,17 +105,18 @@ export function constructGenerateCodeFromStepsPrompt(
     }).join(",\n        ");
     
     return `{
-        "task": "You are given existing code and a list of ordered steps to implement. Generate new code that completes exactly what is required by the abstract of each step - no more, no less. Then identify the correspondence between new code chunks and steps/knowledge cards.",
+        "task": "You are given existing code and a list of ordered steps to implement. Generate new code that completes exactly what is required by the abstract of each step - no more, no less. Then identify the correspondence between code chunks and each step/knowledge card separately.",
         "requirements": [
             "Generate code that implements exactly what each step's abstract requires",
             "Do not generate excessive code beyond what is needed for the current steps",
             "Do not skip any required functionality mentioned in the abstracts",
             "Include proper comments in the generated code to explain what each part does",
-            "Identify which parts of the new code correspond to which steps and knowledge cards",
+            "For each step, identify which parts of the generated code correspond to that step",
+            "For each knowledge card, identify the most relevant and precise code that relates to the knowledge card's theme",
+            "If a knowledge card has no corresponding code, leave its code field empty",
             "The changed_code should include both existing code and newly generated code",
-            "Each new_code_chunks item should contain only the newly added code for that specific functionality",
             "Respond in the same language as the step descriptions",
-            "You must follow this JSON format in your response: {\\"changed_code\\": \\"(complete code with both existing and new parts)\\", \\"new_code_chunks\\": [{\\"code\\": \\"(newly added code chunk)\\", \\"corresponding_steps\\": [\\"step_id1\\", \\"step_id2\\"], \\"corresponding_knowledge_cards\\": [\\"card_id1\\", \\"card_id2\\"]}]}",
+            "You must follow this JSON format in your response: {\\"changed_code\\": \\"(complete code with both existing and new parts)\\", \\"steps_corresponding_code\\": [{\\"id\\": \\"step_id\\", \\"code\\": \\"(code for this step)\\"}], \\"knowledge_cards_corresponding_code\\": [{\\"id\\": \\"card_id\\", \\"code\\": \\"(precise code for this knowledge card, or empty string if no correspondence)\\"}]}",
             "Please do not use invalid \`\`\`json character to envelope the JSON response, just return the JSON object directly."
         ],
         "existing_code": "${existingCode}",
@@ -158,20 +159,23 @@ export function constructGenerateKnowledgeCardThemesFromQueryPrompt(
         query: string;
     },
     currentStep: { title: string, abstract: string },
+    currentCode: string,
     existingThemes: string[],
     learningGoal: string,
     task: string
 ): string {
     return `{
-        "task": "You are given a user query in the context of a programming learning session. Based on the query, current step information, existing knowledge card themes, and learning goals, generate new knowledge card themes that address the user's question and complement existing ones.",
+        "task": "You are given a user query in the context of a programming learning session. Based on the query, current step information, current code, existing knowledge card themes, and learning goals, generate new knowledge card themes that address the user's question and complement existing ones.",
         "requirements": [
             "Generate 1-3 new knowledge card themes that directly address the user's query",
             "The themes should complement, not duplicate, the existing themes",
             "Consider why the existing themes might not fully address the user's question",
             "The themes should be relevant to the current step and align with the learning goals",
             "Each theme should be a concise phrase or question (no more than 15 words)",
+            "For each theme, identify if there is corresponding code in the current_code that relates to this theme",
+            "If corresponding code exists, extract the relevant code chunk; if not, leave it empty",
             "Respond in the same language as the task description",
-            "You must follow this JSON format in your response: [\\"(theme 1)\\", \\"(theme 2)\\", ...]",
+            "You must follow this JSON format in your response: [{\\"title\\": \\"(theme title)\\", \\"corresponding_code_chunk\\": \\"(relevant code or empty string)\\"}]",
             "Please do not use invalid \`\`\`json character to envelope the JSON response, just return the JSON array directly."
         ],
         "query_context": {
@@ -183,6 +187,7 @@ export function constructGenerateKnowledgeCardThemesFromQueryPrompt(
             "title": "${currentStep.title}",
             "abstract": "${currentStep.abstract}"
         },
+        "current_code": "${currentCode}",
         "existing_themes": [${existingThemes.map(theme => `"${theme}"`).join(", ")}],
         "learning_goal": "${learningGoal}",
         "task": "${task}"

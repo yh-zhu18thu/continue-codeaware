@@ -273,6 +273,9 @@ export const codeAwareSessionSlice = createSlice({
                     }
                 });
             });
+
+            console.log(`Found ${allMatchedMappings.length} matched mappings for highlight events.`);
+            console.log("Matched mappings:", allMatchedMappings);
             
             // If mappings are found, update highlight status of all elements within them
             if (allMatchedMappings.length > 0) {
@@ -295,14 +298,22 @@ export const codeAwareSessionSlice = createSlice({
                 // Collect code chunks to highlight in IDE
                 const codeChunksForIde: CodeChunk[] = [];
 
+                console.log("code chunks", state.codeChunks);
+                console.log("Available code chunks:", state.codeChunks.map(c => ({ id: c.id, content: c.content.substring(0, 50) })));
+                
                 // Update code chunk highlights
                 codeChunkIds.forEach(codeChunkId => {
                     const codeChunk = state.codeChunks.find(chunk => chunk.id === codeChunkId);
+                    console.log(`Highlighting code chunk: ${codeChunkId}, found:`, !!codeChunk);
                     if (codeChunk) {
                         codeChunk.isHighlighted = true;
                         codeChunksForIde.push(codeChunk);
+                    } else {
+                        console.warn(`Code chunk with id ${codeChunkId} not found in state.codeChunks`);
                     }
                 });
+
+                console.log("Code chunks to highlight in IDE:", codeChunksForIde);
 
                 // Set code chunks to highlight in IDE
                 state.codeChunksToHighlightInIde = codeChunksForIde;
@@ -501,6 +512,36 @@ export const codeAwareSessionSlice = createSlice({
             };
             state.codeChunks.push(newCodeChunk);
         },
+        // 创建或获取代码块（用于知识卡片映射）
+        createOrGetCodeChunk: (state, action: PayloadAction<{
+            content: string;
+            range: [number, number];
+            filePath: string;
+            id?: string; // 可选的预设ID
+        }>) => {
+            const { content, range, filePath, id: presetId } = action.payload;
+            
+            // 首先检查是否已经存在类似的代码块
+            const existingChunk = state.codeChunks.find(chunk => 
+                chunk.filePath === filePath && 
+                chunk.content === content &&
+                chunk.range[0] === range[0] &&
+                chunk.range[1] === range[1]
+            );
+            
+            if (!existingChunk) {
+                // 如果不存在，创建新的代码块
+                const newCodeChunk: CodeChunk = {
+                    id: presetId || `c-${state.codeChunks.length + 1}`, // 使用预设ID或基于长度的ID
+                    content,
+                    range,
+                    isHighlighted: false,
+                    filePath
+                };
+                
+                state.codeChunks.push(newCodeChunk);
+            }
+        },
         // 创建新的知识卡片（不包含content和tests）
         createKnowledgeCard: (state, action: PayloadAction<{
             stepId: string;
@@ -623,6 +664,7 @@ export const {
     setKnowledgeCardError,
     setKnowledgeCardDisabled,
     addCodeChunkFromCompletion,
+    createOrGetCodeChunk,
     createKnowledgeCard,
     createCodeAwareMapping,
     setStepStatus,

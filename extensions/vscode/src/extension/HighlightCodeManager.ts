@@ -15,7 +15,7 @@ export class HighlightCodeManager {
    */
   async highlightCodeChunk(codeChunk: CodeChunk): Promise<void> {
     const filepath = codeChunk.filePath;
-    
+    console.log(`Highlighting code chunk in file: ${filepath}, range: ${codeChunk.range}`);
     try {
       // Normalize the filepath for comparison
       const normalizedFilepath = this.normalizeFilePath(filepath);

@@ -544,6 +544,7 @@ export const CodeAware = () => {
   }, [shouldClearIdeHighlights, ideMessenger, dispatch]);
 
   useEffect(() => {
+    console.log("Code chunks to highlight in IDE:", codeChunksToHighlightInIde);
     if (codeChunksToHighlightInIde.length > 0) {
       // Merge multiple code chunks into one for efficient highlighting
       if (codeChunksToHighlightInIde.length === 1) {

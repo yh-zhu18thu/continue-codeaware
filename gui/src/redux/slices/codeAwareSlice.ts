@@ -199,64 +199,83 @@ export const codeAwareSessionSlice = createSlice({
             state.shouldClearIdeHighlights = true;
             state.codeChunksToHighlightInIde = [];
         },
-        updateHighlight: (state, action: PayloadAction<HighlightEvent>) => {
-            const { sourceType, identifier, additionalInfo } = action.payload;
+        updateHighlight: (state, action: PayloadAction<HighlightEvent | HighlightEvent[]>) => {
+            // 统一处理单个或多个事件，保持向后兼容性
+            const events = Array.isArray(action.payload) ? action.payload : [action.payload];
 
-            // Find all mappings that match the highlight event
-            let matchedMappings: CodeAwareMapping[] = [];
+            // 收集所有匹配的mappings
+            let allMatchedMappings: CodeAwareMapping[] = [];
             
-            // First, try to match by identifier - collect all matching mappings
-            for (const mapping of state.codeAwareMappings) {
-                let isMatch = false;
+            // 处理每个事件
+            events.forEach(({ sourceType, identifier, additionalInfo }) => {
+                // Find all mappings that match the highlight event
+                let matchedMappings: CodeAwareMapping[] = [];
                 
-                switch (sourceType) {
-                    case "code":
-                        isMatch = mapping.codeChunkId === identifier;
-                        break;
-                    case "requirement":
-                        isMatch = mapping.requirementChunkId === identifier;
-                        break;
-                    case "step":
-                        isMatch = mapping.stepId === identifier;
-                        break;
-                    case "knowledgeCard":
-                        isMatch = mapping.knowledgeCardId === identifier;
-                        break;
-                }
-                
-                if (isMatch) {
-                    matchedMappings.push(mapping);
-                }
-            }
-            
-            // If no match found by identifier and sourceType is "code", try meta search using additionalInfo
-            if (matchedMappings.length === 0 && sourceType === "code" && additionalInfo) {
-                const codeInfo = additionalInfo as CodeChunk;
-                
-                // Search through code chunks to find a match by line range and content
-                for (const codeChunk of state.codeChunks) {
-                    // Check if line ranges overlap or match
-                    const rangesOverlap = (
-                        codeInfo.range[0] <= codeChunk.range[1] &&
-                        codeInfo.range[1] >= codeChunk.range[0]
-                    );
+                // First, try to match by identifier - collect all matching mappings
+                for (const mapping of state.codeAwareMappings) {
+                    let isMatch = false;
                     
-                    // Check if content matches (partial match allowed)
-                    const contentMatches = codeChunk.content.includes(codeInfo.content) || 
-                                         codeInfo.content.includes(codeChunk.content);
+                    switch (sourceType) {
+                        case "code":
+                            isMatch = mapping.codeChunkId === identifier;
+                            break;
+                        case "requirement":
+                            isMatch = mapping.requirementChunkId === identifier;
+                            break;
+                        case "step":
+                            isMatch = mapping.stepId === identifier;
+                            break;
+                        case "knowledgeCard":
+                            isMatch = mapping.knowledgeCardId === identifier;
+                            break;
+                    }
                     
-                    if (rangesOverlap && contentMatches) {
-                        // Find all mappings for this code chunk
-                        const foundMappings = state.codeAwareMappings.filter(mapping => 
-                            mapping.codeChunkId === codeChunk.id
-                        );
-                        matchedMappings.push(...foundMappings);
+                    if (isMatch) {
+                        matchedMappings.push(mapping);
                     }
                 }
-            }
+                
+                // If no match found by identifier and sourceType is "code", try meta search using additionalInfo
+                if (matchedMappings.length === 0 && sourceType === "code" && additionalInfo) {
+                    const codeInfo = additionalInfo as CodeChunk;
+                    
+                    // Search through code chunks to find a match by line range and content
+                    for (const codeChunk of state.codeChunks) {
+                        // Check if line ranges overlap or match
+                        const rangesOverlap = (
+                            codeInfo.range[0] <= codeChunk.range[1] &&
+                            codeInfo.range[1] >= codeChunk.range[0]
+                        );
+                        
+                        // Check if content matches (partial match allowed)
+                        const contentMatches = codeChunk.content.includes(codeInfo.content) || 
+                                             codeInfo.content.includes(codeChunk.content);
+                        
+                        if (rangesOverlap && contentMatches) {
+                            // Find all mappings for this code chunk
+                            const foundMappings = state.codeAwareMappings.filter(mapping => 
+                                mapping.codeChunkId === codeChunk.id
+                            );
+                            matchedMappings.push(...foundMappings);
+                        }
+                    }
+                }
+
+                // 将匹配的mappings添加到总列表中，避免重复
+                matchedMappings.forEach(mapping => {
+                    if (!allMatchedMappings.some(m => 
+                        m.codeChunkId === mapping.codeChunkId &&
+                        m.requirementChunkId === mapping.requirementChunkId &&
+                        m.stepId === mapping.stepId &&
+                        m.knowledgeCardId === mapping.knowledgeCardId
+                    )) {
+                        allMatchedMappings.push(mapping);
+                    }
+                });
+            });
             
             // If mappings are found, update highlight status of all elements within them
-            if (matchedMappings.length > 0) {
+            if (allMatchedMappings.length > 0) {
                 // Clear all existing highlights using the dedicated reducer
                 codeAwareSessionSlice.caseReducers.clearAllHighlights(state);
 
@@ -266,7 +285,7 @@ export const codeAwareSessionSlice = createSlice({
                 const stepIds = new Set<string>();
                 const knowledgeCardIds = new Set<string>();
 
-                matchedMappings.forEach(mapping => {
+                allMatchedMappings.forEach(mapping => {
                     if (mapping.codeChunkId) codeChunkIds.add(mapping.codeChunkId);
                     if (mapping.requirementChunkId) requirementChunkIds.add(mapping.requirementChunkId);
                     if (mapping.stepId) stepIds.add(mapping.stepId);
@@ -313,8 +332,12 @@ export const codeAwareSessionSlice = createSlice({
                     }
                 });
 
-                // Update knowledge card highlights (only for code and knowledgeCard sources)
-                if (sourceType === "code" || sourceType === "knowledgeCard") {
+                // Update knowledge card highlights (只有当事件中包含 code 或 knowledgeCard 源时才更新)
+                const hasCodeOrKnowledgeCardSource = events.some(event => 
+                    event.sourceType === "code" || event.sourceType === "knowledgeCard"
+                );
+                
+                if (hasCodeOrKnowledgeCardSource) {
                     knowledgeCardIds.forEach(knowledgeCardId => {
                         for (const step of state.steps) {
                             const knowledgeCard = step.knowledgeCards.find(
@@ -329,7 +352,7 @@ export const codeAwareSessionSlice = createSlice({
                 }
 
                 // Update all matched mappings' highlight status
-                matchedMappings.forEach(mapping => {
+                allMatchedMappings.forEach(mapping => {
                     mapping.isHighlighted = true;
                 });
             }

@@ -12,10 +12,10 @@
   // 一键安装插件 + Python 依赖
   "postCreateCommand": [
     // 安装 Python 依赖（如果有 requirements.txt）
-    "pip install -r requirements.txt || echo 'no requirements.txt found, skipping Python deps'",
+    "pip install -r requirements.txt;",
     // 下载并安装 CodeAware 扩展（将 YOUR_VSIX_URL 替换成你发布的 .vsix 下载地址）
-    "curl -L https://github.com/yh-zhu18thu/continue-codeaware/releases/download/Experimental/codeaware-extension.vsix -o /tmp/code-aware.vsix",
-    "code --install-extension /tmp/code-aware.vsix"
+    "curl -L https://github.com/yh-zhu18thu/continue-codeaware/releases/download/Experimental/codeaware-extension.vsix -o /tmp/code-aware.vsix;",
+    "code --install-extension /tmp/code-aware.vsix;"
   ],
 
   // 容器启动后自动安装有助于 Python 开发的 VS Code 插件

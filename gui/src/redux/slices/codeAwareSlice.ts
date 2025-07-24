@@ -102,15 +102,71 @@ export const codeAwareSessionSlice = createSlice({
         setStepAbstract: (state, action: PayloadAction<{ stepId: string; abstract: string }>) => {
             const { stepId, abstract } = action.payload;
             const stepIndex = state.steps.findIndex(step => step.id === stepId);
-            if (stepIndex !== -1) {  
-                state.steps[stepIndex].abstract = abstract;
+            
+            if (stepIndex !== -1) {
+                const step = state.steps[stepIndex];
+                
+                // 如果step状态是generated，且内容发生了变化，则设置为step_dirty
+                if (step.stepStatus === "generated" && step.abstract !== abstract) {
+                    // 保存之前的abstract
+                    step.previousStepAbstract = step.abstract;
+                    step.stepStatus = "step_dirty";
+                }
+                // 如果已经是step_dirty状态，检查是否需要恢复到generated状态
+                else if (step.stepStatus === "step_dirty") {
+                    // 如果编辑后的内容与原始的previousStepAbstract相同，则恢复到generated状态
+                    if (step.previousStepAbstract && abstract === step.previousStepAbstract) {
+                        step.stepStatus = "generated";
+                        step.previousStepAbstract = undefined; // 清除之前的保存
+                    }
+                    // 否则保持step_dirty状态，不改变previousStepAbstract
+                }
+                // 如果step状态是editing，这表示用户正在从编辑模式确认修改
+                // 我们需要检查内容是否相对于最初的generated状态发生了变化
+                else if (step.stepStatus === "editing") {
+                    // 如果之前保存了原始内容，与之比较
+                    if (step.previousStepAbstract !== undefined) {
+                        if (abstract === step.previousStepAbstract) {
+                            // 内容回到了原始状态，应该恢复到generated
+                            step.stepStatus = "generated";
+                            step.previousStepAbstract = undefined;
+                        } else {
+                            // 内容仍然与原始状态不同，设置为step_dirty
+                            step.stepStatus = "step_dirty";
+                        }
+                    } else {
+                        // 没有保存原始内容，需要与当前abstract比较
+                        if (step.abstract !== abstract) {
+                            // 内容发生了变化，保存原始内容并设置为step_dirty
+                            step.previousStepAbstract = step.abstract;
+                            step.stepStatus = "step_dirty";
+                        } else {
+                            // 内容没有变化，保持原状态（这种情况下通常应该是generated）
+                            step.stepStatus = "generated";
+                        }
+                    }
+                }
+                
+                step.abstract = abstract;
             }
         },
         setStepStatus: (state, action: PayloadAction<{ stepId: string; status: StepStatus }>) => {
             const { stepId, status } = action.payload;
             const stepIndex = state.steps.findIndex(step => step.id === stepId);
+            
             if (stepIndex !== -1) {
-                state.steps[stepIndex].stepStatus = status;
+                const step = state.steps[stepIndex];
+                
+                // 如果要设置为编辑状态，且step当前是generated或step_dirty状态，保存原始内容
+                if (status === "editing" && (step.stepStatus === "generated" || step.stepStatus === "step_dirty")) {
+                    // 如果是从generated状态进入编辑，保存当前的abstract
+                    if (step.stepStatus === "generated") {
+                        step.previousStepAbstract = step.abstract;
+                    }
+                    // 如果是从step_dirty状态进入编辑，previousStepAbstract已经存在，不需要重新保存
+                }
+                
+                step.stepStatus = status;
             }
         },
         setStepGeneratedUntil: (state, action: PayloadAction<string>) => {

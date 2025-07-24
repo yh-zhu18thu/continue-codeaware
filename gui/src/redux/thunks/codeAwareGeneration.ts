@@ -1046,6 +1046,7 @@ export const generateCodeFromSteps = createAsyncThunk<
                             orderedSteps.forEach(step => {
                                 dispatch(setStepStatus({ stepId: step.id, status: 'generated' }));
                             });
+                            console.log("所有步骤状态已更新为 'generated'");
                         } else {
                             console.warn("⚠️ getCurrentFile 响应状态不成功:", currentFileResponse.status);
                         }

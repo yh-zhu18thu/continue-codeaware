@@ -1,4 +1,4 @@
-import { ChevronDownIcon, PlayIcon } from '@heroicons/react/24/outline';
+import { ChevronDownIcon, PlayIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import React from 'react';
 import styled from "styled-components";
 import {
@@ -99,6 +99,7 @@ interface StepTitleBarProps {
   stepStatus?: StepStatus; // Add step status to control button availability
   onToggle?: () => void; // Optional callback for toggle functionality
   onExecuteUntilStep?: () => void; // Optional callback for execute until step
+  onRerunStep?: () => void; // Optional callback for rerun step when dirty
 }
 
 const StepTitleBar: React.FC<StepTitleBarProps> = ({ 
@@ -110,16 +111,26 @@ const StepTitleBar: React.FC<StepTitleBarProps> = ({
   stepStatus = "confirmed",
   onToggle,
   onExecuteUntilStep,
+  onRerunStep,
 }) => {
-  const handlePlayClick = (e: React.MouseEvent) => {
+  const handleButtonClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    // Only allow execution if not in generating state
-    if (stepStatus !== "generating" && onExecuteUntilStep) {
-      onExecuteUntilStep();
+    
+    if (stepStatus === "step_dirty") {
+      // 如果状态是step_dirty，执行重新运行逻辑
+      if (onRerunStep) {
+        onRerunStep();
+      }
+    } else {
+      // 否则执行正常的执行逻辑
+      if (stepStatus !== "generating" && onExecuteUntilStep) {
+        onExecuteUntilStep();
+      }
     }
   };
 
-  const isExecuteDisabled = stepStatus === "generating";
+  const isButtonDisabled = stepStatus === "generating";
+  const isStepDirty = stepStatus === "step_dirty";
 
   return (
     <TitleBarContainer 
@@ -134,11 +145,21 @@ const StepTitleBar: React.FC<StepTitleBarProps> = ({
       </TitleContent>
       <IconContainer>
         <IconButton 
-          onClick={handlePlayClick} 
-          disabled={isExecuteDisabled}
-          title={isExecuteDisabled ? "代码正在生成中..." : "执行到此步骤"}
+          onClick={handleButtonClick} 
+          disabled={isButtonDisabled}
+          title={
+            isButtonDisabled 
+              ? "代码正在生成中..." 
+              : isStepDirty 
+                ? "重新生成代码" 
+                : "执行到此步骤"
+          }
         >
-          <PlayIcon width={16} height={16} />
+          {isStepDirty ? (
+            <ArrowPathIcon width={16} height={16} />
+          ) : (
+            <PlayIcon width={16} height={16} />
+          )}
         </IconButton>
         <ChevronContainer isExpanded={isExpanded}>
           <ChevronDownIcon width={16} height={16} />

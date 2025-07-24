@@ -484,7 +484,7 @@ export interface ProgramRequirement {
 }
 
 
-export type StepStatus = "editing" | "confirmed" | "generating" | "generated";
+export type StepStatus = "editing" | "confirmed" | "generating" | "generated" | "step_dirty" | "code_dirty";
 
 export type KnowledgeCardGenerationStatus = "empty" | "generating" | "checked";
 
@@ -494,6 +494,7 @@ export interface StepItem {
   id: string;
   title: string;
   abstract: string;
+  previousStepAbstract?: string; // 存储之前的abstract，用于检测变化和重新生成
   knowledgeCards: KnowledgeCardItem[]; //维护该步骤下的知识卡片
   stepStatus: StepStatus;
   knowledgeCardGenerationStatus: KnowledgeCardGenerationStatus;

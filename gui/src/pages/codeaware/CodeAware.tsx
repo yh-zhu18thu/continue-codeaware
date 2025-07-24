@@ -468,14 +468,56 @@ export const CodeAware = () => {
       // 显示错误提示
       ideMessenger?.post("showToast", ["error", "代码生成过程中发生错误，请重试。"]);
     }
-  }, [steps, ideMessenger, dispatch]);  const handleStepEdit = useCallback((stepId: string, newContent: string) => {
-    console.log(`修改步骤: ${stepId}, 新内容: ${newContent}`);
+  }, [steps, ideMessenger, dispatch]);
+
+  // Handle rerun step when step is dirty
+  const handleRerunStep = useCallback(async (stepId: string) => {
+    console.log(`重新运行步骤: ${stepId}`);
+    
+    try {
+      // 找到对应的步骤
+      const step = steps.find(s => s.id === stepId);
+      if (!step) {
+        console.error(`Step with id ${stepId} not found`);
+        return;
+      }
+
+      // 只有在step_dirty状态下才允许重新运行
+      if (step.stepStatus !== "step_dirty") {
+        console.warn(`Step ${stepId} is not in step_dirty status, current status: ${step.stepStatus}`);
+        return;
+      }
+
+      // 设置状态为generating
+      dispatch(setStepStatus({ stepId, status: "generating" }));
+      
+      // TODO: 这里需要实现具体的重新生成逻辑
+      // 可以调用类似executeUntilStep的逻辑，但只针对这一个步骤
+      // 需要考虑使用step.previousStepAbstract和当前的step.abstract来生成新代码
+      
+      // 临时显示提示信息
+      ideMessenger?.post("showToast", ["info", "开始重新生成代码..."]);
+      
+      // 模拟异步操作，稍后设置为generated状态
+      setTimeout(() => {
+        dispatch(setStepStatus({ stepId, status: "generated" }));
+        ideMessenger?.post("showToast", ["info", "代码重新生成完成！"]);
+      }, 2000);
+      
+    } catch (error) {
+      console.error("❌ 重新运行步骤时发生错误:", error);
+      // 恢复状态
+      dispatch(setStepStatus({ stepId, status: "step_dirty" }));
+      ideMessenger?.post("showToast", ["error", "重新生成代码失败，请重试。"]);
+    }
+  }, [steps, dispatch, ideMessenger]);
+
+  const handleStepEdit = useCallback((stepId: string, newContent: string) => {
     // Update step abstract in Redux store
     dispatch(setStepAbstract({ stepId, abstract: newContent }));
   }, [dispatch]);
 
   const handleStepStatusChange = useCallback((stepId: string, newStatus: StepStatus) => {
-    console.log(`修改步骤状态: ${stepId}, 新状态: ${newStatus}`);
     // Update step status in Redux store
     dispatch(setStepStatus({ stepId, status: newStatus }));
   }, [dispatch]);
@@ -697,6 +739,7 @@ export const CodeAware = () => {
               onHighlightEvent={handleHighlightEvent}
               onClearHighlight={removeHighlightEvent} // Pass the clear highlight function
               onExecuteUntilStep={executeUntilStep} // Pass execute until step function
+              onRerunStep={handleRerunStep} // Pass rerun step function
               onStepEdit={handleStepEdit} // Pass step edit function
               onStepStatusChange={handleStepStatusChange} // Pass step status change function
               onGenerateKnowledgeCardThemes={handleGenerateKnowledgeCardThemes} // Pass knowledge card themes generation function

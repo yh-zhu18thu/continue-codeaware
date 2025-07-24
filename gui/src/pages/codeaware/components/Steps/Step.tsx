@@ -102,6 +102,7 @@ interface StepProps {
   onHighlightEvent?: (event: HighlightEvent) => void;
   onClearHighlight?: () => void;
   onExecuteUntilStep?: (stepId: string) => void;
+  onRerunStep?: (stepId: string) => void; // Callback for rerun step
   onStepEdit?: (stepId: string, newContent: string) => void; // Callback for step edit
   onStepStatusChange?: (stepId: string, newStatus: StepStatus) => void; // Callback for status change
   onGenerateKnowledgeCardThemes?: (stepId: string, stepTitle: string, stepAbstract: string, learningGoal: string) => void; // Callback for generating knowledge card themes
@@ -122,6 +123,7 @@ const Step: React.FC<StepProps> = ({
   onHighlightEvent,
   onClearHighlight,
   onExecuteUntilStep,
+  onRerunStep,
   onStepEdit,
   onStepStatusChange,
   onGenerateKnowledgeCardThemes,
@@ -253,6 +255,12 @@ const Step: React.FC<StepProps> = ({
     }
   };
 
+  const handleRerunStep = () => {
+    if (stepId && onRerunStep) {
+      onRerunStep(stepId);
+    }
+  };
+
   const handleEditStep = () => {
     // Trigger edit mode by changing status to "editing"
     if (stepId && onStepStatusChange) {
@@ -264,10 +272,9 @@ const Step: React.FC<StepProps> = ({
     if (stepId && onStepEdit) {
       onStepEdit(stepId, newContent);
     }
-    // Change status back to "confirmed" after editing
-    if (stepId && onStepStatusChange) {
-      onStepStatusChange(stepId, "confirmed");
-    }
+    
+    // Note: We don't call onStepStatusChange here anymore because setStepAbstract
+    // in the Redux slice will intelligently determine the correct status based on content changes
   };
 
   const handleAddQuestionClick = () => {
@@ -300,6 +307,7 @@ const Step: React.FC<StepProps> = ({
         stepStatus={stepStatus}
         onToggle={handleToggle}
         onExecuteUntilStep={handleExecuteUntilStep}
+        onRerunStep={handleRerunStep}
       />
       <ContentArea isVisible={isExpanded}>
         {isEditing ? (
@@ -312,7 +320,7 @@ const Step: React.FC<StepProps> = ({
           <StepDescription 
             markdownContent={description} 
             isVisible={isExpanded}
-            onEdit={stepStatus === "confirmed" ? handleEditStep : undefined}
+            onEdit={stepStatus === "confirmed" || stepStatus === "generated" || stepStatus === "step_dirty" ? handleEditStep : undefined}
             onQuestionSubmit={(selectedText, question) => {
               if (stepId) {
                 onQuestionSubmit?.(stepId, selectedText, question);

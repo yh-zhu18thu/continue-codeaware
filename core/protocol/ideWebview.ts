@@ -2,12 +2,12 @@ import { ToIdeFromWebviewOrCoreProtocol } from "./ide";
 import { ToWebviewFromIdeOrCoreProtocol } from "./webview";
 
 import type {
-    ApplyState,
-    CodeChunk,
-    CodeToEdit,
-    EditStatus,
-    MessageContent,
-    RangeInFileWithContents
+  ApplyState,
+  CodeChunk,
+  CodeToEdit,
+  EditStatus,
+  MessageContent,
+  RangeInFileWithContents
 } from "../";
 
 export type ToIdeFromWebviewProtocol = ToIdeFromWebviewOrCoreProtocol & {
@@ -108,6 +108,10 @@ export type ToWebviewFromIdeProtocol = ToWebviewFromIdeOrCoreProtocol & {
     filePath: string;
     selectedLines: [number, number];
     selectedContent: string;
+  }, void];
+  // CodeAware: 代码选择取消事件
+  codeSelectionCleared: [{
+    filePath: string;
   }, void];
   // CodeAware: 代码补全事件
   codeCompletionGenerated: [{

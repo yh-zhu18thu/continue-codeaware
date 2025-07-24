@@ -418,12 +418,23 @@ export class VsCodeExtension {
           void webviewProtocol.request("codeSelectionChanged", currentSelectionData);
         }, 300); // 300ms 防抖延迟，适合多行选择场景
       } else {
-        // 如果没有选中内容，清除防抖定时器和上次选择数据
-        if (this.selectionDebounceTimer) {
-          clearTimeout(this.selectionDebounceTimer);
-          this.selectionDebounceTimer = null;
+        // 如果没有选中内容且之前有选择，发送取消选择事件
+        if (this.lastSelectionData) {
+          // 清除防抖定时器
+          if (this.selectionDebounceTimer) {
+            clearTimeout(this.selectionDebounceTimer);
+            this.selectionDebounceTimer = null;
+          }
+          
+          // 发送取消选择事件
+          const webviewProtocol = await this.webviewProtocolPromise;
+          void webviewProtocol.request("codeSelectionCleared", {
+            filePath: document.uri.fsPath
+          });
+          
+          // 清除上次选择数据
+          this.lastSelectionData = null;
         }
-        this.lastSelectionData = null;
       }
     });
 

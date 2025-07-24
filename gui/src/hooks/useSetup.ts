@@ -5,7 +5,7 @@ import { IdeMessengerContext } from "../context/IdeMessenger";
 import { ConfigResult } from "@continuedev/config-yaml";
 import { BrowserSerializedContinueConfig } from "core";
 import { useAppDispatch, useAppSelector } from "../redux/hooks";
-import { selectCodeChunks, updateHighlight } from "../redux/slices/codeAwareSlice";
+import { clearAllHighlights, selectCodeChunks, updateHighlight } from "../redux/slices/codeAwareSlice";
 import { setConfigError, setConfigResult } from "../redux/slices/configSlice";
 import { updateIndexingStatus } from "../redux/slices/indexingSlice";
 import { updateDocsSuggestions } from "../redux/slices/miscSlice";
@@ -249,9 +249,29 @@ function useSetup() {
   );
 
 
+  // CodeAware: 监听代码选择取消事件
+  useWebviewListener("codeSelectionCleared", async (data) => {
+    const { filePath } = data;
+
+    console.log("Code Selection Cleared:", {
+      filePath,
+      previousSelection: codeChunks.filter(chunk => chunk.isHighlighted)
+    });
+
+    // 清除所有高亮
+    dispatch(clearAllHighlights());
+  }, [dispatch]);
+
   // CodeAware: 监听代码选择变化事件
   useWebviewListener("codeSelectionChanged", async (data) => {
     const { filePath, selectedLines, selectedContent } = data;
+
+    console.log("Code Selection sent to webview:", {
+      filePath,
+      selectedLines,
+      selectedContent: selectedContent.substring(0, 100) + "...", // 只
+      // 显示前100个字符
+    });
 
     // 存储符合条件的代码块
     const fullyContainedChunks = []; // 选区完全包含的代码块

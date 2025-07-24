@@ -1,12 +1,12 @@
-import { ChevronDownIcon, PlayIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
+import { ArrowPathIcon, ChevronDownIcon, PlayIcon } from '@heroicons/react/24/outline';
 import React from 'react';
 import styled from "styled-components";
 import {
-    defaultBorderRadius,
-    lightGray,
-    vscForeground,
-    vscInputBackground,
-    vscListActiveBackground
+  defaultBorderRadius,
+  lightGray,
+  vscForeground,
+  vscInputBackground,
+  vscListActiveBackground
 } from "../../../../components";
 
 const TitleBarContainer = styled.div<{ 

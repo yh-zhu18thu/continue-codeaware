@@ -58,6 +58,14 @@ export class VsCodeExtension {
   private fileSearch: FileSearch;
   // private metacompleteProvider: MetaCompleteProvider;
 
+  // CodeAware: 添加防抖相关属性
+  private lastSelectionData: {
+    filePath: string;
+    selectedLines: number[];
+    selectedContent: string;
+  } | null = null;
+  private selectionDebounceTimer: NodeJS.Timeout | null = null;
+
   constructor(context: vscode.ExtensionContext) {
     console.log("VsCodeExtension: Initializing...");
     // Register auth provider
@@ -380,7 +388,6 @@ export class VsCodeExtension {
       }
 
       const selection = event.selections[0]; // 取第一个选择区域
-      const webviewProtocol = await this.webviewProtocolPromise;
 
       // 只处理有选中内容的情况
       if (!selection.isEmpty) {
@@ -388,11 +395,35 @@ export class VsCodeExtension {
         const endLine = selection.end.line + 1;
         const selectedContent = document.getText(selection);
 
-        void webviewProtocol.request("codeSelectionChanged", {
+        const currentSelectionData = {
           filePath: document.uri.fsPath,
-          selectedLines: [startLine, endLine],
+          selectedLines: [startLine, endLine] as [number, number],
           selectedContent,
-        });
+        };
+
+        // 检查是否与上次选择相同
+        if (this.isSameSelection(currentSelectionData, this.lastSelectionData)) {
+          return;
+        }
+
+        // 清除之前的定时器
+        if (this.selectionDebounceTimer) {
+          clearTimeout(this.selectionDebounceTimer);
+        }
+
+        // 设置新的防抖定时器
+        this.selectionDebounceTimer = setTimeout(async () => {
+          this.lastSelectionData = currentSelectionData;
+          const webviewProtocol = await this.webviewProtocolPromise;
+          void webviewProtocol.request("codeSelectionChanged", currentSelectionData);
+        }, 300); // 300ms 防抖延迟，适合多行选择场景
+      } else {
+        // 如果没有选中内容，清除防抖定时器和上次选择数据
+        if (this.selectionDebounceTimer) {
+          clearTimeout(this.selectionDebounceTimer);
+          this.selectionDebounceTimer = null;
+        }
+        this.lastSelectionData = null;
       }
     });
 
@@ -413,6 +444,20 @@ export class VsCodeExtension {
 
   // eslint-disable-next-line @typescript-eslint/naming-convention
   private PREVIOUS_BRANCH_FOR_WORKSPACE_DIR: { [dir: string]: string } = {};
+
+  private isSameSelection(
+    current: { filePath: string; selectedLines: [number, number]; selectedContent: string },
+    previous: { filePath: string; selectedLines: number[]; selectedContent: string } | null
+  ): boolean {
+    if (!previous) {
+      return false;
+    }
+    
+    return current.filePath === previous.filePath &&
+           current.selectedLines[0] === previous.selectedLines[0] &&
+           current.selectedLines[1] === previous.selectedLines[1] &&
+           current.selectedContent === previous.selectedContent;
+  }
 
   registerCustomContextProvider(contextProvider: IContextProvider) {
     this.configHandler.registerCustomContextProvider(contextProvider);

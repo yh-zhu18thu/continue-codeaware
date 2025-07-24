@@ -10,7 +10,7 @@ def read_labeled_data(file_path):
     """
     try:
         # Read the CSV file into a Pandas DataFrame
-        data = pd.read_csv(file_path)
+        data = pd.read_csv(file_path) 
         
         # Ensure data structure and columns exist (e.g., 'text' and 'label' columns)
         if 'text' in data.columns and 'label' in data.columns:

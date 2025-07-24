@@ -1,27 +1,21 @@
 import pandas as pd
 
-# Step s-1: Read in the labeled CSV file
-def read_labeled_data(file_path):
-    """
-    Reads labeled data from the specified CSV file.
+# Step 1: Load the data from the CSV file located at 'src/spam.csv'
+data_path = 'src/spam.csv'  # Path to the data file
+try:
+    data = pd.read_csv(data_path)  # Reading the CSV file
+    print("Data successfully loaded.")
+except FileNotFoundError:
+    print(f"Error: File not found at {data_path}")
+    data = None
 
-    :param file_path: Path to the CSV file with spam data.
-    :return: Pandas DataFrame containing the data.
-    """
-    try:
-        # Read the CSV file into a Pandas DataFrame
-        data = pd.read_csv(file_path) 
-        
-        # Ensure data structure and columns exist (e.g., 'text' and 'label' columns)
-        if 'text' in data.columns and 'label' in data.columns:
-            return data
-        else:
-            raise ValueError("Required columns 'text' and 'label' are missing from the dataset.")
-    except Exception as e:
-        print(f"Error reading the file: {e}")
-        return None
+# Check if the data is loaded and inspect the first few rows
+if data is not None:
+    print("Preview of the dataset:")
+    print(data.head())  # Display the first 5 rows of the dataset to ensure correctness
 
-# Usage example (path adjusted for the step requirement):
-labeled_data = read_labeled_data('src/spam.csv')
-if labeled_data is not None:
-    print(labeled_data.head())  # Print the first few rows for verification
+    # Additional integrity checks
+    print("Dataset summary:")
+    print(data.info())  # Summary of the data to check for missing values or types issues
+    print("Checking for null values:")
+    print(data.isnull().sum())  # Count of null values in each column

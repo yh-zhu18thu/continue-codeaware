@@ -27,22 +27,24 @@ const StyledDiv = styled.div`
 interface RequirementDisplayToolBarProps {
     onEdit: () => void;
     onRegenerate: () => void;
+    disabled?: boolean; // Optional disabled state
 }
 
 export default function RequirementDisplayToolBar({
     onEdit,
     onRegenerate,
+    disabled = false,
 }: RequirementDisplayToolBarProps) {
     return (
         <StyledDiv className="find-widget-skip flex"> {/* Added find-widget-skip and flex for consistency */}
             {/* Edit Button */}
             <HoverItem>
                 <PencilSquareIcon
-                    className="w-5 h-5 hover:brightness-125 cursor-pointer" // Adjusted classes
-                    onClick={onEdit}
+                    className={`w-5 h-5 ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:brightness-125 cursor-pointer'}`} // Disabled styling
+                    onClick={disabled ? undefined : onEdit}
                     aria-label="Edit Requirement"
                 >
-                    <ToolTip text="编辑需求" position="top">
+                    <ToolTip text={disabled ? "代码编辑模式下不可用" : "编辑需求"} position="top">
                         编辑需求
                     </ToolTip>
                 </PencilSquareIcon>
@@ -51,11 +53,11 @@ export default function RequirementDisplayToolBar({
             {/* Regenerate Button */}
             <HoverItem>
                 <ArrowPathIcon
-                    className="w-5 h-5 hover:brightness-125 cursor-pointer"
-                    onClick={onRegenerate}
+                    className={`w-5 h-5 ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:brightness-125 cursor-pointer'}`} // Disabled styling
+                    onClick={disabled ? undefined : onRegenerate}
                     aria-label="Regenerate"
                 >
-                    <ToolTip text="重新生成" position="top">
+                    <ToolTip text={disabled ? "代码编辑模式下不可用" : "重新生成"} position="top">
                         重新生成
                     </ToolTip>
                 </ArrowPathIcon>

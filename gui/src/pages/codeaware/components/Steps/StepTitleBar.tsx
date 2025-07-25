@@ -100,6 +100,7 @@ interface StepTitleBarProps {
   onToggle?: () => void; // Optional callback for toggle functionality
   onExecuteUntilStep?: () => void; // Optional callback for execute until step
   onRerunStep?: () => void; // Optional callback for rerun step when dirty
+  disabled?: boolean; // Optional disabled state for code edit mode
 }
 
 const StepTitleBar: React.FC<StepTitleBarProps> = ({ 
@@ -112,9 +113,15 @@ const StepTitleBar: React.FC<StepTitleBarProps> = ({
   onToggle,
   onExecuteUntilStep,
   onRerunStep,
+  disabled = false,
 }) => {
   const handleButtonClick = (e: React.MouseEvent) => {
     e.stopPropagation();
+    
+    if (disabled) {
+      console.warn("⚠️ Step execution is disabled in code edit mode");
+      return;
+    }
     
     if (stepStatus === "step_dirty") {
       // 如果状态是step_dirty，执行重新运行逻辑
@@ -129,7 +136,7 @@ const StepTitleBar: React.FC<StepTitleBarProps> = ({
     }
   };
 
-  const isButtonDisabled = stepStatus === "generating";
+  const isButtonDisabled = stepStatus === "generating" || disabled;
   const isStepDirty = stepStatus === "step_dirty";
 
   return (
@@ -148,11 +155,13 @@ const StepTitleBar: React.FC<StepTitleBarProps> = ({
           onClick={handleButtonClick} 
           disabled={isButtonDisabled}
           title={
-            isButtonDisabled 
-              ? "代码正在生成中..." 
-              : isStepDirty 
-                ? "重新生成代码" 
-                : "执行到此步骤"
+            disabled 
+              ? "代码编辑模式下不可用"
+              : isButtonDisabled && stepStatus === "generating"
+                ? "代码正在生成中..." 
+                : isStepDirty 
+                  ? "重新生成代码" 
+                  : "执行到此步骤"
           }
         >
           {isStepDirty ? (

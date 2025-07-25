@@ -6,6 +6,7 @@ import {
   lightGray,
   vscForeground
 } from "../../components";
+import PageHeader from "../../components/PageHeader";
 import { IdeMessengerContext } from "../../context/IdeMessenger";
 import { useWebviewListener } from "../../hooks/useWebviewListener";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks";
@@ -14,6 +15,7 @@ import {
   newCodeAwareSession, // Add this import
   resetIdeCommFlags,
   resetSessionExceptRequirement, // Add this import
+  selectIsCodeEditModeEnabled, // Add this import for code edit mode
   selectIsRequirementInEditMode, // Import submitRequirementContent
   selectIsStepsGenerated,
   selectLearningGoal, // Add this import
@@ -35,6 +37,7 @@ import {
   rerunStep
 } from "../../redux/thunks/codeAwareGeneration";
 import "./CodeAware.css";
+import CodeEditModeToggle from "./components/CodeEditModeToggle"; // Import the toggle component
 import RequirementDisplay from "./components/Requirements/RequirementDisplay"; // Import RequirementDisplay
 import RequirementEditor from "./components/Requirements/RequirementEditor"; // Import RequirementEditor
 import Step from "./components/Steps/Step"; // Import Step
@@ -135,6 +138,7 @@ export const CodeAware = () => {
   // 当前requirement部分应该使用
   const isEditMode = useAppSelector(selectIsRequirementInEditMode);
   const isStepsGenerated = useAppSelector(selectIsStepsGenerated); // Use the selector
+  const isCodeEditModeEnabled = useAppSelector(selectIsCodeEditModeEnabled); // Get code edit mode state
   // 获取可能有的requirement内容
   const userRequirement = useAppSelector(
     (state) => state.codeAwareSession.userRequirement
@@ -168,6 +172,26 @@ export const CodeAware = () => {
       syncToIde();
     }
   }, [steps.length, ideMessenger]);
+
+  // Sync code edit mode state to IDE
+  useEffect(() => {
+    const syncCodeEditModeToIde = async () => {
+      try {
+        // TODO: Add setCodeEditMode to IDE protocol
+        // await ideMessenger?.request("setCodeEditMode", {
+        //   enabled: isCodeEditModeEnabled
+        // });
+
+        console.log("📡 [CodeAware] Code edit mode state:", {
+          isCodeEditModeEnabled
+        });
+      } catch (error) {
+        console.warn("⚠️ [CodeAware] Failed to sync code edit mode to IDE:", error);
+      }
+    };
+
+    syncCodeEditModeToIde();
+  }, [isCodeEditModeEnabled, ideMessenger]);
 
   // Add webview listener for new session event to initialize CodeAware session
   useWebviewListener(
@@ -225,6 +249,12 @@ export const CodeAware = () => {
 
   const AIPolishUserRequirement = useCallback(
     (requirement: string) => { // Expect requirement from editor
+      // Disable in code edit mode
+      if (isCodeEditModeEnabled) {
+        console.warn("⚠️ AI requirement polishing is disabled in code edit mode");
+        return;
+      }
+      
       if (!userRequirement) {
         return;
       }
@@ -236,11 +266,17 @@ export const CodeAware = () => {
         console.log("Requirement submitted to AI");
       });
     },
-    [dispatch, userRequirement]
+    [dispatch, userRequirement, isCodeEditModeEnabled]
   );
 
   const AIHandleRequirementConfirmation = useCallback(
     (requirement: string) => { // Expect requirement from editor
+      // Disable in code edit mode
+      if (isCodeEditModeEnabled) {
+        console.warn("⚠️ Requirement confirmation is disabled in code edit mode");
+        return;
+      }
+      
       if (!userRequirement) {
         return;
       }
@@ -253,14 +289,26 @@ export const CodeAware = () => {
           console.log("Steps generated from requirement");
         });
     }
-  , [dispatch, userRequirement]
+  , [dispatch, userRequirement, isCodeEditModeEnabled]
   );
 
   const handleEditRequirement = useCallback(() => {
+    // Disable in code edit mode
+    if (isCodeEditModeEnabled) {
+      console.warn("⚠️ Requirement editing is disabled in code edit mode");
+      return;
+    }
+    
     dispatch(setUserRequirementStatus("editing"));
-  }, [dispatch]);
+  }, [dispatch, isCodeEditModeEnabled]);
 
   const handleRegenerateSteps = useCallback(() => {
+    // Disable in code edit mode
+    if (isCodeEditModeEnabled) {
+      console.warn("⚠️ Step regeneration is disabled in code edit mode");
+      return;
+    }
+    
     if (!userRequirement?.requirementDescription) {
       return;
     }
@@ -272,7 +320,7 @@ export const CodeAware = () => {
       .then(() => {
         dispatch(setUserRequirementStatus("finalized"));
       });
-  }, [dispatch, userRequirement?.requirementDescription]);
+  }, [dispatch, userRequirement?.requirementDescription, isCodeEditModeEnabled]);
 
 
   // CodeAware: 获取学习目标和代码上下文
@@ -381,6 +429,12 @@ export const CodeAware = () => {
 
   // Add new functions for step operations
   const executeUntilStep = useCallback(async (stepId: string) => {
+    // Disable in code edit mode
+    if (isCodeEditModeEnabled) {
+      console.warn("⚠️ Code execution is disabled in code edit mode");
+      return;
+    }
+    
     console.log(`执行到步骤: ${stepId}`);
     
     try {
@@ -496,10 +550,16 @@ export const CodeAware = () => {
       // 显示错误提示
       ideMessenger?.post("showToast", ["error", "代码生成过程中发生错误，请重试。"]);
     }
-  }, [steps, ideMessenger, dispatch]);
+  }, [steps, ideMessenger, dispatch, isCodeEditModeEnabled]);
 
   // Handle rerun step when step is dirty
   const handleRerunStep = useCallback(async (stepId: string) => {
+    // Disable in code edit mode
+    if (isCodeEditModeEnabled) {
+      console.warn("⚠️ Step rerun is disabled in code edit mode");
+      return;
+    }
+    
     console.log(`重新运行步骤: ${stepId}`);
     
     try {
@@ -553,12 +613,18 @@ export const CodeAware = () => {
       dispatch(setStepStatus({ stepId, status: "step_dirty" }));
       ideMessenger?.post("showToast", ["error", "重新生成代码失败，请重试。"]);
     }
-  }, [steps, dispatch, ideMessenger]);
+  }, [steps, dispatch, ideMessenger, isCodeEditModeEnabled]);
 
   const handleStepEdit = useCallback((stepId: string, newContent: string) => {
+    // Disable in code edit mode
+    if (isCodeEditModeEnabled) {
+      console.warn("⚠️ Step editing is disabled in code edit mode");
+      return;
+    }
+    
     // Update step abstract in Redux store
     dispatch(setStepAbstract({ stepId, abstract: newContent }));
-  }, [dispatch]);
+  }, [dispatch, isCodeEditModeEnabled]);
 
   const handleStepStatusChange = useCallback((stepId: string, newStatus: StepStatus) => {
     // Update step status in Redux store
@@ -699,6 +765,12 @@ export const CodeAware = () => {
         }
       }}
     >
+      {/* CodeAware Header with Edit Mode Toggle */}
+      <PageHeader
+        title="CodeAware"
+        rightContent={<CodeEditModeToggle />}
+      />
+
       {/* Loading Overlay */}
       {(isGeneratingSteps || hasGeneratingSteps) && (
         <LoadingOverlay>
@@ -757,6 +829,7 @@ export const CodeAware = () => {
         <RequirementEditor
           onConfirm={AIHandleRequirementConfirmation}
           onAIProcess={AIPolishUserRequirement}
+          disabled={isCodeEditModeEnabled} // Disable in code edit mode
         />
       ) : (
         <RequirementDisplay
@@ -764,6 +837,7 @@ export const CodeAware = () => {
           onRegenerate={handleRegenerateSteps}
           onChunkFocus={handleHighlightEvent} // Pass the highlight event handler
           onClearHighlight={removeHighlightEvent} // Pass the clear highlight function
+          disabled={isCodeEditModeEnabled} // Disable in code edit mode
         />
       )}
 
@@ -789,6 +863,7 @@ export const CodeAware = () => {
               onGenerateKnowledgeCardThemes={handleGenerateKnowledgeCardThemes} // Pass knowledge card themes generation function
               onDisableKnowledgeCard={handleDisableKnowledgeCard} // Pass knowledge card disable function
               onQuestionSubmit={handleQuestionSubmit} // Pass question submit function
+              disabled={isCodeEditModeEnabled} // Disable in code edit mode
               knowledgeCards={step.knowledgeCards.map((kc: KnowledgeCardItem, kcIndex: number) => {
                 // 从 KnowledgeCardItem.tests 转换为 TestItem[]
                 const testItems = kc.tests?.map(test => ({

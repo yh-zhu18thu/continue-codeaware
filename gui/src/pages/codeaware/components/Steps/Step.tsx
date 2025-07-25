@@ -108,6 +108,7 @@ interface StepProps {
   onGenerateKnowledgeCardThemes?: (stepId: string, stepTitle: string, stepAbstract: string, learningGoal: string) => void; // Callback for generating knowledge card themes
   onDisableKnowledgeCard?: (stepId: string, cardId: string) => void; // Callback for disabling knowledge card
   onQuestionSubmit?: (stepId: string, selectedText: string, question: string) => void; // Callback for question submission
+  disabled?: boolean; // Optional disabled state for code edit mode
 }
 
 const Step: React.FC<StepProps> = ({
@@ -129,6 +130,7 @@ const Step: React.FC<StepProps> = ({
   onGenerateKnowledgeCardThemes,
   onDisableKnowledgeCard,
   onQuestionSubmit,
+  disabled = false,
 }) => {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const [isFlickering, setIsFlickering] = useState(false);
@@ -250,18 +252,30 @@ const Step: React.FC<StepProps> = ({
   };
 
   const handleExecuteUntilStep = () => {
+    if (disabled) {
+      console.warn("⚠️ Execute until step is disabled in code edit mode");
+      return;
+    }
     if (stepId && onExecuteUntilStep) {
       onExecuteUntilStep(stepId);
     }
   };
 
   const handleRerunStep = () => {
+    if (disabled) {
+      console.warn("⚠️ Rerun step is disabled in code edit mode");
+      return;
+    }
     if (stepId && onRerunStep) {
       onRerunStep(stepId);
     }
   };
 
   const handleEditStep = () => {
+    if (disabled) {
+      console.warn("⚠️ Step editing is disabled in code edit mode");
+      return;
+    }
     // Trigger edit mode by changing status to "editing"
     if (stepId && onStepStatusChange) {
       onStepStatusChange(stepId, "editing");
@@ -269,6 +283,10 @@ const Step: React.FC<StepProps> = ({
   };
 
   const handleConfirmEdit = (newContent: string) => {
+    if (disabled) {
+      console.warn("⚠️ Step editing is disabled in code edit mode");
+      return;
+    }
     if (stepId && onStepEdit) {
       onStepEdit(stepId, newContent);
     }
@@ -308,6 +326,7 @@ const Step: React.FC<StepProps> = ({
         onToggle={handleToggle}
         onExecuteUntilStep={handleExecuteUntilStep}
         onRerunStep={handleRerunStep}
+        disabled={disabled}
       />
       <ContentArea isVisible={isExpanded}>
         {isEditing ? (

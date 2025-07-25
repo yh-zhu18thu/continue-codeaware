@@ -55,6 +55,8 @@ type CodeAwareSessionState = {
     // IDE communication flags
     shouldClearIdeHighlights: boolean;
     codeChunksToHighlightInIde: CodeChunk[];
+    // Code editing mode - when true, allows manual code editing; when false, allows CodeAware operations
+    isCodeEditModeEnabled: boolean;
 }
 
 const initialCodeAwareState: CodeAwareSessionState = {
@@ -72,6 +74,7 @@ const initialCodeAwareState: CodeAwareSessionState = {
     codeAwareMappings: [],
     shouldClearIdeHighlights: false,
     codeChunksToHighlightInIde: [],
+    isCodeEditModeEnabled: false, // Default to CodeAware mode
 }
 
 export const codeAwareSessionSlice = createSlice({
@@ -702,6 +705,14 @@ export const codeAwareSessionSlice = createSlice({
             if (state.userRequirement && !state.userRequirement.highlightChunks) {
                 state.userRequirement.highlightChunks = [];
             }
+        },
+        // Toggle code edit mode - controls whether user can edit code manually or use CodeAware features
+        toggleCodeEditMode: (state) => {
+            state.isCodeEditModeEnabled = !state.isCodeEditModeEnabled;
+        },
+        // Set code edit mode explicitly
+        setCodeEditMode: (state, action: PayloadAction<boolean>) => {
+            state.isCodeEditModeEnabled = action.payload;
         }
     },
     selectors:{
@@ -750,6 +761,9 @@ export const codeAwareSessionSlice = createSlice({
         selectTask: (state: CodeAwareSessionState) => {
             // 返回session的任务信息
             return state.userRequirement;
+        },
+        selectIsCodeEditModeEnabled: (state: CodeAwareSessionState) => {
+            return state.isCodeEditModeEnabled;
         }
     }
 });
@@ -797,7 +811,9 @@ export const {
     setStepTitle,
     setStepGeneratedUntil,
     setKnowledgeCardGenerationStatus,
-    setStepAbstract
+    setStepAbstract,
+    toggleCodeEditMode,
+    setCodeEditMode
 } = codeAwareSessionSlice.actions
 
 export const {
@@ -808,7 +824,8 @@ export const {
     selectCurrentStep,
     selectLearningGoal,
     selectTask,
-    selectCanExecuteUntilStep
+    selectCanExecuteUntilStep,
+    selectIsCodeEditModeEnabled
 } = codeAwareSessionSlice.selectors
 
 export default codeAwareSessionSlice.reducer;

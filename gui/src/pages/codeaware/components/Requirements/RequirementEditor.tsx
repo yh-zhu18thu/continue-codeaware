@@ -80,9 +80,10 @@ const SpinnerIcon = styled.div`
 interface RequirementEditorProps {
     onConfirm: (requirement: string) => void;
     onAIProcess: (requirement: string) => void;
+    disabled?: boolean; // Optional disabled state
 }
 
-export default function RequirementEditor(props:RequirementEditorProps){
+export default function RequirementEditor({ onConfirm, onAIProcess, disabled = false }: RequirementEditorProps){
     const userRequirementContent = useAppSelector((state) => state.codeAwareSession.userRequirement?.requirementDescription || "");
 
     const userRequirementStatus = useAppSelector((state) => state.codeAwareSession.userRequirement?.requirementStatus || "empty");
@@ -97,18 +98,22 @@ export default function RequirementEditor(props:RequirementEditorProps){
             StarterKit,
         ],
         content: currentTargetContent, // 4. 使用 currentTargetContent 初始化编辑器
+        editable: !disabled, // Disable editing when disabled prop is true
     });
 
-    // 5. 使用 useEffect 来监听 editor 实例和 currentTargetContent 的变化, 保证编辑器内容与内容一致
+        // 5. 使用 useEffect 监听用户需求状态的变化，确保编辑器内容同步更新
+    useEffect(() => {
+        if (editor && currentTargetContent !== editor.getHTML()) {
+            editor.commands.setContent(currentTargetContent);
+        }
+    }, [userRequirementContent, editor, currentTargetContent]);
+
+    // Update editor editable state when disabled prop changes
     useEffect(() => {
         if (editor) {
-            const currentEditorHTML = editor.getHTML();
-            // 如果编辑器当前内容与目标内容不一致，则更新
-            if (currentEditorHTML !== currentTargetContent) {
-                editor.commands.setContent(currentTargetContent);
-            }
+            editor.setEditable(!disabled);
         }
-    }, [editor, currentTargetContent]); // 依赖 editor 实例和 currentTargetContent
+    }, [disabled, editor]);
 
     if (!editor) {
         return <div>Loading...</div>; // 等待编辑器初始化
@@ -137,19 +142,27 @@ export default function RequirementEditor(props:RequirementEditorProps){
                 {/* Tool Bar */}
                 <RequirementEditToolBar
                     onSubmit={() => {
+                        if (disabled) return;
                         const requirement = editor.getText();
-                        props.onConfirm(requirement);
+                        onConfirm(requirement);
                     }}
-                    onUndo={() => editor.chain().focus().undo().run()}
-                    onRedo={() => editor.chain().focus().redo().run()}
+                    onUndo={() => {
+                        if (disabled) return;
+                        editor.chain().focus().undo().run();
+                    }}
+                    onRedo={() => {
+                        if (disabled) return;
+                        editor.chain().focus().redo().run();
+                    }}
                     onAIProcess={() => {
-                            const requirement = editor.getText();
-                            props.onAIProcess(requirement);
+                        if (disabled) return;
+                        const requirement = editor.getText();
+                        onAIProcess(requirement);
                     }}
-                    isUndoDisabled={!editor.can().undo() || isParaphrasing}
-                    isRedoDisabled={!editor.can().redo() || isParaphrasing}
-                    isSubmitDisabled={editor.isEmpty || isParaphrasing}
-                    isAIProcessDisabled={editor.isEmpty || isParaphrasing}
+                    isUndoDisabled={!editor.can().undo() || isParaphrasing || disabled}
+                    isRedoDisabled={!editor.can().redo() || isParaphrasing || disabled}
+                    isSubmitDisabled={editor.isEmpty || isParaphrasing || disabled}
+                    isAIProcessDisabled={editor.isEmpty || isParaphrasing || disabled}
                     // isSubmitDisabled={editor.isEmpty || !editor.can().run()}
                 />
             </div>

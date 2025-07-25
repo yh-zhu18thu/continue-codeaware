@@ -89,6 +89,7 @@ interface RequirementDisplayProps {
     onRegenerate: () => void;
     onChunkFocus?: (highlight: HighlightEvent) => void;
     onClearHighlight?: () => void;
+    disabled?: boolean; // Optional disabled state
 }
 
 export default function RequirementDisplay({
@@ -96,6 +97,7 @@ export default function RequirementDisplay({
     onRegenerate,
     onChunkFocus,
     onClearHighlight,
+    disabled = false,
 }: RequirementDisplayProps) {
     const requirementText = useAppSelector(selectRequirementText);
     const highlightChunks = useAppSelector(selectRequirementHighlightChunks);
@@ -248,6 +250,7 @@ export default function RequirementDisplay({
                 <RequirementDisplayToolBar
                     onEdit={onEdit}
                     onRegenerate={onRegenerate}
+                    disabled={disabled}
                 />
             </ContentDisplayDiv>
         </div>

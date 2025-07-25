@@ -361,9 +361,11 @@ export const codeAwareSessionSlice = createSlice({
                 codeChunkIds.forEach(codeChunkId => {
                     const codeChunk = state.codeChunks.find(chunk => chunk.id === codeChunkId);
                     console.log(`Highlighting code chunk: ${codeChunkId}, found:`, !!codeChunk);
-                    if (codeChunk) {
+                    if (codeChunk && !codeChunk.disabled) { // 跳过被禁用的代码块
                         codeChunk.isHighlighted = true;
                         codeChunksForIde.push(codeChunk);
+                    } else if (codeChunk && codeChunk.disabled) {
+                        console.log(`Code chunk ${codeChunkId} is disabled, skipping highlight`);
                     } else {
                         console.warn(`Code chunk with id ${codeChunkId} not found in state.codeChunks`);
                     }
@@ -435,6 +437,14 @@ export const codeAwareSessionSlice = createSlice({
         },
         updateCodeChunks: (state, action: PayloadAction<CodeChunk[]>) => {
             state.codeChunks.push(...action.payload);
+        },
+        // 设置代码块的禁用状态
+        setCodeChunkDisabled: (state, action: PayloadAction<{codeChunkId: string, disabled: boolean}>) => {
+            const { codeChunkId, disabled } = action.payload;
+            const chunk = state.codeChunks.find(c => c.id === codeChunkId);
+            if (chunk) {
+                chunk.disabled = disabled;
+            }
         },
         updateCodeAwareMappings: (state, action: PayloadAction<CodeAwareMapping[]>) => {
             // 使用 Set 来高效检查重复的 mapping
@@ -564,6 +574,7 @@ export const codeAwareSessionSlice = createSlice({
                 content: completionText,
                 range: range,
                 isHighlighted: false,
+                disabled: false,
                 filePath: filePath
             };
             state.codeChunks.push(newCodeChunk);
@@ -592,6 +603,7 @@ export const codeAwareSessionSlice = createSlice({
                     content,
                     range,
                     isHighlighted: false,
+                    disabled: false,
                     filePath
                 };
                 
@@ -711,6 +723,7 @@ export const {
     updateHighlight,
     updateRequirementChunks,
     updateCodeChunks,
+    setCodeChunkDisabled,
     updateCodeAwareMappings,
     setCodeAwareTitle,
     setLearningGoal,

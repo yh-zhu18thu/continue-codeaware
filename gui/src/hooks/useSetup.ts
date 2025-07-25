@@ -255,7 +255,7 @@ function useSetup() {
 
     console.log("Code Selection Cleared:", {
       filePath,
-      previousSelection: codeChunks.filter(chunk => chunk.isHighlighted)
+      previousSelection: codeChunks.filter(chunk => chunk.isHighlighted && !chunk.disabled)
     });
 
     // 清除所有高亮

@@ -465,6 +465,7 @@ export type CodeChunk = {
   content: string;
   range: [number, number];
   isHighlighted: boolean;
+  disabled: boolean;
   filePath: string;
 }
 

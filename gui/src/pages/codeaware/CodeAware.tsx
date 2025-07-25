@@ -284,11 +284,38 @@ export const CodeAware = () => {
     (stepId: string, cardId: string, theme: string, learningGoal: string, codeContext: string) => {
       console.log("Generating knowledge card content for:", { stepId, cardId, theme });
       
-      // 如果没有提供代码上下文，我们可以使用一个默认的上下文或者从当前的代码中获取
+      // 如果没有提供代码上下文，从mapping中获取和cardId绑定的code chunk的内容
       let contextToUse = codeContext;
       if (!contextToUse) {
-        // 可以从当前的 IDE 状态获取代码上下文
-        contextToUse = "当前代码上下文暂时不可用，请基于知识卡片主题生成内容。";
+        // 从mapping中查找与cardId绑定的code chunk
+        const cardMappings = allMappings.filter(mapping => mapping.knowledgeCardId === cardId);
+        console.log(`Found ${cardMappings.length} mappings for card ${cardId}:`, cardMappings);
+        
+        if (cardMappings.length > 0) {
+          // 获取所有相关的code chunk内容
+          const codeChunkContents: string[] = [];
+          
+          cardMappings.forEach(mapping => {
+            if (mapping.codeChunkId) {
+              const codeChunk = codeChunks.find(chunk => chunk.id === mapping.codeChunkId);
+              if (codeChunk && !codeChunk.disabled) {
+                codeChunkContents.push(codeChunk.content);
+              }
+            }
+          });
+          
+          // 合并所有相关的代码块内容作为上下文
+          if (codeChunkContents.length > 0) {
+            contextToUse = codeChunkContents.join('\n\n// --- Related Code Chunk ---\n\n');
+            console.log(`Using code context from ${codeChunkContents.length} code chunks for card ${cardId}`);
+          } else {
+            console.warn(`No valid code chunks found for card ${cardId}, using empty context`);
+            contextToUse = "";
+          }
+        } else {
+          console.warn(`No mappings found for card ${cardId}, using empty context`);
+          contextToUse = "";
+        }
       }
 
       dispatch(generateKnowledgeCardDetail({
@@ -299,7 +326,7 @@ export const CodeAware = () => {
         codeContext: contextToUse
       }));
     },
-    [dispatch]
+    [dispatch, allMappings, codeChunks]
   );
 
   // 处理生成知识卡片主题列表

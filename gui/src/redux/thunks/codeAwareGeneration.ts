@@ -12,23 +12,30 @@ import {
     constructGenerateKnowledgeCardThemesFromQueryPrompt,
     constructGenerateKnowledgeCardThemesPrompt,
     constructGenerateStepsPrompt,
-    constructParaphraseUserIntentPrompt
+    constructParaphraseUserIntentPrompt,
+    constructRerunStepPrompt
 } from "core/llm/codeAwarePrompts";
 import {
     createCodeAwareMapping,
     createKnowledgeCard,
     createOrGetCodeChunk,
+    removeCodeAwareMappings,
     setCodeAwareTitle,
+    setCodeChunkDisabled,
     setGeneratedSteps,
     setKnowledgeCardError,
     setKnowledgeCardGenerationStatus,
     setKnowledgeCardLoading,
     setLearningGoal,
+    setStepAbstract,
     setStepStatus,
+    setStepTitle,
     setUserRequirementStatus,
     submitRequirementContent,
     updateCodeAwareMappings,
+    updateCodeChunkRange,
     updateKnowledgeCardContent,
+    updateKnowledgeCardTitle,
     updateRequirementChunks
 } from "../slices/codeAwareSlice";
 import { selectDefaultModel } from "../slices/configSlice";
@@ -1074,6 +1081,278 @@ export const generateCodeFromSteps = createAsyncThunk<
             console.error("Error during code generation from steps:", error);
             const errorMessage = error instanceof Error ? error.message : String(error);
             throw new Error(`代码生成失败: ${errorMessage}`);
+        }
+    }
+);
+
+// 异步重新运行步骤 - 根据步骤抽象的变化更新代码和映射关系
+export const rerunStep = createAsyncThunk<
+    void,
+    {
+        stepId: string;
+        changedStepAbstract: string;
+        existingCode: string;
+        filepath: string;
+    },
+    ThunkApiType
+>(
+    "codeAware/rerunStep",
+    async (
+        { stepId, changedStepAbstract, existingCode, filepath },
+        { dispatch, extra, getState }
+    ) => {
+        try {
+            const state = getState();
+            const defaultModel = selectDefaultModel(state);
+            if (!defaultModel) {
+                throw new Error("Default model not defined");
+            }
+
+            // 从Redux状态中获取步骤信息
+            const steps = state.codeAwareSession.steps;
+            const targetStep = steps.find(step => step.id === stepId);
+            if (!targetStep) {
+                throw new Error(`Step with id ${stepId} not found`);
+            }
+
+            console.log("rerunStep called with:", {
+                stepId,
+                stepTitle: targetStep.title,
+                previousAbstract: targetStep.abstract,
+                changedAbstract: changedStepAbstract,
+                knowledgeCardsCount: targetStep.knowledgeCards.length
+            });
+
+            // 构造提示词并发送请求
+            const prompt = constructRerunStepPrompt(
+                existingCode,
+                {
+                    id: targetStep.id,
+                    title: targetStep.title,
+                    abstract: targetStep.abstract,
+                    knowledge_cards: targetStep.knowledgeCards.map(kc => ({
+                        id: kc.id,
+                        title: kc.title
+                    }))
+                },
+                changedStepAbstract
+            );
+
+            const result = await extra.ideMessenger.request("llm/complete", {
+                prompt: prompt,
+                completionOptions: {},
+                title: defaultModel.title
+            });
+
+            if (result.status !== "success" || !result.content) {
+                throw new Error("LLM request failed or returned empty content");
+            }
+
+            console.log("LLM response for rerun step:", result.content);
+
+            // 解析 LLM 返回的 JSON 内容
+            try {
+                const jsonResponse = JSON.parse(result.content);
+                const updatedCode = jsonResponse.updated_code || "";
+                const stepUpdates = jsonResponse.step_updates || {};
+                const knowledgeCardsUpdates = jsonResponse.knowledge_cards_updates || [];
+
+                console.log("✅ 步骤重新运行成功:", {
+                    updatedCodeLength: updatedCode.length,
+                    stepId: stepUpdates.id,
+                    stepTitle: stepUpdates.title,
+                    knowledgeCardsCount: knowledgeCardsUpdates.length
+                });
+
+                // 1. 禁用与当前步骤相关的旧代码块
+                const currentMappings = state.codeAwareSession.codeAwareMappings;
+                const relatedMappings = currentMappings.filter(mapping => 
+                    mapping.stepId === stepId || 
+                    (mapping.knowledgeCardId && mapping.knowledgeCardId.startsWith(`${stepId}-kc-`))
+                );
+
+                // 禁用相关的代码块
+                relatedMappings.forEach(mapping => {
+                    if (mapping.codeChunkId) {
+                        dispatch(setCodeChunkDisabled({ 
+                            codeChunkId: mapping.codeChunkId, 
+                            disabled: true 
+                        }));
+                    }
+                });
+
+                console.log(`🚫 禁用了 ${relatedMappings.length} 个相关代码块`);
+
+                // 2. 删除相关的映射关系
+                dispatch(removeCodeAwareMappings({ stepId: stepId }));
+                console.log(`🗑️ 删除了步骤 ${stepId} 相关的所有映射关系`);
+
+                // 3. 将更新的代码应用到编辑器
+                try {
+                    console.log("🚀 开始将更新的代码应用到IDE文件...");
+                    
+                    // 使用diff方式应用代码变更，更安全且支持undo
+                    await extra.ideMessenger.request("applyDiffChanges", {
+                        filepath: filepath,
+                        oldCode: existingCode,
+                        newCode: updatedCode
+                    });
+                    
+                    console.log("✅ 代码已成功应用到IDE文件");
+                } catch (applyError) {
+                    console.error("❌ 应用代码到IDE失败:", applyError);
+                }
+
+                // 4. 更新其他未禁用代码块的行号范围
+                console.log("🔄 开始更新其他未禁用代码块的行号范围...");
+                
+                // 获取所有未禁用的代码块
+                const updatedState = getState();
+                const enabledCodeChunks = updatedState.codeAwareSession.codeChunks.filter(chunk => !chunk.disabled);
+                
+                // 为每个未禁用的代码块重新计算范围
+                enabledCodeChunks.forEach(chunk => {
+                    try {
+                        const newRange = calculateCodeChunkRange(updatedCode, chunk.content);
+                        
+                        // 如果范围有变化，更新代码块
+                        if (newRange[0] !== chunk.range[0] || newRange[1] !== chunk.range[1]) {
+                            dispatch(updateCodeChunkRange({
+                                codeChunkId: chunk.id,
+                                range: newRange
+                            }));
+                            
+                            console.log(`📏 更新代码块 ${chunk.id} 的范围: [${chunk.range[0]}, ${chunk.range[1]}] -> [${newRange[0]}, ${newRange[1]}]`);
+                        }
+                    } catch (error) {
+                        console.warn(`⚠️ 无法为代码块 ${chunk.id} 计算新的范围:`, error);
+                    }
+                });
+                
+                console.log(`✅ 完成更新 ${enabledCodeChunks.length} 个未禁用代码块的范围`);
+
+                // 5. 创建新的代码块和映射关系
+                const currentState = getState();
+                const existingCodeChunksCount = currentState.codeAwareSession.codeChunks.length;
+                let codeChunkCounter = existingCodeChunksCount + 1;
+
+                // 为步骤创建新的代码块和映射
+                if (stepUpdates.corresponding_code && stepUpdates.corresponding_code.trim()) {
+                    const stepCodeContent = stepUpdates.corresponding_code.trim();
+                    const stepRange = calculateCodeChunkRange(updatedCode, stepCodeContent);
+                    const stepCodeChunkId = `c-${codeChunkCounter++}`;
+                    
+                    dispatch(createOrGetCodeChunk({
+                        content: stepCodeContent,
+                        range: stepRange,
+                        filePath: filepath,
+                        id: stepCodeChunkId
+                    }));
+
+                    // 找到对应的需求块ID（从现有映射中查找）
+                    const existingStepMapping = currentMappings.find(mapping => mapping.stepId === stepId && mapping.requirementChunkId);
+                    const requirementChunkId = existingStepMapping?.requirementChunkId;
+
+                    // 创建步骤映射
+                    const stepMapping: CodeAwareMapping = {
+                        codeChunkId: stepCodeChunkId,
+                        stepId: stepId,
+                        requirementChunkId: requirementChunkId,
+                        isHighlighted: false
+                    };
+                    
+                    dispatch(createCodeAwareMapping(stepMapping));
+                    console.log(`🔗 创建新的步骤映射: ${stepCodeChunkId} -> ${stepId}`);
+                }
+
+                // 为知识卡片创建新的代码块和映射
+                knowledgeCardsUpdates.forEach((cardUpdate: any) => {
+                    if (cardUpdate.corresponding_code && cardUpdate.corresponding_code.trim()) {
+                        const cardCodeContent = cardUpdate.corresponding_code.trim();
+                        const cardRange = calculateCodeChunkRange(updatedCode, cardCodeContent);
+                        const cardCodeChunkId = `c-${codeChunkCounter++}`;
+                        
+                        dispatch(createOrGetCodeChunk({
+                            content: cardCodeContent,
+                            range: cardRange,
+                            filePath: filepath,
+                            id: cardCodeChunkId
+                        }));
+
+                        // 找到对应的需求块ID
+                        const existingCardMapping = currentMappings.find(mapping => mapping.knowledgeCardId === cardUpdate.id);
+                        const requirementChunkId = existingCardMapping?.requirementChunkId;
+
+                        // 创建知识卡片映射
+                        const cardMapping: CodeAwareMapping = {
+                            codeChunkId: cardCodeChunkId,
+                            stepId: stepId,
+                            knowledgeCardId: cardUpdate.id,
+                            requirementChunkId: requirementChunkId,
+                            isHighlighted: false
+                        };
+                        
+                        dispatch(createCodeAwareMapping(cardMapping));
+                        console.log(`🎯 创建新的知识卡片映射: ${cardCodeChunkId} -> ${cardUpdate.id}`);
+                    }
+                });
+
+                // 6. 更新步骤标题（如果有变化）
+                if (stepUpdates.title && stepUpdates.title !== targetStep.title) {
+                    dispatch(setStepTitle({ stepId: stepId, title: stepUpdates.title }));
+                    console.log(`📝 步骤标题已更新: "${targetStep.title}" -> "${stepUpdates.title}"`);
+                }
+
+                // 7. 更新步骤的抽象内容
+                dispatch(setStepAbstract({ 
+                    stepId: stepId, 
+                    abstract: changedStepAbstract 
+                }));
+                console.log(`📄 步骤抽象已更新为: "${changedStepAbstract}"`);
+
+                // 8. 处理需要更新的知识卡片
+                knowledgeCardsUpdates.forEach((cardUpdate: any) => {
+                    if (cardUpdate.needs_update) {
+                        // 更新知识卡片标题并清空内容和测试（如果有变化）
+                        const originalCard = targetStep.knowledgeCards.find(kc => kc.id === cardUpdate.id);
+                        if (originalCard && cardUpdate.title && cardUpdate.title !== originalCard.title) {
+                            // 使用新的action来更新标题并清空内容
+                            dispatch(updateKnowledgeCardTitle({
+                                stepId: stepId,
+                                cardId: cardUpdate.id,
+                                title: cardUpdate.title
+                            }));
+                            console.log(`🏷️ 更新知识卡片标题并清空内容: "${originalCard.title}" -> "${cardUpdate.title}"`);
+                        } else if (originalCard) {
+                            // 即使标题没有变化，如果需要更新，也要清空内容
+                            dispatch(updateKnowledgeCardTitle({
+                                stepId: stepId,
+                                cardId: cardUpdate.id,
+                                title: originalCard.title // 保持原标题
+                            }));
+                            console.log(`🔄 清空知识卡片 ${cardUpdate.id} 的内容和测试`);
+                        }
+
+                        // 设置知识卡片为需要重新生成内容状态
+                        dispatch(setKnowledgeCardGenerationStatus({ 
+                            stepId: stepId, 
+                            status: "generating" 
+                        }));
+                        console.log(`🔄 知识卡片 ${cardUpdate.id} 标记为需要重新生成内容`);
+                    }
+                });
+
+                console.log("✅ 步骤重新运行完成");
+
+            } catch (parseError) {
+                console.error("Error parsing LLM response:", parseError);
+                throw new Error("解析LLM响应失败");
+            }
+
+        } catch (error) {
+            console.error("Error during step rerun:", error);
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            throw new Error(`步骤重新运行失败: ${errorMessage}`);
         }
     }
 );

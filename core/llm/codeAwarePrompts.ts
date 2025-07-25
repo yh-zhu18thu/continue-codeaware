@@ -193,3 +193,46 @@ export function constructGenerateKnowledgeCardThemesFromQueryPrompt(
         "task": "${task}"
     }`;
 }
+
+export function constructRerunStepPrompt(
+    existingCode: string,
+    previousStep: {
+        id: string;
+        title: string;
+        abstract: string;
+        knowledge_cards: Array<{
+            id: string;
+            title: string;
+        }>;
+    },
+    changedStepAbstract: string
+): string {
+    const knowledgeCardsText = previousStep.knowledge_cards.map(kc => 
+        `{"id": "${kc.id}", "title": "${kc.title}"}`
+    ).join(", ");
+    
+    return `{
+        "task": "You are given existing code and a step whose abstract has been modified. Analyze the changes and update the code minimally to match the new abstract, then determine the correspondence between the updated code and the step/knowledge cards.",
+        "requirements": [
+            "Analyze the differences between the previous abstract and the changed abstract",
+            "Update the code minimally to match the changed abstract - make only necessary changes",
+            "Preserve existing code structure and comments where possible",
+            "For the step, identify which parts of the updated code correspond to this step",
+            "For each knowledge card, determine if the abstract change affects its content (needs_update: true/false)",
+            "If a knowledge card needs update, its title may also need adjustment",
+            "Extract the most relevant code chunks that correspond to each knowledge card",
+            "If a knowledge card has no corresponding code, leave its corresponding_code empty",
+            "Respond in the same language as the step descriptions",
+            "You must follow this JSON format in your response: {\\"updated_code\\": \\"(complete updated code)\\", \\"step_updates\\": {\\"id\\": \\"${previousStep.id}\\", \\"title\\": \\"(possibly updated title)\\", \\"corresponding_code\\": \\"(code for this step)\\"}, \\"knowledge_cards_updates\\": [{\\"id\\": \\"card_id\\", \\"needs_update\\": true/false, \\"title\\": \\"(possibly updated title)\\", \\"corresponding_code\\": \\"(relevant code or empty string)\\"}]}",
+            "Please do not use invalid \`\`\`json character to envelope the JSON response, just return the JSON object directly."
+        ],
+        "existing_code": "${existingCode}",
+        "previous_step": {
+            "id": "${previousStep.id}",
+            "title": "${previousStep.title}",
+            "abstract": "${previousStep.abstract}",
+            "knowledge_cards": [${knowledgeCardsText}]
+        },
+        "changed_step_abstract": "${changedStepAbstract}"
+    }`;
+}

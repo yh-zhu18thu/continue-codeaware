@@ -31,7 +31,8 @@ import {
   generateKnowledgeCardThemes,
   generateKnowledgeCardThemesFromQuery,
   generateStepsFromRequirement,
-  paraphraseUserIntent
+  paraphraseUserIntent,
+  rerunStep
 } from "../../redux/thunks/codeAwareGeneration";
 import "./CodeAware.css";
 import RequirementDisplay from "./components/Requirements/RequirementDisplay"; // Import RequirementDisplay
@@ -491,18 +492,33 @@ export const CodeAware = () => {
       // 设置状态为generating
       dispatch(setStepStatus({ stepId, status: "generating" }));
       
-      // TODO: 这里需要实现具体的重新生成逻辑
-      // 可以调用类似executeUntilStep的逻辑，但只针对这一个步骤
-      // 需要考虑使用step.previousStepAbstract和当前的step.abstract来生成新代码
+      // 获取当前文件内容
+      const currentFileResponse = await ideMessenger?.request("getCurrentFile", undefined);
       
-      // 临时显示提示信息
-      ideMessenger?.post("showToast", ["info", "开始重新生成代码..."]);
+      if (!currentFileResponse || currentFileResponse.status !== "success" || !currentFileResponse.content) {
+        throw new Error("无法获取当前文件内容");
+      }
       
-      // 模拟异步操作，稍后设置为generated状态
-      setTimeout(() => {
-        dispatch(setStepStatus({ stepId, status: "generated" }));
-        ideMessenger?.post("showToast", ["info", "代码重新生成完成！"]);
-      }, 2000);
+      const currentFile = currentFileResponse.content;
+      const filepath = currentFile.path;
+      const existingCode = currentFile.contents;
+      
+      // 使用修改后的abstract作为新的步骤描述
+      const changedStepAbstract = step.abstract;
+      
+      // 调用rerunStep thunk
+      await dispatch(rerunStep({
+        stepId,
+        changedStepAbstract,
+        existingCode,
+        filepath
+      })).unwrap();
+      
+      // 成功完成后设置状态为generated
+      dispatch(setStepStatus({ stepId, status: "generated" }));
+      
+      console.log("✅ 步骤重新运行成功");
+      ideMessenger?.post("showToast", ["info", "步骤重新运行成功！"]);
       
     } catch (error) {
       console.error("❌ 重新运行步骤时发生错误:", error);
@@ -628,6 +644,7 @@ export const CodeAware = () => {
                 content: mergedContent,
                 range: [minLine, maxLine] as [number, number],
                 isHighlighted: true,
+                disabled: false,
                 filePath: filePath
               };
 

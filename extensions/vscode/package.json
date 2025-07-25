@@ -1,7 +1,7 @@
 {
-  "name": "continue",
+  "name": "CodeAware",
   "icon": "media/icon.png",
-  "author": "Continue Dev, Inc",
+  "author": "THU PI Lab",
   "version": "1.1.3",
   "repository": {
     "type": "git",
@@ -18,10 +18,10 @@
   "homepage": "https://continue.dev",
   "qna": "https://github.com/continuedev/continue/issues/new/choose",
   "license": "Apache-2.0",
-  "displayName": "Continue - Codestral, Claude, and more",
+  "displayName": "CodeAware, generate code into your mind",
   "pricing": "Free",
-  "description": "The leading open-source AI code assistant",
-  "publisher": "Continue",
+  "description": "The first awareness-first code assistant tool",
+  "publisher": "CodeAware",
   "engines": {
     "vscode": "^1.70.0",
     "node": ">=20.11.0"

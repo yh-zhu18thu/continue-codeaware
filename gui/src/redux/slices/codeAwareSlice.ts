@@ -169,6 +169,14 @@ export const codeAwareSessionSlice = createSlice({
                 step.stepStatus = status;
             }
         },
+        setStepTitle: (state, action: PayloadAction<{ stepId: string; title: string }>) => {
+            const { stepId, title } = action.payload;
+            const stepIndex = state.steps.findIndex(step => step.id === stepId);
+            
+            if (stepIndex !== -1) {
+                state.steps[stepIndex].title = title;
+            }
+        },
         setStepGeneratedUntil: (state, action: PayloadAction<string>) => {
             const stepId = action.payload;
             const stepIndex = state.steps.findIndex(step => step.id === stepId);
@@ -438,6 +446,14 @@ export const codeAwareSessionSlice = createSlice({
         updateCodeChunks: (state, action: PayloadAction<CodeChunk[]>) => {
             state.codeChunks.push(...action.payload);
         },
+        // 更新代码块的范围
+        updateCodeChunkRange: (state, action: PayloadAction<{codeChunkId: string, range: [number, number]}>) => {
+            const { codeChunkId, range } = action.payload;
+            const chunk = state.codeChunks.find(c => c.id === codeChunkId);
+            if (chunk) {
+                chunk.range = range;
+            }
+        },
         // 设置代码块的禁用状态
         setCodeChunkDisabled: (state, action: PayloadAction<{codeChunkId: string, disabled: boolean}>) => {
             const { codeChunkId, disabled } = action.payload;
@@ -561,6 +577,21 @@ export const codeAwareSessionSlice = createSlice({
                 }
             }
         },
+        // 更新知识卡片标题并清空内容和测试
+        updateKnowledgeCardTitle: (state, action: PayloadAction<{stepId: string, cardId: string, title: string}>) => {
+            const { stepId, cardId, title } = action.payload;
+            const step = state.steps.find(s => s.id === stepId);
+            if (step) {
+                const card = step.knowledgeCards.find(c => c.id === cardId);
+                if (card) {
+                    card.title = title;
+                    // 清空内容和测试，保持其他属性不变
+                    card.content = undefined;
+                    card.tests = undefined;
+                    card.codeContext = undefined;
+                }
+            }
+        },
         // 添加新的代码块（从autocomplete生成）
         addCodeChunkFromCompletion: (state, action: PayloadAction<{
             prefixCode: string;
@@ -633,6 +664,29 @@ export const codeAwareSessionSlice = createSlice({
         // 创建新的mapping
         createCodeAwareMapping: (state, action: PayloadAction<CodeAwareMapping>) => {
             state.codeAwareMappings.push(action.payload);
+        },
+        // 删除指定的mappings
+        removeCodeAwareMappings: (state, action: PayloadAction<{
+            stepId?: string;
+            knowledgeCardId?: string;
+            codeChunkId?: string;
+        }>) => {
+            const { stepId, knowledgeCardId, codeChunkId } = action.payload;
+            state.codeAwareMappings = state.codeAwareMappings.filter(mapping => {
+                // 如果指定了stepId，删除所有包含该stepId的映射
+                if (stepId && mapping.stepId === stepId) {
+                    return false;
+                }
+                // 如果指定了knowledgeCardId，删除所有包含该knowledgeCardId的映射
+                if (knowledgeCardId && mapping.knowledgeCardId === knowledgeCardId) {
+                    return false;
+                }
+                // 如果指定了codeChunkId，删除所有包含该codeChunkId的映射
+                if (codeChunkId && mapping.codeChunkId === codeChunkId) {
+                    return false;
+                }
+                return true;
+            });
         },
         resetSessionExceptRequirement: (state) => {
             // Clear all highlights first
@@ -723,13 +777,16 @@ export const {
     updateHighlight,
     updateRequirementChunks,
     updateCodeChunks,
+    updateCodeChunkRange,
     setCodeChunkDisabled,
     updateCodeAwareMappings,
+    removeCodeAwareMappings,
     setCodeAwareTitle,
     setLearningGoal,
     resetIdeCommFlags,
     setKnowledgeCardLoading,
     updateKnowledgeCardContent,
+    updateKnowledgeCardTitle,
     setKnowledgeCardError,
     setKnowledgeCardDisabled,
     addCodeChunkFromCompletion,
@@ -737,6 +794,7 @@ export const {
     createKnowledgeCard,
     createCodeAwareMapping,
     setStepStatus,
+    setStepTitle,
     setStepGeneratedUntil,
     setKnowledgeCardGenerationStatus,
     setStepAbstract

@@ -65,6 +65,8 @@ export type ToIdeFromWebviewProtocol = ToIdeFromWebviewOrCoreProtocol & {
   syncCodeAwareSteps: [{ currentStep: string; nextStep: string; stepFinished?: boolean }, void];
   //CodeAware: 获取完整的CodeAware上下文
   getCodeAwareContext: [undefined, { userRequirement: string; currentStep: string; nextStep: string; stepFinished: boolean }];
+  //CodeAware: 设置代码编辑模式
+  setCodeEditMode: [{ enabled: boolean }, void];
 };
 
 export type ToWebviewFromIdeProtocol = ToWebviewFromIdeOrCoreProtocol & {
@@ -126,5 +128,9 @@ export type ToWebviewFromIdeProtocol = ToWebviewFromIdeOrCoreProtocol & {
   codeCompletionAccepted: [{
     completionId?: string;
     outcome?: any;
+  }, void];
+  // CodeAware: 代码编辑模式状态变化事件
+  didChangeCodeEditMode: [{
+    enabled: boolean;
   }, void];
 };

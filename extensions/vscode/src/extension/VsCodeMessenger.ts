@@ -19,6 +19,7 @@ import { stripImages } from "core/util/messageContent";
 import { getUriPathBasename } from "core/util/uri";
 import * as vscode from "vscode";
 
+import { CodeEditModeManager } from "../CodeEditModeManager";
 import { VerticalDiffManager } from "../diff/vertical/manager";
 import EditDecorationManager from "../quickEdit/EditDecorationManager";
 import {
@@ -85,7 +86,8 @@ export class VsCodeMessenger {
     private readonly configHandlerPromise: Promise<ConfigHandler>,
     private readonly workOsAuthProvider: WorkOsAuthProvider,
     private readonly editDecorationManager: EditDecorationManager,
-    private readonly highlightCodeManager: HighlightCodeManager
+    private readonly highlightCodeManager: HighlightCodeManager,
+    private readonly codeEditModeManager: CodeEditModeManager
   ) {
     /** WEBVIEW ONLY LISTENERS **/
     this.onWebview("showFile", (msg) => {
@@ -328,6 +330,17 @@ export class VsCodeMessenger {
 
     this.onWebview("clearCodeHighlight", async (msg) => {
       this.highlightCodeManager.clearAllHighlights();
+    });
+
+    // CodeAware: 设置代码编辑模式
+    this.onWebview("setCodeEditMode", async (msg) => {
+      console.log("💡 设置代码编辑模式:", msg.data);
+      this.codeEditModeManager.setCodeEditMode(msg.data.enabled);
+      
+      // 向webview发送状态变化通知
+      await this.webviewProtocol.request("didChangeCodeEditMode", {
+        enabled: msg.data.enabled
+      });
     });
 
     /** PASS THROUGH FROM WEBVIEW TO CORE AND BACK **/

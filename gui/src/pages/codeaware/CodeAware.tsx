@@ -20,6 +20,7 @@ import {
   selectIsStepsGenerated,
   selectLearningGoal, // Add this import
   selectTask,
+  setCodeEditMode, // Add this import for code edit mode action
   setKnowledgeCardDisabled, // Add this import for knowledge card disable
   setStepAbstract, // Add this import for step editing
   setStepStatus, // Add this import for step status change
@@ -177,12 +178,11 @@ export const CodeAware = () => {
   useEffect(() => {
     const syncCodeEditModeToIde = async () => {
       try {
-        // TODO: Add setCodeEditMode to IDE protocol
-        // await ideMessenger?.request("setCodeEditMode", {
-        //   enabled: isCodeEditModeEnabled
-        // });
+        await ideMessenger?.request("setCodeEditMode", {
+          enabled: isCodeEditModeEnabled
+        });
 
-        console.log("📡 [CodeAware] Code edit mode state:", {
+        console.log("📡 [CodeAware] Code edit mode synced to IDE:", {
           isCodeEditModeEnabled
         });
       } catch (error) {
@@ -198,6 +198,16 @@ export const CodeAware = () => {
     "newSession",
     async () => {
       dispatch(newCodeAwareSession());
+    },
+    [dispatch]
+  );
+
+  // Add webview listener for code edit mode changes from IDE
+  useWebviewListener(
+    "didChangeCodeEditMode",
+    async (data: { enabled: boolean }) => {
+      console.log("📡 [CodeAware] Received code edit mode change from IDE:", data);
+      dispatch(setCodeEditMode(data.enabled));
     },
     [dispatch]
   );

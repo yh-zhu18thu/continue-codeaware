@@ -7,18 +7,19 @@ import { Core } from "core/core";
 import { FromCoreProtocol, ToCoreProtocol } from "core/protocol";
 import { InProcessMessenger } from "core/protocol/messenger";
 import {
-  getConfigJsonPath,
-  getConfigTsPath,
-  getConfigYamlPath,
+    getConfigJsonPath,
+    getConfigTsPath,
+    getConfigYamlPath,
 } from "core/util/paths";
 import { v4 as uuidv4 } from "uuid";
 import * as vscode from "vscode";
 
 // import { MetaCompleteProvider } from "../autocomplete/metacomplete";
 import {
-  monitorBatteryChanges,
-  setupStatusBar
+    monitorBatteryChanges,
+    setupStatusBar
 } from "../autocomplete/statusBar";
+import { CodeEditModeManager } from "../CodeEditModeManager";
 import { registerAllCommands } from "../commands";
 import { ContinueGUIWebviewViewProvider } from "../ContinueGUIWebviewViewProvider";
 import { VerticalDiffManager } from "../diff/vertical/manager";
@@ -28,8 +29,8 @@ import EditDecorationManager from "../quickEdit/EditDecorationManager";
 import { QuickEdit } from "../quickEdit/QuickEditQuickPick";
 import { setupRemoteConfigSync } from "../stubs/activation";
 import {
-  getControlPlaneSessionInfo,
-  WorkOsAuthProvider,
+    getControlPlaneSessionInfo,
+    WorkOsAuthProvider,
 } from "../stubs/WorkOsAuthProvider";
 import { Battery } from "../util/battery";
 import { FileSearch } from "../util/FileSearch";
@@ -50,6 +51,7 @@ export class VsCodeExtension {
   private windowId: string;
   private editDecorationManager: EditDecorationManager;
   private highlightCodeManager: HighlightCodeManager;
+  private codeEditModeManager: CodeEditModeManager;
   private verticalDiffManager: VerticalDiffManager;
   webviewProtocolPromise: Promise<VsCodeWebviewProtocol>;
   private core: Core;
@@ -75,6 +77,7 @@ export class VsCodeExtension {
 
     this.editDecorationManager = new EditDecorationManager(context);
     this.highlightCodeManager = new HighlightCodeManager();
+    this.codeEditModeManager = new CodeEditModeManager();
 
     let resolveWebviewProtocol: any = undefined;
     this.webviewProtocolPromise = new Promise<VsCodeWebviewProtocol>(
@@ -134,7 +137,8 @@ export class VsCodeExtension {
       configHandlerPromise,
       this.workOsAuthProvider,
       this.editDecorationManager,
-      this.highlightCodeManager
+      this.highlightCodeManager,
+      this.codeEditModeManager
     );
 
     this.core = new Core(inProcessMessenger, this.ide, async (log: string) => {
@@ -472,5 +476,10 @@ export class VsCodeExtension {
 
   registerCustomContextProvider(contextProvider: IContextProvider) {
     this.configHandler.registerCustomContextProvider(contextProvider);
+  }
+
+  public dispose(): void {
+    // 清理CodeEditModeManager资源
+    this.codeEditModeManager?.dispose();
   }
 }

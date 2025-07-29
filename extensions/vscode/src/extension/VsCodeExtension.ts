@@ -7,17 +7,17 @@ import { Core } from "core/core";
 import { FromCoreProtocol, ToCoreProtocol } from "core/protocol";
 import { InProcessMessenger } from "core/protocol/messenger";
 import {
-  getConfigJsonPath,
-  getConfigTsPath,
-  getConfigYamlPath,
+    getConfigJsonPath,
+    getConfigTsPath,
+    getConfigYamlPath,
 } from "core/util/paths";
 import { v4 as uuidv4 } from "uuid";
 import * as vscode from "vscode";
 
 // import { MetaCompleteProvider } from "../autocomplete/metacomplete";
 import {
-  monitorBatteryChanges,
-  setupStatusBar
+    monitorBatteryChanges,
+    setupStatusBar
 } from "../autocomplete/statusBar";
 import { CodeEditModeManager } from "../CodeEditModeManager";
 import { CodeSelectionHandler } from "../codeSelection/CodeSelectionHandler";
@@ -28,10 +28,9 @@ import { registerAllCodeLensProviders } from "../lang-server/codeLens";
 import { registerAllPromptFilesCompletionProviders } from "../lang-server/promptFileCompletions";
 import EditDecorationManager from "../quickEdit/EditDecorationManager";
 import { QuickEdit } from "../quickEdit/QuickEditQuickPick";
-import { setupRemoteConfigSync } from "../stubs/activation";
 import {
-  getControlPlaneSessionInfo,
-  WorkOsAuthProvider,
+    getControlPlaneSessionInfo,
+    WorkOsAuthProvider,
 } from "../stubs/WorkOsAuthProvider";
 import { Battery } from "../util/battery";
 import { FileSearch } from "../util/FileSearch";
@@ -229,9 +228,10 @@ export class VsCodeExtension {
     );
     resolveVerticalDiffManager?.(this.verticalDiffManager);
 
-    setupRemoteConfigSync(
-      this.configHandler.reloadConfig.bind(this.configHandler),
-    );
+    // CodeAware: 禁用远程配置同步以避免网络请求
+    // setupRemoteConfigSync(
+    //   this.configHandler.reloadConfig.bind(this.configHandler),
+    // );
 
     this.configHandler.loadConfig().then(({ config }) => {
       const { verticalDiffCodeLens } = registerAllCodeLensProviders(

@@ -1,10 +1,8 @@
 import { getContinueRcPath, getTsConfigPath } from "core/util/paths";
-import { Telemetry } from "core/util/posthog";
 import * as vscode from "vscode";
 
 import { VsCodeExtension } from "../extension/VsCodeExtension";
 import registerQuickFixProvider from "../lang-server/codeActions";
-import { getExtensionVersion } from "../util/util";
 
 import { VsCodeContinueApi } from "./api";
 import setupInlineTips from "./InlineTipManager";
@@ -23,13 +21,14 @@ export async function activateExtension(context: vscode.ExtensionContext) {
   // Load Continue configuration
   if (!context.globalState.get("hasBeenInstalled")) {
     context.globalState.update("hasBeenInstalled", true);
-    Telemetry.capture(
-      "install",
-      {
-        extensionVersion: getExtensionVersion(),
-      },
-      true,
-    );
+    // CodeAware: 禁用 Telemetry 数据收集以避免网络请求
+    // Telemetry.capture(
+    //   "install",
+    //   {
+    //     extensionVersion: getExtensionVersion(),
+    //   },
+    //   true,
+    // );
   }
 
   const api = new VsCodeContinueApi(vscodeExtension);

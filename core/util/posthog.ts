@@ -44,6 +44,10 @@ export class Telemetry {
     isExtensionActivationError: boolean = false,
   ) {
     try {
+      // CodeAware: 禁用所有网络请求以避免连接错误
+      console.log(`[Telemetry] Disabled telemetry capture for event: ${event}`, properties);
+      return;
+      
       const augmentedProperties = {
         ...properties,
         os: Telemetry.os,
@@ -95,24 +99,20 @@ export class Telemetry {
   }
 
   static async setup(allow: boolean, uniqueId: string, ideInfo: IdeInfo) {
+    // CodeAware: 禁用所有 Telemetry 功能以避免网络请求
     Telemetry.uniqueId = uniqueId;
     Telemetry.os = os.platform();
     Telemetry.ideInfo = ideInfo;
-
-    if (!allow || process.env.NODE_ENV === "test") {
-      Telemetry.client = undefined;
-    } else if (!Telemetry.client) {
-      Telemetry.client = await Telemetry.getTelemetryClient();
-    }
+    Telemetry.client = undefined; // 强制禁用客户端
+    console.log("[Telemetry] Telemetry disabled in CodeAware mode");
   }
 
   private static featureValueCache: Record<string, any> = {};
 
   static async getFeatureFlag(flag: PosthogFeatureFlag) {
-    const value = Telemetry.client?.getFeatureFlag(flag, Telemetry.uniqueId);
-
-    Telemetry.featureValueCache[flag] = value;
-    return value;
+    // CodeAware: 禁用功能标志请求
+    console.log(`[Telemetry] Disabled feature flag request for: ${flag}`);
+    return undefined;
   }
 
   static async getValueForFeatureFlag(flag: PosthogFeatureFlag) {

@@ -17,18 +17,18 @@ import { getExtensionUri, openEditorAndRevealRange } from "./util/vscode";
 import { VsCodeWebviewProtocol } from "./webviewProtocol";
 
 import type {
-    ContinueRcJson,
-    FileStatsMap,
-    FileType,
-    IDE,
-    IdeInfo,
-    IdeSettings,
-    IndexTag,
-    Location,
-    Problem,
-    RangeInFile,
-    TerminalOptions,
-    Thread,
+  ContinueRcJson,
+  FileStatsMap,
+  FileType,
+  IDE,
+  IdeInfo,
+  IdeSettings,
+  IndexTag,
+  Location,
+  Problem,
+  RangeInFile,
+  TerminalOptions,
+  Thread,
 } from "core";
 
 
@@ -44,6 +44,16 @@ class VsCodeIde implements IDE {
   ) {
     this.ideUtils = new VsCodeIdeUtils();
     this.secretStorage = new SecretStorage(context);
+    
+    // 设置代码编辑模式切换时的自动保存回调
+    if (this.codeEditModeManager) {
+      this.codeEditModeManager.setOnModeChangeCallback(async (enabled: boolean) => {
+        // 当从代码编辑模式切换到webview-only模式时自动保存
+        if (!enabled) {
+          await this.autoSaveCurrentFile();
+        }
+      });
+    }
   }
 
   public updateLastFileSaveTimestamp(): void {
@@ -681,6 +691,29 @@ class VsCodeIde implements IDE {
     return ideSettings;
   }
 
+  // CodeAware: Auto save current active file
+  private async autoSaveCurrentFile(): Promise<void> {
+    try {
+      const activeEditor = vscode.window.activeTextEditor;
+      if (activeEditor && activeEditor.document.isDirty) {
+        await activeEditor.document.save();
+        console.log(`💾 Auto-saved file: ${activeEditor.document.fileName}`);
+        
+        // 更新最后保存时间戳
+        this.updateLastFileSaveTimestamp();
+        
+        // 显示简短的状态信息
+        vscode.window.setStatusBarMessage(
+          `💾 已自动保存: ${activeEditor.document.fileName.split('/').pop()}`, 
+          2000
+        );
+      }
+    } catch (error) {
+      console.error("Auto-save failed:", error);
+      // 不显示错误通知，避免打断用户
+    }
+  }
+
   // CodeAware: Apply diff changes using WorkspaceEdit
   async applyDiffChanges(args: {
     filepath: string;
@@ -735,9 +768,17 @@ class VsCodeIde implements IDE {
       if (success) {
         console.log(`✅ 代码差异已成功应用到文件: ${filepath}`);
         
+        // 自动保存应用了更改的文件
+        try {
+          await this.saveFile(uri.toString());
+          console.log(`💾 Auto-saved after applying diff: ${filepath}`);
+        } catch (saveError) {
+          console.warn("Failed to auto-save after applying diff:", saveError);
+        }
+        
         // 显示成功通知
         vscode.window.showInformationMessage(
-          `代码已更新: ${filepath.split('/').pop()}`,
+          `代码已更新并保存: ${filepath.split('/').pop()}`,
           "查看文件"
         ).then(selection => {
           if (selection === "查看文件") {

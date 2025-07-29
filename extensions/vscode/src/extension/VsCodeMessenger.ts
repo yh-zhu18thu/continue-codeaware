@@ -3,17 +3,17 @@ import { ConfigHandler } from "core/config/ConfigHandler";
 import { getModelByRole } from "core/config/util";
 import { applyCodeBlock } from "core/edit/lazy/applyCodeBlock";
 import {
-    FromCoreProtocol,
-    FromWebviewProtocol,
-    ToCoreProtocol,
+  FromCoreProtocol,
+  FromWebviewProtocol,
+  ToCoreProtocol,
 } from "core/protocol";
 import { ToWebviewFromCoreProtocol } from "core/protocol/coreWebview";
 import { ToIdeFromWebviewOrCoreProtocol } from "core/protocol/ide";
 import { ToIdeFromCoreProtocol } from "core/protocol/ideCore";
 import { InProcessMessenger, Message } from "core/protocol/messenger";
 import {
-    CORE_TO_WEBVIEW_PASS_THROUGH,
-    WEBVIEW_TO_CORE_PASS_THROUGH,
+  CORE_TO_WEBVIEW_PASS_THROUGH,
+  WEBVIEW_TO_CORE_PASS_THROUGH,
 } from "core/protocol/passThrough";
 import { stripImages } from "core/util/messageContent";
 import { getUriPathBasename } from "core/util/uri";
@@ -23,8 +23,8 @@ import { CodeEditModeManager } from "../CodeEditModeManager";
 import { VerticalDiffManager } from "../diff/vertical/manager";
 import EditDecorationManager from "../quickEdit/EditDecorationManager";
 import {
-    getControlPlaneSessionInfo,
-    WorkOsAuthProvider,
+  getControlPlaneSessionInfo,
+  WorkOsAuthProvider,
 } from "../stubs/WorkOsAuthProvider";
 import { showTutorial } from "../util/tutorial";
 import { getExtensionUri } from "../util/vscode";
@@ -335,7 +335,7 @@ export class VsCodeMessenger {
     // CodeAware: 设置代码编辑模式
     this.onWebview("setCodeEditMode", async (msg) => {
       console.log("💡 设置代码编辑模式:", msg.data);
-      this.codeEditModeManager.setCodeEditMode(msg.data.enabled);
+      await this.codeEditModeManager.setCodeEditMode(msg.data.enabled);
       
       // 向webview发送状态变化通知
       await this.webviewProtocol.request("didChangeCodeEditMode", {

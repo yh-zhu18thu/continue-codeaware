@@ -11,17 +11,37 @@ export class CodeEditModeManager {
   private documentSnapshots: Map<vscode.TextDocument, string> = new Map();
   private preventionActive: boolean = false;
   private programmaticUpdateInProgress: boolean = false;
+  private onModeChangeCallback?: (enabled: boolean) => Promise<void>;
 
   constructor() {
     this.setupEventListeners();
   }
 
   /**
+   * 设置模式切换回调函数
+   * @param callback 当模式切换时调用的回调函数
+   */
+  public setOnModeChangeCallback(callback: (enabled: boolean) => Promise<void>): void {
+    this.onModeChangeCallback = callback;
+  }
+
+  /**
    * 设置代码编辑模式
    * @param enabled true: 代码编辑模式（允许编辑），false: webview-only模式（禁止编辑）
    */
-  public setCodeEditMode(enabled: boolean): void {
+  public async setCodeEditMode(enabled: boolean): Promise<void> {
+    const wasEnabled = this.isCodeEditModeEnabled;
     this.isCodeEditModeEnabled = enabled;
+    
+    // 如果从代码编辑模式切换到webview-only模式，先自动保存
+    if (wasEnabled && !enabled && this.onModeChangeCallback) {
+      try {
+        await this.onModeChangeCallback(enabled);
+        console.log("💾 Auto-saved before switching to webview-only mode");
+      } catch (error) {
+        console.error("Failed to auto-save before mode switch:", error);
+      }
+    }
     
     if (enabled) {
       this.enableCodeEditing();

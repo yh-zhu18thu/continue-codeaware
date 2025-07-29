@@ -319,6 +319,12 @@
         "group": "Continue"
       },
       {
+        "command": "continue.askCodeAware",
+        "category": "Continue",
+        "title": "向 CodeAware 提问",
+        "group": "Continue"
+      },
+      {
         "command": "continue.focusContinueSessionId",
         "category": "Continue",
         "title": "Focus Continue Chat",
@@ -456,6 +462,11 @@
       "continue.continueSubMenu": [
         {
           "command": "continue.focusContinueInputWithoutClear",
+          "group": "Continue",
+          "when": "editorHasSelection"
+        },
+        {
+          "command": "continue.askCodeAware",
           "group": "Continue",
           "when": "editorHasSelection"
         },

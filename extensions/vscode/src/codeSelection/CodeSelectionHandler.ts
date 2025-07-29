@@ -4,91 +4,33 @@ import { VsCodeWebviewProtocol } from "../webviewProtocol";
 
 export class CodeSelectionHandler {
   private disposables: vscode.Disposable[] = [];
-  private currentQuickPick: vscode.QuickPick<vscode.QuickPickItem> | undefined;
-  private selectionTimeout: NodeJS.Timeout | undefined;
 
   constructor(
     private webviewProtocol: VsCodeWebviewProtocol,
     context: vscode.ExtensionContext
   ) {
-    this.setupSelectionListener();
+    // 注册命令处理器
+    this.registerCommands(context);
     context.subscriptions.push(this);
   }
 
-  private setupSelectionListener() {
-    const disposable = vscode.window.onDidChangeTextEditorSelection(
-      this.handleSelectionChange.bind(this)
+  private registerCommands(context: vscode.ExtensionContext) {
+    // 注册 CodeAware 提问命令
+    const askCodeAwareCommand = vscode.commands.registerCommand(
+      "continue.askCodeAware",
+      async (uri: vscode.Uri, range: vscode.Range, selectedText: string) => {
+        const editor = vscode.window.activeTextEditor;
+        if (!editor || editor.document.uri.toString() !== uri.toString()) {
+          vscode.window.showErrorMessage("无法找到对应的编辑器");
+          return;
+        }
+
+        const selection = new vscode.Selection(range.start, range.end);
+        await this.handleCodeAwareQuestion(editor, selection, selectedText);
+      }
     );
-    this.disposables.push(disposable);
-  }
 
-  private handleSelectionChange(event: vscode.TextEditorSelectionChangeEvent) {
-    // 清除之前的定时器
-    if (this.selectionTimeout) {
-      clearTimeout(this.selectionTimeout);
-    }
-
-    // 关闭之前的QuickPick
-    if (this.currentQuickPick) {
-      this.currentQuickPick.dispose();
-      this.currentQuickPick = undefined;
-    }
-
-    const editor = event.textEditor;
-    const selection = event.selections[0];
-
-    // 只处理有选中内容的情况
-    if (selection.isEmpty || editor.document.uri.scheme !== 'file') {
-      return;
-    }
-
-    // 防抖处理，避免频繁触发
-    this.selectionTimeout = setTimeout(() => {
-      this.showCodeAwareQuickPick(editor, selection);
-    }, 500); // 500ms 防抖
-  }
-
-  private showCodeAwareQuickPick(
-    editor: vscode.TextEditor, 
-    selection: vscode.Selection
-  ) {
-    const selectedText = editor.document.getText(selection);
-    
-    // 如果选中的文本太短，不显示QuickPick
-    if (selectedText.trim().length < 10) {
-      return;
-    }
-
-    const quickPick = vscode.window.createQuickPick();
-    quickPick.title = "CodeAware Actions";
-    quickPick.placeholder = "选择一个动作...";
-    
-    quickPick.items = [
-      {
-        label: "$(question) 向 CodeAware 提问",
-        description: "基于选中的代码向 CodeAware 提问",
-        detail: `选中代码: ${selectedText.substring(0, 50)}${selectedText.length > 50 ? '...' : ''}`
-      },
-      {
-        label: "$(close) 取消",
-        description: "取消操作"
-      }
-    ];
-
-    quickPick.onDidChangeSelection(items => {
-      if (items[0]?.label.includes("提问")) {
-        this.handleCodeAwareQuestion(editor, selection, selectedText);
-      }
-      quickPick.dispose();
-    });
-
-    quickPick.onDidHide(() => {
-      quickPick.dispose();
-      this.currentQuickPick = undefined;
-    });
-
-    this.currentQuickPick = quickPick;
-    quickPick.show();
+    this.disposables.push(askCodeAwareCommand);
   }
 
   private async handleCodeAwareQuestion(
@@ -144,12 +86,6 @@ export class CodeSelectionHandler {
   }
 
   dispose() {
-    if (this.selectionTimeout) {
-      clearTimeout(this.selectionTimeout);
-    }
-    if (this.currentQuickPick) {
-      this.currentQuickPick.dispose();
-    }
     this.disposables.forEach(d => d.dispose());
   }
 }

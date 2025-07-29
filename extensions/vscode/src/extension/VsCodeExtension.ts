@@ -7,18 +7,19 @@ import { Core } from "core/core";
 import { FromCoreProtocol, ToCoreProtocol } from "core/protocol";
 import { InProcessMessenger } from "core/protocol/messenger";
 import {
-    getConfigJsonPath,
-    getConfigTsPath,
-    getConfigYamlPath,
+  getConfigJsonPath,
+  getConfigTsPath,
+  getConfigYamlPath,
 } from "core/util/paths";
 import { v4 as uuidv4 } from "uuid";
 import * as vscode from "vscode";
 
 // import { MetaCompleteProvider } from "../autocomplete/metacomplete";
 import {
-    monitorBatteryChanges,
-    setupStatusBar
+  monitorBatteryChanges,
+  setupStatusBar
 } from "../autocomplete/statusBar";
+import { CodeAwareActionProvider } from "../codeActions/CodeAwareActionProvider";
 import { CodeEditModeManager } from "../CodeEditModeManager";
 import { CodeSelectionHandler } from "../codeSelection/CodeSelectionHandler";
 import { registerAllCommands } from "../commands";
@@ -29,8 +30,8 @@ import { registerAllPromptFilesCompletionProviders } from "../lang-server/prompt
 import EditDecorationManager from "../quickEdit/EditDecorationManager";
 import { QuickEdit } from "../quickEdit/QuickEditQuickPick";
 import {
-    getControlPlaneSessionInfo,
-    WorkOsAuthProvider,
+  getControlPlaneSessionInfo,
+  WorkOsAuthProvider,
 } from "../stubs/WorkOsAuthProvider";
 import { Battery } from "../util/battery";
 import { FileSearch } from "../util/FileSearch";
@@ -124,6 +125,15 @@ export class VsCodeExtension {
     this.codeSelectionHandler = new CodeSelectionHandler(
       this.sidebar.webviewProtocol,
       context
+    );
+
+    // Register CodeAware Code Action Provider
+    const codeAwareActionProvider = new CodeAwareActionProvider(this.sidebar.webviewProtocol);
+    context.subscriptions.push(
+      vscode.languages.registerCodeActionsProvider(
+        "*", // 支持所有语言
+        codeAwareActionProvider
+      )
     );
 
     // CodeAware: 监听代码选择变化

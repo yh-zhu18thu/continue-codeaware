@@ -10,6 +10,7 @@ export class CodeEditModeManager {
   private lastActiveEditor: vscode.TextEditor | undefined;
   private documentSnapshots: Map<vscode.TextDocument, string> = new Map();
   private preventionActive: boolean = false;
+  private programmaticUpdateInProgress: boolean = false;
 
   constructor() {
     this.setupEventListeners();
@@ -39,6 +40,30 @@ export class CodeEditModeManager {
   }
 
   /**
+   * 允许程序化更新，临时禁用拦截
+   */
+  public allowProgrammaticUpdate(): void {
+    this.programmaticUpdateInProgress = true;
+    console.log("🔄 CodeEditModeManager: Programmatic update started");
+  }
+
+  /**
+   * 结束程序化更新，重新启用拦截
+   */
+  public endProgrammaticUpdate(): void {
+    this.programmaticUpdateInProgress = false;
+    
+    // 更新所有文档的快照以反映程序化更新后的状态
+    if (!this.isCodeEditModeEnabled) {
+      vscode.window.visibleTextEditors.forEach(editor => {
+        this.captureDocumentSnapshot(editor.document);
+      });
+    }
+    
+    console.log("✅ CodeEditModeManager: Programmatic update ended, snapshots updated");
+  }
+
+  /**
    * 设置事件监听器
    */
   private setupEventListeners(): void {
@@ -56,7 +81,7 @@ export class CodeEditModeManager {
     // 监听文档变化并阻止编辑
     this.disposables.push(
       vscode.workspace.onDidChangeTextDocument((event) => {
-        if (!this.isCodeEditModeEnabled && !this.preventionActive) {
+        if (!this.isCodeEditModeEnabled && !this.preventionActive && !this.programmaticUpdateInProgress) {
           this.handleDocumentChange(event);
         }
       })
@@ -126,14 +151,22 @@ export class CodeEditModeManager {
     const document = event.document;
     const originalContent = this.documentSnapshots.get(document);
     
+    console.log(`📝 CodeEditModeManager: Document change detected in ${document.fileName}`);
+    console.log(`   - isCodeEditModeEnabled: ${this.isCodeEditModeEnabled}`);
+    console.log(`   - preventionActive: ${this.preventionActive}`);
+    console.log(`   - programmaticUpdateInProgress: ${this.programmaticUpdateInProgress}`);
+    
     if (!originalContent) {
       // 如果没有快照，立即捕获当前内容作为基准
+      console.log("📸 Capturing new document snapshot");
       this.captureDocumentSnapshot(document);
       return;
     }
 
     // 检查是否有实际的内容变化
     if (event.contentChanges.length > 0) {
+      console.log(`🚫 Blocking user edit in webview-only mode`);
+      
       // 设置防止递归标志
       this.preventionActive = true;
       

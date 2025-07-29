@@ -9,6 +9,7 @@ import * as URI from "uri-js";
 import * as vscode from "vscode";
 
 import { executeGotoProvider } from "./autocomplete/lsp";
+import { CodeEditModeManager } from "./CodeEditModeManager";
 import { Repository } from "./otherExtensions/git";
 import { SecretStorage } from "./stubs/SecretStorage";
 import { VsCodeIdeUtils } from "./util/ideUtils";
@@ -16,18 +17,18 @@ import { getExtensionUri, openEditorAndRevealRange } from "./util/vscode";
 import { VsCodeWebviewProtocol } from "./webviewProtocol";
 
 import type {
-  ContinueRcJson,
-  FileStatsMap,
-  FileType,
-  IDE,
-  IdeInfo,
-  IdeSettings,
-  IndexTag,
-  Location,
-  Problem,
-  RangeInFile,
-  TerminalOptions,
-  Thread,
+    ContinueRcJson,
+    FileStatsMap,
+    FileType,
+    IDE,
+    IdeInfo,
+    IdeSettings,
+    IndexTag,
+    Location,
+    Problem,
+    RangeInFile,
+    TerminalOptions,
+    Thread,
 } from "core";
 
 
@@ -39,6 +40,7 @@ class VsCodeIde implements IDE {
   constructor(
     private readonly vscodeWebviewProtocolPromise: Promise<VsCodeWebviewProtocol>,
     private readonly context: vscode.ExtensionContext,
+    private readonly codeEditModeManager?: CodeEditModeManager,
   ) {
     this.ideUtils = new VsCodeIdeUtils();
     this.secretStorage = new SecretStorage(context);
@@ -689,63 +691,51 @@ class VsCodeIde implements IDE {
     
     try {
       console.log("apply! diff changes!");
-      // Import diff library with proper typing
-      // @ts-ignore - diff library provides its own types but TypeScript doesn't detect them
-      const diff = await import('diff');
       
-      // Calculate diff
-      const changes = diff.diffLines(oldCode, newCode);
+      // 标记开始程序化更新，防止CodeEditModeManager拦截
+      if (this.codeEditModeManager) {
+        this.codeEditModeManager.allowProgrammaticUpdate();
+      }
       
-      // Create WorkspaceEdit
-      const edit = new vscode.WorkspaceEdit();
-      const uri = vscode.Uri.file(filepath); // 使用 Uri.file() 从绝对路径创建 URI
-      
-      let lineNumber = 0;
-      const edits: vscode.TextEdit[] = [];
-      
-      // Process each change
-      changes.forEach((change: any) => {
-        if (change.removed) {
-          // Delete operation
-          const lines = change.value.split('\n');
-          const linesCount = lines.length - 1; // Last element is empty after split
-          
-          const startPos = new vscode.Position(lineNumber, 0);
-          const endPos = new vscode.Position(lineNumber + linesCount, 0);
-          
-          edits.push(vscode.TextEdit.delete(new vscode.Range(startPos, endPos)));
-          
-          // Don't increment lineNumber for deleted lines
-        } else if (change.added) {
-          // Insert operation
-          const insertPos = new vscode.Position(lineNumber, 0);
-          edits.push(vscode.TextEdit.insert(insertPos, change.value));
-          
-          // Increment line number for added lines
-          const lines = change.value.split('\n');
-          lineNumber += lines.length - 1;
-        } else {
-          // Unchanged lines
-          const lines = change.value.split('\n');
-          lineNumber += lines.length - 1;
-        }
-      });
-
-      if (edits.length === 0) {
-        console.log("No changes to apply.");
+      // 如果新旧代码相同，直接返回
+      if (oldCode === newCode) {
+        console.log("No changes to apply - old and new code are identical.");
         return;
       }
       
-      // Apply all edits at once
-      edit.set(uri, edits);
+      // 创建 URI
+      const uri = vscode.Uri.file(filepath);
       
-      // Apply the edit
+      // 打开文档
+      const document = await vscode.workspace.openTextDocument(uri);
+      
+      // 验证当前文档内容是否与oldCode匹配
+      const currentContent = document.getText();
+      if (currentContent !== oldCode) {
+        console.warn("⚠️ Current file content differs from expected oldCode");
+        console.log("Current content length:", currentContent.length);
+        console.log("Expected oldCode length:", oldCode.length);
+        
+        // 仍然尝试应用，但使用当前内容作为基础
+      }
+      
+      // 创建一个简单的替换编辑
+      const edit = new vscode.WorkspaceEdit();
+      const fullRange = new vscode.Range(
+        document.positionAt(0),
+        document.positionAt(document.getText().length)
+      );
+      
+      // 替换整个文档内容
+      edit.replace(uri, fullRange, newCode);
+      
+      // 应用编辑
       const success = await vscode.workspace.applyEdit(edit);
       
       if (success) {
         console.log(`✅ 代码差异已成功应用到文件: ${filepath}`);
         
-        // Show success notification
+        // 显示成功通知
         vscode.window.showInformationMessage(
           `代码已更新: ${filepath.split('/').pop()}`,
           "查看文件"
@@ -763,12 +753,17 @@ class VsCodeIde implements IDE {
     } catch (error) {
       console.error("应用代码差异失败:", error);
       
-      // Show error notification
+      // 显示错误通知
       vscode.window.showErrorMessage(
         `代码更新失败: ${error instanceof Error ? error.message : String(error)}`
       );
       
       throw error;
+    } finally {
+      // 确保在任何情况下都结束程序化更新标记
+      if (this.codeEditModeManager) {
+        this.codeEditModeManager.endProgrammaticUpdate();
+      }
     }
   }
 }

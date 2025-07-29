@@ -1,5 +1,6 @@
-# Import pandas to work with dataframes
 import pandas as pd
 
-# Read a dataset containing labeled spam and non-spam emails from a .csv file
-data = pd.read_csv('src/spam.csv')
+# Step 1: Load a table containing spam and non-spam labels
+# Ensure the table is successfully loaded using pandas. The table should include a column that labels each email as spam or not.
+data = pd.read_csv('emails.csv')  # Reads in the table from the given file path
+print(data.head())  # Display the first few rows of the data

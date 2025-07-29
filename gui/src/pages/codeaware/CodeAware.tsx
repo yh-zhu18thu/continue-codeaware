@@ -24,6 +24,7 @@ import {
   selectTask,
   setCodeEditMode, // Add this import for code edit mode action
   setKnowledgeCardDisabled, // Add this import for knowledge card disable
+  setKnowledgeCardGenerationStatus, // Add this import for knowledge card generation status
   setStepAbstract, // Add this import for step editing
   setStepStatus, // Add this import for step status change
   setUserRequirementStatus,
@@ -45,6 +46,68 @@ import CodeEditModeToggle from "./components/CodeEditModeToggle"; // Import the 
 import RequirementDisplay from "./components/Requirements/RequirementDisplay"; // Import RequirementDisplay
 import RequirementEditor from "./components/Requirements/RequirementEditor"; // Import RequirementEditor
 import Step from "./components/Steps/Step"; // Import Step
+
+// Helper function to find the most relevant step for a given code selection
+const findMostRelevantStepForSelection = (
+  filePath: string,
+  selectedLines: [number, number],
+  allMappings: any[],
+  codeChunks: any[],
+  steps: any[]
+): string | null => {
+  // Find code chunks that overlap with the selected range
+  const overlappingChunks = codeChunks.filter(chunk => {
+    if (chunk.filePath !== filePath || chunk.disabled) {
+      return false;
+    }
+    
+    // Check if the chunk's range overlaps with the selected range
+    const [chunkStart, chunkEnd] = chunk.range;
+    const [selectionStart, selectionEnd] = selectedLines;
+    
+    // There's an overlap if selection start is before chunk end AND selection end is after chunk start
+    return selectionStart <= chunkEnd && selectionEnd >= chunkStart;
+  });
+  
+  if (overlappingChunks.length === 0) {
+    return null;
+  }
+  
+  // Find mappings for these overlapping chunks
+  const relevantMappings = allMappings.filter(mapping => 
+    overlappingChunks.some(chunk => chunk.id === mapping.codeChunkId)
+  );
+  
+  if (relevantMappings.length === 0) {
+    return null;
+  }
+  
+  // Count occurrences of each step in the mappings
+  const stepCounts: Record<string, number> = {};
+  relevantMappings.forEach(mapping => {
+    if (mapping.stepId) {
+      stepCounts[mapping.stepId] = (stepCounts[mapping.stepId] || 0) + 1;
+    }
+  });
+  
+  // Find the step with the most mappings (most relevant)
+  let mostRelevantStepId: string | null = null;
+  let maxCount = 0;
+  
+  for (const [stepId, count] of Object.entries(stepCounts)) {
+    if (count > maxCount) {
+      maxCount = count;
+      mostRelevantStepId = stepId;
+    }
+  }
+  
+  // Verify the step still exists
+  if (mostRelevantStepId && steps.some(step => step.id === mostRelevantStepId)) {
+    return mostRelevantStepId;
+  }
+  
+  return null;
+};
 
 // 全局样式：
 const CodeAwareDiv = styled.div`
@@ -392,6 +455,23 @@ export const CodeAware = () => {
   }>({
     matchedCodeChunks: []
   });
+
+  // Track steps that should be force expanded due to code selection questions
+  const [forceExpandedSteps, setForceExpandedSteps] = useState<Set<string>>(new Set());
+
+  // Effect to remove steps from forceExpandedSteps when their status changes from generating to checked
+  useEffect(() => {
+    steps.forEach(step => {
+      if (forceExpandedSteps.has(step.id) && step.knowledgeCardGenerationStatus === "checked") {
+        setForceExpandedSteps(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(step.id);
+          return newSet;
+        });
+        console.log(`🔄 [CodeAware] Removed step ${step.id} from force expanded list as status is now checked`);
+      }
+    });
+  }, [steps, forceExpandedSteps]);
 
   // 获取当前 CodeChunks 用于调试
   const codeChunks = useAppSelector((state) => state.codeAwareSession.codeChunks);
@@ -780,7 +860,7 @@ export const CodeAware = () => {
     dispatch(setStepStatus({ stepId, status: newStatus }));
   }, [dispatch]);
 
-  const handleQuestionSubmit = useCallback((stepId: string, selectedText: string, question: string) => {
+  const handleQuestionSubmit = useCallback(async (stepId: string, selectedText: string, question: string) => {
     console.log('处理步骤问题提交:', { stepId, selectedText, question });
     
     // 通过stepId查找对应的步骤信息
@@ -796,24 +876,123 @@ export const CodeAware = () => {
     // 获取学习目标和任务描述
     const taskDescription = task?.requirementDescription || '';
 
-    // 调用新的 thunk 来生成知识卡片主题
-    dispatch(generateKnowledgeCardThemesFromQuery({
-      stepId,
-      queryContext: {
-        selectedCode: '', // 可以后续扩展从IDE获取选中的代码
-        selectedText: selectedText || '',
-        query: question
-      },
-      currentStep: {
-        title: step.title,
-        abstract: step.abstract
-      },
-      existingThemes,
-      learningGoal: learningGoal || '',
-      task: taskDescription
-    }));
+    try {
+      // 调用新的 thunk 来生成知识卡片主题
+      const result = await dispatch(generateKnowledgeCardThemesFromQuery({
+        stepId,
+        queryContext: {
+          selectedCode: '', // 可以后续扩展从IDE获取选中的代码
+          selectedText: selectedText || '',
+          query: question
+        },
+        currentStep: {
+          title: step.title,
+          abstract: step.abstract
+        },
+        existingThemes,
+        learningGoal: learningGoal || '',
+        task: taskDescription
+      }));
+
+      // 如果生成成功，设置状态为checked
+      if (generateKnowledgeCardThemesFromQuery.fulfilled.match(result)) {
+        dispatch(setKnowledgeCardGenerationStatus({ 
+          stepId, 
+          status: "checked" 
+        }));
+        console.log("✅ Knowledge card themes generated successfully, status set to checked");
+      } else if (generateKnowledgeCardThemesFromQuery.rejected.match(result)) {
+        console.error("❌ Failed to generate knowledge card themes:", result.error.message);
+        // 如果生成失败，保持generating状态或设置为empty
+        dispatch(setKnowledgeCardGenerationStatus({ 
+          stepId, 
+          status: "empty" 
+        }));
+      }
+    } catch (error) {
+      console.error("❌ Error in handleQuestionSubmit:", error);
+      dispatch(setKnowledgeCardGenerationStatus({ 
+        stepId, 
+        status: "empty" 
+      }));
+    }
 
   }, [steps, learningGoal, task, dispatch]);
+
+  // Add webview listener for questions from code selection
+  useWebviewListener(
+    "codeAwareQuestionFromSelection",
+    async (data: {
+      selectedCode: string;
+      selectedText: string;
+      question: string;
+      filePath: string;
+      selectedLines: [number, number];
+      contextInfo: {
+        fileName: string;
+        language: string;
+      };
+    }) => {
+      console.log("📝 [CodeAware] Received question from code selection:", data);
+      
+      try {
+        // 检查是否有活跃的步骤，如果没有则提示用户
+        if (steps.length === 0) {
+          ideMessenger?.post("showToast", [
+            "warning", 
+            "请先在 CodeAware 中设置项目需求，然后生成步骤。"
+          ]);
+          return;
+        }
+        
+        // 根据选中范围和mapping找到最直接对应的step
+        const targetStepId = findMostRelevantStepForSelection(
+          data.filePath,
+          data.selectedLines,
+          allMappings,
+          codeChunks,
+          steps
+        );
+        
+        let stepIdToUse: string;
+        if (!targetStepId) {
+          // 如果没有找到直接对应的step，使用最后一个步骤
+          const lastStep = steps[steps.length - 1];
+          stepIdToUse = lastStep.id;
+          console.log("🔍 [CodeAware] No direct mapping found, using last step:", stepIdToUse);
+        } else {
+          stepIdToUse = targetStepId;
+          console.log("🎯 [CodeAware] Found most relevant step:", stepIdToUse);
+        }
+        
+        // 设置知识卡片生成状态为generating
+        dispatch(setKnowledgeCardGenerationStatus({ 
+          stepId: stepIdToUse, 
+          status: "generating" 
+        }));
+        
+        // 强制展开该步骤
+        setForceExpandedSteps(prev => new Set(prev).add(stepIdToUse));
+        
+        // 提交问题生成知识卡片
+        handleQuestionSubmit(stepIdToUse, data.selectedText, data.question);
+        
+        // 显示成功提示
+        ideMessenger?.post("showToast", [
+          "info", 
+          `问题已添加到相关步骤中，正在生成知识卡片...`
+        ]);
+        
+      } catch (error) {
+        console.error("❌ [CodeAware] Failed to process question from selection:", error);
+        ideMessenger?.post("showToast", [
+          "error", 
+          "处理问题时发生错误，请重试。"
+        ]);
+      }
+    },
+    [steps, allMappings, codeChunks, handleQuestionSubmit, ideMessenger, dispatch, setForceExpandedSteps]
+  );
 
   // Add keyboard event listener for Escape key to clear highlights
   useEffect(() => {
@@ -1003,6 +1182,7 @@ export const CodeAware = () => {
               stepId={step.id}
               stepStatus={step.stepStatus}
               knowledgeCardGenerationStatus={step.knowledgeCardGenerationStatus} // Pass knowledge card generation status
+              forceExpanded={forceExpandedSteps.has(step.id) && step.knowledgeCardGenerationStatus === "generating"} // Force expand only when generating
               onHighlightEvent={handleHighlightEvent}
               onClearHighlight={removeHighlightEvent} // Pass the clear highlight function
               onExecuteUntilStep={executeUntilStep} // Pass execute until step function

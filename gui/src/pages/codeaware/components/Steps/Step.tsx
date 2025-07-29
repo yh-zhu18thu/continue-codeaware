@@ -95,6 +95,7 @@ interface StepProps {
   knowledgeCards: KnowledgeCardProps[];
   isActive?: boolean;
   defaultExpanded?: boolean;
+  forceExpanded?: boolean; // Force expand the step (overrides defaultExpanded)
   isHighlighted?: boolean;
   stepId?: string;
   stepStatus?: StepStatus; // Use StepStatus type from core
@@ -117,6 +118,7 @@ const Step: React.FC<StepProps> = ({
   knowledgeCards,
   isActive = false,
   defaultExpanded = false, // Changed to false for collapsed by default
+  forceExpanded = false, // Force expand parameter
   isHighlighted = false,
   stepId,
   stepStatus = "confirmed", // Default to confirmed for backward compatibility
@@ -132,7 +134,7 @@ const Step: React.FC<StepProps> = ({
   onQuestionSubmit,
   disabled = false,
 }) => {
-  const [isExpanded, setIsExpanded] = useState(defaultExpanded);
+  const [isExpanded, setIsExpanded] = useState(forceExpanded || defaultExpanded);
   const [isFlickering, setIsFlickering] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [shouldKeepHighlighted, setShouldKeepHighlighted] = useState(false);
@@ -150,6 +152,15 @@ const Step: React.FC<StepProps> = ({
   const handleMouseLeave = () => {
     setIsHovered(false);
   };
+
+  // Handle forceExpanded changes - only expand when forceExpanded becomes true
+  useEffect(() => {
+    if (forceExpanded && !isExpanded) {
+      setIsExpanded(true);
+    }
+    // Note: We don't force collapse when forceExpanded becomes false
+    // This allows users to manually control the step after force expansion ends
+  }, [forceExpanded, isExpanded]);
 
   // Handle flickering effect when isHighlighted becomes true
   useEffect(() => {
@@ -240,9 +251,11 @@ const Step: React.FC<StepProps> = ({
 
     // Trigger knowledge card theme generation when expanding for the first time 
     // and knowledge card generation status is "empty"
+    // BUT NOT when the expansion is forced (e.g., from code selection question)
     if (willBeExpanded && !wasExpanded && 
         knowledgeCardGenerationStatus === "empty" && 
         knowledgeCards.length === 0 &&
+        !forceExpanded && // Don't auto-generate when force expanded
         stepId && onGenerateKnowledgeCardThemes) {
       // Use setTimeout to ensure UI update happens first
       setTimeout(() => {

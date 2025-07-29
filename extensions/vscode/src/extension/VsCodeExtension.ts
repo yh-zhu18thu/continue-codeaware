@@ -7,19 +7,20 @@ import { Core } from "core/core";
 import { FromCoreProtocol, ToCoreProtocol } from "core/protocol";
 import { InProcessMessenger } from "core/protocol/messenger";
 import {
-    getConfigJsonPath,
-    getConfigTsPath,
-    getConfigYamlPath,
+  getConfigJsonPath,
+  getConfigTsPath,
+  getConfigYamlPath,
 } from "core/util/paths";
 import { v4 as uuidv4 } from "uuid";
 import * as vscode from "vscode";
 
 // import { MetaCompleteProvider } from "../autocomplete/metacomplete";
 import {
-    monitorBatteryChanges,
-    setupStatusBar
+  monitorBatteryChanges,
+  setupStatusBar
 } from "../autocomplete/statusBar";
 import { CodeEditModeManager } from "../CodeEditModeManager";
+import { CodeSelectionHandler } from "../codeSelection/CodeSelectionHandler";
 import { registerAllCommands } from "../commands";
 import { ContinueGUIWebviewViewProvider } from "../ContinueGUIWebviewViewProvider";
 import { VerticalDiffManager } from "../diff/vertical/manager";
@@ -29,8 +30,8 @@ import EditDecorationManager from "../quickEdit/EditDecorationManager";
 import { QuickEdit } from "../quickEdit/QuickEditQuickPick";
 import { setupRemoteConfigSync } from "../stubs/activation";
 import {
-    getControlPlaneSessionInfo,
-    WorkOsAuthProvider,
+  getControlPlaneSessionInfo,
+  WorkOsAuthProvider,
 } from "../stubs/WorkOsAuthProvider";
 import { Battery } from "../util/battery";
 import { FileSearch } from "../util/FileSearch";
@@ -58,12 +59,13 @@ export class VsCodeExtension {
   private battery: Battery;
   private workOsAuthProvider: WorkOsAuthProvider;
   private fileSearch: FileSearch;
+  private codeSelectionHandler: CodeSelectionHandler;
   // private metacompleteProvider: MetaCompleteProvider;
-
-  // CodeAware: 添加防抖相关属性
+  
+  // CodeAware: 代码选择监听相关属性
   private lastSelectionData: {
     filePath: string;
-    selectedLines: number[];
+    selectedLines: [number, number];
     selectedContent: string;
   } | null = null;
   private selectionDebounceTimer: NodeJS.Timeout | null = null;
@@ -85,7 +87,7 @@ export class VsCodeExtension {
         resolveWebviewProtocol = resolve;
       },
     );
-    this.ide = new VsCodeIde(this.webviewProtocolPromise, context);
+    this.ide = new VsCodeIde(this.webviewProtocolPromise, context, this.codeEditModeManager);
 
     this.extensionContext = context;
     this.windowId = uuidv4();
@@ -119,6 +121,72 @@ export class VsCodeExtension {
     );
     resolveWebviewProtocol(this.sidebar.webviewProtocol);
 
+    // Initialize CodeSelectionHandler after webviewProtocol is ready
+    this.codeSelectionHandler = new CodeSelectionHandler(
+      this.sidebar.webviewProtocol,
+      context
+    );
+
+    // CodeAware: 监听代码选择变化
+    vscode.window.onDidChangeTextEditorSelection(async (event) => {
+      const editor = event.textEditor;
+      const document = editor.document;
+      
+      // 确保这是一个有效的文本文档
+      if (document.uri.scheme !== 'file') {
+        return;
+      }
+
+      const selection = event.selections[0]; // 取第一个选择区域
+
+      // 只处理有选中内容的情况
+      if (!selection.isEmpty) {
+        const startLine = selection.start.line + 1;
+        const endLine = selection.end.line + 1;
+        const selectedContent = document.getText(selection);
+
+        const currentSelectionData = {
+          filePath: document.uri.fsPath,
+          selectedLines: [startLine, endLine] as [number, number],
+          selectedContent,
+        };
+
+        // 检查是否与上次选择相同
+        if (this.isSameSelection(currentSelectionData, this.lastSelectionData)) {
+          return;
+        }
+
+        // 清除之前的定时器
+        if (this.selectionDebounceTimer) {
+          clearTimeout(this.selectionDebounceTimer);
+        }
+
+        // 设置新的防抖定时器
+        this.selectionDebounceTimer = setTimeout(async () => {
+          this.lastSelectionData = currentSelectionData;
+          const webviewProtocol = await this.webviewProtocolPromise;
+          void webviewProtocol.request("codeSelectionChanged", currentSelectionData);
+        }, 300); // 300ms 防抖延迟，适合多行选择场景
+      } else {
+        // 如果没有选中内容且之前有选择，发送取消选择事件
+        if (this.lastSelectionData) {
+          // 清除防抖定时器
+          if (this.selectionDebounceTimer) {
+            clearTimeout(this.selectionDebounceTimer);
+            this.selectionDebounceTimer = null;
+          }
+          
+          // 发送取消选择事件
+          const webviewProtocol = await this.webviewProtocolPromise;
+          void webviewProtocol.request("codeSelectionCleared", {
+            filePath: document.uri.fsPath
+          });
+          
+          // 清除上次选择数据
+          this.lastSelectionData = null;
+        }
+      }
+    });
 
     // Config Handler with output channel
     const outputChannel = vscode.window.createOutputChannel(
@@ -381,67 +449,6 @@ export class VsCodeExtension {
       void this.core.invoke("didChangeActiveTextEditor", { filepath });
     });
 
-    // CodeAware: 监听代码选择变化
-    vscode.window.onDidChangeTextEditorSelection(async (event) => {
-      const editor = event.textEditor;
-      const document = editor.document;
-      
-      // 确保这是一个有效的文本文档
-      if (document.uri.scheme !== 'file') {
-        return;
-      }
-
-      const selection = event.selections[0]; // 取第一个选择区域
-
-      // 只处理有选中内容的情况
-      if (!selection.isEmpty) {
-        const startLine = selection.start.line + 1;
-        const endLine = selection.end.line + 1;
-        const selectedContent = document.getText(selection);
-
-        const currentSelectionData = {
-          filePath: document.uri.fsPath,
-          selectedLines: [startLine, endLine] as [number, number],
-          selectedContent,
-        };
-
-        // 检查是否与上次选择相同
-        if (this.isSameSelection(currentSelectionData, this.lastSelectionData)) {
-          return;
-        }
-
-        // 清除之前的定时器
-        if (this.selectionDebounceTimer) {
-          clearTimeout(this.selectionDebounceTimer);
-        }
-
-        // 设置新的防抖定时器
-        this.selectionDebounceTimer = setTimeout(async () => {
-          this.lastSelectionData = currentSelectionData;
-          const webviewProtocol = await this.webviewProtocolPromise;
-          void webviewProtocol.request("codeSelectionChanged", currentSelectionData);
-        }, 300); // 300ms 防抖延迟，适合多行选择场景
-      } else {
-        // 如果没有选中内容且之前有选择，发送取消选择事件
-        if (this.lastSelectionData) {
-          // 清除防抖定时器
-          if (this.selectionDebounceTimer) {
-            clearTimeout(this.selectionDebounceTimer);
-            this.selectionDebounceTimer = null;
-          }
-          
-          // 发送取消选择事件
-          const webviewProtocol = await this.webviewProtocolPromise;
-          void webviewProtocol.request("codeSelectionCleared", {
-            filePath: document.uri.fsPath
-          });
-          
-          // 清除上次选择数据
-          this.lastSelectionData = null;
-        }
-      }
-    });
-
     vscode.workspace.onDidChangeConfiguration(async (event) => {
       if (event.affectsConfiguration(EXTENSION_NAME)) {
         const settings = await this.ide.getIdeSettings();
@@ -460,18 +467,20 @@ export class VsCodeExtension {
   // eslint-disable-next-line @typescript-eslint/naming-convention
   private PREVIOUS_BRANCH_FOR_WORKSPACE_DIR: { [dir: string]: string } = {};
 
+  // CodeAware: 检查选择是否相同的辅助方法
   private isSameSelection(
-    current: { filePath: string; selectedLines: [number, number]; selectedContent: string },
-    previous: { filePath: string; selectedLines: number[]; selectedContent: string } | null
+    current: { filePath: string; selectedLines: [number, number]; selectedContent: string } | null,
+    previous: { filePath: string; selectedLines: [number, number]; selectedContent: string } | null
   ): boolean {
-    if (!previous) {
+    if (!current || !previous) {
       return false;
     }
-    
-    return current.filePath === previous.filePath &&
-           current.selectedLines[0] === previous.selectedLines[0] &&
-           current.selectedLines[1] === previous.selectedLines[1] &&
-           current.selectedContent === previous.selectedContent;
+    return (
+      current.filePath === previous.filePath &&
+      current.selectedLines[0] === previous.selectedLines[0] &&
+      current.selectedLines[1] === previous.selectedLines[1] &&
+      current.selectedContent === previous.selectedContent
+    );
   }
 
   registerCustomContextProvider(contextProvider: IContextProvider) {
@@ -481,5 +490,12 @@ export class VsCodeExtension {
   public dispose(): void {
     // 清理CodeEditModeManager资源
     this.codeEditModeManager?.dispose();
+    // 清理CodeSelectionHandler资源
+    this.codeSelectionHandler?.dispose();
+    // 清理代码选择防抖定时器
+    if (this.selectionDebounceTimer) {
+      clearTimeout(this.selectionDebounceTimer);
+      this.selectionDebounceTimer = null;
+    }
   }
 }

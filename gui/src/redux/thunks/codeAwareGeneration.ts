@@ -397,17 +397,27 @@ export const generateKnowledgeCardDetail = createAsyncThunk<
                 throw new Error("Default model not defined");
             }
 
+            // 从state中获取任务描述信息
+            const taskDescription = state.codeAwareSession.userRequirement?.requirementDescription || 
+                                  "";
+
             // 设置加载状态
             dispatch(setKnowledgeCardLoading({ stepId, cardId: knowledgeCardId, isLoading: true }));
 
-            // 构造提示词并发送请求
-            const prompt = constructGenerateKnowledgeCardDetailPrompt(knowledgeCardTheme, learningGoal, codeContext);
+            // 构造提示词并发送请求，传入task描述
+            const prompt = constructGenerateKnowledgeCardDetailPrompt(
+                knowledgeCardTheme, 
+                learningGoal, 
+                codeContext, 
+                taskDescription
+            );
 
             console.log("generateKnowledgeCardDetail called with:", {
                 stepId,
                 knowledgeCardId,
                 knowledgeCardTheme,
                 learningGoal,
+                taskDescription,
                 codeContext: codeContext.substring(0, 100) + "..." // 只打印前100个字符
             });
 

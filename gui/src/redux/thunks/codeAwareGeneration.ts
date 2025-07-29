@@ -13,6 +13,7 @@ import {
     constructGenerateKnowledgeCardThemesPrompt,
     constructGenerateStepsPrompt,
     constructParaphraseUserIntentPrompt,
+    constructProcessCodeChangesPrompt,
     constructRerunStepPrompt
 } from "core/llm/codeAwarePrompts";
 import {
@@ -236,18 +237,45 @@ export const generateStepsFromRequirement = createAsyncThunk<
                 throw new Error("Default model not defined");
             }
 
-            // call LLM to generate steps
+            // call LLM to generate steps with retry mechanism
             const prompt = constructGenerateStepsPrompt(userRequirement);
+            const maxRetries = 3;
+            let lastError: Error | null = null;
+            let result: any = null;
 
-            const result = await extra.ideMessenger.request("llm/complete", {
-                prompt: prompt,
-                completionOptions: {}, // 根据需要配置
-                title: defaultModel.title
-            });
+            for (let attempt = 1; attempt <= maxRetries; attempt++) {
+                try {
+                    console.log(`🔄 Attempt ${attempt}/${maxRetries} to generate steps...`);
+                    
+                    result = await extra.ideMessenger.request("llm/complete", {
+                        prompt: prompt,
+                        completionOptions: {}, // 根据需要配置
+                        title: defaultModel.title
+                    });
+
+                    if (result.status === "success" && result.content) {
+                        console.log("✅ Steps generation successful on attempt", attempt);
+                        break;
+                    } else {
+                        throw new Error(`LLM request failed: status=${result.status}, hasContent=${!!result.content}`);
+                    }
+                } catch (error) {
+                    lastError = error instanceof Error ? error : new Error(String(error));
+                    console.warn(`⚠️ Steps generation attempt ${attempt}/${maxRetries} failed:`, lastError.message);
+                    
+                    if (attempt < maxRetries) {
+                        // Wait before retry (exponential backoff)
+                        const waitTime = Math.pow(2, attempt) * 1000; // 2s, 4s, 8s
+                        console.log(`⏱️ Waiting ${waitTime}ms before retry...`);
+                        await new Promise(resolve => setTimeout(resolve, waitTime));
+                    }
+                }
+            }
 
             // 提取信息，更新到Slice中
-            if (result.status !== "success" || !result.content) {
-                throw new Error("LLM request to generate steps failed or returned empty content");
+            if (!result || result.status !== "success" || !result.content) {
+                dispatch(setUserRequirementStatus("editing"));
+                throw new Error(`LLM request to generate steps failed after ${maxRetries} attempts: ${lastError?.message || "Unknown error"}`);
             }
 
             //要初始化设置的一些值，同时要更新的是userRequirement, 并且需要设置learning goal;
@@ -846,17 +874,47 @@ export const generateCodeFromSteps = createAsyncThunk<
                 steps: orderedSteps.map(s => ({ id: s.id, title: s.title }))
             });
 
-            // 构造提示词并发送请求
+            // 构造提示词并发送请求，带重试机制
             const prompt = constructGenerateCodeFromStepsPrompt(existingCode, orderedSteps);
+            const maxRetries = 3;
+            let lastError: Error | null = null;
+            let result: any = null;
 
-            const result = await extra.ideMessenger.request("llm/complete", {
-                prompt: prompt,
-                completionOptions: {},
-                title: defaultModel.title
-            });
+            for (let attempt = 1; attempt <= maxRetries; attempt++) {
+                try {
+                    console.log(`🔄 Attempt ${attempt}/${maxRetries} to generate code...`);
+                    
+                    result = await extra.ideMessenger.request("llm/complete", {
+                        prompt: prompt,
+                        completionOptions: {},
+                        title: defaultModel.title
+                    });
 
-            if (result.status !== "success" || !result.content) {
-                throw new Error("LLM request failed or returned empty content");
+                    if (result.status === "success" && result.content) {
+                        console.log("✅ Code generation successful on attempt", attempt);
+                        break;
+                    } else {
+                        throw new Error(`LLM request failed: status=${result.status}, hasContent=${!!result.content}`);
+                    }
+                } catch (error) {
+                    lastError = error instanceof Error ? error : new Error(String(error));
+                    console.warn(`⚠️ Code generation attempt ${attempt}/${maxRetries} failed:`, lastError.message);
+                    
+                    if (attempt < maxRetries) {
+                        // Wait before retry (exponential backoff)
+                        const waitTime = Math.pow(2, attempt) * 1000; // 2s, 4s, 8s
+                        console.log(`⏱️ Waiting ${waitTime}ms before retry...`);
+                        await new Promise(resolve => setTimeout(resolve, waitTime));
+                    }
+                }
+            }
+
+            if (!result || result.status !== "success" || !result.content) {
+                // If code generation fails, restore step status for all ordered steps
+                orderedSteps.forEach(step => {
+                    dispatch(setStepStatus({ stepId: step.id, status: "confirmed" }));
+                });
+                throw new Error(`LLM request failed after ${maxRetries} attempts: ${lastError?.message || "Unknown error"}`);
             }
 
             console.log("LLM response for code generation:", result.content);
@@ -1076,11 +1134,21 @@ export const generateCodeFromSteps = createAsyncThunk<
 
             } catch (parseError) {
                 console.error("Error parsing LLM response:", parseError);
+                // Restore step status for all ordered steps if parsing fails
+                orderedSteps.forEach(step => {
+                    dispatch(setStepStatus({ stepId: step.id, status: "confirmed" }));
+                });
                 throw new Error("解析LLM代码生成响应失败");
             }
 
         } catch (error) {
             console.error("Error during code generation from steps:", error);
+            
+            // Restore step status for all ordered steps if any error occurs
+            orderedSteps.forEach(step => {
+                dispatch(setStepStatus({ stepId: step.id, status: "confirmed" }));
+            });
+            
             const errorMessage = error instanceof Error ? error.message : String(error);
             throw new Error(`代码生成失败: ${errorMessage}`);
         }
@@ -1529,6 +1597,33 @@ export const processCodeChanges = createAsyncThunk<
                 dispatch(markStepsCodeDirty({
                     stepIds: Array.from(affectedStepIds)
                 }));
+                
+                // Create a formatted diff string for LLM
+                const formattedDiff = realEdits.map(edit => {
+                    const prefix = edit.type === 'added' ? '+' : edit.type === 'removed' ? '-' : ' ';
+                    return `${prefix} ${edit.content.trim()}`;
+                }).join('\n');
+                
+                // After marking steps as code_dirty, process the code updates
+                console.log("🔄 Calling processCodeUpdates for dirty steps...");
+                try {
+                    await dispatch(processCodeUpdates({
+                        currentFilePath,
+                        currentContent,
+                        codeDiff: formattedDiff
+                    })).unwrap();
+                } catch (updateError) {
+                    console.error("❌ Failed to process code updates:", updateError);
+                    
+                    // If processCodeUpdates fails, restore the affected steps to "generated" status
+                    console.log("🔄 Restoring step status due to processCodeUpdates failure...");
+                    for (const stepId of affectedStepIds) {
+                        dispatch(setStepStatus({ stepId, status: "generated" }));
+                    }
+                    
+                    // Re-throw the error so the UI can handle it
+                    throw updateError;
+                }
             }
             
             if (unaffectedChunks.length > 0) {
@@ -1542,6 +1637,285 @@ export const processCodeChanges = createAsyncThunk<
         } catch (error) {
             console.error("❌ Error processing code changes:", error);
             throw new Error(`处理代码变化失败: ${error instanceof Error ? error.message : String(error)}`);
+        }
+    }
+);
+
+// Process code updates when steps are marked as code_dirty
+export const processCodeUpdates = createAsyncThunk<
+    void,
+    {
+        currentFilePath: string;
+        currentContent: string;
+        codeDiff: string;
+    },
+    ThunkApiType
+>(
+    "codeAware/processCodeUpdates",
+    async ({ currentFilePath, currentContent, codeDiff }, { getState, dispatch, extra }) => {
+        try {
+            const state = getState();
+            const steps = state.codeAwareSession.steps;
+            const mappings = state.codeAwareSession.codeAwareMappings;
+            const codeChunks = state.codeAwareSession.codeChunks;
+            
+            // Find steps that are marked as code_dirty
+            const codeDirtySteps = steps.filter(step => step.stepStatus === "code_dirty");
+            
+            if (codeDirtySteps.length === 0) {
+                console.log("No code_dirty steps found, skipping update");
+                return;
+            }
+
+            console.log("🔄 Processing code updates for dirty steps:", codeDirtySteps.map(s => s.id));
+
+            // Disable code chunks and remove mappings for code_dirty steps
+            for (const step of codeDirtySteps) {
+                // Find all mappings related to this step (including knowledge cards)
+                const relatedMappings = mappings.filter(mapping => 
+                    mapping.stepId === step.id || 
+                    (mapping.knowledgeCardId && mapping.knowledgeCardId.startsWith(`${step.id}-kc-`))
+                );
+
+                // Disable related code chunks
+                relatedMappings.forEach(mapping => {
+                    if (mapping.codeChunkId) {
+                        dispatch(setCodeChunkDisabled({ 
+                            codeChunkId: mapping.codeChunkId, 
+                            disabled: true 
+                        }));
+                    }
+                });
+
+                // Remove mappings for this step
+                dispatch(removeCodeAwareMappings({ stepId: step.id }));
+
+                console.log(`🚫 Disabled ${relatedMappings.length} code chunks and removed mappings for step ${step.id}`);
+            }
+
+            // Prepare data for LLM call
+            const relevantSteps = codeDirtySteps.map(step => ({
+                id: step.id,
+                title: step.title,
+                abstract: step.abstract,
+                knowledge_cards: step.knowledgeCards.map(kc => ({
+                    id: kc.id,
+                    title: kc.title
+                }))
+            }));
+
+            const defaultModel = selectDefaultModel(state);
+            if (!defaultModel) {
+                throw new Error("Default model not defined");
+            }
+
+            // Call LLM to analyze code changes and update steps with retry mechanism
+            const prompt = constructProcessCodeChangesPrompt(currentContent, codeDiff, relevantSteps);
+            const maxRetries = 3;
+            let lastError: Error | null = null;
+            let result: any = null;
+
+            console.log("🤖 Calling LLM to process code changes...");
+            
+            for (let attempt = 1; attempt <= maxRetries; attempt++) {
+                try {
+                    console.log(`🔄 Attempt ${attempt}/${maxRetries} to call LLM...`);
+                    
+                    result = await extra.ideMessenger.request("llm/complete", {
+                        prompt: prompt,
+                        completionOptions: {},
+                        title: defaultModel.title
+                    });
+
+                    if (result.status === "success" && result.content) {
+                        console.log("✅ LLM request successful on attempt", attempt);
+                        break;
+                    } else {
+                        throw new Error(`LLM request failed: status=${result.status}, hasContent=${!!result.content}`);
+                    }
+                } catch (error) {
+                    lastError = error instanceof Error ? error : new Error(String(error));
+                    console.warn(`⚠️ Attempt ${attempt}/${maxRetries} failed:`, lastError.message);
+                    
+                    if (attempt < maxRetries) {
+                        // Wait before retry (exponential backoff)
+                        const waitTime = Math.pow(2, attempt) * 1000; // 2s, 4s, 8s
+                        console.log(`⏱️ Waiting ${waitTime}ms before retry...`);
+                        await new Promise(resolve => setTimeout(resolve, waitTime));
+                    }
+                }
+            }
+
+            if (!result || result.status !== "success" || !result.content) {
+                // If all retries failed, restore step status and throw error
+                console.error("❌ All LLM retry attempts failed, restoring step status...");
+                for (const step of codeDirtySteps) {
+                    dispatch(setStepStatus({ stepId: step.id, status: "generated" }));
+                }
+                throw new Error(`LLM request failed after ${maxRetries} attempts: ${lastError?.message || "Unknown error"}`);
+            }
+
+            console.log("LLM response for code update analysis:", result.content);
+
+            // Parse LLM response with error handling
+            try {
+                const jsonResponse = JSON.parse(result.content);
+                const updatedSteps = jsonResponse.updated_steps || [];
+                const knowledgeCards = jsonResponse.knowledge_cards || [];
+
+                console.log("✅ Code update analysis completed:", {
+                    updatedStepsCount: updatedSteps.length,
+                    knowledgeCardsCount: knowledgeCards.length
+                });
+
+                // Validate response structure
+                if (!Array.isArray(updatedSteps) || !Array.isArray(knowledgeCards)) {
+                    throw new Error("Invalid LLM response structure: expected arrays for updated_steps and knowledge_cards");
+                }
+
+                // Process updated steps
+                let codeChunkCounter = state.codeAwareSession.codeChunks.length + 1;
+
+                for (const stepUpdate of updatedSteps) {
+                    const stepId = stepUpdate.id;
+                    
+                    try {
+                        // Update step title and abstract if needed
+                        if (stepUpdate.needs_update) {
+                            if (stepUpdate.title) {
+                                dispatch(setStepTitle({ stepId, title: stepUpdate.title }));
+                            }
+                            if (stepUpdate.abstract) {
+                                dispatch(setStepAbstract({ stepId, abstract: stepUpdate.abstract }));
+                            }
+                            console.log(`📝 Updated step ${stepId}: title="${stepUpdate.title}", abstract updated`);
+                        }
+
+                        // Create new code chunk and mapping for the step
+                        if (stepUpdate.corresponding_code && stepUpdate.corresponding_code.trim()) {
+                            const stepCodeContent = stepUpdate.corresponding_code.trim();
+                            const stepRange = calculateCodeChunkRange(currentContent, stepCodeContent);
+                            const stepCodeChunkId = `c-${codeChunkCounter++}`;
+                            
+                            dispatch(createOrGetCodeChunk({
+                                content: stepCodeContent,
+                                range: stepRange,
+                                filePath: currentFilePath,
+                                id: stepCodeChunkId
+                            }));
+
+                            // Find requirement chunk for mapping
+                            const existingStepMapping = mappings.find(mapping => mapping.stepId === stepId && mapping.requirementChunkId);
+                            const requirementChunkId = existingStepMapping?.requirementChunkId;
+
+                            // Create step mapping
+                            const stepMapping: CodeAwareMapping = {
+                                codeChunkId: stepCodeChunkId,
+                                stepId: stepId,
+                                requirementChunkId: requirementChunkId,
+                                isHighlighted: false
+                            };
+                            
+                            dispatch(createCodeAwareMapping(stepMapping));
+                            console.log(`🔗 Created new step mapping: ${stepCodeChunkId} -> ${stepId}`);
+                        }
+
+                        // Set step status to generated
+                        dispatch(setStepStatus({ stepId, status: "generated" }));
+                    } catch (stepError) {
+                        console.error(`❌ Error processing step ${stepId}:`, stepError);
+                        // Set this step back to generated status if processing fails
+                        dispatch(setStepStatus({ stepId, status: "generated" }));
+                    }
+                }
+
+                // Process knowledge cards
+                for (const cardUpdate of knowledgeCards) {
+                    const cardId = cardUpdate.id;
+                    const stepId = cardId.split('-kc-')[0]; // Extract step ID from card ID
+                    
+                    try {
+                        if (cardUpdate.needs_update) {
+                            // Update knowledge card title and clear content
+                            if (cardUpdate.title) {
+                                dispatch(updateKnowledgeCardTitle({
+                                    stepId,
+                                    cardId,
+                                    title: cardUpdate.title
+                                }));
+                                console.log(`🏷️ Updated knowledge card title: ${cardId} -> "${cardUpdate.title}"`);
+                            }
+
+                            // Mark for content regeneration
+                            dispatch(setKnowledgeCardGenerationStatus({ 
+                                stepId, 
+                                status: "generating" 
+                            }));
+                        }
+
+                        // Create new code chunk and mapping for the knowledge card
+                        if (cardUpdate.corresponding_code && cardUpdate.corresponding_code.trim()) {
+                            const cardCodeContent = cardUpdate.corresponding_code.trim();
+                            const cardRange = calculateCodeChunkRange(currentContent, cardCodeContent);
+                            const cardCodeChunkId = `c-${codeChunkCounter++}`;
+                            
+                            dispatch(createOrGetCodeChunk({
+                                content: cardCodeContent,
+                                range: cardRange,
+                                filePath: currentFilePath,
+                                id: cardCodeChunkId
+                            }));
+
+                            // Find requirement chunk for mapping
+                            const existingCardMapping = mappings.find(mapping => mapping.knowledgeCardId === cardId);
+                            const requirementChunkId = existingCardMapping?.requirementChunkId;
+
+                            // Create knowledge card mapping
+                            const cardMapping: CodeAwareMapping = {
+                                codeChunkId: cardCodeChunkId,
+                                stepId,
+                                knowledgeCardId: cardId,
+                                requirementChunkId: requirementChunkId,
+                                isHighlighted: false
+                            };
+                            
+                            dispatch(createCodeAwareMapping(cardMapping));
+                            console.log(`🎯 Created new knowledge card mapping: ${cardCodeChunkId} -> ${cardId}`);
+                        }
+                    } catch (cardError) {
+                        console.error(`❌ Error processing knowledge card ${cardId}:`, cardError);
+                        // Continue processing other cards even if one fails
+                    }
+                }
+
+                console.log("✅ Code updates processed successfully");
+
+            } catch (parseError) {
+                console.error("Error parsing LLM response:", parseError);
+                
+                // Restore step status for all code_dirty steps
+                console.log("🔄 Restoring step status for failed code update...");
+                for (const step of codeDirtySteps) {
+                    dispatch(setStepStatus({ stepId: step.id, status: "generated" }));
+                }
+                
+                throw new Error("解析LLM代码更新响应失败");
+            }
+
+        } catch (error) {
+            console.error("❌ Error processing code updates:", error);
+            
+            // Restore step status for all code_dirty steps if any error occurs
+            console.log("🔄 Restoring step status for all code_dirty steps due to error...");
+            const currentState = getState();
+            const currentSteps = currentState.codeAwareSession.steps;
+            const currentCodeDirtySteps = currentSteps.filter(step => step.stepStatus === "code_dirty");
+            
+            for (const step of currentCodeDirtySteps) {
+                dispatch(setStepStatus({ stepId: step.id, status: "generated" }));
+            }
+            
+            throw new Error(`处理代码更新失败: ${error instanceof Error ? error.message : String(error)}`);
         }
     }
 );

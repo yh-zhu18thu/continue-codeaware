@@ -236,3 +236,50 @@ export function constructRerunStepPrompt(
         "changed_step_abstract": "${changedStepAbstract}"
     }`;
 }
+
+// 构建处理代码变更的prompt
+export function constructProcessCodeChangesPrompt(
+    currentCode: string,
+    codeDiff: string,
+    relevantSteps: Array<{
+        id: string;
+        title: string;
+        abstract: string;
+        knowledge_cards: Array<{
+            id: string;
+            title: string;
+        }>;
+    }>
+): string {
+    const stepsText = relevantSteps.map(step => {
+        const knowledgeCardsText = step.knowledge_cards.map(kc => 
+            `{"id": "${kc.id}", "title": "${kc.title}"}`
+        ).join(", ");
+        
+        return `{
+            "id": "${step.id}",
+            "title": "${step.title}",
+            "abstract": "${step.abstract}",
+            "knowledge_cards": [${knowledgeCardsText}]
+        }`;
+    }).join(", ");
+    
+    return `{
+        "task": "You are given the current code, a code diff showing changes, and a list of relevant steps that were affected by these code changes. Analyze whether these changes require updates to the step abstracts and knowledge card titles/content.",
+        "requirements": [
+            "Analyze the code diff to understand what changes were made",
+            "For each step, determine if the changes require updating the step's title or abstract (needs_update: true/false)",
+            "If a step needs update, provide the updated title and abstract that reflect the code changes",
+            "For each knowledge card, determine if it needs content regeneration based on the changes (needs_update: true/false)",
+            "If a knowledge card needs update, provide an updated title that better reflects the new code",
+            "Extract the most relevant code parts that correspond to each updated step and knowledge card",
+            "The corresponding_code should include the relevant portions from the current_code (after changes)",
+            "Respond in the same language as the step descriptions",
+            "You must follow this JSON format in your response: {\\"updated_steps\\": [{\\"id\\": \\"step_id\\", \\"needs_update\\": true/false, \\"title\\": \\"(updated or original title)\\", \\"abstract\\": \\"(updated or original abstract)\\", \\"corresponding_code\\": \\"(relevant code from current_code)\\"}], \\"knowledge_cards\\": [{\\"id\\": \\"card_id\\", \\"needs_update\\": true/false, \\"title\\": \\"(updated or original title)\\", \\"corresponding_code\\": \\"(relevant code from current_code)\\"}]}",
+            "Please do not use invalid \`\`\`json character to envelope the JSON response, just return the JSON object directly."
+        ],
+        "current_code": "${currentCode}",
+        "code_diff": "${codeDiff}",
+        "relevant_steps": [${stepsText}]
+    }`;
+}

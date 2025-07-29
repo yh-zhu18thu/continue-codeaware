@@ -359,6 +359,9 @@ export const CodeAware = () => {
   
   // Check if any step is in generating state
   const hasGeneratingSteps = steps.some(step => step.stepStatus === "generating");
+  
+  // Check if any step is in code_dirty state (processing code changes)
+  const hasCodeDirtySteps = steps.some(step => step.stepStatus === "code_dirty");
 
   // log all the data for debugging
   useEffect(() => {
@@ -918,7 +921,7 @@ export const CodeAware = () => {
       />
 
       {/* Loading Overlay */}
-      {(isGeneratingSteps || hasGeneratingSteps) && (
+      {(isGeneratingSteps || hasGeneratingSteps || hasCodeDirtySteps) && (
         <LoadingOverlay>
           <SpinnerIcon />
         </LoadingOverlay>
@@ -1071,7 +1074,7 @@ export const CodeAware = () => {
       )}
 
       {/* Loading Overlay */}
-      {(isGeneratingSteps || hasGeneratingSteps) && (
+      {(isGeneratingSteps || hasGeneratingSteps || hasCodeDirtySteps) && (
         <LoadingOverlay>
           <SpinnerIcon />
         </LoadingOverlay>

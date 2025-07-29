@@ -2,7 +2,6 @@ import { HighlightEvent, KnowledgeCardItem, StepItem, StepStatus } from "core";
 import { Key, useCallback, useContext, useEffect, useRef, useState } from "react";
 import styled from "styled-components";
 import {
-  defaultBorderRadius,
   lightGray,
   vscForeground
 } from "../../components";
@@ -165,7 +164,7 @@ const CodeAwareDiv = styled.div`
 `;
 
 const LoadingOverlay = styled.div`
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
   right: 0;
@@ -174,7 +173,6 @@ const LoadingOverlay = styled.div`
   display: flex;
   justify-content: center;
   align-items: center;
-  border-radius: ${defaultBorderRadius};
   z-index: 1000;
 `;
 

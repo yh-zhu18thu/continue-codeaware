@@ -291,7 +291,7 @@ export const generateStepsFromRequirement = createAsyncThunk<
                 const jsonResponse = JSON.parse(result.content);
                 console.log("LLM response JSON:", jsonResponse);
                 title = jsonResponse.title || "";
-                taskRequirements = jsonResponse.tasks || "";
+                taskRequirements = jsonResponse.task_description || "";
                 learningGoal = jsonResponse.learning_goal || "";
                 const steps = jsonResponse.steps || [];
                 for (const step of steps) {
@@ -337,7 +337,7 @@ export const generateStepsFromRequirement = createAsyncThunk<
             // 更新 Redux 状态
             dispatch(setCodeAwareTitle(title));
             dispatch(setLearningGoal(learningGoal));
-            dispatch(submitRequirementContent(userRequirement)); // 重新设置用户需求内容，因为newCodeAwareSession清空了状态
+            dispatch(submitRequirementContent(taskRequirements)); // 重新设置用户需求内容，因为newCodeAwareSession清空了状态
             dispatch(setGeneratedSteps(parsedSteps));
             dispatch(updateRequirementChunks(requirementChunks));
             dispatch(updateCodeAwareMappings(initialMappings));

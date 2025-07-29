@@ -2,12 +2,12 @@ import { ToIdeFromWebviewOrCoreProtocol } from "./ide";
 import { ToWebviewFromIdeOrCoreProtocol } from "./webview";
 
 import type {
-  ApplyState,
-  CodeChunk,
-  CodeToEdit,
-  EditStatus,
-  MessageContent,
-  RangeInFileWithContents
+    ApplyState,
+    CodeChunk,
+    CodeToEdit,
+    EditStatus,
+    MessageContent,
+    RangeInFileWithContents
 } from "../";
 
 export type ToIdeFromWebviewProtocol = ToIdeFromWebviewOrCoreProtocol & {
@@ -58,7 +58,7 @@ export type ToIdeFromWebviewProtocol = ToIdeFromWebviewOrCoreProtocol & {
   ];
   "edit/exit": [{ shouldFocusEditor: boolean }, void];
   //CodeAware: 代码高亮相关
-  highlightCodeChunk: [codeChunk: CodeChunk, void];
+  highlightCodeChunk: [CodeChunk, void];
   clearCodeHighlight: [undefined, void];
   //CodeAware: 向ide同步当前的任务描述和当前/下一步骤等
   syncCodeAwareRequirement: [{ userRequirement: string }, void];

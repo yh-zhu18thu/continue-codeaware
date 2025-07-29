@@ -19,6 +19,7 @@ import {
     createCodeAwareMapping,
     createKnowledgeCard,
     createOrGetCodeChunk,
+    markStepsCodeDirty,
     removeCodeAwareMappings,
     setCodeAwareTitle,
     setCodeChunkDisabled,
@@ -33,6 +34,7 @@ import {
     setUserRequirementStatus,
     submitRequirementContent,
     updateCodeAwareMappings,
+    updateCodeChunkPositions,
     updateCodeChunkRange,
     updateKnowledgeCardContent,
     updateKnowledgeCardTitle,
@@ -1353,6 +1355,193 @@ export const rerunStep = createAsyncThunk<
             console.error("Error during step rerun:", error);
             const errorMessage = error instanceof Error ? error.message : String(error);
             throw new Error(`步骤重新运行失败: ${errorMessage}`);
+        }
+    }
+);
+
+// Process code changes when exiting code edit mode
+export const processCodeChanges = createAsyncThunk<
+    void,
+    {
+        currentFilePath: string;
+        currentContent: string;
+    },
+    ThunkApiType
+>(
+    "codeAware/processCodeChanges",
+    async ({ currentFilePath, currentContent }, { getState, dispatch }) => {
+        try {
+            const state = getState();
+            const snapshot = state.codeAwareSession.codeEditModeSnapshot;
+            
+            if (!snapshot) {
+                console.warn("No code snapshot found, cannot process changes");
+                return;
+            }
+
+            // Check if we're working on the same file
+            if (snapshot.filePath !== currentFilePath) {
+                console.warn("File path changed, processing changes might not be accurate");
+            }
+
+            // Import diff library dynamically to avoid bundling issues
+            const { diffLines } = await import('diff');
+            
+            // Calculate diff between snapshot and current content
+            const changes = diffLines(snapshot.content, currentContent);
+            
+            console.log("📊 Code changes detected:", {
+                totalChanges: changes.length,
+                additions: changes.filter(c => c.added).length,
+                deletions: changes.filter(c => c.removed).length
+            });
+
+            // Track real edits (excluding whitespace-only changes)
+            const realEdits: Array<{
+                type: 'added' | 'removed' | 'modified';
+                lineStart: number;
+                lineEnd: number;
+                content: string;
+            }> = [];
+
+            let currentLine = 1;
+            
+            for (const change of changes) {
+                if (!change.value) continue;
+                
+                const lines = change.value.split('\n');
+                // Remove last empty line if it exists
+                if (lines[lines.length - 1] === '') {
+                    lines.pop();
+                }
+                
+                if (change.added) {
+                    // Check if the addition contains real content (not just whitespace)
+                    const hasRealContent = lines.some(line => line.trim() !== '');
+                    if (hasRealContent) {
+                        realEdits.push({
+                            type: 'added',
+                            lineStart: currentLine,
+                            lineEnd: currentLine + lines.length - 1,
+                            content: change.value
+                        });
+                    }
+                    currentLine += lines.length;
+                } else if (change.removed) {
+                    // Check if the removal contains real content (not just whitespace)
+                    const hasRealContent = lines.some(line => line.trim() !== '');
+                    if (hasRealContent) {
+                        realEdits.push({
+                            type: 'removed',
+                            lineStart: currentLine,
+                            lineEnd: currentLine + lines.length - 1,
+                            content: change.value
+                        });
+                    }
+                    // Don't increment currentLine for removed content
+                } else {
+                    // Unchanged content
+                    currentLine += lines.length;
+                }
+            }
+
+            console.log("🔍 Real edits found:", realEdits);
+
+            if (realEdits.length === 0) {
+                console.log("✅ No real code changes detected (only whitespace changes)");
+                return;
+            }
+
+            // Get current code chunks and steps
+            const codeChunks = state.codeAwareSession.codeChunks;
+            const steps = state.codeAwareSession.steps;
+            const mappings = state.codeAwareSession.codeAwareMappings;
+
+            // Find which code chunks are affected by real edits
+            const affectedChunkIds = new Set<string>();
+            const unaffectedChunks: Array<{
+                chunkId: string;
+                newRange: [number, number];
+            }> = [];
+
+            for (const chunk of codeChunks) {
+                if (chunk.filePath !== currentFilePath) {
+                    continue; // Skip chunks from other files
+                }
+                
+                let isAffected = false;
+                let lineOffset = 0;
+                
+                // Check if this chunk overlaps with any real edit
+                for (const edit of realEdits) {
+                    const chunkStart = chunk.range[0];
+                    const chunkEnd = chunk.range[1];
+                    const editStart = edit.lineStart;
+                    const editEnd = edit.lineEnd;
+                    
+                    // Check for overlap
+                    if (chunkStart <= editEnd && chunkEnd >= editStart) {
+                        isAffected = true;
+                        affectedChunkIds.add(chunk.id);
+                        break;
+                    }
+                    
+                    // Calculate line offset for unaffected chunks that come after edits
+                    if (editEnd < chunkStart) {
+                        if (edit.type === 'added') {
+                            lineOffset += (editEnd - editStart + 1);
+                        } else if (edit.type === 'removed') {
+                            lineOffset -= (editEnd - editStart + 1);
+                        }
+                    }
+                }
+                
+                if (!isAffected && lineOffset !== 0) {
+                    // This chunk is not affected but its position needs to be updated
+                    unaffectedChunks.push({
+                        chunkId: chunk.id,
+                        newRange: [
+                            chunk.range[0] + lineOffset,
+                            chunk.range[1] + lineOffset
+                        ]
+                    });
+                }
+            }
+
+            console.log("📍 Code chunks analysis:", {
+                affected: Array.from(affectedChunkIds),
+                unaffectedWithNewPositions: unaffectedChunks
+            });
+
+            // Find which steps have affected code chunks
+            const affectedStepIds = new Set<string>();
+            
+            for (const mapping of mappings) {
+                if (mapping.codeChunkId && affectedChunkIds.has(mapping.codeChunkId) && mapping.stepId) {
+                    affectedStepIds.add(mapping.stepId);
+                }
+            }
+
+            console.log("🎯 Steps affected by code changes:", Array.from(affectedStepIds));
+
+            // Update Redux state
+            if (affectedStepIds.size > 0) {
+                dispatch(markStepsCodeDirty({
+                    stepIds: Array.from(affectedStepIds)
+                }));
+            }
+            
+            if (unaffectedChunks.length > 0) {
+                dispatch(updateCodeChunkPositions({
+                    updates: unaffectedChunks
+                }));
+            }
+
+            console.log("✅ Code changes processed successfully");
+
+        } catch (error) {
+            console.error("❌ Error processing code changes:", error);
+            throw new Error(`处理代码变化失败: ${error instanceof Error ? error.message : String(error)}`);
         }
     }
 );

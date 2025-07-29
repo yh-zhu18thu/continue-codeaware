@@ -12,9 +12,11 @@ import { useWebviewListener } from "../../hooks/useWebviewListener";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks";
 import {
   clearAllHighlights,
+  clearCodeEditModeSnapshot,
   newCodeAwareSession, // Add this import
   resetIdeCommFlags,
   resetSessionExceptRequirement, // Add this import
+  saveCodeEditModeSnapshot,
   selectIsCodeEditModeEnabled, // Add this import for code edit mode
   selectIsRequirementInEditMode, // Import submitRequirementContent
   selectIsStepsGenerated,
@@ -35,6 +37,7 @@ import {
   generateKnowledgeCardThemesFromQuery,
   generateStepsFromRequirement,
   paraphraseUserIntent,
+  processCodeChanges,
   rerunStep
 } from "../../redux/thunks/codeAwareGeneration";
 import "./CodeAware.css";
@@ -193,6 +196,78 @@ export const CodeAware = () => {
     syncCodeEditModeToIde();
   }, [isCodeEditModeEnabled, ideMessenger]);
 
+  // Handle local code edit mode changes (from toggle button)
+  useEffect(() => {
+    const handleLocalCodeEditModeChange = async () => {
+      const previousMode = prevCodeEditModeRef.current;
+      const currentMode = isCodeEditModeEnabled;
+      
+      // Update the ref to current state
+      prevCodeEditModeRef.current = currentMode;
+      
+      // Only process if the mode actually changed
+      if (previousMode === currentMode) {
+        return;
+      }
+      
+      if (currentMode && !previousMode) {
+        // Entering code edit mode - save current code snapshot
+        try {
+          const currentFileResponse = await ideMessenger?.request("getCurrentFile", undefined);
+          
+          if (currentFileResponse && currentFileResponse.status === "success" && currentFileResponse.content) {
+            const currentFile = currentFileResponse.content;
+            
+            dispatch(saveCodeEditModeSnapshot({
+              filePath: currentFile.path,
+              content: currentFile.contents || ""
+            }));
+            
+            console.log("📸 [CodeAware] Code snapshot saved (local toggle):", {
+              filePath: currentFile.path,
+              contentLength: (currentFile.contents || "").length
+            });
+          } else {
+            console.warn("⚠️ [CodeAware] Could not get current file for snapshot (local toggle)");
+          }
+        } catch (error) {
+          console.error("❌ [CodeAware] Failed to save code snapshot (local toggle):", error);
+        }
+      } else if (!currentMode && previousMode) {
+        // Exiting code edit mode - process code changes
+        try {
+          const currentFileResponse = await ideMessenger?.request("getCurrentFile", undefined);
+          
+          if (currentFileResponse && currentFileResponse.status === "success" && currentFileResponse.content) {
+            const currentFile = currentFileResponse.content;
+            
+            console.log("🔄 [CodeAware] Processing code changes (local toggle)...");
+            
+            // Process code changes in the background
+            await dispatch(processCodeChanges({
+              currentFilePath: currentFile.path,
+              currentContent: currentFile.contents || ""
+            }));
+            
+            console.log("✅ [CodeAware] Code changes processed successfully (local toggle)");
+          } else {
+            console.warn("⚠️ [CodeAware] Could not get current file for change processing (local toggle)");
+          }
+          
+          // Clear the snapshot after processing
+          dispatch(clearCodeEditModeSnapshot());
+          
+        } catch (error) {
+          console.error("❌ [CodeAware] Failed to process code changes (local toggle):", error);
+          // Clear snapshot even if processing failed
+          dispatch(clearCodeEditModeSnapshot());
+        }
+      }
+    };
+
+    handleLocalCodeEditModeChange();
+  }, [isCodeEditModeEnabled, ideMessenger, dispatch]);
+
   // Add webview listener for new session event to initialize CodeAware session
   useWebviewListener(
     "newSession",
@@ -207,9 +282,67 @@ export const CodeAware = () => {
     "didChangeCodeEditMode",
     async (data: { enabled: boolean }) => {
       console.log("📡 [CodeAware] Received code edit mode change from IDE:", data);
+      
+      const currentCodeEditMode = isCodeEditModeEnabled;
+      
+      if (data.enabled && !currentCodeEditMode) {
+        // Entering code edit mode - save current code snapshot
+        try {
+          const currentFileResponse = await ideMessenger?.request("getCurrentFile", undefined);
+          
+          if (currentFileResponse && currentFileResponse.status === "success" && currentFileResponse.content) {
+            const currentFile = currentFileResponse.content;
+            
+            dispatch(saveCodeEditModeSnapshot({
+              filePath: currentFile.path,
+              content: currentFile.contents || ""
+            }));
+            
+            console.log("📸 [CodeAware] Code snapshot saved:", {
+              filePath: currentFile.path,
+              contentLength: (currentFile.contents || "").length
+            });
+          } else {
+            console.warn("⚠️ [CodeAware] Could not get current file for snapshot");
+          }
+        } catch (error) {
+          console.error("❌ [CodeAware] Failed to save code snapshot:", error);
+        }
+      } else if (!data.enabled && currentCodeEditMode) {
+        // Exiting code edit mode - process code changes
+        try {
+          const currentFileResponse = await ideMessenger?.request("getCurrentFile", undefined);
+          
+          if (currentFileResponse && currentFileResponse.status === "success" && currentFileResponse.content) {
+            const currentFile = currentFileResponse.content;
+            
+            console.log("🔄 [CodeAware] Processing code changes...");
+            
+            // Process code changes in the background
+            await dispatch(processCodeChanges({
+              currentFilePath: currentFile.path,
+              currentContent: currentFile.contents || ""
+            }));
+            
+            console.log("✅ [CodeAware] Code changes processed successfully");
+          } else {
+            console.warn("⚠️ [CodeAware] Could not get current file for change processing");
+          }
+          
+          // Clear the snapshot after processing
+          dispatch(clearCodeEditModeSnapshot());
+          
+        } catch (error) {
+          console.error("❌ [CodeAware] Failed to process code changes:", error);
+          // Clear snapshot even if processing failed
+          dispatch(clearCodeEditModeSnapshot());
+        }
+      }
+      
+      // Update the code edit mode state
       dispatch(setCodeEditMode(data.enabled));
     },
-    [dispatch]
+    [dispatch, ideMessenger, isCodeEditModeEnabled]
   );
 
   // Get IDE communication flags
@@ -235,6 +368,9 @@ export const CodeAware = () => {
 
   // 设置全局样式：
   const codeAwareDivRef = useRef<HTMLDivElement>(null);
+  
+  // Track previous code edit mode state for local toggles
+  const prevCodeEditModeRef = useRef<boolean>(isCodeEditModeEnabled);
 
   // CodeAware: 调试状态 - 跟踪最近的光标位置和选择信息
   const [debugInfo, setDebugInfo] = useState<{

@@ -57,6 +57,12 @@ type CodeAwareSessionState = {
     codeChunksToHighlightInIde: CodeChunk[];
     // Code editing mode - when true, allows manual code editing; when false, allows CodeAware operations
     isCodeEditModeEnabled: boolean;
+    // Code state snapshot when entering code edit mode
+    codeEditModeSnapshot: {
+        filePath: string;
+        content: string;
+        timestamp: number;
+    } | null;
 }
 
 const initialCodeAwareState: CodeAwareSessionState = {
@@ -75,6 +81,7 @@ const initialCodeAwareState: CodeAwareSessionState = {
     shouldClearIdeHighlights: false,
     codeChunksToHighlightInIde: [],
     isCodeEditModeEnabled: false, // Default to CodeAware mode
+    codeEditModeSnapshot: null, // No snapshot initially
 }
 
 export const codeAwareSessionSlice = createSlice({
@@ -713,6 +720,46 @@ export const codeAwareSessionSlice = createSlice({
         // Set code edit mode explicitly
         setCodeEditMode: (state, action: PayloadAction<boolean>) => {
             state.isCodeEditModeEnabled = action.payload;
+        },
+        // Save code snapshot when entering code edit mode
+        saveCodeEditModeSnapshot: (state, action: PayloadAction<{
+            filePath: string;
+            content: string;
+        }>) => {
+            state.codeEditModeSnapshot = {
+                filePath: action.payload.filePath,
+                content: action.payload.content,
+                timestamp: Date.now()
+            };
+        },
+        // Clear code edit mode snapshot
+        clearCodeEditModeSnapshot: (state) => {
+            state.codeEditModeSnapshot = null;
+        },
+        // Mark steps as code_dirty based on code changes
+        markStepsCodeDirty: (state, action: PayloadAction<{
+            stepIds: string[];
+        }>) => {
+            action.payload.stepIds.forEach(stepId => {
+                const step = state.steps.find(s => s.id === stepId);
+                if (step && step.stepStatus === "generated") {
+                    step.stepStatus = "code_dirty";
+                }
+            });
+        },
+        // Update code chunk positions after code changes
+        updateCodeChunkPositions: (state, action: PayloadAction<{
+            updates: Array<{
+                chunkId: string;
+                newRange: [number, number];
+            }>;
+        }>) => {
+            action.payload.updates.forEach(update => {
+                const chunk = state.codeChunks.find(c => c.id === update.chunkId);
+                if (chunk) {
+                    chunk.range = update.newRange;
+                }
+            });
         }
     },
     selectors:{
@@ -813,7 +860,11 @@ export const {
     setKnowledgeCardGenerationStatus,
     setStepAbstract,
     toggleCodeEditMode,
-    setCodeEditMode
+    setCodeEditMode,
+    saveCodeEditModeSnapshot,
+    clearCodeEditModeSnapshot,
+    markStepsCodeDirty,
+    updateCodeChunkPositions
 } = codeAwareSessionSlice.actions
 
 export const {

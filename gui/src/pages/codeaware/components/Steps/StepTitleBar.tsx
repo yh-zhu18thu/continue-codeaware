@@ -1,4 +1,5 @@
 import { ArrowPathIcon, ChevronDownIcon, PlayIcon } from '@heroicons/react/24/outline';
+import { StepStatus } from "core";
 import React from 'react';
 import styled from "styled-components";
 import {
@@ -14,6 +15,7 @@ const TitleBarContainer = styled.div<{
   isExpanded: boolean; 
   isHighlighted: boolean; 
   isFlickering: boolean; 
+  stepStatus?: StepStatus;
 }>`
   padding: 4px 12px;
   display: flex;
@@ -22,9 +24,14 @@ const TitleBarContainer = styled.div<{
   background-color: ${({ isActive }) => 
     isActive ? vscListActiveBackground : vscInputBackground
   };
-  color: ${vscForeground};
+  color: ${({ stepStatus }) => {
+    // Special text colors for dirty states to make them stand out
+    if (stepStatus === "step_dirty") return '#FCD34D'; // Bright amber text for step dirty
+    if (stepStatus === "code_dirty") return '#FB923C'; // Bright orange text for code dirty
+    return vscForeground;
+  }};
   cursor: pointer;
-  transition: background-color 0.15s ease-in-out, border-color 0.15s ease-in-out;
+  transition: background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, opacity 0.15s ease-in-out;
   border-radius: ${defaultBorderRadius};
   border: 2px solid ${({ isHighlighted, isFlickering }) => {
     if (isFlickering) return '#FFD700'; // Gold color for flickering
@@ -39,12 +46,24 @@ const TitleBarContainer = styled.div<{
     if (isHighlighted) return '0 0 8px rgba(0, 122, 204, 0.4)'; // Blue glow for highlighted
     return 'none';
   }};
+  // Different opacity for different states
+  opacity: ${({ stepStatus }) => {
+    if (stepStatus === "generating") return 0.7; // Dimmed when generating
+    if (stepStatus === "generated") return 0.85; // Slightly dimmed when generated but not confirmed
+    return 1; // Full opacity for confirmed and dirty states
+  }};
   animation: ${({ isFlickering }) => 
     isFlickering ? 'none' : 'none'
   }; // Remove any conflicting animations
 
   &:hover {
     background-color: ${vscInputBackground};
+    color: ${({ stepStatus }) => {
+      // Maintain bright text colors on hover for dirty states
+      if (stepStatus === "step_dirty") return '#FDE68A'; // Even brighter amber on hover
+      if (stepStatus === "code_dirty") return '#FED7AA'; // Even brighter orange on hover
+      return vscForeground;
+    }};
   }
 `;
 
@@ -67,13 +86,20 @@ const IconContainer = styled.div`
   gap: 8px;
 `;
 
-const IconButton = styled.button<{ disabled?: boolean }>`
+const IconButton = styled.button<{ disabled?: boolean; stepStatus?: StepStatus }>`
   display: flex;
   align-items: center;
   justify-content: center;
   background: none;
   border: none;
-  color: ${({ disabled }) => disabled ? 'rgba(255, 255, 255, 0.4)' : vscForeground};
+  color: ${({ disabled, stepStatus }) => {
+    if (disabled) {
+      if (stepStatus === "generating") return 'rgba(255, 255, 255, 0.3)'; // More dimmed for generating
+      if (stepStatus === "generated") return 'rgba(255, 255, 255, 0.4)'; // Slightly less dimmed for generated
+      return 'rgba(255, 255, 255, 0.4)';
+    }
+    return vscForeground;
+  }};
   cursor: ${({ disabled }) => disabled ? 'not-allowed' : 'pointer'};
   padding: 4px;
   border-radius: 4px;
@@ -87,8 +113,6 @@ const IconButton = styled.button<{ disabled?: boolean }>`
     background-color: ${({ disabled }) => disabled ? 'transparent' : 'rgba(255, 255, 255, 0.2)'};
   }
 `;
-
-import { StepStatus } from "core";
 
 interface StepTitleBarProps {
   title: string;
@@ -130,14 +154,23 @@ const StepTitleBar: React.FC<StepTitleBarProps> = ({
       }
     } else {
       // 否则执行正常的执行逻辑
-      if (stepStatus !== "generating" && onExecuteUntilStep) {
+      if (stepStatus !== "generating" && stepStatus !== "generated" && onExecuteUntilStep) {
         onExecuteUntilStep();
       }
     }
   };
 
-  const isButtonDisabled = stepStatus === "generating" || disabled;
+  const isButtonDisabled = stepStatus === "generating" || stepStatus === "generated" || disabled;
   const isStepDirty = stepStatus === "step_dirty";
+
+  // Tooltip text based on step status
+  const getTooltipText = () => {
+    if (disabled) return "代码编辑模式下不可用";
+    if (stepStatus === "generating") return "代码正在生成中...";
+    if (stepStatus === "generated") return "步骤代码已生成，更改step信息后可重新生成";
+    if (isStepDirty) return "重新生成代码";
+    return "执行到此步骤";
+  };
 
   return (
     <TitleBarContainer 
@@ -145,6 +178,7 @@ const StepTitleBar: React.FC<StepTitleBarProps> = ({
       isExpanded={isExpanded}
       isHighlighted={isHighlighted}
       isFlickering={isFlickering}
+      stepStatus={stepStatus}
       onClick={onToggle}
     >
       <TitleContent>
@@ -154,15 +188,8 @@ const StepTitleBar: React.FC<StepTitleBarProps> = ({
         <IconButton 
           onClick={handleButtonClick} 
           disabled={isButtonDisabled}
-          title={
-            disabled 
-              ? "代码编辑模式下不可用"
-              : isButtonDisabled && stepStatus === "generating"
-                ? "代码正在生成中..." 
-                : isStepDirty 
-                  ? "重新生成代码" 
-                  : "执行到此步骤"
-          }
+          stepStatus={stepStatus}
+          title={getTooltipText()}
         >
           {isStepDirty ? (
             <ArrowPathIcon width={16} height={16} />

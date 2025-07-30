@@ -10,7 +10,7 @@ import StepDescription from './StepDescription';
 import StepEditor from './StepEditor';
 import StepTitleBar from './StepTitleBar';
 
-const StepContainer = styled.div<{ isHovered: boolean }>`
+const StepContainer = styled.div<{ isHovered: boolean; stepStatus?: StepStatus }>`
   width: 100%;
   max-width: 100%;
   min-width: 0; /* 防止内容撑开 */
@@ -18,11 +18,17 @@ const StepContainer = styled.div<{ isHovered: boolean }>`
   flex-direction: column;
   background-color: ${vscBackground};
   margin: 12px 0px; /* 减少垂直间距 */
-  transition: box-shadow 0.2s ease-in-out;
+  transition: box-shadow 0.2s ease-in-out, opacity 0.2s ease-in-out;
   box-shadow: ${({ isHovered }) => isHovered ? '0 6px 16px rgba(0, 0, 0, 0.12)' : '0 2px 4px rgba(0, 0, 0, 0.1)'};
   border-radius: 4px;
   overflow: hidden;
   box-sizing: border-box;
+  // Different opacity for different states
+  opacity: ${({ stepStatus }) => {
+    if (stepStatus === "generating") return 0.8; // Dimmed when generating
+    if (stepStatus === "generated") return 0.9; // Slightly dimmed when generated but not confirmed
+    return 1; // Full opacity for confirmed and dirty states
+  }};
 `;
 
 const ContentArea = styled.div<{ isVisible: boolean }>`
@@ -326,6 +332,7 @@ const Step: React.FC<StepProps> = ({
   return (
     <StepContainer 
       isHovered={isHovered}
+      stepStatus={stepStatus}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >

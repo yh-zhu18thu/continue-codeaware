@@ -18,27 +18,16 @@ except Exception as e:
 missing_values = dataset.isnull().sum()
 abnormal_entries = (dataset.eq('').sum()) | (dataset.isin(['?', 'N/A']).sum())  # Check for values that may not be valid
 
-# Handle missing or abnormal values (for simplicity, remove rows with such values)
-if missing_values.sum() > 0 or abnormal_entries.sum() > 0:
-    dataset = dataset.dropna()  # Drop rows with missing values
-    dataset = dataset[~dataset.isin(['', '?', 'N/A']).any(axis=1)]  # Remove rows with abnormal entries
+def handle_missing_and_abnormal_data(df):
+    # Drop rows with excessive missing/abnormal values or fill them
+    df = df.dropna()  # Example treatment: dropping rows with missing values
+    df.replace(['', '?', 'N/A'], pd.NA, inplace=True)  # Replace abnormal entries with NA
+    df.fillna('unknown', inplace=True)  # Fill NA with 'unknown'
+    return df
 
-# Display cleaned dataset information
-print(f'Dataset Shape After Cleaning: {dataset.shape}')  # Show updated number of rows and columns
-print(f'Missing Values After Cleaning: {dataset.isnull().sum().sum()}')
+# Apply data handling logic to clean the dataset
+dataset = handle_missing_and_abnormal_data(dataset)
 
-# Step 3: Extract features from email text
-try:
-    if 'text' not in dataset.columns:
-        raise ValueError("The column 'text' containing email content is missing.")
-
-    # Use TfidfVectorizer to extract text-based features
-    vectorizer = TfidfVectorizer()  # Initializes the TF-IDF vectorizer
-    tfidf_features = vectorizer.fit_transform(dataset['text'])  # Fits and transforms the email text data
-
-    print("Feature extraction completed successfully.")  # Acknowledge completion
-    print(f"TF-IDF feature shape: {tfidf_features.shape}")  # Show shape of extracted features (sample count x feature count)
-except ValueError as ve:
-    print(f"ValueError: {ve}")
-except Exception as e:
-    print(f"An unexpected error occurred during feature extraction: {e}")
+# Verify the dataset after cleaning
+print("Dataset after cleaning:")
+print(dataset.head())

@@ -267,17 +267,20 @@ export function constructProcessCodeChangesPrompt(
     }).join(", ");
     
     return `{
-        "task": "You are given the current code, a code diff showing changes, and a list of relevant steps that were affected by these code changes. Analyze whether these changes require updates to the step abstracts and knowledge card titles/content.",
+        "task": "You are given the current code, a code diff showing changes, and a list of relevant steps that were affected by these code changes. Analyze whether these changes require updates to the step abstracts and knowledge card titles/content, and determine if any steps have become functionally incomplete and need regeneration.",
         "requirements": [
             "Analyze the code diff to understand what changes were made",
             "For each step, determine if the changes require updating the step's title or abstract (needs_update: true/false)",
+            "For each step, analyze if the code changes have made the step's functionality incomplete or broken, requiring complete regeneration (needs_regenerate: true/false)",
+            "A step needs_regenerate when: the code changes have removed or broken core functionality described in the step's abstract, making the step's implementation incomplete or non-functional",
+            "A step only needs_update when: minor adjustments to title/abstract are needed but the core functionality remains intact",
             "If a step needs update, provide the updated title and abstract that reflect the code changes",
             "For each knowledge card, determine if its content needs to be regenerated based on the changes (needs_update: true/false)",
             "If a knowledge card needs update, provide an updated title that better reflects the new code",
             "Extract the most relevant code parts that correspond to each updated step and knowledge card",
             "The corresponding_code should include the relevant portions from the current_code (after changes)",
             "Respond in the same language as the step descriptions",
-            "You must follow this JSON format in your response: {\\"analysis\\": \\"(your analysis of the changes in the code and the things that need modification)\\", \\"updated_steps\\": [{\\"id\\": \\"step_id\\", \\"needs_update\\": true/false, \\"title\\": \\"(updated or original title)\\", \\"abstract\\": \\"(updated or original abstract)\\", \\"corresponding_code\\": \\"(relevant code from current_code)\\"}], \\"knowledge_cards\\": [{\\"id\\": \\"card_id\\", \\"needs_update\\": true/false, \\"title\\": \\"(updated or original title)\\", \\"corresponding_code\\": \\"(relevant code from current_code)\\"}]}",
+            "You must follow this JSON format in your response: {\\"analysis\\": \\"(your analysis of the changes in the code and the things that need modification)\\", \\"updated_steps\\": [{\\"id\\": \\"step_id\\", \\"needs_update\\": true/false, \\"needs_regenerate\\": true/false, \\"title\\": \\"(updated or original title)\\", \\"abstract\\": \\"(updated or original abstract)\\", \\"corresponding_code\\": \\"(relevant code from current_code)\\"}], \\"knowledge_cards\\": [{\\"id\\": \\"card_id\\", \\"needs_update\\": true/false, \\"title\\": \\"(updated or original title)\\", \\"corresponding_code\\": \\"(relevant code from current_code)\\"}]}",
             "Please do not use invalid \`\`\`json character to envelope the JSON response, just return the JSON object directly."
         ],
         "current_code": "${currentCode}",

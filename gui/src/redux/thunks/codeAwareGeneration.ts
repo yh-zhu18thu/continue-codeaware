@@ -1775,7 +1775,8 @@ export const processCodeUpdates = createAsyncThunk<
 
                 console.log("✅ Code update analysis completed:", {
                     updatedStepsCount: updatedSteps.length,
-                    knowledgeCardsCount: knowledgeCards.length
+                    knowledgeCardsCount: knowledgeCards.length,
+                    stepsNeedingRegeneration: updatedSteps.filter((s: any) => s.needs_regenerate).length
                 });
 
                 // Validate response structure
@@ -1790,6 +1791,13 @@ export const processCodeUpdates = createAsyncThunk<
                     const stepId = stepUpdate.id;
                     
                     try {
+                        // Check if step needs regeneration
+                        if (stepUpdate.needs_regenerate) {
+                            console.log(`🔄 Step ${stepId} needs regeneration, marking as step_dirty`);
+                            dispatch(setStepStatus({ stepId, status: "step_dirty" }));
+                            continue; // Skip further processing for this step as it needs full regeneration
+                        }
+
                         // Update step title and abstract if needed
                         if (stepUpdate.needs_update) {
                             if (stepUpdate.title) {
@@ -1830,7 +1838,7 @@ export const processCodeUpdates = createAsyncThunk<
                             console.log(`🔗 Created new step mapping: ${stepCodeChunkId} -> ${stepId}`);
                         }
 
-                        // Set step status to generated
+                        // Set step status to generated (only if not needing regeneration)
                         dispatch(setStepStatus({ stepId, status: "generated" }));
                     } catch (stepError) {
                         console.error(`❌ Error processing step ${stepId}:`, stepError);

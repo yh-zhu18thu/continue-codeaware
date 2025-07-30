@@ -68,46 +68,85 @@ function calculateCodeChunkRange(fullCode: string, chunkCode: string): [number, 
     
     // 如果代码块只有一行
     if (chunkLines.length === 1) {
-        const chunkLine = chunkLines[0].trim();
+        const chunkLine = chunkLines[0];
         for (let i = 0; i < fullCodeLines.length; i++) {
-            if (fullCodeLines[i].trim() === chunkLine) {
+            if (fullCodeLines[i] === chunkLine) {
+                return [i + 1, i + 1]; // 转换为1基索引
+            }
+        }
+        
+        // 如果精确匹配失败，尝试去掉空白再匹配
+        const chunkLineTrimmed = chunkLine.trim();
+        for (let i = 0; i < fullCodeLines.length; i++) {
+            if (fullCodeLines[i].trim() === chunkLineTrimmed) {
                 return [i + 1, i + 1]; // 转换为1基索引
             }
         }
     }
     
     // 如果代码块有多行，尝试找到连续匹配的行
-    const firstChunkLine = chunkLines[0].trim();
-    const lastChunkLine = chunkLines[chunkLines.length - 1].trim();
-    
     for (let i = 0; i <= fullCodeLines.length - chunkLines.length; i++) {
-        if (fullCodeLines[i].trim() === firstChunkLine) {
-            // 检查是否所有行都匹配
-            let allMatch = true;
-            for (let j = 0; j < chunkLines.length; j++) {
-                if (fullCodeLines[i + j].trim() !== chunkLines[j].trim()) {
-                    allMatch = false;
-                    break;
-                }
+        // 检查是否所有行都匹配（先尝试精确匹配，包括空行）
+        let allMatch = true;
+        for (let j = 0; j < chunkLines.length; j++) {
+            if (fullCodeLines[i + j] !== chunkLines[j]) {
+                allMatch = false;
+                break;
+            }
+        }
+        
+        if (allMatch) {
+            return [i + 1, i + chunkLines.length]; // 转换为1基索引
+        }
+        
+        // 如果精确匹配失败，尝试去掉首尾空白后匹配（但保留空行结构）
+        allMatch = true;
+        for (let j = 0; j < chunkLines.length; j++) {
+            const fullLine = fullCodeLines[i + j];
+            const chunkLine = chunkLines[j];
+            
+            // 如果两者都是空行或都是空白行，认为匹配
+            if ((fullLine.trim() === '' && chunkLine.trim() === '')) {
+                continue;
             }
             
-            if (allMatch) {
-                return [i + 1, i + chunkLines.length]; // 转换为1基索引
+            // 对于非空行，比较去空白后的内容
+            if (fullLine.trim() !== chunkLine.trim()) {
+                allMatch = false;
+                break;
             }
+        }
+        
+        if (allMatch) {
+            return [i + 1, i + chunkLines.length]; // 转换为1基索引
         }
     }
     
     // 如果无法精确匹配，尝试部分匹配
+    const firstChunkLine = chunkLines[0].trim();
+    const lastChunkLine = chunkLines[chunkLines.length - 1].trim();
+    
     for (let i = 0; i < fullCodeLines.length; i++) {
-        if (fullCodeLines[i].includes(firstChunkLine) || firstChunkLine.includes(fullCodeLines[i].trim())) {
-            // 找到可能的开始位置，估算结束位置
+        const fullLine = fullCodeLines[i].trim();
+        if (fullLine === firstChunkLine && firstChunkLine !== '') {
+            // 找到第一行匹配，尝试找到最后一行
+            for (let j = i; j < fullCodeLines.length; j++) {
+                if (fullCodeLines[j].trim() === lastChunkLine && lastChunkLine !== '') {
+                    return [i + 1, j + 1]; // 转换为1基索引
+                }
+            }
+            // 如果只找到第一行，估算结束位置
             const estimatedEnd = Math.min(i + chunkLines.length, fullCodeLines.length);
             return [i + 1, estimatedEnd]; // 转换为1基索引
         }
     }
     
     // 如果都无法匹配，返回默认范围
-    console.warn("无法为代码块计算精确的行号范围，使用默认范围");
+    console.warn("无法为代码块计算精确的行号范围，使用默认范围", {
+        chunkLinesCount: chunkLines.length,
+        fullCodeLinesCount: fullCodeLines.length,
+        chunkPreview: chunkCode.substring(0, 100)
+    });
     return [1, Math.min(chunkLines.length, fullCodeLines.length)];
 }
 
@@ -1474,7 +1513,7 @@ export const processCodeChanges = createAsyncThunk<
                 deletions: changes.filter(c => c.removed).length
             });
 
-            // Track real edits (excluding whitespace-only changes)
+            // Track real edits (including whitespace-only changes like adding/removing empty lines)
             const realEdits: Array<{
                 type: 'added' | 'removed' | 'modified';
                 lineStart: number;
@@ -1494,28 +1533,22 @@ export const processCodeChanges = createAsyncThunk<
                 }
                 
                 if (change.added) {
-                    // Check if the addition contains real content (not just whitespace)
-                    const hasRealContent = lines.some(line => line.trim() !== '');
-                    if (hasRealContent) {
-                        realEdits.push({
-                            type: 'added',
-                            lineStart: currentLine,
-                            lineEnd: currentLine + lines.length - 1,
-                            content: change.value
-                        });
-                    }
+                    // Include all additions, even if they're just whitespace/empty lines
+                    realEdits.push({
+                        type: 'added',
+                        lineStart: currentLine,
+                        lineEnd: currentLine + lines.length - 1,
+                        content: change.value
+                    });
                     currentLine += lines.length;
                 } else if (change.removed) {
-                    // Check if the removal contains real content (not just whitespace)
-                    const hasRealContent = lines.some(line => line.trim() !== '');
-                    if (hasRealContent) {
-                        realEdits.push({
-                            type: 'removed',
-                            lineStart: currentLine,
-                            lineEnd: currentLine + lines.length - 1,
-                            content: change.value
-                        });
-                    }
+                    // Include all removals, even if they're just whitespace/empty lines
+                    realEdits.push({
+                        type: 'removed',
+                        lineStart: currentLine,
+                        lineEnd: currentLine + lines.length - 1,
+                        content: change.value
+                    });
                     // Don't increment currentLine for removed content
                 } else {
                     // Unchanged content
@@ -1523,12 +1556,38 @@ export const processCodeChanges = createAsyncThunk<
                 }
             }
 
-            console.log("🔍 Real edits found:", realEdits);
+            console.log("🔍 All edits found:", realEdits);
 
             if (realEdits.length === 0) {
-                console.log("✅ No real code changes detected (only whitespace changes)");
+                console.log("✅ No code changes detected");
                 return;
             }
+
+            // Separate substantial edits (code changes) from formatting edits (whitespace only)
+            const substantialEdits = realEdits.filter(edit => {
+                const lines = edit.content.split('\n');
+                return lines.some(line => line.trim() !== '');
+            });
+
+            const formattingOnlyEdits = realEdits.filter(edit => {
+                const lines = edit.content.split('\n');
+                return lines.every(line => line.trim() === '');
+            });
+
+            console.log("📊 Edit analysis:", {
+                totalEdits: realEdits.length,
+                substantialEdits: substantialEdits.length,
+                formattingOnlyEdits: formattingOnlyEdits.length
+            });
+
+            // Log details of each edit for debugging
+            realEdits.forEach((edit, index) => {
+                console.log(`📝 Edit ${index + 1}: ${edit.type} at lines ${edit.lineStart}-${edit.lineEnd}`, {
+                    content: edit.content.replace(/\n/g, '\\n'),
+                    isSubstantial: substantialEdits.includes(edit),
+                    isFormatting: formattingOnlyEdits.includes(edit)
+                });
+            });
 
             // Get current code chunks and steps
             const codeChunks = state.codeAwareSession.codeChunks;
@@ -1541,6 +1600,10 @@ export const processCodeChanges = createAsyncThunk<
                 chunkId: string;
                 newRange: [number, number];
             }> = [];
+            const subtlyAffectedChunks: Array<{
+                chunkId: string;
+                newRange: [number, number];
+            }> = [];
 
             for (const chunk of codeChunks) {
                 if (chunk.filePath !== currentFilePath) {
@@ -1549,8 +1612,11 @@ export const processCodeChanges = createAsyncThunk<
                 
                 let isAffected = false;
                 let lineOffset = 0;
+                let hasSubtleChanges = false;
                 
-                // Check if this chunk overlaps with any real edit
+                console.log(`🔍 Analyzing chunk ${chunk.id} at range [${chunk.range[0]}, ${chunk.range[1]}]`);
+                
+                // Check if this chunk overlaps with any edit (including formatting)
                 for (const edit of realEdits) {
                     const chunkStart = chunk.range[0];
                     const chunkEnd = chunk.range[1];
@@ -1559,12 +1625,27 @@ export const processCodeChanges = createAsyncThunk<
                     
                     // Check for overlap
                     if (chunkStart <= editEnd && chunkEnd >= editStart) {
-                        isAffected = true;
-                        affectedChunkIds.add(chunk.id);
-                        break;
+                        console.log(`  📍 Chunk ${chunk.id} overlaps with ${edit.type} edit at lines ${editStart}-${editEnd}`);
+                        
+                        // Check if this is a substantial change that affects semantics
+                        const isSubstantialChange = substantialEdits.some(substantialEdit => 
+                            substantialEdit.lineStart === edit.lineStart && 
+                            substantialEdit.lineEnd === edit.lineEnd
+                        );
+                        
+                        if (isSubstantialChange) {
+                            console.log(`  ⚡ Substantial change detected in chunk ${chunk.id}`);
+                            isAffected = true;
+                            affectedChunkIds.add(chunk.id);
+                            break;
+                        } else {
+                            console.log(`  ✨ Subtle change detected in chunk ${chunk.id}`);
+                            // This is just formatting/whitespace change within the chunk
+                            hasSubtleChanges = true;
+                        }
                     }
                     
-                    // Calculate line offset for unaffected chunks that come after edits
+                    // Calculate line offset for chunks that come after edits
                     if (editEnd < chunkStart) {
                         if (edit.type === 'added') {
                             lineOffset += (editEnd - editStart + 1);
@@ -1574,21 +1655,93 @@ export const processCodeChanges = createAsyncThunk<
                     }
                 }
                 
-                if (!isAffected && lineOffset !== 0) {
-                    // This chunk is not affected but its position needs to be updated
-                    unaffectedChunks.push({
-                        chunkId: chunk.id,
-                        newRange: [
-                            chunk.range[0] + lineOffset,
-                            chunk.range[1] + lineOffset
-                        ]
-                    });
+                console.log(`  📊 Chunk ${chunk.id} analysis: isAffected=${isAffected}, hasSubtleChanges=${hasSubtleChanges}, lineOffset=${lineOffset}`);
+                
+                // Always try to recalculate range if there are any changes affecting this chunk
+                // This includes: substantial changes, subtle changes, or position offset
+                if (isAffected || hasSubtleChanges || lineOffset !== 0) {
+                    try {
+                        // Try to recalculate the range for this chunk's content in the new code
+                        const newRange = calculateCodeChunkRange(currentContent, chunk.content);
+                        
+                        console.log(`  🔄 Recalculated range for chunk ${chunk.id}: [${chunk.range[0]}, ${chunk.range[1]}] -> [${newRange[0]}, ${newRange[1]}]`);
+                        console.log(`  📝 Chunk content preview:`, chunk.content.substring(0, 100).replace(/\n/g, '\\n'));
+                        
+                        // If we can find the chunk content with a different range, update it
+                        if (newRange[0] !== chunk.range[0] || newRange[1] !== chunk.range[1]) {
+                            console.log(`📏 Detected range changes in chunk ${chunk.id}: [${chunk.range[0]}, ${chunk.range[1]}] -> [${newRange[0]}, ${newRange[1]}]`);
+                            
+                            // If this chunk was marked as affected (substantial changes), keep it there
+                            if (!isAffected) {
+                                // This is a subtle change or position change
+                                subtlyAffectedChunks.push({
+                                    chunkId: chunk.id,
+                                    newRange: newRange
+                                });
+                                console.log(`  ✅ Added chunk ${chunk.id} to subtlyAffectedChunks`);
+                            } else {
+                                console.log(`  ⚡ Chunk ${chunk.id} has range changes but will be handled by LLM due to substantial changes`);
+                            }
+                        } else {
+                            console.log(`  ❓ Chunk ${chunk.id} range unchanged despite detected changes - investigating...`);
+                            
+                            // Additional debugging: let's check what exactly changed
+                            if (hasSubtleChanges) {
+                                const overlappingEdits = realEdits.filter(edit => {
+                                    const chunkStart = chunk.range[0];
+                                    const chunkEnd = chunk.range[1];
+                                    return chunkStart <= edit.lineEnd && chunkEnd >= edit.lineStart;
+                                });
+                                console.log(`  🔍 Overlapping edits for chunk ${chunk.id}:`, overlappingEdits.map(e => ({
+                                    type: e.type,
+                                    lines: `${e.lineStart}-${e.lineEnd}`,
+                                    content: e.content.replace(/\n/g, '\\n')
+                                })));
+                            }
+                            
+                            if (!isAffected && lineOffset !== 0) {
+                                // Range calculation didn't detect changes but we know there's an offset
+                                // This handles edge cases where calculateCodeChunkRange doesn't detect the change
+                                unaffectedChunks.push({
+                                    chunkId: chunk.id,
+                                    newRange: [
+                                        chunk.range[0] + lineOffset,
+                                        chunk.range[1] + lineOffset
+                                    ]
+                                });
+                                console.log(`  📍 Added chunk ${chunk.id} to unaffectedChunks with offset (range calc failed to detect change)`);
+                            }
+                        }
+                    } catch (rangeError) {
+                        console.warn(`⚠️ Could not recalculate range for chunk ${chunk.id}:`, rangeError);
+                        
+                        if (!isAffected) {
+                            // If we can't recalculate the range but we know there are changes, 
+                            // treat as affected if there were substantial edits, otherwise use offset
+                            if (hasSubtleChanges && substantialEdits.length > 0) {
+                                isAffected = true;
+                                affectedChunkIds.add(chunk.id);
+                                console.log(`  ⚠️ Chunk ${chunk.id} moved to affectedChunkIds due to range calculation failure`);
+                            } else if (lineOffset !== 0) {
+                                // Fallback to simple offset calculation
+                                unaffectedChunks.push({
+                                    chunkId: chunk.id,
+                                    newRange: [
+                                        chunk.range[0] + lineOffset,
+                                        chunk.range[1] + lineOffset
+                                    ]
+                                });
+                                console.log(`  📍 Chunk ${chunk.id} added to unaffectedChunks with fallback offset`);
+                            }
+                        }
+                    }
                 }
             }
 
             console.log("📍 Code chunks analysis:", {
                 affected: Array.from(affectedChunkIds),
-                unaffectedWithNewPositions: unaffectedChunks
+                subtlyAffected: subtlyAffectedChunks.map(c => c.chunkId),
+                unaffectedWithNewPositions: unaffectedChunks.map(c => c.chunkId)
             });
 
             // Find which steps have affected code chunks
@@ -1608,8 +1761,8 @@ export const processCodeChanges = createAsyncThunk<
                     stepIds: Array.from(affectedStepIds)
                 }));
                 
-                // Create a formatted diff string for LLM
-                const formattedDiff = realEdits.map(edit => {
+                // Create a formatted diff string for LLM using only substantial edits
+                const formattedDiff = substantialEdits.map(edit => {
                     const prefix = edit.type === 'added' ? '+' : edit.type === 'removed' ? '-' : ' ';
                     return `${prefix} ${edit.content.trim()}`;
                 }).join('\n');
@@ -1634,15 +1787,32 @@ export const processCodeChanges = createAsyncThunk<
                     // Re-throw the error so the UI can handle it
                     throw updateError;
                 }
+            } else if (substantialEdits.length > 0) {
+                console.log("📝 Substantial code changes detected but no steps were affected");
             }
             
+            // Update positions for unaffected chunks and subtly affected chunks
             if (unaffectedChunks.length > 0) {
                 dispatch(updateCodeChunkPositions({
                     updates: unaffectedChunks
                 }));
+                console.log(`📏 Updated positions for ${unaffectedChunks.length} unaffected chunks`);
+            }
+            
+            if (subtlyAffectedChunks.length > 0) {
+                dispatch(updateCodeChunkPositions({
+                    updates: subtlyAffectedChunks
+                }));
+                console.log(`🔧 Updated ranges for ${subtlyAffectedChunks.length} subtly affected chunks`);
             }
 
-            console.log("✅ Code changes processed successfully");
+            console.log("✅ Code changes processed successfully:", {
+                affectedSteps: affectedStepIds.size,
+                repositionedChunks: unaffectedChunks.length,
+                adjustedChunks: subtlyAffectedChunks.length,
+                substantialEdits: substantialEdits.length,
+                formattingEdits: formattingOnlyEdits.length
+            });
 
         } catch (error) {
             console.error("❌ Error processing code changes:", error);

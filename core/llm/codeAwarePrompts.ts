@@ -24,13 +24,16 @@ export function constructGenerateStepsPrompt(
     userRequirement: string,
 ): string {
     return `{
-        "task": "You are given a description of a coding project. Provide a detailed list of steps based on the project description.",
+        "task": "You are given a description of a coding project. First, provide a high-level breakdown of the project into major tasks, then provide detailed steps for each task.",
         "requirements": [
-            "The steps should be fine-grained. If the title of a step is 'A and B', divide it into two steps 'A' and 'B'. Think of it as being atomic in some sense.",
+            "First, identify 4-8 major high-level tasks that represent the overall workflow of the project. These should be conceptual phases like 'Setup and Configuration', 'Data Processing', 'User Interface Development', etc.",
+            "Then, for each major task, generate fine-grained steps. The steps should be atomic - if the title of a step is 'A and B', divide it into two steps 'A' and 'B'.",
             "Generate an abstract for each step. The abstract can contain Markdown. The abstract should entail all actions needed in this step.",
-            "Each step must correspond to a part of the given description",
-            "Respond in the same language as the project description, EXCEPT FOR THE JSON FIELD NAMES, which must be in English.",
-            "You must follow this JSON format in your response: {"title": "(title of the project)", "task_description": "(exactly the same task description cut out from the input description), "learning_goal": "(exactly the same learning goals cut out from the input description)", "steps": [{"title": "(title of the step)", "abstract": "(description of the step, can contain Markdown)", "tasks_corresponding_chunks": [(a list of exact quotes from the extracted task_description)]}]}.",
+            "Each step must correspond to exactly one of the major tasks",
+            "Multiple steps can belong to the same task - this is encouraged to break down complex tasks into manageable pieces",
+            "In the task_description field, format the major tasks as a numbered list (1. task1\\n2. task2\\n...), not the original project description",
+            "You must follow this JSON format in your response: {"title": "(title of the project)", "task_description": "(format the tasks as numbered list: 1. task1\\n2. task2\\n...)", "learning_goal": "(exactly the same learning goals cut out from the input description)", "tasks": ["(high-level task 1)", "(high-level task 2)", ...], "steps": [{"title": "(title of the step)", "abstract": "(description of the step, can contain Markdown)", "tasks_corresponding_chunks": ["(the exact text from tasks array that this step belongs to)"]}]}.",
+            "Respond in the same language as the description, EXCEPT FOR THE JSON FIELD NAMES, which must be in English.",
             "Please do not use invalid \`\`\`json character to envelope the JSON response, just return the JSON object directly.",
         ],
         "description": "${userRequirement}"

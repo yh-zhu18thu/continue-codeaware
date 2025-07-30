@@ -326,6 +326,7 @@ export const generateStepsFromRequirement = createAsyncThunk<
             let taskRequirements = "";
             let learningGoal = "";
             let title = "";
+            let tasks: string[] = [];
             
             // 解析 LLM 返回的 JSON 内容
             try {
@@ -334,7 +335,9 @@ export const generateStepsFromRequirement = createAsyncThunk<
                 title = jsonResponse.title || "";
                 taskRequirements = jsonResponse.task_description || "";
                 learningGoal = jsonResponse.learning_goal || "";
+                tasks = jsonResponse.tasks || [];
                 const steps = jsonResponse.steps || [];
+                
                 for (const step of steps) {
                     const stepTitle = step.title || "";
                     const stepAbstract = step.abstract || "";
@@ -353,6 +356,7 @@ export const generateStepsFromRequirement = createAsyncThunk<
                     } else {
                         console.warn("Step is missing title or abstract:", step);
                     }
+                    // 为每个step的对应任务块创建requirement chunks和映射
                     for (const chunk of tasksCorrespondingChunks) {
                         requirementChunks.push({
                             id: "r-"+(requirementChunks.length+1),
@@ -366,6 +370,9 @@ export const generateStepsFromRequirement = createAsyncThunk<
                         });
                     }
                 }
+                
+                // task_description 已经是AI格式化好的任务列表，直接使用
+                // tasks 数组主要用于步骤映射的参考
             } catch (error) {
                 console.error("Error during LLM request for generating steps:", error);
                 // 在抛出新错误之前，确保 error 是一个 Error 实例，以便保留原始堆栈跟踪
@@ -373,6 +380,8 @@ export const generateStepsFromRequirement = createAsyncThunk<
                 throw new Error(`Failed to generate steps: ${errorMessage}`);
                 // CATODO: UI提示，告知用户请求失败
             }
+            console.log("Generated tasks array:", tasks);
+            console.log("Formatted task_description from AI:", taskRequirements);
             console.log("userRequirement chunks:", requirementChunks);
 
             // 更新 Redux 状态

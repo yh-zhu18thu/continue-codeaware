@@ -36,6 +36,7 @@ import {
   generateKnowledgeCardThemes,
   generateKnowledgeCardThemesFromQuery,
   generateStepsFromRequirement,
+  getStepCorrespondingCode,
   paraphraseUserIntent,
   processCodeChanges,
   rerunStep
@@ -677,12 +678,15 @@ export const CodeAware = () => {
         step.stepStatus !== "generated"
       );
 
+      // 获取所有已生成的步骤（stepStatus 是 "generated"）
+      const generatedSteps = steps.filter(step => step.stepStatus === "generated");
+
       // 设置未执行步骤的状态为"generating"
       for (const step of unexecutedSteps) {
         dispatch(setStepStatus({ stepId: step.id, status: "generating" }));
       }
 
-      // 提取步骤信息
+      // 提取未执行步骤信息
       const stepsInfo = unexecutedSteps.map(step => ({
         id: step.id,
         title: step.title,
@@ -694,6 +698,7 @@ export const CodeAware = () => {
       }));
 
       console.log("📋 未执行的步骤信息:", stepsInfo);
+      console.log("📋 已生成的步骤数量:", generatedSteps.length);
 
       // 2. 通过ideMessenger获取当前文件的所有代码
       const currentFileResponse = await ideMessenger?.request("getCurrentFile", undefined);
@@ -725,7 +730,36 @@ export const CodeAware = () => {
         contentLength: currentFile.contents?.length || 0,
       });
 
-      // 3. 调用新的代码生成thunk
+      // 3. 收集已生成步骤的对应代码信息
+      const previouslyGeneratedStepsInfo = await Promise.all(
+        generatedSteps.map(async (step) => {
+          // 获取该步骤对应的代码内容
+          const correspondingCode = await getStepCorrespondingCode(
+            step.id, 
+            allMappings,
+            codeChunks,
+            ideMessenger
+          );
+          
+          return {
+            id: step.id,
+            title: step.title,
+            knowledge_cards: step.knowledgeCards.map(card => ({
+              id: card.id,
+              title: card.title
+            })),
+            current_corresponding_code: correspondingCode
+          };
+        })
+      );
+
+      console.log("📋 已生成步骤的对应代码信息:", previouslyGeneratedStepsInfo.map(step => ({
+        id: step.id,
+        title: step.title,
+        codeLength: step.current_corresponding_code?.length || 0
+      })));
+
+      // 4. 调用新的代码生成thunk
       const orderedSteps = stepsInfo.map(step => ({
         id: step.id,
         title: step.title,
@@ -740,7 +774,8 @@ export const CodeAware = () => {
       const result = await dispatch(generateCodeFromSteps({
         existingCode: currentFile.contents || "",
         filepath: currentFile.path,
-        orderedSteps: orderedSteps
+        orderedSteps: orderedSteps,
+        previouslyGeneratedSteps: previouslyGeneratedStepsInfo.length > 0 ? previouslyGeneratedStepsInfo : undefined
       }));
 
       if (generateCodeFromSteps.fulfilled.match(result)) {
@@ -777,7 +812,7 @@ export const CodeAware = () => {
       // 显示错误提示
       ideMessenger?.post("showToast", ["error", "代码生成过程中发生错误，请重试。"]);
     }
-  }, [steps, ideMessenger, dispatch, isCodeEditModeEnabled]);
+  }, [steps, ideMessenger, dispatch, isCodeEditModeEnabled, allMappings, codeChunks]);
 
   // Handle rerun step when step is dirty
   const handleRerunStep = useCallback(async (stepId: string) => {

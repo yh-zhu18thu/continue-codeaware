@@ -273,6 +273,14 @@ export const codeAwareSessionSlice = createSlice({
             state.shouldClearIdeHighlights = true;
             state.codeChunksToHighlightInIde = [];
         },
+        clearAllCodeChunks: (state) => {
+            // Clear all code chunks
+            state.codeChunks = [];
+        },
+        clearAllCodeAwareMappings: (state) => {
+            // Clear all CodeAware mappings
+            state.codeAwareMappings = [];
+        },
         updateHighlight: (state, action: PayloadAction<HighlightEvent | HighlightEvent[]>) => {
             // 统一处理单个或多个事件，保持向后兼容性
             const events = Array.isArray(action.payload) ? action.payload : [action.payload];
@@ -835,6 +843,8 @@ export const {
     newCodeAwareSession,
     resetSessionExceptRequirement,
     clearAllHighlights,
+    clearAllCodeChunks,
+    clearAllCodeAwareMappings,
     updateHighlight,
     updateRequirementChunks,
     updateCodeChunks,

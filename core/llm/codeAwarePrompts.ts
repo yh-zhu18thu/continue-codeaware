@@ -7,13 +7,13 @@ export function constructParaphraseUserIntentPrompt(
 ): string {
     const requirementText = programRequirement.requirementDescription;
     return `{
-        "task": "You are given a brief description of a coding project. Expand upon the description and provide a detailed list of steps. After that, generate a list of learning goals for someone doing the project.",
+        "task": "You are given a brief description of a coding project. Provide a clear implementation plan and learning goals.",
         "requirements": [
-            "The list of steps should be described in accessible terms for someone new to the field, and must not contain code or highly professional knowledge.",
-            "If there is no learning goal in the brief description, you should come up with your own ones based on the project. Otherwise, follow the learning goals in the brief description and expand upon them.",
+            "For the implementation plan: list the basic approach and key steps needed to complete the project. Use simple terms, no code or technical jargon.",
+            "For learning goals: identify what the learner will gain from this project. Create goals if none are provided.",
             "Respond in the same language as the project description.",
-            "Respond in first person, as if you are the learner gathering your thoughts and writing them down as notes. Use appropriate tone.",
-            "Respond in two paragraphs: one for the list of steps, and the other for the list of learning goals."
+            "Use first person tone as if taking notes.",
+            "Format: First paragraph for implementation plan, second paragraph for learning goals."
         ],
         "description": "${requirementText}"
     }`;
@@ -99,6 +99,15 @@ export function constructGenerateCodeFromStepsPrompt(
             id: string;
             title: string;
         }>;
+    }>,
+    previouslyGeneratedSteps?: Array<{
+        id: string;
+        title: string;
+        knowledge_cards: Array<{
+            id: string;
+            title: string;
+        }>;
+        current_corresponding_code?: string;
     }>
 ): string {
     const stepsText = orderedSteps.map(step => {
@@ -108,25 +117,39 @@ export function constructGenerateCodeFromStepsPrompt(
         return `{"id": "${step.id}", "title": "${step.title}", "abstract": "${step.abstract}", "knowledge_cards": [${knowledgeCardsText}]}`;
     }).join(",\n        ");
     
+    const previousStepsText = previouslyGeneratedSteps ? previouslyGeneratedSteps.map(step => {
+        const knowledgeCardsText = step.knowledge_cards.map(kc => 
+            `{"id": "${kc.id}", "title": "${kc.title}"}`
+        ).join(", ");
+        return `{"id": "${step.id}", "title": "${step.title}", "knowledge_cards": [${knowledgeCardsText}], "current_corresponding_code": "${step.current_corresponding_code || ""}"}`;
+    }).join(",\n        ") : "";
+    
     return `{
-        "task": "You are given existing code and a list of ordered steps to implement. Generate new code that completes exactly what is required by the abstract of each step - no more, no less. Then identify the correspondence between code chunks and each step/knowledge card separately.",
+        "task": "You are given existing code, a list of new steps to implement, and information about previously generated steps. Generate new code that completes exactly what is required by the abstract of each new step, while maintaining and updating the code correspondence for all steps (both new and previously generated).",
         "requirements": [
-            "Generate code that implements exactly what each step's abstract requires",
+            "Generate code that implements exactly what each new step's abstract requires",
             "Do not generate excessive code beyond what is needed for the current steps",
             "Do not skip any required functionality mentioned in the abstracts",
             "Include proper comments in the generated code to explain what each part does",
-            "For each step, identify which parts of the generated code correspond to that step base on the abstract. Be precise.",
+            "IMPORTANT: For ALL steps (both new and previously generated), precisely identify which parts of the final code correspond to each step and its knowledge cards",
+            "The code correspondence should be updated for previously generated steps as well, since new code generation may affect their positioning or integration",
+            "For each step, identify the most relevant and precise code chunks that implement the step's functionality",
             "For each knowledge card, identify the most relevant and precise code that relates to the knowledge card's theme",
             "If a knowledge card has no corresponding code, leave its code field empty",
             "The changed_code should include both existing code and newly generated code",
+            "Be very precise in code chunk identification - include only the essential code that directly relates to each step/knowledge card",
             "Respond in the same language as the step descriptions",
-            "You must follow this JSON format in your response: {\\"changed_code\\": \\"(complete code with both existing and new parts)\\", \\"steps_corresponding_code\\": [{\\"id\\": \\"step_id\\", \\"code\\": \\"(code for this step)\\"}], \\"knowledge_cards_corresponding_code\\": [{\\"id\\": \\"card_id\\", \\"code\\": \\"(precise code for this knowledge card, or empty string if no correspondence)\\"}]}",
+            "You must follow this JSON format in your response: {\\"changed_code\\": \\"(complete code with both existing and new parts)\\", \\"steps_corresponding_code\\": [{\\"id\\": \\"step_id\\", \\"code\\": \\"(precise code for this step)\\"}], \\"knowledge_cards_corresponding_code\\": [{\\"id\\": \\"card_id\\", \\"code\\": \\"(precise code for this knowledge card, or empty string if no correspondence)\\"}]}",
+            "The steps_corresponding_code and knowledge_cards_corresponding_code should include entries for ALL steps and knowledge cards (both new and previously generated)",
             "Please do not use invalid \`\`\`json character to envelope the JSON response, just return the JSON object directly."
         ],
         "existing_code": "${existingCode}",
-        "ordered_steps": [
+        "new_steps_to_implement": [
         ${stepsText}
-        ]
+        ]${previousStepsText ? `,
+        "previously_generated_steps": [
+        ${previousStepsText}
+        ]` : ""}
     }`;
 }
 

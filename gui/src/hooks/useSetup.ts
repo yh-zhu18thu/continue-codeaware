@@ -249,7 +249,7 @@ function useSetup() {
   );
 
 
-  // CodeAware: 监听代码选择取消事件
+  // CodeAware: 监听代码选中事件
   useWebviewListener("codeSelectionCleared", async (data) => {
     const { filePath } = data;
 

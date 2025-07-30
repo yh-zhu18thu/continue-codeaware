@@ -81,6 +81,10 @@ export class VsCodeExtension {
     this.highlightCodeManager = new HighlightCodeManager();
     this.codeEditModeManager = new CodeEditModeManager();
 
+    // Register managers for automatic disposal
+    context.subscriptions.push(this.highlightCodeManager);
+    context.subscriptions.push(this.codeEditModeManager);
+
     let resolveWebviewProtocol: any = undefined;
     this.webviewProtocolPromise = new Promise<VsCodeWebviewProtocol>(
       (resolve) => {
@@ -217,6 +221,19 @@ export class VsCodeExtension {
       this.highlightCodeManager,
       this.codeEditModeManager
     );
+
+    // CodeAware: 设置高亮清除回调，当用户交互时通知 webview
+    this.highlightCodeManager.setOnHighlightClearedCallback(async (filePath: string) => {
+      try {
+        const webviewProtocol = await this.webviewProtocolPromise;
+        void webviewProtocol.request("codeSelectionCleared", {
+          filePath: filePath
+        });
+        console.log(`Notified webview of highlight cleared for file: ${filePath}`);
+      } catch (error) {
+        console.error("Error notifying webview of highlight cleared:", error);
+      }
+    });
 
     this.core = new Core(inProcessMessenger, this.ide, async (log: string) => {
       outputChannel.appendLine(
@@ -502,6 +519,8 @@ export class VsCodeExtension {
     this.codeEditModeManager?.dispose();
     // 清理CodeSelectionHandler资源
     this.codeSelectionHandler?.dispose();
+    // 清理HighlightCodeManager资源
+    this.highlightCodeManager?.dispose();
     // 清理代码选择防抖定时器
     if (this.selectionDebounceTimer) {
       clearTimeout(this.selectionDebounceTimer);

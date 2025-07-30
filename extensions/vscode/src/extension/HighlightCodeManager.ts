@@ -5,9 +5,90 @@ interface CodeChunk {
   range: [number, number];
 }
 
-export class HighlightCodeManager {
+export class HighlightCodeManager implements vscode.Disposable {
   private activeDecorations: Map<string, vscode.TextEditorDecorationType> = new Map();
   private blinkTimeouts: Map<string, NodeJS.Timeout[]> = new Map();
+  private disposables: vscode.Disposable[] = [];
+  private onHighlightClearedCallback?: (filePath: string) => void;
+
+  constructor() {
+    this.setupUserInteractionListeners();
+  }
+
+  /**
+   * Sets up listeners for user interactions that should clear highlights
+   */
+  private setupUserInteractionListeners(): void {
+    // Listen for text editor selection changes (mouse clicks, keyboard navigation)
+    this.disposables.push(
+      vscode.window.onDidChangeTextEditorSelection((event) => {
+        this.handleUserInteraction(event.textEditor);
+      })
+    );
+
+    // Listen for active text editor changes (switching between files)
+    this.disposables.push(
+      vscode.window.onDidChangeActiveTextEditor((editor) => {
+        if (editor) {
+          this.handleUserInteraction(editor);
+        }
+      })
+    );
+
+    // Listen for text document changes (typing)
+    this.disposables.push(
+      vscode.workspace.onDidChangeTextDocument((event) => {
+        // Find editors showing this document
+        const editors = vscode.window.visibleTextEditors.filter(
+          editor => editor.document === event.document
+        );
+        editors.forEach(editor => this.handleUserInteraction(editor));
+      })
+    );
+  }
+
+  /**
+   * Handles user interaction in an editor by clearing highlights for that file
+   * @param editor The text editor where interaction occurred
+   */
+  private handleUserInteraction(editor: vscode.TextEditor): void {
+    if (!editor || editor.document.uri.scheme !== 'file') {
+      return;
+    }
+
+    const filePath = editor.document.uri.fsPath;
+
+    // Check if there are active highlights for this file
+    if (this.hasActiveHighlights(filePath)) {
+      console.log(`User interaction detected in file: ${filePath}, clearing highlights`);
+      
+      // Clear highlights for this file
+      this.clearHighlightForFile(filePath);
+      
+      // Notify callback if set (to inform webview)
+      if (this.onHighlightClearedCallback) {
+        this.onHighlightClearedCallback(filePath);
+      }
+    }
+  }
+
+  /**
+   * Sets a callback to be called when highlights are cleared due to user interaction
+   * @param callback The callback function to call with the file path
+   */
+  setOnHighlightClearedCallback(callback: (filePath: string) => void): void {
+    this.onHighlightClearedCallback = callback;
+  }
+
+  /**
+   * Checks if there are active highlights for a specific file
+   * @param filepath The file path to check
+   * @returns True if there are active highlights for the file
+   */
+  hasActiveHighlights(filepath: string): boolean {
+    const normalizedFilepath = this.normalizeFilePath(filepath);
+    return this.activeDecorations.has(normalizedFilepath) || this.activeDecorations.has(filepath);
+  }
 
   /**
    * Highlights a code chunk in the specified file
@@ -148,6 +229,13 @@ export class HighlightCodeManager {
    */
   dispose(): void {
     this.clearAllHighlights();
+    
+    // Dispose of all event listeners
+    this.disposables.forEach(disposable => disposable.dispose());
+    this.disposables = [];
+    
+    // Clear callback reference
+    this.onHighlightClearedCallback = undefined;
   }
 
   /**

@@ -48,8 +48,8 @@ const TitleBarContainer = styled.div<{
   }};
   // Different opacity for different states
   opacity: ${({ stepStatus }) => {
-    if (stepStatus === "generating") return 0.7; // Dimmed when generating
-    if (stepStatus === "generated") return 0.85; // Slightly dimmed when generated but not confirmed
+    if (stepStatus === "generating") return 0.85; // Slightly dimmed when generating
+    if (stepStatus === "generated") return 0.7; // More dimmed when generated but not confirmed
     return 1; // Full opacity for confirmed and dirty states
   }};
   animation: ${({ isFlickering }) => 
@@ -94,8 +94,8 @@ const IconButton = styled.button<{ disabled?: boolean; stepStatus?: StepStatus }
   border: none;
   color: ${({ disabled, stepStatus }) => {
     if (disabled) {
-      if (stepStatus === "generating") return 'rgba(255, 255, 255, 0.3)'; // More dimmed for generating
-      if (stepStatus === "generated") return 'rgba(255, 255, 255, 0.4)'; // Slightly less dimmed for generated
+      if (stepStatus === "generating") return 'rgba(255, 255, 255, 0.4)'; // Slightly less dimmed for generating
+      if (stepStatus === "generated") return 'rgba(255, 255, 255, 0.3)'; // More dimmed for generated
       return 'rgba(255, 255, 255, 0.4)';
     }
     return vscForeground;

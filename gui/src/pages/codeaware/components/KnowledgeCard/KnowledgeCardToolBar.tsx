@@ -1,4 +1,5 @@
-import { ChevronDownIcon, QuestionMarkCircleIcon, XCircleIcon } from '@heroicons/react/24/outline';
+import { ChevronDownIcon, QuestionMarkCircleIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon } from '@heroicons/react/24/solid';
 import React from 'react';
 import styled from "styled-components";
 import {
@@ -22,15 +23,17 @@ const ToolBarContainer = styled.div<{ isHighlighted?: boolean; isFlickering?: bo
     isHighlighted ? '#4ade80' : 
     `${lightGray}33`};
   transition: border-color 0.15s ease-in-out;
+  position: relative;
 `;
 
 const DisableButtonContainer = styled.div`
+  position: absolute;
+  top: 2px;
+  left: 2px;
   display: flex;
   align-items: center;
-  flex-shrink: 0;
-  margin-left: 0px;
-  margin-right: 8px;
-  margin-top: 2px; /* Align with the title */
+  justify-content: center;
+  z-index: 10;
 `;
 
 const TitleSection = styled.div`
@@ -39,6 +42,7 @@ const TitleSection = styled.div`
   flex: 1;
   cursor: pointer;
   min-width: 0; /* Allow text to shrink */
+  margin-left: 10px; /* Add space to avoid overlap with the x button */
 `;
 
 const Title = styled.span`
@@ -91,17 +95,16 @@ const KnowledgeCardToolBar: React.FC<KnowledgeCardToolBarProps> = ({
 }) => {
   return (
     <ToolBarContainer isHighlighted={isHighlighted} isFlickering={isFlickering}>
-      {/* Disable button on the left */}
+      {/* Small disable button in top-left corner */}
       <DisableButtonContainer>
         <HoverItem>
-          <XCircleIcon
-            className="w-5 h-5 hover:brightness-125 cursor-pointer text-red-400"
+          <XMarkIcon
+            className="w-3 h-3 cursor-pointer text-white hover:text-gray-300 transition-colors"
             onClick={onDisableClick}
-          >
-            <ToolTip text="Remove Card" position="top">
-              Remove Card
-            </ToolTip>
-          </XCircleIcon>
+          />
+          <ToolTip text="删除不需要的知识卡片" position="top">
+            删除不需要的知识卡片
+          </ToolTip>
         </HoverItem>
       </DisableButtonContainer>
 

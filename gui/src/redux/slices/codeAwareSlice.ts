@@ -508,12 +508,9 @@ export const codeAwareSessionSlice = createSlice({
                 }
             }
         },
-        updateRequirementChunks: (state, action: PayloadAction<RequirementChunk[]>) => {
+        setRequirementChunks: (state, action: PayloadAction<RequirementChunk[]>) => {
             if (state.userRequirement) { 
-                // Initialize highlightChunks if it doesn't exist
-                if (!state.userRequirement.highlightChunks) {
-                    state.userRequirement.highlightChunks = [];
-                }
+                state.userRequirement.highlightChunks = [];
                 state.userRequirement.highlightChunks.push(...action.payload);
             }
         },
@@ -902,7 +899,7 @@ export const {
     clearAllCodeChunks,
     clearAllCodeAwareMappings,
     updateHighlight,
-    updateRequirementChunks,
+    setRequirementChunks,
     updateCodeChunks,
     updateCodeChunkRange,
     setCodeChunkDisabled,

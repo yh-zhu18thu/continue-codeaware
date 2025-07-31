@@ -31,6 +31,7 @@ import {
     setKnowledgeCardGenerationStatus,
     setKnowledgeCardLoading,
     setLearningGoal,
+    setRequirementChunks,
     setStepAbstract,
     setStepStatus,
     setStepTitle,
@@ -41,8 +42,7 @@ import {
     updateCodeChunkRange,
     updateHighlight,
     updateKnowledgeCardContent,
-    updateKnowledgeCardTitle,
-    updateRequirementChunks
+    updateKnowledgeCardTitle
 } from "../slices/codeAwareSlice";
 import { selectDefaultModel } from "../slices/configSlice";
 import { ThunkApiType } from "../store";
@@ -322,31 +322,40 @@ export const generateStepsFromRequirement = createAsyncThunk<
 
             //要初始化设置的一些值，同时要更新的是userRequirement, 并且需要设置learning goal;
             let parsedSteps: StepItem[] = [];
-            let requirementChunks: RequirementChunk[] = [];
             let initialMappings: CodeAwareMapping[] = [];
-            let taskRequirements = "";
+            let requirementChunks: RequirementChunk[] = [];
             let learningGoal = "";
             let title = "";
-            let tasks: string[] = [];
+            let highLevelSteps: string[] = [];
             
             // 解析 LLM 返回的 JSON 内容
             try {
                 const jsonResponse = JSON.parse(result.content);
                 console.log("LLM response JSON:", jsonResponse);
                 title = jsonResponse.title || "";
-                taskRequirements = jsonResponse.task_description || "";
                 learningGoal = jsonResponse.learning_goal || "";
-                tasks = jsonResponse.tasks || [];
+                highLevelSteps = jsonResponse.high_level_steps || [];
                 const steps = jsonResponse.steps || [];
+                
+                // 根据high_level_steps创建requirement chunks
+                highLevelSteps.forEach((highLevelStep, index) => {
+                    requirementChunks.push({
+                        id: `r-${index + 1}`,
+                        content: highLevelStep,
+                        isHighlighted: false
+                    });
+                });
                 
                 for (const step of steps) {
                     const stepTitle = step.title || "";
                     const stepAbstract = step.abstract || "";
-                    const tasksCorrespondingChunks = step.tasks_corresponding_chunks || [];
+                    const taskCorrespondingHighLevelTask = step.task_corresponding_high_level_task || "";
+                    
                     // 确保每个步骤都有标题和摘要
                     if (stepTitle && stepAbstract) {
+                        const stepId = `s-${parsedSteps.length + 1}`;
                         parsedSteps.push({
-                            id: "s-"+(parsedSteps.length+1), 
+                            id: stepId, 
                             title: stepTitle,
                             abstract: stepAbstract,
                             knowledgeCards:[],
@@ -354,26 +363,28 @@ export const generateStepsFromRequirement = createAsyncThunk<
                             stepStatus: "confirmed", // 默认状态为 confirmed
                             knowledgeCardGenerationStatus: "empty", // 初始状态为 empty
                         });
+                        
+                        // 为每个step的对应high-level task创建映射
+                        if (taskCorrespondingHighLevelTask) {
+                            // 找到对应的requirement chunk
+                            const correspondingChunkIndex = highLevelSteps.findIndex(
+                                highLevelStep => highLevelStep === taskCorrespondingHighLevelTask
+                            );
+                            
+                            if (correspondingChunkIndex !== -1) {
+                                const requirementChunkId = `r-${correspondingChunkIndex + 1}`;
+                                initialMappings.push({
+                                    requirementChunkId: requirementChunkId,
+                                    stepId: stepId,
+                                    isHighlighted: false
+                                });
+                            }
+                        }
                     } else {
                         console.warn("Step is missing title or abstract:", step);
                     }
-                    // 为每个step的对应任务块创建requirement chunks和映射
-                    for (const chunk of tasksCorrespondingChunks) {
-                        requirementChunks.push({
-                            id: "r-"+(requirementChunks.length+1),
-                            content: chunk,
-                            isHighlighted: false
-                        });
-                        initialMappings.push({
-                            requirementChunkId: "r-"+(requirementChunks.length),
-                            stepId: "s-"+(parsedSteps.length),
-                            isHighlighted: false
-                        });
-                    }
                 }
                 
-                // task_description 已经是AI格式化好的任务列表，直接使用
-                // tasks 数组主要用于步骤映射的参考
             } catch (error) {
                 console.error("Error during LLM request for generating steps:", error);
                 // 在抛出新错误之前，确保 error 是一个 Error 实例，以便保留原始堆栈跟踪
@@ -381,16 +392,14 @@ export const generateStepsFromRequirement = createAsyncThunk<
                 throw new Error(`Failed to generate steps: ${errorMessage}`);
                 // CATODO: UI提示，告知用户请求失败
             }
-            console.log("Generated tasks array:", tasks);
-            console.log("Formatted task_description from AI:", taskRequirements);
-            console.log("userRequirement chunks:", requirementChunks);
+            console.log("Generated high_level_steps array:", highLevelSteps);
+            console.log("Generated requirement chunks:", requirementChunks);
 
             // 更新 Redux 状态
             dispatch(setCodeAwareTitle(title));
             dispatch(setLearningGoal(learningGoal));
-            dispatch(submitRequirementContent(taskRequirements)); // 重新设置用户需求内容，因为newCodeAwareSession清空了状态
             dispatch(setGeneratedSteps(parsedSteps));
-            dispatch(updateRequirementChunks(requirementChunks));
+            dispatch(setRequirementChunks(requirementChunks));
             dispatch(updateCodeAwareMappings(initialMappings));
             dispatch(setUserRequirementStatus("finalized"));
 

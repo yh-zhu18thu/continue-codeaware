@@ -1,3 +1,14 @@
+import {
+    Box,
+    Paper,
+    Step,
+    StepContent,
+    StepIcon,
+    StepLabel,
+    Stepper,
+    Typography
+} from "@mui/material";
+import { createTheme, ThemeProvider } from "@mui/material/styles";
 import { HighlightEvent } from "core";
 import { useEffect, useRef, useState } from "react";
 import styled, { css, keyframes } from "styled-components";
@@ -17,35 +28,97 @@ const flicker = keyframes`
   50% { opacity: 0.3; }
 `;
 
-// Highlighted chunk styling
-const HighlightedChunk = styled.span<{ isHighlighted: boolean; isFlickering: boolean }>`
-  cursor: pointer;
-  padding: 2px 4px;
-  border-radius: 4px;
-  transition: all 0.3s ease;
+// Custom step icon component with flickering animation
+const AnimatedStepIcon = styled(StepIcon)<{ isFlickering: boolean; isHighlighted: boolean }>`
+  ${props => props.isFlickering && css`
+    animation: ${flicker} 0.6s ease-in-out 3;
+  `}
   
   ${props => props.isHighlighted ? `
-    background-color: rgba(255, 193, 7, 0.2);
-    box-shadow: 0 0 8px rgba(255, 193, 7, 0.4);
-    border: 1px solid rgba(255, 193, 7, 0.6);
-  ` : `
-    background-color: transparent;
-    border: 1px solid transparent;
-  `}
+    .MuiStepIcon-root {
+      color: #FFC107 !important;
+    }
+    .MuiStepIcon-text {
+      fill: #000 !important;
+    }
+  ` : ''}
+  
+  cursor: pointer;
+  transition: all 0.3s ease;
+  
+  &:hover {
+    transform: scale(1.1);
+  }
+`;
+
+// Highlighted step content styling
+const HighlightedStepContent = styled(StepContent)<{ isHighlighted: boolean; isFlickering: boolean }>`
+  cursor: pointer;
+  transition: all 0.3s ease;
+  
+  .MuiStepContent-root {
+    ${props => props.isHighlighted ? `
+      background-color: rgba(255, 193, 7, 0.1);
+      border-left: 3px solid #FFC107;
+      padding-left: 1rem;
+    ` : ''}
+  }
   
   ${props => props.isFlickering && css`
     animation: ${flicker} 0.6s ease-in-out 3;
   `}
   
   &:hover {
-    background-color: rgba(255, 193, 7, 0.1);
-  }
-  
-  &:focus {
-    outline: 2px solid rgba(255, 193, 7, 0.8);
-    outline-offset: 2px;
+    background-color: rgba(255, 193, 7, 0.05);
   }
 `;
+
+// Custom theme for Material UI components to match VS Code colors
+const muiTheme = createTheme({
+  palette: {
+    mode: 'dark',
+    primary: {
+      main: '#FFC107',
+    },
+    background: {
+      default: '#1e1e1e',
+      paper: '#2d2d30',
+    },
+    text: {
+      primary: '#cccccc',
+      secondary: '#969696',
+    },
+  },
+  components: {
+    MuiStepLabel: {
+      styleOverrides: {
+        label: {
+          color: '#cccccc',
+          '&.Mui-active': {
+            color: '#FFC107',
+          },
+          '&.Mui-completed': {
+            color: '#cccccc',
+          },
+        },
+      },
+    },
+    MuiTypography: {
+      styleOverrides: {
+        root: {
+          color: '#cccccc',
+        },
+      },
+    },
+    MuiStepConnector: {
+      styleOverrides: {
+        line: {
+          borderColor: '#404040',
+        },
+      },
+    },
+  },
+});
 
 const DisplayContainerDiv = styled.div<{}>`
   resize: none;
@@ -187,72 +260,137 @@ export default function RequirementDisplay({
         }
     };
 
-    // Render requirement text with highlighted chunks
-    const renderRequirementWithHighlights = () => {
+    // Create steps from highlight chunks or fallback to requirement text sections
+    const createSteps = () => {
         if (!highlightChunks.length) {
-            return requirementText;
+            // If no highlight chunks, split requirement text by lines or sentences
+            const sentences = requirementText.split(/[.!?]+/).filter(s => s.trim().length > 0);
+            return sentences.map((sentence, index) => ({
+                id: `sentence-${index}`,
+                content: sentence.trim(),
+                isHighlighted: false,
+                label: `需求 ${index + 1}`,
+            }));
         }
 
-        // Sort chunks by their position in the text
+        // Sort chunks by their position in the text and create steps
         const sortedChunks = [...highlightChunks].sort((a, b) => {
             const indexA = requirementText.indexOf(a.content);
             const indexB = requirementText.indexOf(b.content);
             return indexA - indexB;
         });
 
-        let result = [];
-        let lastIndex = 0;
+        return sortedChunks.map((chunk, index) => ({
+            id: chunk.id,
+            content: chunk.content,
+            isHighlighted: chunk.isHighlighted,
+            label: `需求 ${index + 1}`,
+        }));
+    };
 
-        sortedChunks.forEach((chunk) => {
-            const chunkIndex = requirementText.indexOf(chunk.content, lastIndex);
-            
-            if (chunkIndex !== -1) {
-                // Add text before this chunk
-                if (chunkIndex > lastIndex) {
-                    result.push(requirementText.substring(lastIndex, chunkIndex));
-                }
-                
-                // Add the highlighted chunk
-                result.push(
-                    <HighlightedChunk
-                        key={chunk.id}
-                        isHighlighted={chunk.isHighlighted}
-                        isFlickering={flickeringChunks.has(chunk.id)}
-                        onClick={() => handleChunkClick(chunk.id)}
-                        onKeyDown={(e) => handleChunkKeyDown(e, chunk.id)}
-                        onBlur={handleChunkBlur}
-                        onFocus={handleChunkFocus}
-                        tabIndex={0}
-                        role="button"
-                        aria-label={`Requirement chunk: ${chunk.content}`}
-                    >
-                        {chunk.content}
-                    </HighlightedChunk>
-                );
-                
-                lastIndex = chunkIndex + chunk.content.length;
-            }
-        });
+    const steps = createSteps();
 
-        // Add remaining text
-        if (lastIndex < requirementText.length) {
-            result.push(requirementText.substring(lastIndex));
-        }
+    const handleStepClick = (stepId: string) => {
+        handleChunkFocus();
+        handleChunkClick(stepId);
+    };
 
-        return result;
+    const handleStepIconClick = (stepId: string) => {
+        handleStepClick(stepId);
     };
 
     return (
         <div className="px-2.5 pb-1 pt-2">
-            <ContentDisplayDiv>
-                {renderRequirementWithHighlights()}
-                {/* Tool Bar */}
-                <RequirementDisplayToolBar
-                    onEdit={onEdit}
-                    onRegenerate={onRegenerate}
-                    disabled={disabled}
-                />
-            </ContentDisplayDiv>
+            <DisplayContainerDiv>
+                <ContentDisplayDiv>
+                    <ThemeProvider theme={muiTheme}>
+                        <Paper 
+                            elevation={0} 
+                            sx={{ 
+                                backgroundColor: 'transparent',
+                                padding: 0
+                            }}
+                        >
+                            <Stepper orientation="vertical" sx={{ width: '100%' }}>
+                                {steps.map((step, index) => {
+                                    const isFlickering = flickeringChunks.has(step.id);
+                                    const isHighlighted = step.isHighlighted;
+                                    
+                                    return (
+                                        <Step key={step.id} active={true} completed={false}>
+                                            <StepLabel
+                                                StepIconComponent={(props) => (
+                                                    <AnimatedStepIcon
+                                                        {...props}
+                                                        isFlickering={isFlickering}
+                                                        isHighlighted={isHighlighted}
+                                                        onClick={() => handleStepIconClick(step.id)}
+                                                        onKeyDown={(e: React.KeyboardEvent) => handleChunkKeyDown(e, step.id)}
+                                                        tabIndex={0}
+                                                        role="button"
+                                                        aria-label={`需求步骤 ${index + 1}: ${step.content}`}
+                                                    />
+                                                )}
+                                                onClick={() => handleStepClick(step.id)}
+                                                sx={{ 
+                                                    cursor: 'pointer',
+                                                    '&:hover': {
+                                                        backgroundColor: 'rgba(255, 193, 7, 0.05)',
+                                                    }
+                                                }}
+                                            >
+                                                <Typography 
+                                                    variant="h6" 
+                                                    component="span"
+                                                    sx={{
+                                                        color: isHighlighted ? '#FFC107' : 'inherit',
+                                                        fontWeight: isHighlighted ? 'bold' : 'normal',
+                                                        fontSize: '14px',
+                                                    }}
+                                                >
+                                                    {step.label}
+                                                </Typography>
+                                            </StepLabel>
+                                            <HighlightedStepContent
+                                                isHighlighted={isHighlighted}
+                                                isFlickering={isFlickering}
+                                                onClick={() => handleStepClick(step.id)}
+                                                onKeyDown={(e: React.KeyboardEvent) => handleChunkKeyDown(e, step.id)}
+                                                onBlur={handleChunkBlur}
+                                                onFocus={handleChunkFocus}
+                                                tabIndex={0}
+                                                role="button"
+                                                aria-label={`需求内容: ${step.content}`}
+                                            >
+                                                <Box sx={{ pb: 2 }}>
+                                                    <Typography 
+                                                        variant="body1"
+                                                        sx={{
+                                                            color: isHighlighted ? '#FFC107' : 'inherit',
+                                                            lineHeight: 1.6,
+                                                            fontSize: '14px',
+                                                            whiteSpace: 'pre-wrap',
+                                                        }}
+                                                    >
+                                                        {step.content}
+                                                    </Typography>
+                                                </Box>
+                                            </HighlightedStepContent>
+                                        </Step>
+                                    );
+                                })}
+                            </Stepper>
+                        </Paper>
+                    </ThemeProvider>
+                    
+                    {/* Tool Bar */}
+                    <RequirementDisplayToolBar
+                        onEdit={onEdit}
+                        onRegenerate={onRegenerate}
+                        disabled={disabled}
+                    />
+                </ContentDisplayDiv>
+            </DisplayContainerDiv>
         </div>
     );
 }

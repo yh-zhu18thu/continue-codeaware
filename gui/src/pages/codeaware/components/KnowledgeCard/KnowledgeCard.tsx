@@ -3,10 +3,10 @@ import { HighlightEvent } from "core";
 import React, { useEffect, useRef, useState } from 'react';
 import styled from "styled-components";
 import {
-  defaultBorderRadius,
-  lightGray,
-  vscForeground,
-  vscInputBackground
+    defaultBorderRadius,
+    lightGray,
+    vscForeground,
+    vscInputBackground
 } from "../../../../components";
 import KnowledgeCardContent from './KnowledgeCardContent';
 import KnowledgeCardLoader from './KnowledgeCardLoader';
@@ -15,8 +15,8 @@ import KnowledgeCardSAQ from './KnowledgeCardSAQ';
 import KnowledgeCardToolBar from './KnowledgeCardToolBar';
 
 const KnowledgeCardContainer = styled.div<{ isHighlighted?: boolean; isFlickering?: boolean; isHovered?: boolean }>`
-  width: 98%;
-  max-width: 98%;
+  width: 100%;
+  max-width: 100%;
   min-width: 0; /* 防止内容撑开 */
   display: flex;
   flex-direction: column;
@@ -27,7 +27,7 @@ const KnowledgeCardContainer = styled.div<{ isHighlighted?: boolean; isFlickerin
     isFlickering ? '#ff6b6b' : 
     isHighlighted ? '#4ade80' : 
     `${lightGray}44`};
-  margin: 3px auto; /* Center the card horizontally with smaller margin */
+  margin: 3px 0; /* Remove auto centering, keep vertical margin */
   overflow: hidden;
   transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
   box-sizing: border-box;

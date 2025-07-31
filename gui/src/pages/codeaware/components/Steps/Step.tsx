@@ -46,11 +46,12 @@ const ContentArea = styled.div<{ isVisible: boolean }>`
 const KnowledgeCardsContainer = styled.div<{ isHovered: boolean }>`
   display: flex;
   flex-direction: column;
-  align-items: center; /* Center the knowledge cards horizontally */
+  align-items: flex-start; /* Left align the knowledge cards */
   gap: 4px; /* 减少卡片间隙 */
   margin-top: 4px; /* 减少顶部间距 */
-  width: 100%;
-  max-width: 100%;
+  margin-left: 20px; /* 向右缩进 */
+  width: calc(100% - 20px); /* 减去左边距以防止溢出 */
+  max-width: calc(100% - 20px);
   min-width: 0; /* 防止内容撑开 */
   overflow: hidden;
   box-sizing: border-box;

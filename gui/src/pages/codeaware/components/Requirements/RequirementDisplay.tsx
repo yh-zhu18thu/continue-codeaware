@@ -1,8 +1,6 @@
 import {
-    Box,
     Paper,
     Step,
-    StepContent,
     StepIcon,
     StepLabel,
     Stepper,
@@ -14,9 +12,7 @@ import { useEffect, useRef, useState } from "react";
 import styled, { css, keyframes } from "styled-components";
 import {
     defaultBorderRadius,
-    vscCommandCenterInactiveBorder,
-    vscForeground,
-    vscInputBackground
+    vscForeground
 } from "../../../../components";
 import { useAppSelector } from "../../../../redux/hooks";
 import { selectRequirementHighlightChunks, selectRequirementText } from "../../../../redux/slices/codeAwareSlice";
@@ -34,51 +30,66 @@ const AnimatedStepIcon = styled(StepIcon)<{ isFlickering: boolean; isHighlighted
     animation: ${flicker} 0.6s ease-in-out 3;
   `}
   
+  // 高亮状态样式
   ${props => props.isHighlighted ? `
+    &.MuiStepIcon-root {
+      color: #00BFFF !important;
+      background-color: #00BFFF !important;
+    }
     .MuiStepIcon-root {
-      color: #FFC107 !important;
+      color: #00BFFF !important;
+      background-color: #00BFFF !important;
     }
     .MuiStepIcon-text {
-      fill: #000 !important;
+      fill: #ffffff !important;
+      font-weight: bold;
     }
-  ` : ''}
+    svg {
+      color: #00BFFF !important;
+      fill: #00BFFF !important;
+    }
+    svg circle {
+      fill: #00BFFF !important;
+    }
+  ` : `
+    &.MuiStepIcon-root {
+      color: #888888 !important;
+      background-color: #888888 !important;
+    }
+    .MuiStepIcon-root {
+      color: #888888 !important;
+      background-color: #888888 !important;
+    }
+    .MuiStepIcon-text {
+      fill: #ffffff !important;
+    }
+    svg {
+      color: #888888 !important;
+      fill: #888888 !important;
+    }
+    svg circle {
+      fill: #888888 !important;
+    }
+  `}
   
   cursor: pointer;
   transition: all 0.3s ease;
+  width: 20px;
+  height: 20px;
   
   &:hover {
-    transform: scale(1.1);
+    transform: scale(1.05);
   }
 `;
 
-// Highlighted step content styling
-const HighlightedStepContent = styled(StepContent)<{ isHighlighted: boolean; isFlickering: boolean }>`
-  cursor: pointer;
-  transition: all 0.3s ease;
-  
-  .MuiStepContent-root {
-    ${props => props.isHighlighted ? `
-      background-color: rgba(255, 193, 7, 0.1);
-      border-left: 3px solid #FFC107;
-      padding-left: 1rem;
-    ` : ''}
-  }
-  
-  ${props => props.isFlickering && css`
-    animation: ${flicker} 0.6s ease-in-out 3;
-  `}
-  
-  &:hover {
-    background-color: rgba(255, 193, 7, 0.05);
-  }
-`;
+// Highlighted step content styling - removed as we only need labels now
 
 // Custom theme for Material UI components to match VS Code colors
 const muiTheme = createTheme({
   palette: {
     mode: 'dark',
     primary: {
-      main: '#FFC107',
+      main: '#00BFFF', // Brighter blue
     },
     background: {
       default: '#1e1e1e',
@@ -90,15 +101,36 @@ const muiTheme = createTheme({
     },
   },
   components: {
-    MuiStepLabel: {
+    MuiStepIcon: {
       styleOverrides: {
-        label: {
-          color: '#cccccc',
+        root: {
           '&.Mui-active': {
-            color: '#FFC107',
+            color: '#00BFFF',
           },
           '&.Mui-completed': {
-            color: '#cccccc',
+            color: '#00BFFF',
+          },
+        },
+        text: {
+          fill: '#ffffff',
+          fontWeight: 'bold',
+        },
+      },
+    },
+    MuiStepLabel: {
+      styleOverrides: {
+        root: {
+          padding: '2px 0', // Further reduce padding
+        },
+        label: {
+          color: '#ffffff', // White text
+          fontSize: '16px', // Larger font size
+          lineHeight: '1.3',
+          '&.Mui-active': {
+            color: '#ffffff',
+          },
+          '&.Mui-completed': {
+            color: '#ffffff',
           },
         },
       },
@@ -106,14 +138,31 @@ const muiTheme = createTheme({
     MuiTypography: {
       styleOverrides: {
         root: {
-          color: '#cccccc',
+          color: '#ffffff', // White text
         },
       },
     },
     MuiStepConnector: {
       styleOverrides: {
+        root: {
+          marginLeft: '10px', // 保持图标中心对齐
+          flex: '1 1 auto',
+        },
         line: {
-          borderColor: '#404040',
+          borderColor: '#888888', // Brighter and clearer line color
+          borderWidth: '2px', // Thicker line
+          minHeight: '15px', // 缩短连接线长度，让步骤更紧凑
+          borderLeftWidth: '2px', // 确保左边框宽度
+          marginTop: '-2px', // 向上调整，接触上方图标
+          marginBottom: '-2px', // 向下调整，接触下方图标
+        },
+      },
+    },
+    MuiStep: {
+      styleOverrides: {
+        root: {
+          paddingBottom: '0px', // 移除底部内边距，让连接线更紧密
+          paddingTop: '0px', // 移除顶部内边距
         },
       },
     },
@@ -127,7 +176,7 @@ const DisplayContainerDiv = styled.div<{}>`
   border-radius: ${defaultBorderRadius};
   margin: 12px;
   height: auto;
-  background-color: ${vscInputBackground};
+  background-color: transparent; // Remove background color
   color: ${vscForeground};
 
   transition: border-color 0.15s ease-in-out;
@@ -141,16 +190,16 @@ const DisplayContainerDiv = styled.div<{}>`
   margin-left: auto;
   margin-right: auto;
   margin-top: 1rem;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  // Remove box-shadow
 `;
 
 const ContentDisplayDiv = styled.div<{}>`
   max-width: none;
   min-height: 10px;
-  border: 1px solid ${vscCommandCenterInactiveBorder};
+  border: none; // Remove border
   border-radius: ${defaultBorderRadius};
-  padding: 1rem 1rem 0.25rem 1rem; // Reduced bottom padding from 1rem to 0.5rem
-  background-color: ${vscInputBackground}; // 使用更深的背景色
+  padding: 0.5rem; // Reduce padding
+  background-color: transparent; // Remove background color
   color: ${vscForeground};
   white-space: pre-wrap; // 保留换行符和空格
   line-height: 1.6;
@@ -186,24 +235,37 @@ export default function RequirementDisplay({
 
         const newFlickering = new Set<string>();
         
+        // Check each chunk for state changes - only flicker items that become highlighted
         highlightChunks.forEach(chunk => {
             const previousState = previousHighlightStatesRef.current.get(chunk.id);
-            if (previousState !== undefined && previousState !== chunk.isHighlighted) {
+            // Only add to flickering if the chunk becomes highlighted (false -> true)
+            if (previousState === false && chunk.isHighlighted === true) {
+                console.log(`Chunk ${chunk.id} became highlighted: ${previousState} -> ${chunk.isHighlighted}`);
                 newFlickering.add(chunk.id);
             }
         });
 
+        // Only update flickering state if there are actually new flickering chunks
         if (newFlickering.size > 0) {
-            setFlickeringChunks(newFlickering);
+            console.log("Setting flickering chunks:", Array.from(newFlickering));
+            setFlickeringChunks(prev => {
+                // Merge with existing flickering chunks to avoid conflicts
+                const merged = new Set([...prev, ...newFlickering]);
+                return merged;
+            });
             
             // Clear flickering after animation completes
             setTimeout(() => {
-                setFlickeringChunks(new Set());
+                setFlickeringChunks(prev => {
+                    const updated = new Set(prev);
+                    newFlickering.forEach(id => updated.delete(id));
+                    return updated;
+                });
             }, 1800); // 3 cycles of 0.6s animation
         }
 
-        // Update previous states
-        const newPreviousStates = new Map();
+        // Update previous states after processing
+        const newPreviousStates = new Map(previousHighlightStatesRef.current);
         highlightChunks.forEach(chunk => {
             newPreviousStates.set(chunk.id, chunk.isHighlighted);
         });
@@ -269,7 +331,7 @@ export default function RequirementDisplay({
                 id: `sentence-${index}`,
                 content: sentence.trim(),
                 isHighlighted: false,
-                label: `需求 ${index + 1}`,
+                label: sentence.trim(), // Use sentence content as label
             }));
         }
 
@@ -284,7 +346,7 @@ export default function RequirementDisplay({
             id: chunk.id,
             content: chunk.content,
             isHighlighted: chunk.isHighlighted,
-            label: `需求 ${index + 1}`,
+            label: chunk.content, // Use chunk content as label
         }));
     };
 
@@ -332,50 +394,31 @@ export default function RequirementDisplay({
                                                     />
                                                 )}
                                                 onClick={() => handleStepClick(step.id)}
+                                                onBlur={handleChunkBlur}
+                                                onFocus={handleChunkFocus}
                                                 sx={{ 
                                                     cursor: 'pointer',
                                                     '&:hover': {
-                                                        backgroundColor: 'rgba(255, 193, 7, 0.05)',
+                                                        // Remove background color on hover
                                                     }
                                                 }}
                                             >
                                                 <Typography 
-                                                    variant="h6" 
+                                                    variant="body2" 
                                                     component="span"
                                                     sx={{
-                                                        color: isHighlighted ? '#FFC107' : 'inherit',
+                                                        color: isHighlighted ? '#00BFFF' : '#ffffff', // Brighter highlight color
                                                         fontWeight: isHighlighted ? 'bold' : 'normal',
-                                                        fontSize: '14px',
+                                                        fontSize: '16px', // Larger font size
+                                                        lineHeight: '1.3',
+                                                        display: 'block',
+                                                        maxWidth: '500px',
+                                                        wordBreak: 'break-word',
                                                     }}
                                                 >
                                                     {step.label}
                                                 </Typography>
                                             </StepLabel>
-                                            <HighlightedStepContent
-                                                isHighlighted={isHighlighted}
-                                                isFlickering={isFlickering}
-                                                onClick={() => handleStepClick(step.id)}
-                                                onKeyDown={(e: React.KeyboardEvent) => handleChunkKeyDown(e, step.id)}
-                                                onBlur={handleChunkBlur}
-                                                onFocus={handleChunkFocus}
-                                                tabIndex={0}
-                                                role="button"
-                                                aria-label={`需求内容: ${step.content}`}
-                                            >
-                                                <Box sx={{ pb: 2 }}>
-                                                    <Typography 
-                                                        variant="body1"
-                                                        sx={{
-                                                            color: isHighlighted ? '#FFC107' : 'inherit',
-                                                            lineHeight: 1.6,
-                                                            fontSize: '14px',
-                                                            whiteSpace: 'pre-wrap',
-                                                        }}
-                                                    >
-                                                        {step.content}
-                                                    </Typography>
-                                                </Box>
-                                            </HighlightedStepContent>
                                         </Step>
                                     );
                                 })}

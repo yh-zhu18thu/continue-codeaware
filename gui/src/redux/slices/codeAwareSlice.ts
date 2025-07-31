@@ -836,7 +836,7 @@ export const codeAwareSessionSlice = createSlice({
             if (!state.userRequirement) {
                 return false; // If userRequirement is null, not in edit mode
             }
-            return state.userRequirement.requirementStatus === "editing" || state.userRequirement.requirementStatus === "empty" || state.userRequirement.requirementStatus === "paraphrasing";
+            return state.userRequirement.requirementStatus === "editing" || state.userRequirement.requirementStatus === "empty" || state.userRequirement.requirementStatus === "paraphrasing" || state.userRequirement.requirementStatus === "confirmed";
         },
         selectIsStepsGenerated: (state: CodeAwareSessionState) => {
             return state.userRequirement?.requirementStatus === "finalized" && state.steps.length > 0;

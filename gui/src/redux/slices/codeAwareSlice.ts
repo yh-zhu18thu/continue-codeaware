@@ -358,6 +358,26 @@ export const codeAwareSessionSlice = createSlice({
 
             console.log(`Found ${allMatchedMappings.length} matched mappings for highlight events.`);
             console.log("Matched mappings:", allMatchedMappings);
+            console.log("🔍 Processing events:", events);
+            
+            // 特殊处理：如果是step类型的事件但没有找到映射关系，直接高亮步骤
+            events.forEach(({ sourceType, identifier }) => {
+                if (sourceType === "step") {
+                    const stepIndex = state.steps.findIndex(step => step.id === identifier);
+                    if (stepIndex !== -1) {
+                        // 确保步骤被加入到高亮列表中，即使没有映射关系
+                        const hasStepMapping = allMatchedMappings.some(mapping => mapping.stepId === identifier);
+                        if (!hasStepMapping) {
+                            console.log(`🎯 No mapping found for step ${identifier}, but will highlight step directly`);
+                            // 创建一个虚拟的映射来确保步骤被高亮
+                            allMatchedMappings.push({
+                                stepId: identifier,
+                                isHighlighted: false
+                            });
+                        }
+                    }
+                }
+            });
             
             // If mappings are found, update highlight status of all elements within them
             if (allMatchedMappings.length > 0) {
@@ -375,6 +395,13 @@ export const codeAwareSessionSlice = createSlice({
                     if (mapping.requirementChunkId) requirementChunkIds.add(mapping.requirementChunkId);
                     if (mapping.stepId) stepIds.add(mapping.stepId);
                     if (mapping.knowledgeCardId) knowledgeCardIds.add(mapping.knowledgeCardId);
+                });
+
+                console.log("🎯 IDs to highlight:", {
+                    codeChunkIds: Array.from(codeChunkIds),
+                    requirementChunkIds: Array.from(requirementChunkIds),
+                    stepIds: Array.from(stepIds),
+                    knowledgeCardIds: Array.from(knowledgeCardIds)
                 });
 
                 // Collect code chunks to highlight in IDE
@@ -418,12 +445,17 @@ export const codeAwareSessionSlice = createSlice({
                 // Update step highlights
                 stepIds.forEach(stepId => {
                     const stepIndex = state.steps.findIndex(step => step.id === stepId);
+                    console.log(`🎯 Trying to highlight step ${stepId}, found at index:`, stepIndex);
                     if (stepIndex !== -1) {
+                        console.log(`🎯 Before highlight - step ${stepId} isHighlighted:`, state.steps[stepIndex].isHighlighted);
                         // Create a new step object to ensure React detects the change
                         state.steps[stepIndex] = {
                             ...state.steps[stepIndex],
                             isHighlighted: true
                         };
+                        console.log(`🎯 After highlight - step ${stepId} isHighlighted:`, state.steps[stepIndex].isHighlighted);
+                    } else {
+                        console.warn(`🎯 Step ${stepId} not found in steps array`);
                     }
                 });
 
@@ -450,6 +482,30 @@ export const codeAwareSessionSlice = createSlice({
                 allMatchedMappings.forEach(mapping => {
                     mapping.isHighlighted = true;
                 });
+
+                console.log("✨ Highlight update completed");
+            } else {
+                // 如果没有找到任何映射关系，但有step事件，仍然需要高亮步骤
+                const stepOnlyEvents = events.filter(event => event.sourceType === "step");
+                if (stepOnlyEvents.length > 0) {
+                    console.log("🎯 No mappings found, but highlighting steps directly");
+                    
+                    // Clear all existing highlights first
+                    codeAwareSessionSlice.caseReducers.clearAllHighlights(state);
+                    
+                    stepOnlyEvents.forEach(({ identifier }) => {
+                        const stepIndex = state.steps.findIndex(step => step.id === identifier);
+                        console.log(`🎯 Trying to highlight step ${identifier} directly, found at index:`, stepIndex);
+                        if (stepIndex !== -1) {
+                            console.log(`🎯 Before direct highlight - step ${identifier} isHighlighted:`, state.steps[stepIndex].isHighlighted);
+                            state.steps[stepIndex] = {
+                                ...state.steps[stepIndex],
+                                isHighlighted: true
+                            };
+                            console.log(`🎯 After direct highlight - step ${identifier} isHighlighted:`, state.steps[stepIndex].isHighlighted);
+                        }
+                    });
+                }
             }
         },
         updateRequirementChunks: (state, action: PayloadAction<RequirementChunk[]>) => {

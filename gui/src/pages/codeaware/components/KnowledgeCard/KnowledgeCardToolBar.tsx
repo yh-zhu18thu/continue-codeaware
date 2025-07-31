@@ -28,8 +28,8 @@ const ToolBarContainer = styled.div<{ isHighlighted?: boolean; isFlickering?: bo
 
 const DisableButtonContainer = styled.div`
   position: absolute;
-  top: 2px;
-  left: 2px;
+  top: 0px;
+  left: 0px;
   display: flex;
   align-items: center;
   justify-content: center;

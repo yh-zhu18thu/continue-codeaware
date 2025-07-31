@@ -39,6 +39,7 @@ import {
     updateCodeAwareMappings,
     updateCodeChunkPositions,
     updateCodeChunkRange,
+    updateHighlight,
     updateKnowledgeCardContent,
     updateKnowledgeCardTitle,
     updateRequirementChunks
@@ -1205,6 +1206,31 @@ export const generateCodeFromSteps = createAsyncThunk<
                                 dispatch(setStepStatus({ stepId: step.id, status: 'generated' }));
                             });
                             console.log("所有步骤状态已更新为 'generated'");
+                            
+                            // 触发highlight事件，以steps为source高亮相关的代码变化
+                            // 获取更新后的步骤信息 - 确保在所有mapping创建完成后再触发
+                            const finalState = getState();
+                            
+                            // 调试：检查当前的映射关系
+                            console.log("🔍 当前所有映射关系:", finalState.codeAwareSession.codeAwareMappings);
+                            console.log("🔍 当前所有步骤:", finalState.codeAwareSession.steps.map(s => ({ 
+                                id: s.id, 
+                                title: s.title, 
+                                isHighlighted: s.isHighlighted 
+                            })));
+                            
+                            const stepHighlightEvents = orderedSteps.map(step => {
+                                const fullStepInfo = finalState.codeAwareSession.steps.find(s => s.id === step.id);
+                                return {
+                                    sourceType: "step" as const,
+                                    identifier: step.id,
+                                    additionalInfo: fullStepInfo
+                                };
+                            });
+                            
+                            console.log("🎯 即将触发的highlight事件:", stepHighlightEvents);
+                            dispatch(updateHighlight(stepHighlightEvents));
+                            console.log(`✨ 触发了 ${stepHighlightEvents.length} 个步骤的highlight事件`);
                         } else {
                             console.warn("⚠️ getCurrentFile 响应状态不成功:", currentFileResponse.status);
                         }
@@ -1504,6 +1530,18 @@ export const rerunStep = createAsyncThunk<
                 });
 
                 console.log("✅ 步骤重新运行完成");
+                
+                // 触发highlight事件，以step为source高亮重新运行的步骤变化
+                const latestState = getState();
+                const rerunStepInfo = latestState.codeAwareSession.steps.find(s => s.id === stepId);
+                if (rerunStepInfo) {
+                    dispatch(updateHighlight({
+                        sourceType: "step",
+                        identifier: stepId,
+                        additionalInfo: rerunStepInfo
+                    }));
+                    console.log(`✨ 触发了步骤 ${stepId} 的highlight事件`);
+                }
 
             } catch (parseError) {
                 console.error("Error parsing LLM response:", parseError);
@@ -1998,6 +2036,7 @@ export const processCodeUpdates = createAsyncThunk<
 
                 // Process updated steps
                 let codeChunkCounter = state.codeAwareSession.codeChunks.length + 1;
+                const newCodeChunks: CodeChunk[] = []; // 跟踪新创建的代码块
 
                 for (const stepUpdate of updatedSteps) {
                     const stepId = stepUpdate.id;
@@ -2027,12 +2066,24 @@ export const processCodeUpdates = createAsyncThunk<
                             const stepRange = calculateCodeChunkRange(currentContent, stepCodeContent);
                             const stepCodeChunkId = `c-${codeChunkCounter++}`;
                             
+                            const newChunk: CodeChunk = {
+                                id: stepCodeChunkId,
+                                content: stepCodeContent,
+                                range: stepRange,
+                                filePath: currentFilePath,
+                                disabled: false,
+                                isHighlighted: false
+                            };
+                            
                             dispatch(createOrGetCodeChunk({
                                 content: stepCodeContent,
                                 range: stepRange,
                                 filePath: currentFilePath,
                                 id: stepCodeChunkId
                             }));
+                            
+                            // 添加到新代码块跟踪列表
+                            newCodeChunks.push(newChunk);
 
                             // Find requirement chunk for mapping
                             const existingStepMapping = mappings.find(mapping => mapping.stepId === stepId && mapping.requirementChunkId);
@@ -2089,12 +2140,24 @@ export const processCodeUpdates = createAsyncThunk<
                             const cardRange = calculateCodeChunkRange(currentContent, cardCodeContent);
                             const cardCodeChunkId = `c-${codeChunkCounter++}`;
                             
+                            const newKnowledgeCardChunk: CodeChunk = {
+                                id: cardCodeChunkId,
+                                content: cardCodeContent,
+                                range: cardRange,
+                                filePath: currentFilePath,
+                                disabled: false,
+                                isHighlighted: false
+                            };
+                            
                             dispatch(createOrGetCodeChunk({
                                 content: cardCodeContent,
                                 range: cardRange,
                                 filePath: currentFilePath,
                                 id: cardCodeChunkId
                             }));
+                            
+                            // 添加到新代码块跟踪列表
+                            newCodeChunks.push(newKnowledgeCardChunk);
 
                             // Find requirement chunk for mapping
                             const existingCardMapping = mappings.find(mapping => mapping.knowledgeCardId === cardId);
@@ -2119,6 +2182,19 @@ export const processCodeUpdates = createAsyncThunk<
                 }
 
                 console.log("✅ Code updates processed successfully");
+                
+                // 触发highlight事件，以code为source高亮更新的代码部分
+                // 收集所有新创建的代码块用于highlight
+                const codeHighlightEvents = newCodeChunks.map(chunk => ({
+                    sourceType: "code" as const,
+                    identifier: chunk.id,
+                    additionalInfo: chunk
+                }));
+                
+                if (codeHighlightEvents.length > 0) {
+                    dispatch(updateHighlight(codeHighlightEvents));
+                    console.log(`✨ 触发了 ${codeHighlightEvents.length} 个代码块的highlight事件`);
+                }
 
             } catch (parseError) {
                 console.error("Error parsing LLM response:", parseError);

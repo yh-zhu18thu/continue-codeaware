@@ -12,7 +12,7 @@ except FileNotFoundError:
     print("Error: The file 'src/spam.csv' was not found. Please ensure the file exists in the correct location.")
 except Exception as e:
     print(f"An unexpected error occurred: {e}")
-
+    
 # Step 2: Clean the dataset
 # Check for missing values and abnormal entries
 missing_values = dataset.isnull().sum()

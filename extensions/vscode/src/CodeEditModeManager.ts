@@ -11,6 +11,7 @@ export class CodeEditModeManager {
   private documentSnapshots: Map<vscode.TextDocument, string> = new Map();
   private preventionActive: boolean = false;
   private programmaticUpdateInProgress: boolean = false;
+  private restoringContent: boolean = false;
   private onModeChangeCallback?: (enabled: boolean) => Promise<void>;
 
   constructor() {
@@ -101,7 +102,7 @@ export class CodeEditModeManager {
     // 监听文档变化并阻止编辑
     this.disposables.push(
       vscode.workspace.onDidChangeTextDocument((event) => {
-        if (!this.isCodeEditModeEnabled && !this.preventionActive && !this.programmaticUpdateInProgress) {
+        if (!this.isCodeEditModeEnabled && !this.preventionActive && !this.programmaticUpdateInProgress && !this.restoringContent) {
           this.handleDocumentChange(event);
         }
       })
@@ -110,8 +111,8 @@ export class CodeEditModeManager {
     // 监听文档保存尝试
     this.disposables.push(
       vscode.workspace.onWillSaveTextDocument((event) => {
-        if (!this.isCodeEditModeEnabled) {
-          // 如果在webview-only模式下，阻止保存
+        if (!this.isCodeEditModeEnabled && !this.programmaticUpdateInProgress && !this.restoringContent) {
+          // 如果在webview-only模式下，阻止用户主动保存，但允许程序化保存
           event.waitUntil(Promise.reject(new Error('代码编辑已禁用，请先切换到代码编辑模式')));
         }
       })
@@ -210,14 +211,29 @@ export class CodeEditModeManager {
       return;
     }
 
-    const fullRange = new vscode.Range(
-      document.positionAt(0),
-      document.positionAt(document.getText().length)
-    );
+    // 设置恢复内容标志，防止触发文档变化事件
+    this.restoringContent = true;
 
-    await editor.edit(editBuilder => {
-      editBuilder.replace(fullRange, originalContent);
-    }, { undoStopBefore: false, undoStopAfter: false });
+    try {
+      const fullRange = new vscode.Range(
+        document.positionAt(0),
+        document.positionAt(document.getText().length)
+      );
+
+      await editor.edit(editBuilder => {
+        editBuilder.replace(fullRange, originalContent);
+      }, { undoStopBefore: false, undoStopAfter: false });
+
+      // 立即保存文件以解决未保存状态问题
+      await document.save();
+      console.log(`💾 CodeEditModeManager: Saved file after restoring content: ${document.fileName}`);
+      
+    } catch (error) {
+      console.error(`❌ CodeEditModeManager: Failed to restore/save file:`, error);
+    } finally {
+      // 重置恢复内容标志
+      this.restoringContent = false;
+    }
   }
 
   /**

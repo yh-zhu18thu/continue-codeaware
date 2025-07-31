@@ -45,6 +45,18 @@ export class HighlightCodeManager implements vscode.Disposable {
         editors.forEach(editor => this.handleUserInteraction(editor));
       })
     );
+
+    // Listen for visible text editors changes (opening new editors, closing editors)
+    this.disposables.push(
+      vscode.window.onDidChangeVisibleTextEditors((editors) => {
+        // When editors change, check for interactions in all visible editors
+        editors.forEach(editor => {
+          if (editor.document.uri.scheme === 'file') {
+            this.handleUserInteraction(editor);
+          }
+        });
+      })
+    );
   }
 
   /**
@@ -57,13 +69,19 @@ export class HighlightCodeManager implements vscode.Disposable {
     }
 
     const filePath = editor.document.uri.fsPath;
+    const normalizedFilePath = this.normalizeFilePath(filePath);
 
     // Check if there are active highlights for this file
     if (this.hasActiveHighlights(filePath)) {
       console.log(`User interaction detected in file: ${filePath}, clearing highlights`);
+      console.log(`Active decorations before clear:`, Array.from(this.activeDecorations.keys()));
+      console.log(`Active timeouts before clear:`, Array.from(this.blinkTimeouts.keys()));
       
       // Clear highlights for this file
       this.clearHighlightForFile(filePath);
+      
+      console.log(`Active decorations after clear:`, Array.from(this.activeDecorations.keys()));
+      console.log(`Active timeouts after clear:`, Array.from(this.blinkTimeouts.keys()));
       
       // Notify callback if set (to inform webview)
       if (this.onHighlightClearedCallback) {
@@ -168,11 +186,8 @@ export class HighlightCodeManager implements vscode.Disposable {
         // Clear any existing highlights for this file before applying new one
         this.clearHighlightForFile(normalizedFilepath);
         
-        // Apply blinking effect first
-        await this.applyBlinkEffect(editor, range, blinkDecorationType, permanentDecorationType);
-        
-        // Store permanent decoration for management using normalized path
-        this.activeDecorations.set(normalizedFilepath, permanentDecorationType);
+        // Apply blinking effect first (this will handle storing the decoration)
+        await this.applyBlinkEffect(editor, range, blinkDecorationType, permanentDecorationType, normalizedFilepath);
         
         // Reveal the range in the editor
         editor.revealRange(range, vscode.TextEditorRevealType.InCenter);
@@ -189,10 +204,12 @@ export class HighlightCodeManager implements vscode.Disposable {
    */
   clearHighlightForFile(filepath: string): void {
     const normalizedFilepath = this.normalizeFilePath(filepath);
+    console.log(`Clearing highlights for file: ${filepath} (normalized: ${normalizedFilepath})`);
     
     // Clear any active timeouts - check both original and normalized paths
     const timeouts = this.blinkTimeouts.get(filepath) || this.blinkTimeouts.get(normalizedFilepath);
     if (timeouts) {
+      console.log(`Clearing ${timeouts.length} timeouts for file: ${normalizedFilepath}`);
       timeouts.forEach(timeout => clearTimeout(timeout));
       this.blinkTimeouts.delete(filepath);
       this.blinkTimeouts.delete(normalizedFilepath);
@@ -201,9 +218,28 @@ export class HighlightCodeManager implements vscode.Disposable {
     // Clear decoration - check both original and normalized paths
     const decoration = this.activeDecorations.get(filepath) || this.activeDecorations.get(normalizedFilepath);
     if (decoration) {
+      console.log(`Found decoration to clear for file: ${normalizedFilepath}`);
+      
+      // Find the editor for this file and clear its decorations
+      const editor = vscode.window.visibleTextEditors.find(e => 
+        this.normalizeFilePath(e.document.fileName) === normalizedFilepath ||
+        this.normalizeFilePath(e.document.uri.fsPath) === normalizedFilepath
+      );
+      
+      if (editor) {
+        console.log(`Clearing decorations from editor for file: ${normalizedFilepath}`);
+        // Clear decorations from the editor
+        editor.setDecorations(decoration, []);
+      } else {
+        console.log(`No visible editor found for file: ${normalizedFilepath}`);
+      }
+      
       decoration.dispose();
       this.activeDecorations.delete(filepath);
       this.activeDecorations.delete(normalizedFilepath);
+      console.log(`Decoration disposed and removed from map for file: ${normalizedFilepath}`);
+    } else {
+      console.log(`No decoration found for file: ${normalizedFilepath}`);
     }
   }
 
@@ -219,6 +255,18 @@ export class HighlightCodeManager implements vscode.Disposable {
     
     // Clear all decorations
     for (const [filepath, decoration] of this.activeDecorations) {
+      // Find the editor for this file and clear its decorations
+      const normalizedFilepath = this.normalizeFilePath(filepath);
+      const editor = vscode.window.visibleTextEditors.find(e => 
+        this.normalizeFilePath(e.document.fileName) === normalizedFilepath ||
+        this.normalizeFilePath(e.document.uri.fsPath) === normalizedFilepath
+      );
+      
+      if (editor) {
+        // Clear decorations from the editor
+        editor.setDecorations(decoration, []);
+      }
+      
       decoration.dispose();
     }
     this.activeDecorations.clear();
@@ -262,14 +310,16 @@ export class HighlightCodeManager implements vscode.Disposable {
    * @param range The range to highlight
    * @param blinkDecorationType The decoration for blinking
    * @param permanentDecorationType The permanent decoration
+   * @param normalizedFilepath The normalized file path for storage
    */
   private async applyBlinkEffect(
     editor: vscode.TextEditor,
     range: vscode.Range,
     blinkDecorationType: vscode.TextEditorDecorationType,
-    permanentDecorationType: vscode.TextEditorDecorationType
+    permanentDecorationType: vscode.TextEditorDecorationType,
+    normalizedFilepath?: string
   ): Promise<void> {
-    const filepath = this.normalizeFilePath(editor.document.uri.fsPath);
+    const filepath = normalizedFilepath || this.normalizeFilePath(editor.document.uri.fsPath);
     const timeouts: NodeJS.Timeout[] = [];
     
     // Clear any existing timeouts for this file
@@ -285,12 +335,24 @@ export class HighlightCodeManager implements vscode.Disposable {
     for (let i = 0; i < blinkCount; i++) {
       // Blink on
       const onTimeout = setTimeout(() => {
+        // Check if highlights for this file have been cleared during blinking
+        if (!this.blinkTimeouts.has(filepath)) {
+          blinkDecorationType.dispose();
+          permanentDecorationType.dispose();
+          return;
+        }
         editor.setDecorations(blinkDecorationType, [range]);
       }, i * blinkDuration * 2);
       timeouts.push(onTimeout);
       
       // Blink off
       const offTimeout = setTimeout(() => {
+        // Check if highlights for this file have been cleared during blinking
+        if (!this.blinkTimeouts.has(filepath)) {
+          blinkDecorationType.dispose();
+          permanentDecorationType.dispose();
+          return;
+        }
         editor.setDecorations(blinkDecorationType, []);
       }, i * blinkDuration * 2 + blinkDuration);
       timeouts.push(offTimeout);
@@ -298,8 +360,18 @@ export class HighlightCodeManager implements vscode.Disposable {
     
     // Apply permanent highlight after blinking
     const finalTimeout = setTimeout(() => {
+      // Check if highlights for this file have been cleared during blinking
+      if (!this.blinkTimeouts.has(filepath)) {
+        blinkDecorationType.dispose();
+        permanentDecorationType.dispose();
+        return;
+      }
+      
       editor.setDecorations(permanentDecorationType, [range]);
       blinkDecorationType.dispose();
+      
+      // Store the permanent decoration for management
+      this.activeDecorations.set(filepath, permanentDecorationType);
       
       // Clean up timeouts
       this.blinkTimeouts.delete(filepath);

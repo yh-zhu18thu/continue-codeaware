@@ -59,7 +59,42 @@ clock = pygame.time.Clock()
 fall_time = 0  # Cumulative time
 fall_speed = 500  # Time in milliseconds for blocks to fall one step
 
-# Game loop (to simulate block falling)
+# Initialize block position (example starting point)
+current_block_position = [5, 0]  # Middle-top of grid
+current_block_shape = block_shapes['T']  # Example current block shape
+
+def rotate_block(direction):
+    global current_block_shape, current_block_position
+
+    # Rotate the block
+    if direction == 'clockwise':
+        rotated_block = [list(row) for row in zip(*current_block_shape[::-1])]
+    else:  # Counterclockwise
+        rotated_block = [list(row) for row in zip(*current_block_shape)][::-1]
+
+    # Check boundary violations or collisions (simplistic example)
+    block_height = len(rotated_block)
+    block_width = len(rotated_block[0])
+    x, y = current_block_position
+
+    for i in range(block_height):
+        for j in range(block_width):
+            if rotated_block[i][j]:
+                if not within_boundaries(x + j, y + i) or grid[y + i][x + j]:
+                    return  # Cancel rotation if invalid
+
+    current_block_shape = rotated_block  # Update the current block shape if valid
+
+# Add player input handling for block movement
+def move_block(direction):
+    global current_block_position
+    x, y = current_block_position
+    if direction == 'left' and within_boundaries(x - 1, y):
+        current_block_position[0] -= 1
+    elif direction == 'right' and within_boundaries(x + 1, y):
+        current_block_position[0] += 1
+
+# Game loop (to simulate block falling and movement)
 run = True
 while run:
     screen.fill((0, 0, 0))  # Clear the screen
@@ -71,12 +106,22 @@ while run:
     # Check if it's time for the block to fall
     if fall_time >= fall_speed:
         fall_time = 0  # Reset fall time
+        current_block_position[1] += 1  # Move block down by one step
         print("Block should fall by one step")
 
-    # Event handling to allow quitting the game window
+    # Event handling to allow quitting the game window and moving blocks
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             run = False
+        elif event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_LEFT:
+                move_block('left')
+            elif event.key == pygame.K_RIGHT:
+                move_block('right')
+            elif event.key == pygame.K_UP:
+                rotate_block('clockwise')
+            elif event.key == pygame.K_DOWN:
+                rotate_block('counterclockwise')
 
     pygame.display.update()
 

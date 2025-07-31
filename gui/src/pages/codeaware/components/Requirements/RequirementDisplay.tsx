@@ -1,18 +1,18 @@
 import {
-    Paper,
-    Step,
-    StepIcon,
-    StepLabel,
-    Stepper,
-    Typography
+  Paper,
+  Step,
+  StepIcon,
+  StepLabel,
+  Stepper,
+  Typography
 } from "@mui/material";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 import { HighlightEvent } from "core";
 import { useEffect, useRef, useState } from "react";
 import styled, { css, keyframes } from "styled-components";
 import {
-    defaultBorderRadius,
-    vscForeground
+  defaultBorderRadius,
+  vscForeground
 } from "../../../../components";
 import { useAppSelector } from "../../../../redux/hooks";
 import { selectRequirementHighlightChunks, selectRequirementText } from "../../../../redux/slices/codeAwareSlice";
@@ -35,10 +35,12 @@ const AnimatedStepIcon = styled(StepIcon)<{ isFlickering: boolean; isHighlighted
     &.MuiStepIcon-root {
       color: #00BFFF !important;
       background-color: #00BFFF !important;
+      border-radius: 6px !important;
     }
     .MuiStepIcon-root {
       color: #00BFFF !important;
       background-color: #00BFFF !important;
+      border-radius: 6px !important;
     }
     .MuiStepIcon-text {
       fill: #ffffff !important;
@@ -47,18 +49,23 @@ const AnimatedStepIcon = styled(StepIcon)<{ isFlickering: boolean; isHighlighted
     svg {
       color: #00BFFF !important;
       fill: #00BFFF !important;
+      border-radius: 6px !important;
     }
     svg circle {
       fill: #00BFFF !important;
+      rx: 6 !important;
+      ry: 6 !important;
     }
   ` : `
     &.MuiStepIcon-root {
       color: #888888 !important;
       background-color: #888888 !important;
+      border-radius: 6px !important;
     }
     .MuiStepIcon-root {
       color: #888888 !important;
       background-color: #888888 !important;
+      border-radius: 6px !important;
     }
     .MuiStepIcon-text {
       fill: #ffffff !important;
@@ -66,9 +73,12 @@ const AnimatedStepIcon = styled(StepIcon)<{ isFlickering: boolean; isHighlighted
     svg {
       color: #888888 !important;
       fill: #888888 !important;
+      border-radius: 6px !important;
     }
     svg circle {
       fill: #888888 !important;
+      rx: 6 !important;
+      ry: 6 !important;
     }
   `}
   
@@ -76,6 +86,7 @@ const AnimatedStepIcon = styled(StepIcon)<{ isFlickering: boolean; isHighlighted
   transition: all 0.3s ease;
   width: 20px;
   height: 20px;
+  border-radius: 6px;
   
   &:hover {
     transform: scale(1.05);
@@ -104,6 +115,7 @@ const muiTheme = createTheme({
     MuiStepIcon: {
       styleOverrides: {
         root: {
+          borderRadius: '6px',
           '&.Mui-active': {
             color: '#00BFFF',
           },

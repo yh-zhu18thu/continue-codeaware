@@ -46,6 +46,7 @@ import "./CodeAware.css";
 import CodeEditModeToggle from "./components/CodeEditModeToggle"; // Import the toggle component
 import RequirementDisplay from "./components/Requirements/RequirementDisplay"; // Import RequirementDisplay
 import RequirementEditor from "./components/Requirements/RequirementEditor"; // Import RequirementEditor
+import RequirementSummary from "./components/Requirements/RequirementSummary"; // Import RequirementSummary
 import Step from "./components/Steps/Step"; // Import Step
 
 // Helper function to find the most relevant step for a given code selection
@@ -482,6 +483,10 @@ export const CodeAware = () => {
   // Track steps that should be force expanded due to code selection questions
   const [forceExpandedSteps, setForceExpandedSteps] = useState<Set<string>>(new Set());
 
+  // Track whether RequirementDisplay is visible in viewport
+  const [isRequirementDisplayVisible, setIsRequirementDisplayVisible] = useState<boolean>(true);
+  const requirementDisplayRef = useRef<HTMLDivElement>(null);
+
   // Effect to remove steps from forceExpandedSteps when their status changes from generating to checked
   useEffect(() => {
     steps.forEach(step => {
@@ -498,6 +503,29 @@ export const CodeAware = () => {
 
   // 获取当前 CodeChunks 用于调试
   const codeChunks = useAppSelector((state) => state.codeAwareSession.codeChunks);
+
+  // IntersectionObserver to track RequirementDisplay visibility
+  useEffect(() => {
+    const currentRef = requirementDisplayRef.current;
+    if (!currentRef) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        // RequirementDisplay 至少要有 20% 可见才认为是可见的
+        setIsRequirementDisplayVisible(entry.intersectionRatio > 0.2);
+      },
+      {
+        threshold: [0, 0.2, 0.5, 1.0],
+        rootMargin: '0px 0px -20px 0px' // 稍微向上偏移以提前触发
+      }
+    );
+
+    observer.observe(currentRef);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [userRequirementStatus, isEditMode]); // 在需求状态或编辑模式变化时重新设置 observer
 
   const AIPolishUserRequirement = useCallback(
     (requirement: string) => { // Expect requirement from editor
@@ -1166,6 +1194,14 @@ export const CodeAware = () => {
         }
       />
 
+      {/* RequirementSummary - 只在 RequirementDisplay 不可见且不在编辑模式且需求已确认时显示 */}
+      {!isRequirementDisplayVisible && !isEditMode && userRequirementStatus === "finalized" && (
+        <RequirementSummary
+          onChunkFocus={handleHighlightEvent}
+          onClearHighlight={removeHighlightEvent}
+        />
+      )}
+
       {/* 可滚动的内容区域 */}
       <ScrollableContent>
         {/* Requirement Section */}
@@ -1176,12 +1212,14 @@ export const CodeAware = () => {
             disabled={isCodeEditModeEnabled} // Disable in code edit mode
           />
         ) : (
-          <RequirementDisplay
-            onEdit={handleEditRequirement}
-            onChunkFocus={handleHighlightEvent} // Pass the highlight event handler
-            onClearHighlight={removeHighlightEvent} // Pass the clear highlight function
-            disabled={isCodeEditModeEnabled} // Disable in code edit mode
-          />
+          <div ref={requirementDisplayRef}>
+            <RequirementDisplay
+              onEdit={handleEditRequirement}
+              onChunkFocus={handleHighlightEvent} // Pass the highlight event handler
+              onClearHighlight={removeHighlightEvent} // Pass the clear highlight function
+              disabled={isCodeEditModeEnabled} // Disable in code edit mode
+            />
+          </div>
         )}
 
         {isStepsGenerated && (

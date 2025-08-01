@@ -28,8 +28,7 @@ import {
   setStepAbstract, // Add this import for step editing
   setStepStatus, // Add this import for step status change
   setUserRequirementStatus,
-  submitRequirementContent,
-  updateCodeChunks, // Add this import
+  submitRequirementContent, // Add this import
   updateHighlight
 } from "../../redux/slices/codeAwareSlice";
 import {

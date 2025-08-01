@@ -637,6 +637,18 @@ export const codeAwareSessionSlice = createSlice({
                 }
             }
         },
+        // 重置知识卡片到生成前状态（清空内容和测试）
+        resetKnowledgeCardContent: (state, action: PayloadAction<{stepId: string, cardId: string}>) => {
+            const { stepId, cardId } = action.payload;
+            const step = state.steps.find(s => s.id === stepId);
+            if (step) {
+                const card = step.knowledgeCards.find(c => c.id === cardId);
+                if (card) {
+                    card.content = "";
+                    card.tests = [];
+                }
+            }
+        },
         // 设置知识卡片的禁用状态
         setKnowledgeCardDisabled: (state, action: PayloadAction<{stepId: string, cardId: string, disabled: boolean}>) => {
             const { stepId, cardId, disabled } = action.payload;
@@ -915,6 +927,7 @@ export const {
     updateKnowledgeCardContent,
     updateKnowledgeCardTitle,
     setKnowledgeCardError,
+    resetKnowledgeCardContent,
     setKnowledgeCardDisabled,
     addCodeChunkFromCompletion,
     createOrGetCodeChunk,

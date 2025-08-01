@@ -357,12 +357,48 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
           <KnowledgeCardLoader text="正在生成知识卡片内容..." />
         )}
 
-        {!isTestMode && markdownContent && markdownContent !== "::LOADING::" && (
+        {!isTestMode && markdownContent && markdownContent !== "::LOADING::" && !markdownContent.startsWith("加载失败:") && !markdownContent.startsWith("生成失败") && (
           <KnowledgeCardContent 
             markdownContent={markdownContent} 
             isHighlighted={isHighlighted}
             isFlickering={isFlickering && isExpanded}
           />
+        )}
+
+        {!isTestMode && markdownContent && (markdownContent.startsWith("加载失败:") || markdownContent.startsWith("生成失败")) && (
+          <div style={{
+            padding: '12px',
+            color: '#ff6b6b',
+            fontSize: '14px',
+            textAlign: 'center',
+            backgroundColor: '#ff6b6b11',
+            borderRadius: '6px',
+            margin: '8px',
+            border: '1px solid #ff6b6b33'
+          }}>
+            <div style={{ marginBottom: '8px', fontWeight: '500' }}>
+              {markdownContent}
+            </div>
+            <button
+              style={{
+                backgroundColor: '#4ade80',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                padding: '4px 12px',
+                fontSize: '12px',
+                cursor: 'pointer',
+                fontWeight: '500'
+              }}
+              onClick={() => {
+                if (onGenerateContent && stepId && cardId) {
+                  onGenerateContent(stepId, cardId, title, learningGoal, codeContext);
+                }
+              }}
+            >
+              重新生成
+            </button>
+          </div>
         )}
 
         {!isTestMode && !markdownContent && (

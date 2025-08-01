@@ -24,6 +24,7 @@ import {
     createOrGetCodeChunk,
     markStepsCodeDirty,
     removeCodeAwareMappings,
+    resetKnowledgeCardContent,
     setCodeAwareTitle,
     setCodeChunkDisabled,
     setGeneratedSteps,
@@ -450,6 +451,10 @@ export const generateKnowledgeCardDetail = createAsyncThunk<
     async (
         { stepId, knowledgeCardId, knowledgeCardTheme, learningGoal, codeContext }, 
         { dispatch, extra, getState })=> {
+        
+        const maxRetries = 3; // 最大重试次数
+        let lastError: Error | null = null;
+        
         try{
             const state = getState();
             const defaultModel = selectDefaultModel(state);
@@ -464,7 +469,7 @@ export const generateKnowledgeCardDetail = createAsyncThunk<
             // 设置加载状态
             dispatch(setKnowledgeCardLoading({ stepId, cardId: knowledgeCardId, isLoading: true }));
 
-            // 构造提示词并发送请求，传入task描述
+            // 构造提示词
             const prompt = constructGenerateKnowledgeCardDetailPrompt(
                 knowledgeCardTheme, 
                 learningGoal, 
@@ -481,56 +486,91 @@ export const generateKnowledgeCardDetail = createAsyncThunk<
                 codeContext: codeContext.substring(0, 100) + "..." // 只打印前100个字符
             });
 
-            const result = await extra.ideMessenger.request("llm/complete", {
-                prompt: prompt,
-                completionOptions: {},
-                title: defaultModel.title
-            });
+            // 重试机制
+            for (let attempt = 1; attempt <= maxRetries; attempt++) {
+                try {
+                    console.log(`🔄 知识卡片生成尝试 ${attempt}/${maxRetries}`);
+                    
+                    const result = await extra.ideMessenger.request("llm/complete", {
+                        prompt: prompt,
+                        completionOptions: {},
+                        title: defaultModel.title
+                    });
 
-            if (result.status !== "success" || !result.content) {
-                throw new Error("LLM request failed or returned empty content");
+                    if (result.status !== "success" || !result.content) {
+                        throw new Error("LLM request failed or returned empty content");
+                    }
+
+                    console.log("LLM response for knowledge card:", result.content);
+
+                    // 解析 LLM 返回的 JSON 内容
+                    try {
+                        const jsonResponse = JSON.parse(result.content);
+                        const content = jsonResponse.content || "";
+                        const testsFromLLM = jsonResponse.tests || [];
+
+                        // 为tests添加ID，编号方式为知识卡片ID + "-t-" + 递增编号
+                        const tests = testsFromLLM.map((test: any, index: number) => ({
+                            ...test,
+                            id: `${knowledgeCardId}-t-${index + 1}`
+                        }));
+
+                        // 更新知识卡片内容
+                        dispatch(updateKnowledgeCardContent({
+                            stepId,
+                            cardId: knowledgeCardId,
+                            content,
+                            tests
+                        }));
+                        
+                        console.log("✅ 知识卡片生成成功");
+                        return; // 成功，退出函数
+                        
+                    } catch (parseError) {
+                        throw new Error(`解析LLM响应失败: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
+                    }
+                    
+                } catch (error) {
+                    lastError = error instanceof Error ? error : new Error(String(error));
+                    console.warn(`⚠️ 知识卡片生成第 ${attempt} 次尝试失败:`, lastError.message);
+                    
+                    // 如果不是最后一次尝试，等待一段时间再重试
+                    if (attempt < maxRetries) {
+                        const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000); // 指数退避，最大5秒
+                        console.log(`⏱️ 等待 ${delay}ms 后重试...`);
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                    }
+                }
             }
-
-            console.log("LLM response for knowledge card:", result.content);
-
-            // 解析 LLM 返回的 JSON 内容
-            try {
-                const jsonResponse = JSON.parse(result.content);
-                const content = jsonResponse.content || "";
-                const testsFromLLM = jsonResponse.tests || [];
-
-                // 为tests添加ID，编号方式为知识卡片ID + "-t-" + 递增编号
-                const tests = testsFromLLM.map((test: any, index: number) => ({
-                    ...test,
-                    id: `${knowledgeCardId}-t-${index + 1}`
-                }));
-
-                // 更新知识卡片内容
-                dispatch(updateKnowledgeCardContent({
-                    stepId,
-                    cardId: knowledgeCardId,
-                    content,
-                    tests
-                }));
-                
-
-                console.log("Knowledge card content updated successfully");
-            } catch (parseError) {
-                console.error("Error parsing LLM response:", parseError);
-                dispatch(setKnowledgeCardError({
-                    stepId,
-                    cardId: knowledgeCardId,
-                    error: "解析LLM响应失败"
-                }));
-            }
+            
+            // 如果所有重试都失败了，抛出最后一个错误
+            throw lastError || new Error("知识卡片生成失败");
+            
         } catch(error) {
-            console.error("Error during knowledge card generation:", error);
+            console.error("❌ 知识卡片生成最终失败:", error);
             const errorMessage = error instanceof Error ? error.message : String(error);
+            
+            // 多次失败后，将知识卡片重置到生成前状态
+            console.log("🔄 重置知识卡片到生成前状态");
+            dispatch(resetKnowledgeCardContent({
+                stepId,
+                cardId: knowledgeCardId
+            }));
+            
+            // 显示错误信息的时间较短，然后恢复
             dispatch(setKnowledgeCardError({
                 stepId,
                 cardId: knowledgeCardId,
-                error: errorMessage
+                error: `生成失败（已重试${maxRetries}次）: ${errorMessage}`
             }));
+            
+            // 2秒后清除错误状态，恢复到空内容状态，这样用户下次展开时可以重新生成
+            setTimeout(() => {
+                dispatch(resetKnowledgeCardContent({
+                    stepId,
+                    cardId: knowledgeCardId
+                }));
+            }, 2000);
         }
     }
 );
@@ -564,7 +604,7 @@ export const generateKnowledgeCardThemes = createAsyncThunk<
             // 获取任务描述
             const taskDescription = state.codeAwareSession.userRequirement?.requirementDescription || "";
 
-            // 构造提示词并发送请求
+            // 构造提示词
             const prompt = constructGenerateKnowledgeCardThemesPrompt(
                 taskDescription,
                 { title: stepTitle, abstract: stepAbstract },
@@ -578,14 +618,42 @@ export const generateKnowledgeCardThemes = createAsyncThunk<
                 learningGoal
             });
 
-            const result = await extra.ideMessenger.request("llm/complete", {
-                prompt: prompt,
-                completionOptions: {},
-                title: defaultModel.title
-            });
+            // 重试机制
+            const maxRetries = 3;
+            let lastError: Error | null = null;
+            let result: any = null;
 
-            if (result.status !== "success" || !result.content) {
-                throw new Error("LLM request failed or returned empty content");
+            for (let attempt = 1; attempt <= maxRetries; attempt++) {
+                try {
+                    console.log(`🔄 知识卡片主题生成尝试 ${attempt}/${maxRetries}`);
+                    
+                    result = await extra.ideMessenger.request("llm/complete", {
+                        prompt: prompt,
+                        completionOptions: {},
+                        title: defaultModel.title
+                    });
+
+                    if (result.status !== "success" || !result.content) {
+                        throw new Error("LLM request failed or returned empty content");
+                    }
+
+                    break; // 成功，跳出重试循环
+                } catch (error) {
+                    lastError = error instanceof Error ? error : new Error(String(error));
+                    console.warn(`⚠️ 知识卡片主题生成第 ${attempt} 次尝试失败:`, lastError.message);
+                    
+                    // 如果不是最后一次尝试，等待一段时间再重试
+                    if (attempt < maxRetries) {
+                        const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000); // 指数退避
+                        console.log(`⏱️ 等待 ${delay}ms 后重试...`);
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                    }
+                }
+            }
+
+            // 如果所有重试都失败，抛出错误
+            if (!result || result.status !== "success" || !result.content) {
+                throw lastError || new Error("知识卡片主题生成失败");
             }
 
             console.log("LLM response for knowledge card themes:", result.content);
@@ -636,7 +704,7 @@ export const generateKnowledgeCardThemes = createAsyncThunk<
                     // 设置生成完成状态
                     dispatch(setKnowledgeCardGenerationStatus({ stepId, status: "checked" }));
                     
-                    console.log(`Generated ${themes.length} knowledge card themes for step ${stepId}`);
+                    console.log(`✅ 生成 ${themes.length} 个知识卡片主题，步骤: ${stepId}`);
                 } else {
                     console.warn("No valid themes returned from LLM");
                     dispatch(setKnowledgeCardGenerationStatus({ stepId, status: "checked" }));
@@ -644,15 +712,16 @@ export const generateKnowledgeCardThemes = createAsyncThunk<
                 
             } catch (parseError) {
                 console.error("Error parsing LLM response:", parseError);
+                // 解析失败后回到empty状态，这样用户下次展开时可以重新生成
                 dispatch(setKnowledgeCardGenerationStatus({ stepId, status: "empty" }));
                 throw new Error("解析LLM响应失败");
             }
 
         } catch (error) {
-            console.error("Error during knowledge card themes generation:", error);
+            console.error("❌ 知识卡片主题生成最终失败:", error);
             const errorMessage = error instanceof Error ? error.message : String(error);
+            // 失败后回到empty状态，这样用户下次展开时可以重新生成
             dispatch(setKnowledgeCardGenerationStatus({ stepId, status: "empty" }));
-            // 可以在这里添加错误提示给用户
         }
     }
 );
@@ -720,14 +789,42 @@ export const generateKnowledgeCardThemesFromQuery = createAsyncThunk<
                 task
             });
 
-            const result = await extra.ideMessenger.request("llm/complete", {
-                prompt: prompt,
-                completionOptions: {},
-                title: defaultModel.title
-            });
+            // 重试机制
+            const maxRetries = 3;
+            let lastError: Error | null = null;
+            let result: any = null;
 
-            if (result.status !== "success" || !result.content) {
-                throw new Error("LLM request failed or returned empty content");
+            for (let attempt = 1; attempt <= maxRetries; attempt++) {
+                try {
+                    console.log(`🔄 基于查询的知识卡片主题生成尝试 ${attempt}/${maxRetries}`);
+                    
+                    result = await extra.ideMessenger.request("llm/complete", {
+                        prompt: prompt,
+                        completionOptions: {},
+                        title: defaultModel.title
+                    });
+
+                    if (result.status !== "success" || !result.content) {
+                        throw new Error("LLM request failed or returned empty content");
+                    }
+
+                    break; // 成功，跳出重试循环
+                } catch (error) {
+                    lastError = error instanceof Error ? error : new Error(String(error));
+                    console.warn(`⚠️ 基于查询的知识卡片主题生成第 ${attempt} 次尝试失败:`, lastError.message);
+                    
+                    // 如果不是最后一次尝试，等待一段时间再重试
+                    if (attempt < maxRetries) {
+                        const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000); // 指数退避
+                        console.log(`⏱️ 等待 ${delay}ms 后重试...`);
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                    }
+                }
+            }
+
+            // 如果所有重试都失败，抛出错误
+            if (!result || result.status !== "success" || !result.content) {
+                throw lastError || new Error("基于查询的知识卡片主题生成失败");
             }
 
             console.log("LLM response for knowledge card themes from query:", result.content);
@@ -876,7 +973,7 @@ export const generateKnowledgeCardThemesFromQuery = createAsyncThunk<
                     // 设置生成完成状态
                     dispatch(setKnowledgeCardGenerationStatus({ stepId, status: "checked" }));
                     
-                    console.log(`Generated ${themeResponses.length} knowledge card themes from query for step ${stepId}`);
+                    console.log(`✅ 基于查询生成 ${themeResponses.length} 个知识卡片主题，步骤: ${stepId}`);
                 } else {
                     console.warn("No valid themes returned from LLM");
                     dispatch(setKnowledgeCardGenerationStatus({ stepId, status: "checked" }));
@@ -884,15 +981,16 @@ export const generateKnowledgeCardThemesFromQuery = createAsyncThunk<
                 
             } catch (parseError) {
                 console.error("Error parsing LLM response:", parseError);
-                dispatch(setKnowledgeCardGenerationStatus({ stepId, status: "checked" }));
+                // 解析失败后回到empty状态，这样用户可以重试
+                dispatch(setKnowledgeCardGenerationStatus({ stepId, status: "empty" }));
                 throw new Error("解析LLM响应失败");
             }
 
         } catch (error) {
-            console.error("Error during knowledge card themes generation from query:", error);
+            console.error("❌ 基于查询的知识卡片主题生成最终失败:", error);
             const errorMessage = error instanceof Error ? error.message : String(error);
-            dispatch(setKnowledgeCardGenerationStatus({ stepId, status: "checked" }));
-            // 可以在这里添加错误提示给用户
+            // 失败后回到empty状态，这样用户可以重试
+            dispatch(setKnowledgeCardGenerationStatus({ stepId, status: "empty" }));
         }
     }
 );

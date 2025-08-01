@@ -1,5 +1,5 @@
-import { ArrowPathIcon, PencilIcon } from "@heroicons/react/24/outline";
-import { PencilIcon as PencilIconSolid } from "@heroicons/react/24/solid";
+import { ArrowPathIcon, CodeBracketSquareIcon } from "@heroicons/react/24/outline";
+import { SparklesIcon } from "@heroicons/react/24/solid";
 import { useCallback, useState } from "react";
 import styled from "styled-components";
 import {
@@ -139,10 +139,10 @@ export default function CodeEditModeToggle({
           isActive={isCodeEditModeEnabled}
           onClick={handleToggle}
         >
-          {isCodeEditModeEnabled ? <PencilIconSolid /> : <PencilIcon />}
+          {isCodeEditModeEnabled ? <SparklesIcon /> : <CodeBracketSquareIcon />}
         </ToggleButton>
         <Tooltip show={showEditTooltip}>
-          {isCodeEditModeEnabled ? "退出编辑模式" : "进入编辑模式"}
+          {isCodeEditModeEnabled ? "切换到 CodeAware 模式" : "切换到手动编辑模式"}
         </Tooltip>
       </TooltipContainer>
       

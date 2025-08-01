@@ -131,6 +131,7 @@ export interface KnowledgeCardProps {
   // Toggle functionality props
   defaultTestMode?: boolean; 
   defaultExpanded?: boolean;
+  shouldCollapse?: boolean; // External signal to collapse the card
 
   // Highlight props
   isHighlighted?: boolean;
@@ -159,6 +160,7 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
   onSaqSubmit,
   defaultTestMode = false,
   defaultExpanded = true,
+  shouldCollapse = false, // External collapse signal
   isHighlighted = false,
   cardId,
   onHighlightEvent,
@@ -185,6 +187,24 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
   const handleMouseLeave = () => {
     setIsHovered(false);
   };
+
+  // Handle external collapse signal
+  useEffect(() => {
+    if (shouldCollapse && isExpanded) {
+      setIsExpanded(false);
+      
+      // Clear local highlights when externally collapsed
+      setIsFlickering(false);
+      // Clear all existing timeouts
+      flickerTimeoutRef.current.forEach((timeout) => {
+        if (timeout) clearTimeout(timeout);
+      });
+      flickerTimeoutRef.current = [];
+      
+      // Note: We don't call onClearHighlight() here to avoid clearing 
+      // highlights for other components
+    }
+  }, [shouldCollapse, isExpanded]);
 
   // Handle flickering effect when isHighlighted becomes true
   useEffect(() => {

@@ -483,6 +483,9 @@ export const CodeAware = () => {
   // Track steps that should be force expanded due to code selection questions
   const [forceExpandedSteps, setForceExpandedSteps] = useState<Set<string>>(new Set());
 
+  // Track currently expanded step for auto-collapse functionality
+  const [currentlyExpandedStepId, setCurrentlyExpandedStepId] = useState<string | null>(null);
+
   // Track whether RequirementDisplay is visible in viewport
   const [isRequirementDisplayVisible, setIsRequirementDisplayVisible] = useState<boolean>(true);
   const requirementDisplayRef = useRef<HTMLDivElement>(null);
@@ -1035,6 +1038,19 @@ export const CodeAware = () => {
     dispatch(setStepStatus({ stepId, status: newStatus }));
   }, [dispatch]);
 
+  const handleStepExpansionChange = useCallback((stepId: string, isExpanded: boolean) => {
+    console.log(`Step ${stepId} expansion changed to: ${isExpanded}`);
+    
+    if (isExpanded) {
+      // When a step is expanded, immediately set it as the currently expanded step
+      // This ensures the step stays expanded while other steps are collapsed
+      setCurrentlyExpandedStepId(stepId);
+    } else {
+      // When a step is collapsed, clear the currently expanded step if it's this one
+      setCurrentlyExpandedStepId(prev => prev === stepId ? null : prev);
+    }
+  }, []);
+
   const handleQuestionSubmit = useCallback(async (stepId: string, selectedText: string, question: string) => {
     console.log('处理步骤问题提交:', { stepId, selectedText, question });
     
@@ -1321,12 +1337,14 @@ export const CodeAware = () => {
               stepStatus={step.stepStatus}
               knowledgeCardGenerationStatus={step.knowledgeCardGenerationStatus} // Pass knowledge card generation status
               forceExpanded={forceExpandedSteps.has(step.id) && step.knowledgeCardGenerationStatus === "generating"} // Force expand only when generating
+              shouldCollapse={currentlyExpandedStepId !== null && currentlyExpandedStepId !== step.id} // Collapse if another step is expanded
               onHighlightEvent={handleHighlightEvent}
               onClearHighlight={removeHighlightEvent} // Pass the clear highlight function
               onExecuteUntilStep={executeUntilStep} // Pass execute until step function
               onRerunStep={handleRerunStep} // Pass rerun step function
               onStepEdit={handleStepEdit} // Pass step edit function
               onStepStatusChange={handleStepStatusChange} // Pass step status change function
+              onStepExpansionChange={handleStepExpansionChange} // Pass step expansion change function
               onGenerateKnowledgeCardThemes={handleGenerateKnowledgeCardThemes} // Pass knowledge card themes generation function
               onDisableKnowledgeCard={handleDisableKnowledgeCard} // Pass knowledge card disable function
               onQuestionSubmit={handleQuestionSubmit} // Pass question submit function

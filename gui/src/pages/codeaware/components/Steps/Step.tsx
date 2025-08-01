@@ -103,6 +103,7 @@ interface StepProps {
   isActive?: boolean;
   defaultExpanded?: boolean;
   forceExpanded?: boolean; // Force expand the step (overrides defaultExpanded)
+  shouldCollapse?: boolean; // External signal to collapse the step
   isHighlighted?: boolean;
   stepId?: string;
   stepStatus?: StepStatus; // Use StepStatus type from core
@@ -117,6 +118,7 @@ interface StepProps {
   onDisableKnowledgeCard?: (stepId: string, cardId: string) => void; // Callback for disabling knowledge card
   onQuestionSubmit?: (stepId: string, selectedText: string, question: string) => void; // Callback for question submission
   onRegisterRef?: (stepId: string, element: HTMLDivElement | null) => void; // Callback for registering step ref
+  onStepExpansionChange?: (stepId: string, isExpanded: boolean) => void; // Callback for step expansion state change
   disabled?: boolean; // Optional disabled state for code edit mode
 }
 
@@ -127,6 +129,7 @@ const Step: React.FC<StepProps> = ({
   isActive = false,
   defaultExpanded = false, // Changed to false for collapsed by default
   forceExpanded = false, // Force expand parameter
+  shouldCollapse = false, // External collapse signal
   isHighlighted = false,
   stepId,
   stepStatus = "confirmed", // Default to confirmed for backward compatibility
@@ -141,6 +144,7 @@ const Step: React.FC<StepProps> = ({
   onDisableKnowledgeCard,
   onQuestionSubmit,
   onRegisterRef,
+  onStepExpansionChange,
   disabled = false,
 }) => {
   const [isExpanded, setIsExpanded] = useState(forceExpanded || defaultExpanded);
@@ -148,6 +152,8 @@ const Step: React.FC<StepProps> = ({
   const [isHovered, setIsHovered] = useState(false);
   const [shouldKeepHighlighted, setShouldKeepHighlighted] = useState(false);
   const [showQuestionPopup, setShowQuestionPopup] = useState(false);
+  const [isUserExpanding, setIsUserExpanding] = useState(false); // Track if user is actively expanding this step
+  const [shouldCollapseCards, setShouldCollapseCards] = useState(false); // Signal to collapse all knowledge cards
   const flickerTimeoutRef = useRef<(NodeJS.Timeout | null)[]>([]);
 
   // Check if step is in editing mode based on stepStatus
@@ -170,6 +176,34 @@ const Step: React.FC<StepProps> = ({
     // Note: We don't force collapse when forceExpanded becomes false
     // This allows users to manually control the step after force expansion ends
   }, [forceExpanded, isExpanded]);
+
+  // Handle external collapse signal
+  useEffect(() => {
+    // Don't collapse if user is actively expanding this step
+    if (shouldCollapse && isExpanded && !isUserExpanding) {
+      setIsExpanded(false);
+      
+      // Trigger knowledge cards collapse when step is externally collapsed
+      setShouldCollapseCards(true);
+      setTimeout(() => setShouldCollapseCards(false), 100); // Reset after brief delay
+      
+      // Don't notify parent component about external collapse to avoid infinite loops
+      // The parent already knows about this state change since it initiated it
+      
+      // Clear local highlights when externally collapsed
+      // Don't call onClearHighlight() as it clears ALL highlights globally
+      setIsFlickering(false);
+      setShouldKeepHighlighted(false);
+      // Clear all existing timeouts
+      flickerTimeoutRef.current.forEach((timeout) => {
+        if (timeout) clearTimeout(timeout);
+      });
+      flickerTimeoutRef.current = [];
+      
+      // Note: We don't call onClearHighlight() here because it would clear 
+      // highlights for the newly expanded step as well
+    }
+  }, [shouldCollapse, isExpanded, isUserExpanding]);
 
   // Handle flickering effect when isHighlighted becomes true
   useEffect(() => {
@@ -234,8 +268,21 @@ const Step: React.FC<StepProps> = ({
     const willBeExpanded = !isExpanded;
     setIsExpanded(willBeExpanded);
     
+    // Set protection flag when user is expanding
+    if (willBeExpanded && !wasExpanded) {
+      setIsUserExpanding(true);
+      // Clear the protection flag after a short delay
+      setTimeout(() => {
+        setIsUserExpanding(false);
+      }, 50); // Longer than the notification delay to ensure protection
+    }
+    
     // If step is being collapsed, clear all highlights and immediately stop flickering
     if (wasExpanded) {
+      // Trigger knowledge cards collapse when step is manually collapsed
+      setShouldCollapseCards(true);
+      setTimeout(() => setShouldCollapseCards(false), 100); // Reset after brief delay
+      
       // Immediately stop any flickering animation
       setIsFlickering(false);
       setShouldKeepHighlighted(false); // Clear persistent highlight when collapsing
@@ -245,6 +292,8 @@ const Step: React.FC<StepProps> = ({
       });
       flickerTimeoutRef.current = [];
       
+      // Only clear global highlights when manually collapsing (user action)
+      // This allows auto-collapse to work without interfering with new step highlights
       if (onClearHighlight) {
         onClearHighlight();
       }
@@ -256,6 +305,20 @@ const Step: React.FC<StepProps> = ({
         sourceType: "step",
         identifier: stepId,
       });
+    }
+
+    // Notify parent component about expansion state change with a small delay
+    // This ensures the highlight event is processed before other steps are collapsed
+    if (stepId && onStepExpansionChange) {
+      if (willBeExpanded) {
+        // For expansion, add a tiny delay to ensure highlight processing
+        setTimeout(() => {
+          onStepExpansionChange(stepId, willBeExpanded);
+        }, 10);
+      } else {
+        // For collapse, notify immediately
+        onStepExpansionChange(stepId, willBeExpanded);
+      }
     }
 
     // Trigger knowledge card theme generation when expanding for the first time 
@@ -384,6 +447,7 @@ const Step: React.FC<StepProps> = ({
                   key={cardProps.cardId || `card-${index}`} 
                   {...cardProps} 
                   cardId={cardProps.cardId || `card-${index}`}
+                  shouldCollapse={shouldCollapseCards} // Pass collapse signal to knowledge cards
                   onHighlightEvent={onHighlightEvent}
                   onClearHighlight={onClearHighlight}
                   onDisable={onDisableKnowledgeCard}

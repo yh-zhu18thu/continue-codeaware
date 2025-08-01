@@ -29,6 +29,7 @@ import {
   setStepStatus, // Add this import for step status change
   setUserRequirementStatus,
   submitRequirementContent,
+  updateCodeChunks, // Add this import
   updateHighlight
 } from "../../redux/slices/codeAwareSlice";
 import {
@@ -494,6 +495,11 @@ export const CodeAware = () => {
   const stepRefsMap = useRef<Map<string, HTMLDivElement>>(new Map());
   const scrollableContentRef = useRef<HTMLDivElement>(null);
 
+  // Track whether auto-scroll should be temporarily disabled (e.g., when expanding knowledge cards)
+  const [isAutoScrollDisabled, setIsAutoScrollDisabled] = useState<boolean>(false);
+  const autoScrollDisableTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isAutoScrollDisabledRef = useRef<boolean>(false); // Immediate ref for sync access
+
   // Effect to remove steps from forceExpandedSteps when their status changes from generating to checked
   useEffect(() => {
     steps.forEach(step => {
@@ -513,6 +519,13 @@ export const CodeAware = () => {
     const highlightedSteps = steps.filter(step => step.isHighlighted);
     
     if (highlightedSteps.length === 0) {
+      return;
+    }
+
+    // Don't auto-scroll if auto-scroll is temporarily disabled
+    // This prevents jarring page movements when users expand knowledge cards
+    if (isAutoScrollDisabled || isAutoScrollDisabledRef.current) {
+      console.log("📍 [CodeAware] Skipping auto-scroll because auto-scroll is temporarily disabled");
       return;
     }
 
@@ -578,7 +591,7 @@ export const CodeAware = () => {
     return () => {
       clearTimeout(scrollTimeout);
     };
-  }, [steps]); // Simplified dependency - just track steps array changes
+  }, [steps, isAutoScrollDisabled]); // Include isAutoScrollDisabled to respond to auto-scroll state changes
 
   // Function to register step ref
   const registerStepRef = useCallback((stepId: string, element: HTMLDivElement | null) => {
@@ -778,24 +791,62 @@ export const CodeAware = () => {
   );
 
   const handleHighlightEvent = useCallback((e: HighlightEvent) => {
-    // Dispatch highlight event to trigger mapping-based highlighting
+    // Special handling for knowledge card highlight events
+    if (e.sourceType === "knowledgeCard") {
+      // For knowledge cards, we want to highlight related elements but NOT trigger auto-scroll
+      // We'll use the normal highlight logic but with a flag to prevent auto-scroll
+      console.log("📝 [CodeAware] Handling knowledge card highlight event:", e.identifier);
+      
+      // Temporarily disable auto-scroll for knowledge card highlights
+      setIsAutoScrollDisabled(true);
+      isAutoScrollDisabledRef.current = true; // Immediate disable
+      
+      // Clear any existing timeout
+      if (autoScrollDisableTimeoutRef.current) {
+        clearTimeout(autoScrollDisableTimeoutRef.current);
+      }
+      
+      // Use normal highlight logic
+      dispatch(updateHighlight({
+        sourceType: e.sourceType,
+        identifier: e.identifier,
+        additionalInfo: e.additionalInfo,
+      }));
+      
+      // Keep auto-scroll disabled longer for knowledge cards to completely prevent scrolling
+      autoScrollDisableTimeoutRef.current = setTimeout(() => {
+        setIsAutoScrollDisabled(false);
+        isAutoScrollDisabledRef.current = false; // Re-enable immediate ref
+        autoScrollDisableTimeoutRef.current = null;
+        console.log("📝 [CodeAware] Re-enabled auto-scroll after knowledge card highlight");
+      }, 3000); // Even longer delay to ensure no auto-scroll occurs
+      
+      return;
+    }
+    
+    // Normal highlight logic for other types
     if (!e.additionalInfo){
-      // If no additional info, just update the highlight
       dispatch(updateHighlight({
         sourceType: e.sourceType,
         identifier: e.identifier,
       }));
     } else {
-      // If additional info is provided, use it to update the highlight
       dispatch(updateHighlight({
         sourceType: e.sourceType,
         identifier: e.identifier,
         additionalInfo: e.additionalInfo,
       }));
     }
-  }, [dispatch]);
+  }, [dispatch, allMappings, codeChunks]);
 
   const removeHighlightEvent = useCallback(() => {
+    // Re-enable auto-scroll when highlights are cleared
+    setIsAutoScrollDisabled(false);
+    isAutoScrollDisabledRef.current = false; // Clear immediate ref
+    if (autoScrollDisableTimeoutRef.current) {
+      clearTimeout(autoScrollDisableTimeoutRef.current);
+      autoScrollDisableTimeoutRef.current = null;
+    }
     // Dispatch action to clear all highlights
     dispatch(clearAllHighlights());
   }, [dispatch]);
@@ -1273,6 +1324,16 @@ export const CodeAware = () => {
     }
   }, [codeChunksToHighlightInIde, ideMessenger, dispatch]);
 
+  // Cleanup effect for auto-scroll disable timeout
+  useEffect(() => {
+    return () => {
+      if (autoScrollDisableTimeoutRef.current) {
+        clearTimeout(autoScrollDisableTimeoutRef.current);
+        autoScrollDisableTimeoutRef.current = null;
+      }
+      isAutoScrollDisabledRef.current = false; // Reset ref on cleanup
+    };
+  }, []);
 
   return (
     <CodeAwareDiv

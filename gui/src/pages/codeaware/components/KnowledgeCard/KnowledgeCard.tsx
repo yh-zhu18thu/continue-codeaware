@@ -3,10 +3,10 @@ import { HighlightEvent } from "core";
 import React, { useEffect, useRef, useState } from 'react';
 import styled from "styled-components";
 import {
-    defaultBorderRadius,
-    lightGray,
-    vscForeground,
-    vscInputBackground
+  defaultBorderRadius,
+  lightGray,
+  vscForeground,
+  vscInputBackground
 } from "../../../../components";
 import KnowledgeCardContent from './KnowledgeCardContent';
 import KnowledgeCardLoader from './KnowledgeCardLoader';

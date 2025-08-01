@@ -154,6 +154,7 @@ const Step: React.FC<StepProps> = ({
   const [showQuestionPopup, setShowQuestionPopup] = useState(false);
   const [isUserExpanding, setIsUserExpanding] = useState(false); // Track if user is actively expanding this step
   const [shouldCollapseCards, setShouldCollapseCards] = useState(false); // Signal to collapse all knowledge cards
+  const [currentlyExpandedCardId, setCurrentlyExpandedCardId] = useState<string | null>(null); // Track currently expanded knowledge card
   const flickerTimeoutRef = useRef<(NodeJS.Timeout | null)[]>([]);
 
   // Check if step is in editing mode based on stepStatus
@@ -395,6 +396,18 @@ const Step: React.FC<StepProps> = ({
     setShowQuestionPopup(false);
   };
 
+  const handleKnowledgeCardExpansionChange = (cardId: string, isExpanded: boolean) => {
+    console.log(`Knowledge Card ${cardId} expansion changed to: ${isExpanded}`);
+    
+    if (isExpanded) {
+      // When a knowledge card is expanded, set it as the currently expanded card
+      setCurrentlyExpandedCardId(cardId);
+    } else {
+      // When a knowledge card is collapsed, clear the currently expanded card if it's this one
+      setCurrentlyExpandedCardId(prev => prev === cardId ? null : prev);
+    }
+  };
+
   return (
     <StepContainer 
       ref={(element) => {
@@ -442,17 +455,23 @@ const Step: React.FC<StepProps> = ({
           <KnowledgeCardsContainer isHovered={isHovered}>
             {knowledgeCards
               .filter(cardProps => !cardProps.disabled)
-              .map((cardProps, index) => (
-                <KnowledgeCard 
-                  key={cardProps.cardId || `card-${index}`} 
-                  {...cardProps} 
-                  cardId={cardProps.cardId || `card-${index}`}
-                  shouldCollapse={shouldCollapseCards} // Pass collapse signal to knowledge cards
-                  onHighlightEvent={onHighlightEvent}
-                  onClearHighlight={onClearHighlight}
-                  onDisable={onDisableKnowledgeCard}
-                />
-              ))}
+              .map((cardProps, index) => {
+                const cardId = cardProps.cardId || `card-${index}`;
+                const shouldCollapseThisCard = shouldCollapseCards || (currentlyExpandedCardId !== null && currentlyExpandedCardId !== cardId);
+                
+                return (
+                  <KnowledgeCard 
+                    key={cardId} 
+                    {...cardProps} 
+                    cardId={cardId}
+                    shouldCollapse={shouldCollapseThisCard} // Pass collapse signal with auto-collapse logic
+                    onHighlightEvent={onHighlightEvent}
+                    onClearHighlight={onClearHighlight}
+                    onDisable={onDisableKnowledgeCard}
+                    onExpansionChange={handleKnowledgeCardExpansionChange} // Pass expansion change handler
+                  />
+                );
+              })}
           </KnowledgeCardsContainer>
         )}
         {/* Show loading animation when generating knowledge card themes */}

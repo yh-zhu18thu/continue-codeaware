@@ -138,6 +138,7 @@ export interface KnowledgeCardProps {
   cardId?: string;
   onHighlightEvent?: (event: HighlightEvent) => void;
   onClearHighlight?: () => void;
+  onExpansionChange?: (cardId: string, isExpanded: boolean) => void; // Callback for expansion state change
 
   // Lazy loading props
   stepId?: string;
@@ -165,6 +166,7 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
   cardId,
   onHighlightEvent,
   onClearHighlight,
+  onExpansionChange,
   stepId,
   learningGoal = "",
   codeContext = "",
@@ -259,6 +261,11 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
   const handleToggle = () => {
     const wasExpanded = isExpanded;
     setIsExpanded(!isExpanded);
+    
+    // Notify parent component about expansion change
+    if (onExpansionChange && cardId) {
+      onExpansionChange(cardId, !wasExpanded);
+    }
     
     // If card is being collapsed, clear all highlights and immediately stop flickering
     if (wasExpanded) {

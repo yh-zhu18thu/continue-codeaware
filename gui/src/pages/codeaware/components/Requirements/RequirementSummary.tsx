@@ -1,13 +1,13 @@
 import {
-    StepIcon,
-    Typography
+  StepIcon,
+  Typography
 } from "@mui/material";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 import { HighlightEvent } from "core";
 import { useCallback, useEffect, useRef } from "react";
 import styled, { css, keyframes } from "styled-components";
 import {
-    defaultBorderRadius
+  defaultBorderRadius
 } from "../../../../components";
 import { useAppSelector } from "../../../../redux/hooks";
 import { selectRequirementHighlightChunks } from "../../../../redux/slices/codeAwareSlice";
@@ -130,7 +130,7 @@ const muiTheme = createTheme({
 
 const SummaryContainer = styled.div`
   position: sticky;
-  top: 65px; /* PageHeader 高度约 65px (py-3 + text + border) */
+  top: 0; /* 紧贴前一个 sticky 元素 (PageHeader) */
   z-index: 90;
   background-color: rgba(45, 45, 48, 0.95);
   backdrop-filter: blur(8px);

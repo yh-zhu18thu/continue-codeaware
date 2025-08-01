@@ -487,6 +487,10 @@ export const CodeAware = () => {
   const [isRequirementDisplayVisible, setIsRequirementDisplayVisible] = useState<boolean>(true);
   const requirementDisplayRef = useRef<HTMLDivElement>(null);
 
+  // Track step refs for scrolling functionality
+  const stepRefsMap = useRef<Map<string, HTMLDivElement>>(new Map());
+  const scrollableContentRef = useRef<HTMLDivElement>(null);
+
   // Effect to remove steps from forceExpandedSteps when their status changes from generating to checked
   useEffect(() => {
     steps.forEach(step => {
@@ -500,6 +504,87 @@ export const CodeAware = () => {
       }
     });
   }, [steps, forceExpandedSteps]);
+
+  // Auto-scroll to highlighted steps
+  useEffect(() => {
+    const highlightedSteps = steps.filter(step => step.isHighlighted);
+    
+    if (highlightedSteps.length === 0) {
+      return;
+    }
+
+    // Get the scrollable container
+    const scrollContainer = scrollableContentRef.current;
+    if (!scrollContainer) {
+      return;
+    }
+
+    // Small delay to ensure DOM is updated
+    const scrollTimeout = setTimeout(() => {
+      // Get refs for all highlighted steps
+      const highlightedStepElements = highlightedSteps
+        .map(step => stepRefsMap.current.get(step.id))
+        .filter((element): element is HTMLDivElement => element !== undefined);
+
+      if (highlightedStepElements.length === 0) {
+        return;
+      }
+
+      // Calculate the bounding box that contains all highlighted steps
+      let minTop = Infinity;
+      let maxBottom = -Infinity;
+
+      highlightedStepElements.forEach(element => {
+        const rect = element.getBoundingClientRect();
+        const containerRect = scrollContainer.getBoundingClientRect();
+        
+        // Convert to relative positions within the scroll container
+        const relativeTop = rect.top - containerRect.top + scrollContainer.scrollTop;
+        const relativeBottom = rect.bottom - containerRect.top + scrollContainer.scrollTop;
+        
+        minTop = Math.min(minTop, relativeTop);
+        maxBottom = Math.max(maxBottom, relativeBottom);
+      });
+
+      // Calculate the center point of all highlighted steps
+      const centerY = (minTop + maxBottom) / 2;
+      const containerHeight = scrollContainer.clientHeight;
+      
+      // Calculate scroll position to center the highlighted area
+      const targetScrollTop = centerY - containerHeight / 2;
+      
+      // Ensure we don't scroll beyond the container bounds
+      const maxScrollTop = scrollContainer.scrollHeight - containerHeight;
+      const finalScrollTop = Math.max(0, Math.min(targetScrollTop, maxScrollTop));
+
+      // Smooth scroll to the calculated position
+      scrollContainer.scrollTo({
+        top: finalScrollTop,
+        behavior: 'smooth'
+      });
+
+      console.log(`📍 [CodeAware] Auto-scrolling to ${highlightedSteps.length} highlighted step(s)`, {
+        stepIds: highlightedSteps.map(s => s.id),
+        minTop,
+        maxBottom,
+        centerY,
+        targetScrollTop: finalScrollTop
+      });
+    }, 100); // Small delay to ensure DOM updates are complete
+
+    return () => {
+      clearTimeout(scrollTimeout);
+    };
+  }, [steps]); // Simplified dependency - just track steps array changes
+
+  // Function to register step ref
+  const registerStepRef = useCallback((stepId: string, element: HTMLDivElement | null) => {
+    if (element) {
+      stepRefsMap.current.set(stepId, element);
+    } else {
+      stepRefsMap.current.delete(stepId);
+    }
+  }, []);
 
   // 获取当前 CodeChunks 用于调试
   const codeChunks = useAppSelector((state) => state.codeAwareSession.codeChunks);
@@ -1203,7 +1288,7 @@ export const CodeAware = () => {
       )}
 
       {/* 可滚动的内容区域 */}
-      <ScrollableContent>
+      <ScrollableContent ref={scrollableContentRef}>
         {/* Requirement Section */}
         {isEditMode ? (
           <RequirementEditor
@@ -1245,6 +1330,7 @@ export const CodeAware = () => {
               onGenerateKnowledgeCardThemes={handleGenerateKnowledgeCardThemes} // Pass knowledge card themes generation function
               onDisableKnowledgeCard={handleDisableKnowledgeCard} // Pass knowledge card disable function
               onQuestionSubmit={handleQuestionSubmit} // Pass question submit function
+              onRegisterRef={registerStepRef} // Pass step ref registration function
               disabled={isCodeEditModeEnabled} // Disable in code edit mode
               knowledgeCards={step.knowledgeCards.map((kc: KnowledgeCardItem, kcIndex: number) => {
                 // 从 KnowledgeCardItem.tests 转换为 TestItem[]

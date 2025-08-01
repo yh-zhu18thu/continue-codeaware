@@ -116,6 +116,7 @@ interface StepProps {
   onGenerateKnowledgeCardThemes?: (stepId: string, stepTitle: string, stepAbstract: string, learningGoal: string) => void; // Callback for generating knowledge card themes
   onDisableKnowledgeCard?: (stepId: string, cardId: string) => void; // Callback for disabling knowledge card
   onQuestionSubmit?: (stepId: string, selectedText: string, question: string) => void; // Callback for question submission
+  onRegisterRef?: (stepId: string, element: HTMLDivElement | null) => void; // Callback for registering step ref
   disabled?: boolean; // Optional disabled state for code edit mode
 }
 
@@ -139,6 +140,7 @@ const Step: React.FC<StepProps> = ({
   onGenerateKnowledgeCardThemes,
   onDisableKnowledgeCard,
   onQuestionSubmit,
+  onRegisterRef,
   disabled = false,
 }) => {
   const [isExpanded, setIsExpanded] = useState(forceExpanded || defaultExpanded);
@@ -332,6 +334,11 @@ const Step: React.FC<StepProps> = ({
 
   return (
     <StepContainer 
+      ref={(element) => {
+        if (stepId && onRegisterRef) {
+          onRegisterRef(stepId, element);
+        }
+      }}
       isHovered={isHovered}
       stepStatus={stepStatus}
       onMouseEnter={handleMouseEnter}

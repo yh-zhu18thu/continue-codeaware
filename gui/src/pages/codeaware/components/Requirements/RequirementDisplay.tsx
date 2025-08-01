@@ -1,22 +1,22 @@
 import {
-  Paper,
-  Step,
-  StepIcon,
-  StepLabel,
-  Stepper,
-  Typography
+    Paper,
+    Step,
+    StepIcon,
+    StepLabel,
+    Stepper,
+    Typography
 } from "@mui/material";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 import { HighlightEvent } from "core";
 import { useEffect, useRef, useState } from "react";
 import styled, { css, keyframes } from "styled-components";
 import {
-  defaultBorderRadius,
-  vscForeground
+    defaultBorderRadius,
+    vscForeground
 } from "../../../../components";
 import { useAppSelector } from "../../../../redux/hooks";
 import { selectRequirementHighlightChunks, selectRequirementText } from "../../../../redux/slices/codeAwareSlice";
-import RequirementDisplayToolBar from "./RequirementDisplayToolbar";
+// import RequirementDisplayToolBar from "./RequirementDisplayToolbar"; // 移除工具栏导入
 
 // Flickering animation for highlight state changes
 const flicker = keyframes`
@@ -188,8 +188,9 @@ const DisplayContainerDiv = styled.div<{}>`
   border-radius: ${defaultBorderRadius};
   margin: 12px;
   height: auto;
-  background-color: transparent; // Remove background color
+  background-color: rgba(45, 45, 48, 0.3); // 添加略微深色半透明背景
   color: ${vscForeground};
+  border: 1px solid rgba(255, 255, 255, 0.1); // 添加微妙边框
 
   transition: border-color 0.15s ease-in-out;
 
@@ -210,8 +211,8 @@ const ContentDisplayDiv = styled.div<{}>`
   min-height: 10px;
   border: none; // Remove border
   border-radius: ${defaultBorderRadius};
-  padding: 0.5rem; // Reduce padding
-  background-color: transparent; // Remove background color
+  padding: 1rem; // 增加内边距
+  background-color: rgba(30, 30, 30, 0.2); // 添加更深的半透明背景
   color: ${vscForeground};
   white-space: pre-wrap; // 保留换行符和空格
   line-height: 1.6;
@@ -220,7 +221,7 @@ const ContentDisplayDiv = styled.div<{}>`
 
 interface RequirementDisplayProps {
     onEdit: () => void;
-    onRegenerate: () => void;
+    // onRegenerate: () => void; // 移除重新生成功能
     onChunkFocus?: (highlight: HighlightEvent) => void;
     onClearHighlight?: () => void;
     disabled?: boolean; // Optional disabled state
@@ -228,7 +229,7 @@ interface RequirementDisplayProps {
 
 export default function RequirementDisplay({
     onEdit,
-    onRegenerate,
+    // onRegenerate, // 移除重新生成功能
     onChunkFocus,
     onClearHighlight,
     disabled = false,
@@ -438,12 +439,7 @@ export default function RequirementDisplay({
                         </Paper>
                     </ThemeProvider>
                     
-                    {/* Tool Bar */}
-                    <RequirementDisplayToolBar
-                        onEdit={onEdit}
-                        onRegenerate={onRegenerate}
-                        disabled={disabled}
-                    />
+                    {/* 移除 RequirementDisplayToolBar */}
                 </ContentDisplayDiv>
             </DisplayContainerDiv>
         </div>

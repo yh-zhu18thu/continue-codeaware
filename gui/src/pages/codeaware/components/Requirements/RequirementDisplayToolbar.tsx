@@ -1,4 +1,4 @@
-import { ArrowPathIcon, PencilSquareIcon } from "@heroicons/react/24/outline";
+import { PencilSquareIcon } from "@heroicons/react/24/outline";
 import styled from "styled-components";
 import { ToolTip } from "../../../../components/gui/Tooltip";
 import HoverItem from "../../../../components/mainInput/InputToolbar/HoverItem";
@@ -26,13 +26,13 @@ const StyledDiv = styled.div`
 
 interface RequirementDisplayToolBarProps {
     onEdit: () => void;
-    onRegenerate: () => void;
+    // onRegenerate: () => void; // 移除重新生成功能
     disabled?: boolean; // Optional disabled state
 }
 
 export default function RequirementDisplayToolBar({
     onEdit,
-    onRegenerate,
+    // onRegenerate, // 移除重新生成功能
     disabled = false,
 }: RequirementDisplayToolBarProps) {
     return (
@@ -50,18 +50,7 @@ export default function RequirementDisplayToolBar({
                 </PencilSquareIcon>
             </HoverItem>
 
-            {/* Regenerate Button */}
-            <HoverItem>
-                <ArrowPathIcon
-                    className={`w-5 h-5 ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:brightness-125 cursor-pointer'}`} // Disabled styling
-                    onClick={disabled ? undefined : onRegenerate}
-                    aria-label="Regenerate"
-                >
-                    <ToolTip text={disabled ? "代码编辑模式下不可用" : "重新生成"} position="top">
-                        重新生成
-                    </ToolTip>
-                </ArrowPathIcon>
-            </HoverItem>
+            {/* 移除重新生成按钮 */}
         </StyledDiv>
     );
 }

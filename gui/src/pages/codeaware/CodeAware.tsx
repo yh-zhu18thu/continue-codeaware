@@ -21,6 +21,7 @@ import {
   selectIsStepsGenerated,
   selectLearningGoal, // Add this import
   selectTask,
+  selectTitle, // Add this import for reading title
   setCodeEditMode, // Add this import for code edit mode action
   setKnowledgeCardDisabled, // Add this import for knowledge card disable
   setKnowledgeCardGenerationStatus, // Add this import for knowledge card generation status
@@ -116,8 +117,12 @@ const CodeAwareDiv = styled.div`
   width: 100%;
   max-width: 100%;
   min-width: 0;
+  height: 100vh; /* 设置固定高度 */
   box-sizing: border-box;
   overflow-x: hidden; /* 防止水平滚动 */
+  overflow-y: hidden; /* 禁用外层滚动 */
+  display: flex;
+  flex-direction: column;
 
   & > * {
     position: relative;
@@ -177,6 +182,21 @@ const LoadingOverlay = styled.div`
   z-index: 1000;
 `;
 
+const ScrollableContent = styled.div`
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0;
+  
+  /* 隐藏滚动条但保持滚动功能 */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Internet Explorer 10+ */
+  
+  &::-webkit-scrollbar {
+    display: none; /* Safari and Chrome */
+  }
+`;
+
 const SpinnerIcon = styled.div`
   width: 24px;
   height: 24px;
@@ -205,6 +225,7 @@ export const CodeAware = () => {
   const isEditMode = useAppSelector(selectIsRequirementInEditMode);
   const isStepsGenerated = useAppSelector(selectIsStepsGenerated); // Use the selector
   const isCodeEditModeEnabled = useAppSelector(selectIsCodeEditModeEnabled); // Get code edit mode state
+  const sessionTitle = useAppSelector(selectTitle); // Get title from codeAwareSlice
   // 获取可能有的requirement内容
   const userRequirement = useAppSelector(
     (state) => state.codeAwareSession.userRequirement
@@ -212,6 +233,9 @@ export const CodeAware = () => {
   const userRequirementStatus = useAppSelector(
     (state) => state.codeAwareSession.userRequirement?.requirementStatus
   );
+
+  // 计算要显示的title：只有在requirement为finalized时才显示session title，否则显示"CodeAware"
+  const displayTitle = userRequirementStatus === "finalized" ? sessionTitle : "CodeAware";
 
   const steps = useAppSelector((state) => state.codeAwareSession.steps); // Get steps data
 
@@ -508,7 +532,22 @@ export const CodeAware = () => {
       if (!userRequirement) {
         return;
       }
+      
+      // 检查是否有修改：比较新的requirement和原来的requirementDescription
+      const originalRequirement = userRequirement.requirementDescription;
+      const hasChanges = requirement.trim() !== originalRequirement.trim();
+      
       dispatch(submitRequirementContent(requirement)); // Submit content first
+      
+      if (!hasChanges) {
+        // 没有修改，直接回到finalized状态
+        console.log("No changes detected, returning to finalized state");
+        dispatch(setUserRequirementStatus("finalized"));
+        return;
+      }
+      
+      // 有修改，重新生成步骤
+      console.log("Changes detected, regenerating steps");
       // Reset session except requirement first to ensure clean state
       dispatch(resetSessionExceptRequirement());
       dispatch(setUserRequirementStatus("confirmed"));
@@ -533,23 +572,13 @@ export const CodeAware = () => {
   const handleRegenerateSteps = useCallback(() => {
     // Disable in code edit mode
     if (isCodeEditModeEnabled) {
-      console.warn("⚠️ Step regeneration is disabled in code edit mode");
+      console.warn("⚠️ Regeneration is disabled in code edit mode");
       return;
     }
     
-    if (!userRequirement?.requirementDescription) {
-      return;
-    }
-    // Reset session except requirement first
-    dispatch(resetSessionExceptRequirement());
-    // Set status to confirmed for regeneration
-    dispatch(setUserRequirementStatus("confirmed"));
-    dispatch(generateStepsFromRequirement({ userRequirement: userRequirement.requirementDescription }))
-      .then(() => {
-        dispatch(setUserRequirementStatus("finalized"));
-      });
-  }, [dispatch, userRequirement?.requirementDescription, isCodeEditModeEnabled]);
-
+    // 切换到编辑需求界面，而不是直接重新生成
+    dispatch(setUserRequirementStatus("editing"));
+  }, [dispatch, isCodeEditModeEnabled]);
 
   // CodeAware: 获取学习目标和代码上下文
   const learningGoal = useAppSelector(selectLearningGoal);
@@ -1126,87 +1155,40 @@ export const CodeAware = () => {
         }
       }}
     >
-      {/* CodeAware Header with Edit Mode Toggle */}
+      {/* CodeAware Header with Edit Mode Toggle - 固定在顶部 */}
       <PageHeader
-        title="CodeAware"
-        rightContent={<CodeEditModeToggle />}
+        title={displayTitle}
+        rightContent={
+          <CodeEditModeToggle 
+            onRegenerateSteps={handleRegenerateSteps}
+            showRegenerateSteps={userRequirementStatus === "finalized"}
+          />
+        }
       />
 
-      {/* Loading Overlay */}
-      {(isGeneratingSteps || hasGeneratingSteps || hasCodeDirtySteps) && (
-        <LoadingOverlay>
-          <SpinnerIcon />
-        </LoadingOverlay>
-      )}
-      {/* CodeAware 调试面板 */}
-      {/*
-      <div style={{
-        position: "fixed",
-        top: "10px",
-        right: "10px",
-        background: "rgba(0, 0, 0, 0.8)",
-        color: "white",
-        padding: "10px",
-        borderRadius: "5px",
-        fontSize: "12px",
-        maxWidth: "300px",
-        zIndex: 1000,
-        fontFamily: "monospace"
-      }}>
-        <div><strong>CodeAware 调试信息</strong></div>
-        <div>CodeChunks 总数: {codeChunks.length}</div>
-        <div>Mappings 总数: {allMappings.length}</div>
-        <div>高亮的 CodeChunks: {codeChunksToHighlightInIde.length}</div>
-        {debugInfo.lastCursorPosition && (
-          <div>
-            <div>最近光标位置:</div>
-            <div>文件: {debugInfo.lastCursorPosition.filePath.split('/').pop()}</div>
-            <div>行号: {debugInfo.lastCursorPosition.lineNumber}</div>
-          </div>
+      {/* 可滚动的内容区域 */}
+      <ScrollableContent>
+        {/* Requirement Section */}
+        {isEditMode ? (
+          <RequirementEditor
+            onConfirm={AIHandleRequirementConfirmation}
+            onAIProcess={AIPolishUserRequirement}
+            disabled={isCodeEditModeEnabled} // Disable in code edit mode
+          />
+        ) : (
+          <RequirementDisplay
+            onEdit={handleEditRequirement}
+            onChunkFocus={handleHighlightEvent} // Pass the highlight event handler
+            onClearHighlight={removeHighlightEvent} // Pass the clear highlight function
+            disabled={isCodeEditModeEnabled} // Disable in code edit mode
+          />
         )}
-        {debugInfo.lastSelection && (
-          <div>
-            <div>最近选择:</div>
-            <div>行号: {debugInfo.lastSelection.selectedLines[0]}-{debugInfo.lastSelection.selectedLines[1]}</div>
-          </div>
-        )}
-        <div>匹配的代码块: {debugInfo.matchedCodeChunks.join(', ')}</div>
-      </div>
-    */}
 
-      {/*
-        <Button
-          className="top-2 right-2 z-10"
-          onClick={() => {
-            dispatch(newCodeAwareSession()); // Dispatch action to reset CodeAware session
-          }}
-        >
-          New CodeAware Session
-        </Button>*/}
-
-      {/* Requirement Section */}
-      
-      {isEditMode ? (
-        <RequirementEditor
-          onConfirm={AIHandleRequirementConfirmation}
-          onAIProcess={AIPolishUserRequirement}
-          disabled={isCodeEditModeEnabled} // Disable in code edit mode
-        />
-      ) : (
-        <RequirementDisplay
-          onEdit={handleEditRequirement}
-          onRegenerate={handleRegenerateSteps}
-          onChunkFocus={handleHighlightEvent} // Pass the highlight event handler
-          onClearHighlight={removeHighlightEvent} // Pass the clear highlight function
-          disabled={isCodeEditModeEnabled} // Disable in code edit mode
-        />
-      )}
-
-      {isStepsGenerated && (
-        <div 
-          className={`overflow-y-scroll pt-[8px] no-scrollbar ${steps.length > 0 ? "flex-1" : ""}`}
-        >
-          {steps.map((step: StepItem, index: Key | null | undefined) => (
+        {isStepsGenerated && (
+          <div 
+            className={`pt-[8px] ${steps.length > 0 ? "flex-1" : ""}`}
+          >
+            {steps.map((step: StepItem, index: Key | null | undefined) => (
             <Step
               key={step.id} // Use step.id for proper React tracking
               title={step.title}
@@ -1285,6 +1267,7 @@ export const CodeAware = () => {
           ))}
         </div>
       )}
+      </ScrollableContent>
 
       {/* Loading Overlay */}
       {(isGeneratingSteps || hasGeneratingSteps || hasCodeDirtySteps) && (

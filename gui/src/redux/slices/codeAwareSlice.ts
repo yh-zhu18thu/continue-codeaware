@@ -872,6 +872,9 @@ export const codeAwareSessionSlice = createSlice({
         },
         selectIsCodeEditModeEnabled: (state: CodeAwareSessionState) => {
             return state.isCodeEditModeEnabled;
+        },
+        selectTitle: (state: CodeAwareSessionState) => {
+            return state.title;
         }
     }
 });
@@ -939,7 +942,8 @@ export const {
     selectLearningGoal,
     selectTask,
     selectCanExecuteUntilStep,
-    selectIsCodeEditModeEnabled
+    selectIsCodeEditModeEnabled,
+    selectTitle
 } = codeAwareSessionSlice.selectors
 
 export default codeAwareSessionSlice.reducer;

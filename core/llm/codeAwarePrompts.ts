@@ -24,7 +24,7 @@ export function constructGenerateStepsPrompt(
     userRequirement: string,
 ): string {
     return `{
-        "task": "You are given a description of a coding project. First, provide a high-level breakdown of the project into major tasks, then provide detailed steps for each task.",
+        "task": "You are given a description of a coding project (will be written in a single file, all sources and data are ready). First, provide a high-level breakdown of the project into major tasks, then provide detailed steps for each task.",
         "requirements": [
             "First, identify 4-8 major high-level tasks that represent the overall workflow of the project. These should be conceptual phases like 'Setup and Configuration', 'Data Processing', 'User Interface Development', etc.",
             "Then, for each major task, generate fine-grained steps. The steps should be atomic - if the title of a step is 'A and B', divide it into two steps 'A' and 'B'.",

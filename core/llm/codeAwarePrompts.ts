@@ -24,15 +24,15 @@ export function constructGenerateStepsPrompt(
     userRequirement: string,
 ): string {
     return `{
-        "task": "You are given a description of a coding project (will be written in a single file, all sources and data are ready). First, provide a high-level breakdown of the project into major tasks, then provide detailed steps for each task.",
+        "task": "You are given a description of a coding project (will be written in a single file, all sources and data are ready, necessary packages has been installed). First, provide a high-level breakdown of the project into major tasks, then provide detailed steps for each task.",
         "requirements": [
-            "First, identify 4-8 major high-level tasks that represent the overall workflow of the project. These should be conceptual phases like 'Setup and Configuration', 'Data Processing', 'User Interface Development', etc.",
+            "First, identify 4-8 major high-level tasks that represent the overall workflow of the project（in reasonable implementation order）. These should be conceptual phases like 'Setup and Configuration', 'Data Processing', 'User Interface Development', etc.",
             "Then, for each major task, generate fine-grained steps. The steps should be atomic - if the title of a step is 'A and B', divide it into two steps 'A' and 'B'.",
             "Generate an abstract for each step. The abstract can contain Markdown. The abstract should entail all actions needed in this step.",
             "Each step must correspond to exactly one of the major tasks",
             "Multiple steps can belong to the same task - this is encouraged to break down complex tasks into manageable pieces",
             "You must follow this JSON format in your response: {"title": "(title of the project)", "high_level_steps": ["(high-level task 1)", "(high-level task 2)", ...], "learning_goal": "(exactly the same learning goals cut out from the input description)", "steps": [{"title": "(title of the step)", "abstract": "(description of the step, can contain Markdown)", "task_corresponding_high_level_task": "(the exact text from high_level_steps array that this step belongs to)"]}]}.",
-            "Respond in the same language as the description, EXCEPT FOR THE JSON FIELD NAMES, which must be in English.",
+            "Respond in the same language as the content in \"description\" section, EXCEPT FOR THE JSON FIELD NAMES, which must be in English.",
             "Please do not use invalid \`\`\`json character to envelope the JSON response, just return the JSON object directly.",
         ],
         "description": "${userRequirement}"
@@ -266,6 +266,7 @@ export function constructRerunStepPrompt(
 
 // 构建处理代码变更的prompt
 export function constructProcessCodeChangesPrompt(
+    previousCode: string,
     currentCode: string,
     codeDiff: string,
     relevantSteps: Array<{
@@ -292,12 +293,13 @@ export function constructProcessCodeChangesPrompt(
     }).join(", ");
     
     return `{
-        "task": "You are given the current code, a code diff showing changes, and a list of relevant steps that were affected by these code changes. Analyze whether these changes require updates to the step abstracts and knowledge card titles/content, and determine if any steps have become functionally incomplete and need regeneration.",
+        "task": "You are given the previous code, current code after changes, a code diff for reference, and a list of relevant steps that were affected by these code changes. Analyze whether these changes require updates to the step abstracts and knowledge card titles/content, and determine if any steps have become functionally incomplete and need regeneration.",
         "requirements": [
-            "Analyze the code diff to understand what changes were made",
+            "Compare the previous_code and current_code to understand what changes were made",
+            "The code_diff is provided for reference to help you understand the changes, but focus on comparing the previous and current code directly",
             "For each step, determine if the changes require updating the step's title or abstract (needs_update: true/false)",
-            "For each step, analyze if the code changes have made the step's functionality incomplete or broken, requiring complete regeneration (needs_regenerate: true/false)",
-            "A step needs_regenerate when: the code changes have removed or broken core functionality described in the step's abstract, making the step's implementation incomplete or non-functional",
+            "For each step, analyze if the code changes have made the step's code incomplete or broken, requiring complete regeneration (code_broken: true/false)",
+            "A step has code_broken when: the code changes have removed or broken core functionality described in the step's abstract, making the step's implementation incomplete or non-functional",
             "A step only needs_update when: minor adjustments to title/abstract are needed but the core functionality remains intact",
             "If a step needs update, provide the updated title and abstract that reflect the code changes",
             "For each knowledge card, determine if its content needs to be regenerated based on the changes (needs_update: true/false)",
@@ -305,9 +307,10 @@ export function constructProcessCodeChangesPrompt(
             "Extract the most relevant code parts that correspond to each updated step and knowledge card",
             "The corresponding_code should include the relevant portions from the current_code (after changes)",
             "Respond in the same language as the step descriptions",
-            "You must follow this JSON format in your response: {\\"analysis\\": \\"(your analysis of the changes in the code and the things that need modification)\\", \\"updated_steps\\": [{\\"id\\": \\"step_id\\", \\"needs_update\\": true/false, \\"needs_regenerate\\": true/false, \\"title\\": \\"(updated or original title)\\", \\"abstract\\": \\"(updated or original abstract)\\", \\"corresponding_code\\": \\"(relevant code from current_code)\\"}], \\"knowledge_cards\\": [{\\"id\\": \\"card_id\\", \\"needs_update\\": true/false, \\"title\\": \\"(updated or original title)\\", \\"corresponding_code\\": \\"(relevant code from current_code)\\"}]}",
+            "You must follow this JSON format in your response: {\\"analysis\\": \\"(your analysis of the changes in the code and the things that need modification)\\", \\"updated_steps\\": [{\\"id\\": \\"step_id\\", \\"needs_update\\": true/false, \\"code_broken\\": true/false, \\"title\\": \\"(updated or original title)\\", \\"abstract\\": \\"(updated or original abstract)\\", \\"corresponding_code\\": \\"(relevant code from current_code)\\"}], \\"knowledge_cards\\": [{\\"id\\": \\"card_id\\", \\"needs_update\\": true/false, \\"title\\": \\"(updated or original title)\\", \\"corresponding_code\\": \\"(relevant code from current_code)\\"}]}",
             "Please do not use invalid \`\`\`json character to envelope the JSON response, just return the JSON object directly."
         ],
+        "previous_code": "${previousCode}",
         "current_code": "${currentCode}",
         "code_diff": "${codeDiff}",
         "relevant_steps": [${stepsText}]

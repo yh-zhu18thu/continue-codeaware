@@ -1959,6 +1959,7 @@ export const processCodeChanges = createAsyncThunk<
                 try {
                     await dispatch(processCodeUpdates({
                         currentFilePath,
+                        previousContent: snapshot.content,
                         currentContent,
                         codeDiff: formattedDiff
                     })).unwrap();
@@ -2013,13 +2014,14 @@ export const processCodeUpdates = createAsyncThunk<
     void,
     {
         currentFilePath: string;
+        previousContent: string;
         currentContent: string;
         codeDiff: string;
     },
     ThunkApiType
 >(
     "codeAware/processCodeUpdates",
-    async ({ currentFilePath, currentContent, codeDiff }, { getState, dispatch, extra }) => {
+    async ({ currentFilePath, previousContent, currentContent, codeDiff }, { getState, dispatch, extra }) => {
         try {
             const state = getState();
             const steps = state.codeAwareSession.steps;
@@ -2077,12 +2079,12 @@ export const processCodeUpdates = createAsyncThunk<
             }
 
             // Call LLM to analyze code changes and update steps with retry mechanism
-            const prompt = constructProcessCodeChangesPrompt(currentContent, codeDiff, relevantSteps);
+            const prompt = constructProcessCodeChangesPrompt(previousContent, currentContent, codeDiff, relevantSteps);
             const maxRetries = 3;
             let lastError: Error | null = null;
             let result: any = null;
 
-            console.log("🤖 Calling LLM to process code changes...");
+            console.log("🤖 Calling LLM to process code changes...", prompt);
             
             for (let attempt = 1; attempt <= maxRetries; attempt++) {
                 try {
@@ -2133,7 +2135,7 @@ export const processCodeUpdates = createAsyncThunk<
                 console.log("✅ Code update analysis completed:", {
                     updatedStepsCount: updatedSteps.length,
                     knowledgeCardsCount: knowledgeCards.length,
-                    stepsNeedingRegeneration: updatedSteps.filter((s: any) => s.needs_regenerate).length
+                    stepsBroken: updatedSteps.filter((s: any) => s.code_broken).length
                 });
 
                 // Validate response structure
@@ -2149,11 +2151,11 @@ export const processCodeUpdates = createAsyncThunk<
                     const stepId = stepUpdate.id;
                     
                     try {
-                        // Check if step needs regeneration
-                        if (stepUpdate.needs_regenerate) {
-                            console.log(`🔄 Step ${stepId} needs regeneration, marking as step_dirty`);
-                            dispatch(setStepStatus({ stepId, status: "step_dirty" }));
-                            continue; // Skip further processing for this step as it needs full regeneration
+                        // Check if step's code is broken
+                        if (stepUpdate.code_broken) {
+                            console.log(`� Step ${stepId} code is broken, marking as confirmed for regeneration`);
+                            dispatch(setStepStatus({ stepId, status: "confirmed" }));
+                            continue; // Skip further processing for this step as its code is broken
                         }
 
                         // Update step title and abstract if needed
@@ -2208,7 +2210,7 @@ export const processCodeUpdates = createAsyncThunk<
                             console.log(`🔗 Created new step mapping: ${stepCodeChunkId} -> ${stepId}`);
                         }
 
-                        // Set step status to generated (only if not needing regeneration)
+                        // Set step status to generated (only if code is not broken)
                         dispatch(setStepStatus({ stepId, status: "generated" }));
                     } catch (stepError) {
                         console.error(`❌ Error processing step ${stepId}:`, stepError);

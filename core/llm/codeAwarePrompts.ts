@@ -27,8 +27,10 @@ export function constructGenerateStepsPrompt(
         "task": "You are given a description of a coding project (will be written in a single file, all sources and data are ready, necessary packages has been installed). First, provide a high-level breakdown of the project into major tasks, then provide detailed steps for each task.",
         "requirements": [
             "First, identify 4-8 major high-level tasks that represent the overall workflow of the project（in reasonable implementation order）. These should be conceptual phases like 'Setup and Configuration', 'Data Processing', 'User Interface Development', etc.",
+            "At the beginning of the project, there must be a task for importing the Python packages needed for the project. If PyGame will be used in the project, there must be a task for adding the standard code segments required for every PyGame project.",
             "Then, for each major task, generate fine-grained steps. The steps should be atomic - if the title of a step is 'A and B', divide it into two steps 'A' and 'B'.",
-            "Generate an abstract for each step. The abstract can contain Markdown. The abstract should entail all actions needed in this step.",
+            "Keep the title brief and readable. You must not put any code in the title.",
+            "Generate an abstract for each step. The abstract can contain Markdown. The abstract should entail all actions needed in this step. The abstract should be mostly in natural language, and contain as little code as possible.",
             "Each step must correspond to exactly one of the major tasks",
             "Multiple steps can belong to the same task - this is encouraged to break down complex tasks into manageable pieces",
             "You must follow this JSON format in your response: {"title": "(title of the project)", "high_level_steps": ["(high-level task 1)", "(high-level task 2)", ...], "learning_goal": "(exactly the same learning goals cut out from the input description)", "steps": [{"title": "(title of the step)", "abstract": "(description of the step, can contain Markdown)", "task_corresponding_high_level_task": "(the exact text from high_level_steps array that this step belongs to)"]}]}.",
@@ -36,6 +38,7 @@ export function constructGenerateStepsPrompt(
             "Please do not use invalid \`\`\`json character to envelope the JSON response, just return the JSON object directly.",
         ],
         "description": "${userRequirement}"
+        
     }`;
 }
 
@@ -51,6 +54,7 @@ export function constructGenerateKnowledgeCardDetailPrompt(
         "requirements": [
             "The knowledge card should contain stuff closely related to the theme, task, and code context. Make sure the content is relevant to the specific programming task being worked on.",
             "Do not include content beyond the theme and task at hand. Do not include content from downstream tasks from potential next steps. Keep the content brief and concise.",
+            "The knowledge card should start with a very brief, concise and to-the-point sentence describing its theme and main points, TLDR style.",
             "The questions should be about either high-level concepts introduced in the knowledge card, or details about implementation. You can use actual examples in the questions.",
             "Consider the task context when generating explanations and examples to make them more relevant and practical.",
             "Respond in the same language as the project description. You may use Markdown in the content to make it more readable.",
@@ -127,15 +131,14 @@ export function constructGenerateCodeFromStepsPrompt(
     }).join(",\n        ") : "";
     
     return `{
-        "task": "You are given existing code, a list of new steps to implement, and information about previously generated steps. Generate new code that completes exactly what is required by the abstract of each new step, while maintaining and updating the code correspondence for all steps (both new and previously generated).",
+        "task": "You are given existing code and a list of ordered steps to implement. Generate new code that completes exactly what is required by the abstract of each step - no more, no less. Then identify the correspondence between code chunks and each step/knowledge card separately.",
         "requirements": [
             "Generate code that implements exactly what each new step's abstract requires",
             "Do not generate excessive code beyond what is needed for the current steps",
             "Do not skip any required functionality mentioned in the abstracts",
             "Include proper comments in the generated code to explain what each part does",
-            "IMPORTANT: For ALL steps (both new and previously generated), precisely identify which parts of the final code correspond to each step and its knowledge cards",
+            "Important: Choose only ONE step for the new code to correspond to. If the code is relevant to several steps, choose the one it most closely relates to.",
             "The code correspondence should be updated for previously generated steps as well, since new code generation may affect their positioning or integration",
-            "For each step, identify the most relevant and precise code chunks that implement the step's functionality",
             "For each knowledge card, identify the most relevant and precise code that relates to the knowledge card's theme",
             "If a knowledge card has no corresponding code, leave its code field empty",
             "The changed_code should include both existing code and newly generated code",

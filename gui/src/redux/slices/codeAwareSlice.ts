@@ -8,13 +8,15 @@ import {
     CodeAwareMapping,
     CodeChunk,
     CollaborationStatus,
+    HighLevelStepItem,
     HighlightEvent,
     KnowledgeCardGenerationStatus,
     KnowledgeCardItem,
     ProgramRequirement,
     RequirementChunk,
     StepItem,
-    StepStatus
+    StepStatus,
+    StepToHighLevelMapping
 } from 'core';
 import { v4 as uuidv4 } from "uuid";
 
@@ -46,6 +48,10 @@ type CodeAwareSessionState = {
     userRequirement: ProgramRequirement | null;
     //学习目标
     learningGoal: string;
+    //高级步骤列表
+    highLevelSteps: HighLevelStepItem[];
+    //步骤与高级步骤的对应关系
+    stepToHighLevelMappings: StepToHighLevelMapping[];
     //当前的flow
     steps: StepItem[];
     //当前的代码块
@@ -75,6 +81,8 @@ const initialCodeAwareState: CodeAwareSessionState = {
         highlightChunks: []
     },
     learningGoal: "",
+    highLevelSteps: [],
+    stepToHighLevelMappings: [],
     steps: [],
     codeChunks: [],
     codeAwareMappings: [],
@@ -236,6 +244,8 @@ export const codeAwareSessionSlice = createSlice({
                 highlightChunks: []
             };
             state.learningGoal = "";
+            state.highLevelSteps = [];
+            state.stepToHighLevelMappings = [];
             state.steps = [];
             state.codeAwareMappings = [];
             state.codeChunks = [];
@@ -514,6 +524,22 @@ export const codeAwareSessionSlice = createSlice({
                 state.userRequirement.highlightChunks.push(...action.payload);
             }
         },
+        // 设置高级步骤
+        setHighLevelSteps: (state, action: PayloadAction<HighLevelStepItem[]>) => {
+            state.highLevelSteps = action.payload;
+        },
+        // 设置步骤与高级步骤的映射关系
+        setStepToHighLevelMappings: (state, action: PayloadAction<StepToHighLevelMapping[]>) => {
+            state.stepToHighLevelMappings = action.payload;
+        },
+        // 更新高级步骤的完成状态
+        updateHighLevelStepCompletion: (state, action: PayloadAction<{ highLevelStepId: string; isCompleted: boolean }>) => {
+            const { highLevelStepId, isCompleted } = action.payload;
+            const highLevelStep = state.highLevelSteps.find(step => step.id === highLevelStepId);
+            if (highLevelStep) {
+                highLevelStep.isCompleted = isCompleted;
+            }
+        },
         updateCodeChunks: (state, action: PayloadAction<CodeChunk[]>) => {
             state.codeChunks.push(...action.payload);
         },
@@ -775,6 +801,8 @@ export const codeAwareSessionSlice = createSlice({
             // Clear all highlights first
             codeAwareSessionSlice.caseReducers.clearAllHighlights(state);
             // Reset everything except userRequirement and currentSessionId
+            state.highLevelSteps = [];
+            state.stepToHighLevelMappings = [];
             state.steps = [];
             state.codeChunks = [];
             state.codeAwareMappings = [];
@@ -902,6 +930,30 @@ export const selectRequirementText = createSelector(
     (requirementDescription): string => requirementDescription || ""
 );
 
+// 选择高级步骤
+export const selectHighLevelSteps = createSelector(
+    (state: RootState) => state.codeAwareSession.highLevelSteps,
+    (highLevelSteps): HighLevelStepItem[] => highLevelSteps || []
+);
+
+// 选择步骤到高级步骤的映射关系
+export const selectStepToHighLevelMappings = createSelector(
+    (state: RootState) => state.codeAwareSession.stepToHighLevelMappings,
+    (mappings): StepToHighLevelMapping[] => mappings || []
+);
+
+// 为给定步骤 ID 查找对应的高级步骤序号
+export const selectHighLevelStepIndexForStep = createSelector(
+    [
+        selectStepToHighLevelMappings,
+        (_: RootState, stepId: string) => stepId
+    ],
+    (mappings, stepId): number | null => {
+        const mapping = mappings.find(m => m.stepId === stepId);
+        return mapping ? mapping.highLevelStepIndex : null;
+    }
+);
+
 export const {
     setUserRequirementStatus,
     submitRequirementContent,
@@ -915,6 +967,9 @@ export const {
     clearAllCodeAwareMappings,
     updateHighlight,
     setRequirementChunks,
+    setHighLevelSteps,
+    setStepToHighLevelMappings,
+    updateHighLevelStepCompletion,
     updateCodeChunks,
     updateCodeChunkRange,
     setCodeChunkDisabled,

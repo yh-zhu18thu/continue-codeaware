@@ -100,6 +100,7 @@ interface StepProps {
   title: string;
   content: string;
   knowledgeCards: KnowledgeCardProps[];
+  highLevelStepIndex?: number | null; // 高级步骤序号，从1开始
   isActive?: boolean;
   defaultExpanded?: boolean;
   forceExpanded?: boolean; // Force expand the step (overrides defaultExpanded)
@@ -126,6 +127,7 @@ const Step: React.FC<StepProps> = ({
   title,
   content: description,
   knowledgeCards,
+  highLevelStepIndex = null,
   isActive = false,
   defaultExpanded = false, // Changed to false for collapsed by default
   forceExpanded = false, // Force expand parameter
@@ -422,6 +424,7 @@ const Step: React.FC<StepProps> = ({
     >
       <StepTitleBar 
         title={title} 
+        highLevelStepIndex={highLevelStepIndex}
         isActive={isActive} 
         isExpanded={isExpanded}
         isHighlighted={isHighlighted || shouldKeepHighlighted}

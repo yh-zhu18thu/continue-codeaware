@@ -15,7 +15,7 @@ import {
   newCodeAwareSession, // Add this import
   resetIdeCommFlags,
   resetSessionExceptRequirement, // Add this import
-  saveCodeEditModeSnapshot,
+  saveCodeEditModeSnapshot, // Add this import
   selectIsCodeEditModeEnabled, // Add this import for code edit mode
   selectIsRequirementInEditMode, // Import submitRequirementContent
   selectIsStepsGenerated,
@@ -32,6 +32,7 @@ import {
   updateHighlight
 } from "../../redux/slices/codeAwareSlice";
 import {
+  checkAndUpdateHighLevelStepCompletion,
   generateCodeFromSteps,
   generateKnowledgeCardDetail,
   generateKnowledgeCardThemes,
@@ -239,6 +240,17 @@ export const CodeAware = () => {
   const displayTitle = userRequirementStatus === "finalized" ? sessionTitle : "CodeAware";
 
   const steps = useAppSelector((state) => state.codeAwareSession.steps); // Get steps data
+
+  // 预先获取所有步骤的高级步骤索引，避免在 map 函数中使用 hook
+  const stepToHighLevelIndexMap = useAppSelector((state) => {
+    const mappings = state.codeAwareSession.stepToHighLevelMappings;
+    const map = new Map<string, number | null>();
+    steps.forEach(step => {
+      const mapping = mappings.find(m => m.stepId === step.id);
+      map.set(step.id, mapping ? mapping.highLevelStepIndex : null);
+    });
+    return map;
+  });
 
   // 监听steps变化，同步给IDE
   useEffect(() => {
@@ -979,6 +991,10 @@ export const CodeAware = () => {
         for (const step of unexecutedSteps) {
           dispatch(setStepStatus({ stepId: step.id, status: "generated" }));
         }
+        
+        // 检查并更新高级步骤的完成状态
+        dispatch(checkAndUpdateHighLevelStepCompletion());
+        
         // TODO: 后续处理生成的代码，例如：
         // - 将生成的代码应用到IDE中
         // - 更新代码映射关系
@@ -1060,6 +1076,9 @@ export const CodeAware = () => {
       
       // 成功完成后设置状态为generated
       dispatch(setStepStatus({ stepId, status: "generated" }));
+      
+      // 检查并更新高级步骤的完成状态
+      dispatch(checkAndUpdateHighLevelStepCompletion());
       
       console.log("✅ 步骤重新运行成功");
       ideMessenger?.post("showToast", ["info", "步骤重新运行成功！"]);
@@ -1387,11 +1406,16 @@ export const CodeAware = () => {
           <div 
             className={`pt-[8px] ${steps.length > 0 ? "flex-1" : ""}`}
           >
-            {steps.map((step: StepItem, index: Key | null | undefined) => (
+            {steps.map((step: StepItem, index: Key | null | undefined) => {
+              // 从预先计算的 Map 中获取该步骤对应的高级步骤序号
+              const highLevelStepIndex = stepToHighLevelIndexMap.get(step.id) ?? null;
+
+              return (
             <Step
               key={step.id} // Use step.id for proper React tracking
               title={step.title}
               content={step.abstract}
+              highLevelStepIndex={highLevelStepIndex}
               isHighlighted={step.isHighlighted}
               stepId={step.id}
               stepStatus={step.stepStatus}
@@ -1466,7 +1490,8 @@ export const CodeAware = () => {
               // isActive can be determined by currentFocusedFlowId if needed
               // isActive={step.id === currentFocusedFlowId} 
             />
-          ))}
+              );
+            })}
         </div>
       )}
       </ScrollableContent>

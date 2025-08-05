@@ -3,11 +3,11 @@ import { StepStatus } from "core";
 import React from 'react';
 import styled from "styled-components";
 import {
-  defaultBorderRadius,
-  lightGray,
-  vscForeground,
-  vscInputBackground,
-  vscListActiveBackground
+    defaultBorderRadius,
+    lightGray,
+    vscForeground,
+    vscInputBackground,
+    vscListActiveBackground
 } from "../../../../components";
 
 const TitleBarContainer = styled.div<{ 
@@ -73,6 +73,27 @@ const TitleContent = styled.div`
   flex: 1;
 `;
 
+const HighLevelStepBadge = styled.span<{ stepStatus?: StepStatus }>`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  background-color: ${({ stepStatus }) => {
+    // Match the RequirementDisplay step icon colors
+    if (stepStatus === "step_dirty") return '#FCD34D'; // Bright amber for step dirty
+    if (stepStatus === "code_dirty") return '#FB923C'; // Bright orange for code dirty
+    return '#888888'; // Default gray
+  }};
+  color: #ffffff;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: bold;
+  margin-right: 8px;
+  min-width: 20px;
+  transition: background-color 0.15s ease-in-out;
+`;
+
 const ChevronContainer = styled.div<{ isExpanded: boolean }>`
   display: flex;
   align-items: center;
@@ -116,6 +137,7 @@ const IconButton = styled.button<{ disabled?: boolean; stepStatus?: StepStatus }
 
 interface StepTitleBarProps {
   title: string;
+  highLevelStepIndex?: number | null; // 高级步骤序号，从1开始
   isActive?: boolean; // Optional prop to indicate if the step is active
   isExpanded?: boolean; // Optional prop to indicate if the step is expanded
   isHighlighted?: boolean; // Optional prop to indicate if the step is highlighted
@@ -129,6 +151,7 @@ interface StepTitleBarProps {
 
 const StepTitleBar: React.FC<StepTitleBarProps> = ({ 
   title, 
+  highLevelStepIndex = null,
   isActive = false, 
   isExpanded = true,
   isHighlighted = false,
@@ -182,6 +205,11 @@ const StepTitleBar: React.FC<StepTitleBarProps> = ({
       onClick={onToggle}
     >
       <TitleContent>
+        {highLevelStepIndex && (
+          <HighLevelStepBadge stepStatus={stepStatus}>
+            {highLevelStepIndex}
+          </HighLevelStepBadge>
+        )}
         <span>{title}</span>
       </TitleContent>
       <IconContainer>

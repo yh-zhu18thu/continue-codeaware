@@ -476,6 +476,21 @@ export type RequirementChunk = {
   isHighlighted: boolean;
 }
 
+// CODEAWARE: 高级步骤项目
+export interface HighLevelStepItem {
+  id: string;
+  content: string;
+  isHighlighted: boolean;
+  isCompleted: boolean; // 标记该高级步骤是否已完成
+}
+
+// CODEAWARE: 步骤与高级步骤的对应关系
+export interface StepToHighLevelMapping {
+  stepId: string;
+  highLevelStepId: string;
+  highLevelStepIndex: number; // 序号，从1开始
+}
+
 // CODEAWARE: 用户输入+LLM paraphrase的程序需求
 export interface ProgramRequirement {
   // 程序需求部分

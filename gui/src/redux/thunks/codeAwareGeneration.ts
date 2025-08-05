@@ -2,9 +2,11 @@ import { createAsyncThunk } from "@reduxjs/toolkit";
 import {
     CodeAwareMapping,
     CodeChunk,
+    HighLevelStepItem,
     ProgramRequirement,
     RequirementChunk,
-    StepItem
+    StepItem,
+    StepToHighLevelMapping
 } from "core";
 import {
     constructGenerateCodeFromStepsPrompt,
@@ -28,6 +30,7 @@ import {
     setCodeAwareTitle,
     setCodeChunkDisabled,
     setGeneratedSteps,
+    setHighLevelSteps,
     setKnowledgeCardError,
     setKnowledgeCardGenerationStatus,
     setKnowledgeCardLoading,
@@ -36,17 +39,54 @@ import {
     setStepAbstract,
     setStepStatus,
     setStepTitle,
+    setStepToHighLevelMappings,
     setUserRequirementStatus,
     submitRequirementContent,
     updateCodeAwareMappings,
     updateCodeChunkPositions,
     updateCodeChunkRange,
+    updateHighLevelStepCompletion,
     updateHighlight,
     updateKnowledgeCardContent,
     updateKnowledgeCardTitle
 } from "../slices/codeAwareSlice";
 import { selectDefaultModel } from "../slices/configSlice";
 import { ThunkApiType } from "../store";
+
+// 辅助函数：检查并更新高级步骤的完成状态
+export const checkAndUpdateHighLevelStepCompletion = createAsyncThunk<
+    void,
+    void,
+    ThunkApiType
+>(
+    "codeAware/checkAndUpdateHighLevelStepCompletion",
+    async (_, { dispatch, getState }) => {
+        const state = getState();
+        const steps = state.codeAwareSession.steps;
+        const stepToHighLevelMappings = state.codeAwareSession.stepToHighLevelMappings;
+        const highLevelSteps = state.codeAwareSession.highLevelSteps;
+
+        // 为每个高级步骤检查其对应的所有步骤是否都已生成
+        highLevelSteps.forEach(highLevelStep => {
+            const relatedSteps = stepToHighLevelMappings
+                .filter(mapping => mapping.highLevelStepId === highLevelStep.id)
+                .map(mapping => steps.find(step => step.id === mapping.stepId))
+                .filter(step => step !== undefined);
+
+            // 判断该高级步骤是否完成：所有相关步骤状态为 "generated"
+            const isCompleted = relatedSteps.length > 0 && 
+                relatedSteps.every(step => step!.stepStatus === "generated");
+
+            // 如果完成状态发生变化，更新状态
+            if (isCompleted !== highLevelStep.isCompleted) {
+                dispatch(updateHighLevelStepCompletion({
+                    highLevelStepId: highLevelStep.id,
+                    isCompleted
+                }));
+            }
+        });
+    }
+);
 
 // 辅助函数：清理markdown格式的文本，去掉换行符等特殊字符
 function cleanMarkdownText(text: string): string {
@@ -325,6 +365,8 @@ export const generateStepsFromRequirement = createAsyncThunk<
             let parsedSteps: StepItem[] = [];
             let initialMappings: CodeAwareMapping[] = [];
             let requirementChunks: RequirementChunk[] = [];
+            let highLevelStepItems: HighLevelStepItem[] = [];
+            let stepToHighLevelMappings: StepToHighLevelMapping[] = [];
             let learningGoal = "";
             let title = "";
             let highLevelSteps: string[] = [];
@@ -338,8 +380,17 @@ export const generateStepsFromRequirement = createAsyncThunk<
                 highLevelSteps = jsonResponse.high_level_steps || [];
                 const steps = jsonResponse.steps || [];
                 
-                // 根据high_level_steps创建requirement chunks
+                // 创建高级步骤项目
                 highLevelSteps.forEach((highLevelStep, index) => {
+                    const highLevelStepId = `hl-${index + 1}`;
+                    highLevelStepItems.push({
+                        id: highLevelStepId,
+                        content: highLevelStep,
+                        isHighlighted: false,
+                        isCompleted: false // 初始状态为未完成
+                    });
+                    
+                    // 同时创建 requirement chunks (用于 RequirementDisplay)
                     requirementChunks.push({
                         id: `r-${index + 1}`,
                         content: highLevelStep,
@@ -367,13 +418,23 @@ export const generateStepsFromRequirement = createAsyncThunk<
                         
                         // 为每个step的对应high-level task创建映射
                         if (taskCorrespondingHighLevelTask) {
-                            // 找到对应的requirement chunk
-                            const correspondingChunkIndex = highLevelSteps.findIndex(
+                            // 找到对应的高级步骤
+                            const correspondingIndex = highLevelSteps.findIndex(
                                 highLevelStep => highLevelStep === taskCorrespondingHighLevelTask
                             );
                             
-                            if (correspondingChunkIndex !== -1) {
-                                const requirementChunkId = `r-${correspondingChunkIndex + 1}`;
+                            if (correspondingIndex !== -1) {
+                                const highLevelStepId = `hl-${correspondingIndex + 1}`;
+                                const requirementChunkId = `r-${correspondingIndex + 1}`;
+                                
+                                // 创建步骤到高级步骤的映射
+                                stepToHighLevelMappings.push({
+                                    stepId: stepId,
+                                    highLevelStepId: highLevelStepId,
+                                    highLevelStepIndex: correspondingIndex + 1 // 序号从1开始
+                                });
+                                
+                                // 创建传统的 CodeAware 映射 (用于高亮功能)
                                 initialMappings.push({
                                     requirementChunkId: requirementChunkId,
                                     stepId: stepId,
@@ -395,10 +456,13 @@ export const generateStepsFromRequirement = createAsyncThunk<
             }
             console.log("Generated high_level_steps array:", highLevelSteps);
             console.log("Generated requirement chunks:", requirementChunks);
+            console.log("Generated step to high level mappings:", stepToHighLevelMappings);
 
             // 更新 Redux 状态
             dispatch(setCodeAwareTitle(title));
             dispatch(setLearningGoal(learningGoal));
+            dispatch(setHighLevelSteps(highLevelStepItems));
+            dispatch(setStepToHighLevelMappings(stepToHighLevelMappings));
             dispatch(setGeneratedSteps(parsedSteps));
             dispatch(setRequirementChunks(requirementChunks));
             dispatch(updateCodeAwareMappings(initialMappings));

@@ -1,3 +1,4 @@
+import { CheckCircle } from "@mui/icons-material";
 import {
     Paper,
     Step,
@@ -15,7 +16,11 @@ import {
     vscForeground
 } from "../../../../components";
 import { useAppSelector } from "../../../../redux/hooks";
-import { selectRequirementHighlightChunks, selectRequirementText } from "../../../../redux/slices/codeAwareSlice";
+import {
+    selectHighLevelSteps,
+    selectRequirementHighlightChunks,
+    selectRequirementText
+} from "../../../../redux/slices/codeAwareSlice";
 // import RequirementDisplayToolBar from "./RequirementDisplayToolbar"; // 移除工具栏导入
 
 // Flickering animation for highlight state changes
@@ -91,6 +96,13 @@ const AnimatedStepIcon = styled(StepIcon)<{ isFlickering: boolean; isHighlighted
   &:hover {
     transform: scale(1.05);
   }
+`;
+
+// 完成状态的绿色对钩图标
+const CompletionIcon = styled(CheckCircle)`
+  color: #4ade80 !important; /* 绿色 */
+  margin-left: 8px;
+  font-size: 20px !important;
 `;
 
 // Highlighted step content styling - removed as we only need labels now
@@ -236,6 +248,7 @@ export default function RequirementDisplay({
 }: RequirementDisplayProps) {
     const requirementText = useAppSelector(selectRequirementText);
     const highlightChunks = useAppSelector(selectRequirementHighlightChunks);
+    const highLevelSteps = useAppSelector(selectHighLevelSteps);
 
     // Track previous highlight states for flickering animation using useRef to avoid circular dependency
     const previousHighlightStatesRef = useRef<Map<string, boolean>>(new Map());
@@ -335,8 +348,20 @@ export default function RequirementDisplay({
         }
     };
 
-    // Create steps from highlight chunks or fallback to requirement text sections
+    // Create steps from high level steps or fallback to highlight chunks
     const createSteps = () => {
+        // 优先使用高级步骤数据
+        if (highLevelSteps.length > 0) {
+            return highLevelSteps.map((highLevelStep, index) => ({
+                id: highLevelStep.id,
+                content: highLevelStep.content,
+                isHighlighted: highLevelStep.isHighlighted,
+                isCompleted: highLevelStep.isCompleted,
+                label: highLevelStep.content,
+            }));
+        }
+
+        // 回退到 highlight chunks
         if (!highlightChunks.length) {
             // If no highlight chunks, split requirement text by lines or sentences
             const sentences = requirementText.split(/[.!?]+/).filter(s => s.trim().length > 0);
@@ -344,6 +369,7 @@ export default function RequirementDisplay({
                 id: `sentence-${index}`,
                 content: sentence.trim(),
                 isHighlighted: false,
+                isCompleted: false,
                 label: sentence.trim(), // Use sentence content as label
             }));
         }
@@ -359,6 +385,7 @@ export default function RequirementDisplay({
             id: chunk.id,
             content: chunk.content,
             isHighlighted: chunk.isHighlighted,
+            isCompleted: false, // 默认未完成
             label: chunk.content, // Use chunk content as label
         }));
     };
@@ -424,12 +451,14 @@ export default function RequirementDisplay({
                                                         fontWeight: isHighlighted ? 'bold' : 'normal',
                                                         fontSize: '16px', // Larger font size
                                                         lineHeight: '1.3',
-                                                        display: 'block',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
                                                         maxWidth: '500px',
                                                         wordBreak: 'break-word',
                                                     }}
                                                 >
-                                                    {step.label}
+                                                    <span style={{ flex: 1 }}>{step.label}</span>
+                                                    {step.isCompleted && <CompletionIcon />}
                                                 </Typography>
                                             </StepLabel>
                                         </Step>

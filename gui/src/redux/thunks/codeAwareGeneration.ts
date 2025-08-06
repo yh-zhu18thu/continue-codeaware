@@ -386,9 +386,9 @@ export const generateStepsFromRequirement = createAsyncThunk<
                 
                 // 创建高级步骤项目
                 highLevelSteps.forEach((highLevelStep, index) => {
-                    const highLevelStepId = `hl-${index + 1}`;
+                    const requirementChunkId = `r-${index + 1}`;
                     highLevelStepItems.push({
-                        id: highLevelStepId,
+                        id: requirementChunkId,
                         content: highLevelStep,
                         isHighlighted: false,
                         isCompleted: false // 初始状态为未完成
@@ -396,7 +396,7 @@ export const generateStepsFromRequirement = createAsyncThunk<
                     
                     // 同时创建 requirement chunks (用于 RequirementDisplay)
                     requirementChunks.push({
-                        id: `r-${index + 1}`,
+                        id: requirementChunkId,
                         content: highLevelStep,
                         isHighlighted: false
                     });
@@ -428,13 +428,12 @@ export const generateStepsFromRequirement = createAsyncThunk<
                             );
                             
                             if (correspondingIndex !== -1) {
-                                const highLevelStepId = `hl-${correspondingIndex + 1}`;
                                 const requirementChunkId = `r-${correspondingIndex + 1}`;
                                 
                                 // 创建步骤到高级步骤的映射
                                 stepToHighLevelMappings.push({
                                     stepId: stepId,
-                                    highLevelStepId: highLevelStepId,
+                                    highLevelStepId: requirementChunkId,
                                     highLevelStepIndex: correspondingIndex + 1 // 序号从1开始
                                 });
                                 

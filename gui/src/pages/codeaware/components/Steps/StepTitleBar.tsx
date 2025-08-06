@@ -3,11 +3,11 @@ import { StepStatus } from "core";
 import React from 'react';
 import styled from "styled-components";
 import {
-    defaultBorderRadius,
-    lightGray,
-    vscForeground,
-    vscInputBackground,
-    vscListActiveBackground
+  defaultBorderRadius,
+  lightGray,
+  vscForeground,
+  vscInputBackground,
+  vscListActiveBackground
 } from "../../../../components";
 
 const TitleBarContainer = styled.div<{ 
@@ -16,6 +16,7 @@ const TitleBarContainer = styled.div<{
   isHighlighted: boolean; 
   isFlickering: boolean; 
   stepStatus?: StepStatus;
+  isViewed?: boolean;
 }>`
   padding: 4px 12px;
   display: flex;
@@ -47,9 +48,10 @@ const TitleBarContainer = styled.div<{
     return 'none';
   }};
   // Different opacity for different states
-  opacity: ${({ stepStatus }) => {
+  opacity: ${({ stepStatus, isViewed }) => {
     if (stepStatus === "generating") return 0.85; // Slightly dimmed when generating
     if (stepStatus === "generated") return 0.7; // More dimmed when generated but not confirmed
+    if (!isViewed) return 0.8; // 未查看过的步骤稍微透明
     return 1; // Full opacity for confirmed and dirty states
   }};
   animation: ${({ isFlickering }) => 
@@ -67,10 +69,21 @@ const TitleBarContainer = styled.div<{
   }
 `;
 
-const TitleContent = styled.div`
+const TitleContent = styled.div<{ isViewed?: boolean }>`
   display: flex;
   align-items: center;
   flex: 1;
+  font-weight: ${({ isViewed }) => isViewed ? '400' : '500'}; // 查看过的稍微减轻字重
+`;
+
+const ViewedIndicator = styled.div<{ isViewed: boolean }>`
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: ${({ isViewed }) => isViewed ? '#22C55E' : 'transparent'};
+  border: 1px solid ${({ isViewed }) => isViewed ? '#22C55E' : '#666666'};
+  margin-right: 8px;
+  transition: all 0.2s ease-in-out;
 `;
 
 const HighLevelStepBadge = styled.span<{ stepStatus?: StepStatus }>`
@@ -143,6 +156,7 @@ interface StepTitleBarProps {
   isHighlighted?: boolean; // Optional prop to indicate if the step is highlighted
   isFlickering?: boolean; // Optional prop to indicate if the step is flickering
   stepStatus?: StepStatus; // Add step status to control button availability
+  isViewed?: boolean; // 新增：是否已查看过
   onToggle?: () => void; // Optional callback for toggle functionality
   onExecuteUntilStep?: () => void; // Optional callback for execute until step
   onRerunStep?: () => void; // Optional callback for rerun step when dirty
@@ -157,6 +171,7 @@ const StepTitleBar: React.FC<StepTitleBarProps> = ({
   isHighlighted = false,
   isFlickering = false,
   stepStatus = "confirmed",
+  isViewed = false,
   onToggle,
   onExecuteUntilStep,
   onRerunStep,
@@ -202,9 +217,11 @@ const StepTitleBar: React.FC<StepTitleBarProps> = ({
       isHighlighted={isHighlighted}
       isFlickering={isFlickering}
       stepStatus={stepStatus}
+      isViewed={isViewed}
       onClick={onToggle}
     >
-      <TitleContent>
+      <TitleContent isViewed={isViewed}>
+        <ViewedIndicator isViewed={isViewed} />
         {highLevelStepIndex && (
           <HighLevelStepBadge stepStatus={stepStatus}>
             {highLevelStepIndex}

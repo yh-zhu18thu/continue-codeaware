@@ -319,3 +319,31 @@ export function constructProcessCodeChangesPrompt(
         "relevant_steps": [${stepsText}]
     }`;
 }
+
+// 构建评估SAQ答案的prompt
+export function constructEvaluateSaqAnswerPrompt(
+    question: string,
+    standardAnswer: string,
+    userAnswer: string
+): string {
+    return `{
+        "task": "You are evaluating a student's short answer response to a programming-related question. Compare the user's answer with the standard answer and determine if it covers all key points correctly.",
+        "requirements": [
+            "Analyze whether the user's answer demonstrates understanding of the core concepts",
+            "Check if the user's answer covers all major points mentioned in the standard answer",
+            "Be lenient with minor wording differences - focus on conceptual understanding",
+            "Consider alternative correct explanations that might differ from the standard answer",
+            "Determine if the answer is completely correct (isCorrect: true) or has gaps/errors (isCorrect: false)",
+            "Provide constructive feedback highlighting what was good and what was missing or incorrect",
+            "If the answer is incorrect, point out specific gaps in understanding or missing key concepts",
+            "If the answer is correct, acknowledge the good understanding but mention any minor areas for improvement",
+            "Keep the feedback concise and educational - aim for 1-2 sentences",
+            "Respond in the same language as the question",
+            "You must follow this JSON format in your response: {\\"isCorrect\\": true/false, \\"remarks\\": \\"(your feedback message)\\"}",
+            "Please do not use invalid \`\`\`json character to envelope the JSON response, just return the JSON object directly."
+        ],
+        "question": "${question.replace(/"/g, "\"")}",
+        "standard_answer": "${standardAnswer.replace(/"/g, "\"")}",
+        "user_answer": "${userAnswer.replace(/"/g, "\"")}"
+    }`;
+}

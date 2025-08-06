@@ -622,7 +622,7 @@ export const codeAwareSessionSlice = createSlice({
                         card.tests = tests.map((test, index) => {
                             if (test.question_type === "shortAnswer") {
                                 return {
-                                    id: `${cardId}-test-${index}`,
+                                    id: `${cardId}-t-${index}`,
                                     questionType: "shortAnswer" as const,
                                     question: {
                                         type: "shortAnswer" as const,
@@ -634,7 +634,7 @@ export const codeAwareSessionSlice = createSlice({
                                 };
                             } else {
                                 return {
-                                    id: `${cardId}-test-${index}`,
+                                    id: `${cardId}-t-${index}`,
                                     questionType: "multipleChoice" as const,
                                     question: {
                                         type: "multipleChoice" as const,
@@ -861,6 +861,47 @@ export const codeAwareSessionSlice = createSlice({
                     chunk.range = update.newRange;
                 }
             });
+        },
+        updateSaqTestResult: (state, action: PayloadAction<{
+            stepId: string;
+            knowledgeCardId: string;
+            testId: string;
+            userAnswer: string;
+            isCorrect: boolean;
+            remarks: string;
+        }>) => {
+            const { stepId, knowledgeCardId, testId, userAnswer, isCorrect, remarks } = action.payload;
+            const step = state.steps.find(s => s.id === stepId);
+            if (step) {
+                const kc = step.knowledgeCards.find(k => k.id === knowledgeCardId);
+                if (kc && kc.tests) {
+                    const test = kc.tests.find(t => t.id === testId);
+                    if (test && test.question.type === "shortAnswer") {
+                        test.question.answer = userAnswer;
+                        test.question.result = isCorrect ? "correct" : "wrong";
+                        test.question.remarks = remarks;
+                    }
+                }
+            }
+        },
+        setSaqTestLoading: (state, action: PayloadAction<{
+            stepId: string;
+            knowledgeCardId: string;
+            testId: string;
+            isLoading: boolean;
+        }>) => {
+            const { stepId, knowledgeCardId, testId, isLoading } = action.payload;
+            const step = state.steps.find(s => s.id === stepId);
+            if (step) {
+                const kc = step.knowledgeCards.find(k => k.id === knowledgeCardId);
+                if (kc && kc.tests) {
+                    const test = kc.tests.find(t => t.id === testId);
+                    if (test) {
+                        // 添加一个loading状态到test对象
+                        (test as any).isLoading = isLoading;
+                    }
+                }
+            }
         }
     },
     selectors:{
@@ -998,7 +1039,9 @@ export const {
     saveCodeEditModeSnapshot,
     clearCodeEditModeSnapshot,
     markStepsCodeDirty,
-    updateCodeChunkPositions
+    updateCodeChunkPositions,
+    updateSaqTestResult,
+    setSaqTestLoading
 } = codeAwareSessionSlice.actions
 
 export const {
@@ -1013,6 +1056,64 @@ export const {
     selectIsCodeEditModeEnabled,
     selectTitle
 } = codeAwareSessionSlice.selectors
+
+// Selector to get test information by testId
+export const selectTestByTestId = createSelector(
+    (state: RootState) => state.codeAwareSession.steps,
+    (_: RootState, testId: string) => testId,
+    (steps, testId): {
+        stepId: string;
+        knowledgeCardId: string;
+        test: {
+            id: string;
+            stem: string;
+            standard_answer: string;
+            question_type: "shortAnswer" | "multipleChoice";
+        } | null;
+    } | null => {
+        for (const step of steps) {
+            for (const kc of step.knowledgeCards) {
+                if (kc.tests) {
+                    for (const test of kc.tests) {
+                        if (test.id === testId) {
+                            return {
+                                stepId: step.id,
+                                knowledgeCardId: kc.id,
+                                test: {
+                                    id: test.id,
+                                    stem: test.question.stem,
+                                    standard_answer: test.question.standard_answer,
+                                    question_type: test.question.type
+                                }
+                            };
+                        }
+                    }
+                }
+            }
+        }
+        return null;
+    }
+);
+
+// Selector to get test loading state by testId
+export const selectTestLoadingState = createSelector(
+    (state: RootState) => state.codeAwareSession.steps,
+    (_: RootState, testId: string) => testId,
+    (steps, testId): boolean => {
+        for (const step of steps) {
+            for (const kc of step.knowledgeCards) {
+                if (kc.tests) {
+                    for (const test of kc.tests) {
+                        if (test.id === testId) {
+                            return (test as any).isLoading || false;
+                        }
+                    }
+                }
+            }
+        }
+        return false;
+    }
+);
 
 export default codeAwareSessionSlice.reducer;
 

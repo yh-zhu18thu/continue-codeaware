@@ -5,8 +5,7 @@ import styled from "styled-components";
 import {
   defaultBorderRadius,
   lightGray,
-  vscForeground,
-  vscInputBackground
+  vscForeground
 } from "../../../../components";
 import KnowledgeCardContent from './KnowledgeCardContent';
 import KnowledgeCardLoader from './KnowledgeCardLoader';
@@ -20,7 +19,7 @@ const KnowledgeCardContainer = styled.div<{ isHighlighted?: boolean; isFlickerin
   min-width: 0; /* 防止内容撑开 */
   display: flex;
   flex-direction: column;
-  background-color: ${vscInputBackground};
+  background-color: #000000; /* 设置背景为黑色 */
   border-radius: ${defaultBorderRadius};
   box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
   border: 1px solid ${({ isHighlighted, isFlickering }) => 
@@ -56,18 +55,23 @@ const ContentArea = styled.div<{ isVisible: boolean }>`
 const TestContainer = styled.div`
   position: relative;
   margin-top: 16px;
+  margin-bottom: 50px; /* 为导航按钮留出空间，避免重叠 */
   min-height: 100px;
+  padding: 16px;
+  background-color: #111111; /* 深灰色背景，比主容器稍亮 */
+  border-radius: ${defaultBorderRadius};
+  border: 1px solid ${lightGray}22;
 `;
 
 const TestNavigationContainer = styled.div`
   position: absolute;
-  bottom: 0px;
+  bottom: -45px; /* 调整到容器外部，避免重叠 */
   left: 8px;
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 4px 8px;
-  background-color: ${vscInputBackground};
+  background-color: #1a1a1a; /* 深色背景 */
   border: 1px solid ${lightGray}33;
   border-radius: ${defaultBorderRadius};
   box-shadow: 0 2px 4px -1px rgb(0 0 0 / 0.1);
@@ -109,6 +113,13 @@ export interface TestItem {
   mcqQuestion?: string;
   mcqOptions?: string[];
   mcqCorrectAnswer?: string;
+  // Loading and result state
+  isLoading?: boolean;
+  result?: {
+    userAnswer: string;
+    isCorrect: boolean;
+    remarks: string;
+  };
 }
 
 export interface KnowledgeCardProps {
@@ -317,11 +328,11 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
   }
 
   const handlePreviousTest = () => {
-    setCurrentTestIndex(Math.min(currentTestIndex + 1, testItems.length - 1));
+    setCurrentTestIndex(Math.max(currentTestIndex - 1, 0)); // 修正：减少索引去到前一题
   };
 
   const handleNextTest = () => {
-    setCurrentTestIndex(Math.max(currentTestIndex - 1, 0));
+    setCurrentTestIndex(Math.min(currentTestIndex + 1, testItems.length - 1)); // 修正：增加索引去到下一题
   };
 
   const currentTest = testItems[currentTestIndex];
@@ -420,8 +431,8 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
               <TestNavigationContainer>
                 <TestNavigationButton 
                   onClick={handlePreviousTest} 
-                  disabled={currentTestIndex >= testItems.length - 1}
-                  title="更早的测试"
+                  disabled={currentTestIndex <= 0} /* 修正：在第一题时禁用向前按钮 */
+                  title="上一题"
                 >
                   <ChevronLeftIcon width={14} height={14} />
                 </TestNavigationButton>
@@ -430,8 +441,8 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
                 </TestCounter>
                 <TestNavigationButton 
                   onClick={handleNextTest} 
-                  disabled={currentTestIndex <= 0}
-                  title="更新的测试"
+                  disabled={currentTestIndex >= testItems.length - 1} /* 修正：在最后一题时禁用向后按钮 */
+                  title="下一题"
                 >
                   <ChevronRightIcon width={14} height={14} />
                 </TestNavigationButton>
@@ -454,6 +465,8 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
               <KnowledgeCardSAQ
                 question={currentTest.saqQuestion}
                 onSubmitAnswer={(answer) => onSaqSubmit(currentTest.id, answer)}
+                isLoading={currentTest.isLoading}
+                result={currentTest.result}
               />
             )}
           </TestContainer>

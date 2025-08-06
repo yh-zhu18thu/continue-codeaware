@@ -6,7 +6,6 @@ import {
     lightGray,
     vscButtonBackground,
     vscButtonForeground,
-    vscEditorBackground,
     vscFocusBorder,
     vscForeground
 } from "../../../../components";
@@ -16,7 +15,7 @@ const QuestionContainer = styled.div`
   padding: 16px;
   border: 1px solid ${lightGray}33;
   border-radius: ${defaultBorderRadius};
-  background-color: ${vscEditorBackground};
+  background-color: #1a1a1a; /* 深色背景 */
   color: ${vscForeground};
   text-align: center; /* Center the content */
 `;
@@ -73,7 +72,7 @@ const OptionButton = styled.button<{
         `;
       }
       return `
-        background-color: ${lightGray}22;
+        background-color: #2a2a2a; /* 深色背景 */
         color: ${vscForeground};
         border-color: ${lightGray};
         opacity: 0.7;
@@ -91,12 +90,12 @@ const OptionButton = styled.button<{
     }
     
     return `
-      background-color: ${lightGray}11;
+      background-color: #1a1a1a; /* 深色背景 */
       color: ${vscForeground};
       border-color: ${lightGray}66;
       
       &:hover {
-        background-color: ${lightGray}22;
+        background-color: #2a2a2a; /* 悬停时稍亮的深色背景 */
         border-color: ${lightGray};
       }
     `;

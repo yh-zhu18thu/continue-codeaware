@@ -1,5 +1,5 @@
 import { HighlightEvent, KnowledgeCardItem, StepItem, StepStatus } from "core";
-import { Key, useCallback, useContext, useEffect, useRef, useState } from "react";
+import { Key, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import styled from "styled-components";
 import {
   lightGray,
@@ -41,6 +41,7 @@ import {
   getStepCorrespondingCode,
   paraphraseUserIntent,
   processCodeChanges,
+  processSaqSubmission,
   rerunStep
 } from "../../redux/thunks/codeAwareGeneration";
 import "./CodeAware.css";
@@ -615,6 +616,32 @@ export const CodeAware = () => {
 
   // 获取当前 CodeChunks 用于调试
   const codeChunks = useAppSelector((state) => state.codeAwareSession.codeChunks);
+
+  // Create a memoized map of test loading states and results
+  const testStatesMap = useMemo(() => {
+    const map = new Map();
+    steps.forEach(step => {
+      step.knowledgeCards.forEach(kc => {
+        kc.tests?.forEach(test => {
+          // Extract result from test question if it exists
+          let result: { userAnswer: string; isCorrect: boolean; remarks: string } | undefined;
+          if (test.question.type === 'shortAnswer' && test.question.answer && test.question.result !== 'unanswered') {
+            result = {
+              userAnswer: test.question.answer,
+              isCorrect: test.question.result === 'correct',
+              remarks: test.question.remarks || ''
+            };
+          }
+          
+          map.set(test.id, {
+            isLoading: (test as any).isLoading || false,
+            result
+          });
+        });
+      });
+    });
+    return map;
+  }, [steps]);
 
   // IntersectionObserver to track RequirementDisplay visibility
   useEffect(() => {
@@ -1435,23 +1462,30 @@ export const CodeAware = () => {
               onRegisterRef={registerStepRef} // Pass step ref registration function
               disabled={isCodeEditModeEnabled} // Disable in code edit mode
               knowledgeCards={step.knowledgeCards.map((kc: KnowledgeCardItem, kcIndex: number) => {
-                // 从 KnowledgeCardItem.tests 转换为 TestItem[]
-                const testItems = kc.tests?.map(test => ({
-                  id: test.id,
-                  questionType: test.questionType,
-                  // MCQ specific props
-                  mcqQuestion: test.questionType === 'multipleChoice' && test.question.type === 'multipleChoice' 
-                    ? test.question.stem : undefined,
-                  mcqOptions: test.questionType === 'multipleChoice' && test.question.type === 'multipleChoice' 
-                    ? test.question.options : undefined,
-                  mcqCorrectAnswer: test.questionType === 'multipleChoice' && test.question.type === 'multipleChoice' 
-                    ? test.question.standard_answer : undefined,
-                  // SAQ specific props
-                  saqQuestion: test.questionType === 'shortAnswer' && test.question.type === 'shortAnswer' 
-                    ? test.question.stem : undefined,
-                  saqAnswer: test.questionType === 'shortAnswer' && test.question.type === 'shortAnswer' 
-                    ? test.question.standard_answer : undefined,
-                })) || [];
+                // 使用testStatesMap获取测试项目数据
+                const testItems = kc.tests?.map(test => {
+                  const testState = testStatesMap.get(test.id) || { isLoading: false, result: undefined };
+                  
+                  return {
+                    id: test.id,
+                    questionType: test.questionType,
+                    // MCQ specific props
+                    mcqQuestion: test.questionType === 'multipleChoice' && test.question.type === 'multipleChoice' 
+                      ? test.question.stem : undefined,
+                    mcqOptions: test.questionType === 'multipleChoice' && test.question.type === 'multipleChoice' 
+                      ? test.question.options : undefined,
+                    mcqCorrectAnswer: test.questionType === 'multipleChoice' && test.question.type === 'multipleChoice' 
+                      ? test.question.standard_answer : undefined,
+                    // SAQ specific props
+                    saqQuestion: test.questionType === 'shortAnswer' && test.question.type === 'shortAnswer' 
+                      ? test.question.stem : undefined,
+                    saqAnswer: test.questionType === 'shortAnswer' && test.question.type === 'shortAnswer' 
+                      ? test.question.standard_answer : undefined,
+                    // Loading and result state
+                    isLoading: testState.isLoading,
+                    result: testState.result
+                  };
+                }) || [];
                 
                 return {
                   title: kc.title,
@@ -1473,7 +1507,8 @@ export const CodeAware = () => {
                   
                   onSaqSubmit: (testId: string, answer: string) => {
                     console.log(`SAQ Answer for ${kc.title} (Test ${testId}): ${answer}`);
-                    // TODO: 实现 SAQ 提交逻辑，更新测试结果到 Redux store
+                    // 调用处理SAQ提交的thunk
+                    dispatch(processSaqSubmission({ testId, userAnswer: answer }));
                   },
                   
                   // Default states - 只有title时默认折叠

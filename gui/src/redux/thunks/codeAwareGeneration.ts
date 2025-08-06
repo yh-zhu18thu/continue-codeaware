@@ -9,6 +9,7 @@ import {
     StepToHighLevelMapping
 } from "core";
 import {
+    constructEvaluateSaqAnswerPrompt,
     constructGenerateCodeFromStepsPrompt,
     constructGenerateKnowledgeCardDetailPrompt,
     constructGenerateKnowledgeCardThemesFromQueryPrompt,
@@ -27,6 +28,7 @@ import {
     markStepsCodeDirty,
     removeCodeAwareMappings,
     resetKnowledgeCardContent,
+    selectTestByTestId,
     setCodeAwareTitle,
     setCodeChunkDisabled,
     setGeneratedSteps,
@@ -36,6 +38,7 @@ import {
     setKnowledgeCardLoading,
     setLearningGoal,
     setRequirementChunks,
+    setSaqTestLoading,
     setStepAbstract,
     setStepStatus,
     setStepTitle,
@@ -48,7 +51,8 @@ import {
     updateHighLevelStepCompletion,
     updateHighlight,
     updateKnowledgeCardContent,
-    updateKnowledgeCardTitle
+    updateKnowledgeCardTitle,
+    updateSaqTestResult
 } from "../slices/codeAwareSlice";
 import { selectDefaultModel } from "../slices/configSlice";
 import { ThunkApiType } from "../store";
@@ -2395,6 +2399,129 @@ export const processCodeUpdates = createAsyncThunk<
             }
             
             throw new Error(`处理代码更新失败: ${error instanceof Error ? error.message : String(error)}`);
+        }
+    }
+);
+
+// Process SAQ submission - evaluate user answer using LLM
+export const processSaqSubmission = createAsyncThunk<
+    void,
+    {
+        testId: string;
+        userAnswer: string;
+    },
+    ThunkApiType
+>(
+    "codeAware/processSaqSubmission",
+    async ({ testId, userAnswer }, { getState, dispatch, extra }) => {
+        try {
+            const state = getState();
+            
+            // Get test information using the selector
+            const testInfo = selectTestByTestId(state, testId);
+            if (!testInfo || !testInfo.test) {
+                console.error("❌ [CodeAware] Test not found for testId:", testId);
+                return;
+            }
+
+            const { stepId, knowledgeCardId, test } = testInfo;
+            
+            if (test.question_type !== "shortAnswer") {
+                console.error("❌ [CodeAware] Test is not a short answer question:", testId);
+                return;
+            }
+
+            // Set loading state
+            dispatch(setSaqTestLoading({
+                stepId,
+                knowledgeCardId,
+                testId,
+                isLoading: true
+            }));
+
+            console.log("🔄 [CodeAware] Evaluating SAQ answer for test:", testId);
+
+            // Create prompt for LLM evaluation
+            const prompt = constructEvaluateSaqAnswerPrompt(
+                test.stem,
+                test.standard_answer,
+                userAnswer
+            );
+
+            // Get LLM response
+            const result = await extra.ideMessenger.request("llm/complete", {
+                prompt,
+                completionOptions: {},
+                title: "SAQ Answer Evaluation"
+            });
+
+            if (result.status !== "success" || !result.content) {
+                throw new Error("LLM request failed");
+            }
+
+            console.log("📝 [CodeAware] LLM evaluation response:", result.content);
+
+            // Parse the response
+            try {
+                const evaluationResult = JSON.parse(result.content.trim()) as {
+                    isCorrect: boolean;
+                    remarks: string;
+                };
+
+                // Update the test result in Redux store
+                dispatch(updateSaqTestResult({
+                    stepId,
+                    knowledgeCardId,
+                    testId,
+                    userAnswer,
+                    isCorrect: evaluationResult.isCorrect,
+                    remarks: evaluationResult.remarks
+                }));
+
+                console.log("✅ [CodeAware] SAQ evaluation completed:", {
+                    testId,
+                    isCorrect: evaluationResult.isCorrect,
+                    remarks: evaluationResult.remarks
+                });
+
+            } catch (parseError) {
+                console.error("❌ [CodeAware] Failed to parse LLM evaluation response:", parseError);
+                
+                // Fallback: just save the user answer without evaluation
+                dispatch(updateSaqTestResult({
+                    stepId,
+                    knowledgeCardId,
+                    testId,
+                    userAnswer,
+                    isCorrect: false,
+                    remarks: "无法评估答案，请稍后重试。"
+                }));
+            }
+
+            // Clear loading state
+            dispatch(setSaqTestLoading({
+                stepId,
+                knowledgeCardId,
+                testId,
+                isLoading: false
+            }));
+
+        } catch (error) {
+            console.error("❌ [CodeAware] processSaqSubmission failed:", error);
+            
+            // Clear loading state on error
+            const state = getState();
+            const testInfo = selectTestByTestId(state, testId);
+            if (testInfo) {
+                dispatch(setSaqTestLoading({
+                    stepId: testInfo.stepId,
+                    knowledgeCardId: testInfo.knowledgeCardId,
+                    testId,
+                    isLoading: false
+                }));
+            }
+            
+            throw error;
         }
     }
 );

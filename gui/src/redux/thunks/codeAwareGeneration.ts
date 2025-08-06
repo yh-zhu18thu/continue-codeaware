@@ -1484,12 +1484,84 @@ export const rerunStep = createAsyncThunk<
                 throw new Error(`Step with id ${stepId} not found`);
             }
 
+            // 获取原始的abstract（用于生成代码时的abstract）
+            const originalAbstract = targetStep.previousStepAbstract || targetStep.abstract;
+            
+            // 收集当前步骤对应的代码片段，以便提供给LLM作为参考
+            const currentMappings = state.codeAwareSession.codeAwareMappings;
+            const codeChunks = state.codeAwareSession.codeChunks;
+            
+            // 获取与这个步骤相关的映射
+            const stepMappings = currentMappings.filter(mapping => 
+                mapping.stepId === stepId && mapping.codeChunkId && !mapping.knowledgeCardId
+            );
+            
+            // 获取与这个步骤的知识卡片相关的映射
+            const knowledgeCardMappings = currentMappings.filter(mapping => 
+                mapping.knowledgeCardId && mapping.knowledgeCardId.startsWith(`${stepId}-kc-`) && mapping.codeChunkId
+            );
+            
+            // 构建当前代码映射信息
+            let currentStepCodeChunks: {
+                stepCode: string;
+                knowledgeCardCodes: Array<{
+                    id: string;
+                    title: string;
+                    code: string;
+                }>;
+            } | undefined;
+            
+            // 获取步骤对应的代码
+            const stepCodeParts: string[] = [];
+            stepMappings.forEach(mapping => {
+                if (mapping.codeChunkId) {
+                    const codeChunk = codeChunks.find(chunk => chunk.id === mapping.codeChunkId && !chunk.disabled);
+                    if (codeChunk) {
+                        stepCodeParts.push(codeChunk.content);
+                    }
+                }
+            });
+            
+            // 获取知识卡片对应的代码
+            const knowledgeCardCodes: Array<{
+                id: string;
+                title: string;
+                code: string;
+            }> = [];
+            
+            knowledgeCardMappings.forEach(mapping => {
+                if (mapping.codeChunkId && mapping.knowledgeCardId) {
+                    const codeChunk = codeChunks.find(chunk => chunk.id === mapping.codeChunkId && !chunk.disabled);
+                    const knowledgeCard = targetStep.knowledgeCards.find(kc => kc.id === mapping.knowledgeCardId);
+                    
+                    if (codeChunk && knowledgeCard) {
+                        knowledgeCardCodes.push({
+                            id: knowledgeCard.id,
+                            title: knowledgeCard.title,
+                            code: codeChunk.content
+                        });
+                    }
+                }
+            });
+            
+            // 如果有代码映射信息，构建参考对象
+            if (stepCodeParts.length > 0 || knowledgeCardCodes.length > 0) {
+                currentStepCodeChunks = {
+                    stepCode: stepCodeParts.join("\n\n"),
+                    knowledgeCardCodes: knowledgeCardCodes
+                };
+            }
+            
             console.log("rerunStep called with:", {
                 stepId,
                 stepTitle: targetStep.title,
-                previousAbstract: targetStep.abstract,
+                originalAbstract: originalAbstract,
+                currentAbstract: targetStep.abstract,
                 changedAbstract: changedStepAbstract,
-                knowledgeCardsCount: targetStep.knowledgeCards.length
+                knowledgeCardsCount: targetStep.knowledgeCards.length,
+                hasCurrentCodeMappings: !!currentStepCodeChunks,
+                stepCodePartsCount: stepCodeParts.length,
+                knowledgeCardCodesCount: knowledgeCardCodes.length
             });
 
             // 构造提示词并发送请求
@@ -1498,13 +1570,14 @@ export const rerunStep = createAsyncThunk<
                 {
                     id: targetStep.id,
                     title: targetStep.title,
-                    abstract: targetStep.abstract,
+                    abstract: originalAbstract, // 使用原始的abstract
                     knowledge_cards: targetStep.knowledgeCards.map(kc => ({
                         id: kc.id,
                         title: kc.title
                     }))
                 },
-                changedStepAbstract
+                changedStepAbstract,
+                currentStepCodeChunks // 传递当前代码映射信息
             );
 
             const result = await extra.ideMessenger.request("llm/complete", {
@@ -1610,6 +1683,13 @@ export const rerunStep = createAsyncThunk<
                     const stepCodeContent = stepUpdates.corresponding_code.trim();
                     const stepRange = calculateCodeChunkRange(updatedCode, stepCodeContent);
                     const stepCodeChunkId = `c-${codeChunkCounter++}`;
+                    
+                    console.log(`📋 为步骤 ${stepId} 创建新代码块:`, {
+                        stepCodeChunkId,
+                        codeLength: stepCodeContent.length,
+                        range: stepRange,
+                        codePreview: stepCodeContent.substring(0, 200) + (stepCodeContent.length > 200 ? "..." : "")
+                    });
                     
                     dispatch(createOrGetCodeChunk({
                         content: stepCodeContent,

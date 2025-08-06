@@ -15,7 +15,7 @@ screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
 pygame.display.set_caption("Pygame窗口示例")
 # 设置刷新率（帧率）
 clock = pygame.time.Clock()
-FPS = 60
+FPS = 10
 
 # s-3: 设置游戏主循环结构
 running = True

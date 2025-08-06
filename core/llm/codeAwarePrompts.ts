@@ -240,26 +240,47 @@ export function constructRerunStepPrompt(
             title: string;
         }>;
     },
-    changedStepAbstract: string
+    changedStepAbstract: string,
+    currentStepCodeChunks?: {
+        stepCode: string;
+        knowledgeCardCodes: Array<{
+            id: string;
+            title: string;
+            code: string;
+        }>;
+    }
 ): string {
     const knowledgeCardsText = previousStep.knowledge_cards.map(kc => 
         `{"id": "${kc.id}", "title": "${kc.title}"}`
     ).join(", ");
     
+    // 构建当前代码映射信息的文本
+    const currentCodeMappingText = currentStepCodeChunks ? `
+        "current_code_mappings": {
+            "step_code": "${currentStepCodeChunks.stepCode}",
+            "knowledge_card_codes": [${currentStepCodeChunks.knowledgeCardCodes.map(kc => 
+                `{"id": "${kc.id}", "title": "${kc.title}", "code": "${kc.code}"}`
+            ).join(", ")}]
+        },` : "";
+    
+    const currentCodeMappingRequirement = currentStepCodeChunks ? 
+        "Use the current_code_mappings as a reference to understand which parts of the code currently correspond to this step and its knowledge cards. This will help you identify the relevant code sections more accurately.," : "";
+    
     return `{
-        "task": "You are given existing code and a step whose abstract has been modified. Analyze the changes and update the code minimally to match the new abstract, then determine the correspondence between the updated code and the step/knowledge cards.",
+        "task": "You are given existing code and a step whose abstract has been modified. You also have information about which code parts currently correspond to this step and its knowledge cards. Analyze the changes and update the code minimally to match the new abstract, then determine the correspondence between the updated code and the step/knowledge cards.",
         "requirements": [
             "Analyze the differences between the previous abstract and the changed abstract. If the abstract is changed substantially, update the title of the step if necessary.",
             "Update the code minimally to match the changed abstract - make only necessary changes. Keep as much of the code unchanged as possible. At the very least, you must keep the code structure recognizable to the user.",
-            "For the step, identify which parts of the updated code correspond to this step",
+            "${currentCodeMappingRequirement}"
+            "For the step, identify which parts of the updated code correspond to this step - try to be precise and avoid including the entire file. Focus on the code sections that directly implement the step's functionality.",
             "For each knowledge card, determine if the abstract change affects its content (needs_update: true/false)",
-            "Extract the most relevant code chunks that correspond to each knowledge card",
+            "Extract the most relevant and precise code chunks that correspond to each knowledge card - avoid including large irrelevant sections",
             "If a knowledge card has no corresponding code, leave its corresponding_code empty",
             "Respond in the same language as the step descriptions",
-            "You must follow this JSON format in your response: {\\"analysis\\": \\"(your analysis of the changes in the abstract and the things that need modification)\\", \\"updated_code\\": \\"(complete updated code)\\", \\"step_updates\\": {\\"id\\": \\"${previousStep.id}\\", \\"title\\": \\"(possibly updated title)\\", \\"corresponding_code\\": \\"(code for this step)\\"}, \\"knowledge_cards_updates\\": [{\\"id\\": \\"card_id\\", \\"needs_update\\": true/false, \\"title\\": \\"(possibly updated title)\\", \\"corresponding_code\\": \\"(relevant code or empty string)\\"}]}",
+            "You must follow this JSON format in your response: {\\"analysis\\": \\"(your analysis of the changes in the abstract and the things that need modification)\\", \\"updated_code\\": \\"(complete updated code)\\", \\"step_updates\\": {\\"id\\": \\"${previousStep.id}\\", \\"title\\": \\"(possibly updated title)\\", \\"corresponding_code\\": \\"(precise code for this step, not the entire file)\\"}, \\"knowledge_cards_updates\\": [{\\"id\\": \\"card_id\\", \\"needs_update\\": true/false, \\"title\\": \\"(possibly updated title)\\", \\"corresponding_code\\": \\"(relevant code or empty string)\\"}]}",
             "Please do not use invalid \`\`\`json character to envelope the JSON response, just return the JSON object directly."
         ],
-        "existing_code": "${existingCode}",
+        "existing_code": "${existingCode}",${currentCodeMappingText}
         "previous_step": {
             "id": "${previousStep.id}",
             "title": "${previousStep.title}",

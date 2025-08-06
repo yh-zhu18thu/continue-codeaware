@@ -129,6 +129,31 @@ const RemarksSection = styled.div`
   color: ${vscForeground};
 `;
 
+const RetrySection = styled.div`
+  display: flex;
+  justify-content: center;
+  margin-top: 12px;
+`;
+
+const RetryButton = styled.button`
+  padding: 6px 12px;
+  background-color: ${vscButtonBackground};
+  color: ${vscForeground};
+  border: none;
+  border-radius: ${defaultBorderRadius};
+  cursor: pointer;
+  font-size: 12px;
+  
+  &:hover {
+    brightness: 1.2;
+  }
+  
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
+
 // Remove the custom SubmitButton and use the same pattern as RequirementDisplayToolbar
 
 interface KnowledgeCardSAQProps {
@@ -150,6 +175,9 @@ const KnowledgeCardSAQ: React.FC<KnowledgeCardSAQProps> = ({
   isLoading = false,
   result,
 }) => {
+  const [isRetrying, setIsRetrying] = React.useState(false);
+  const [lastResultHash, setLastResultHash] = React.useState<string>('');
+  
   const editor = useEditor({
     extensions: [StarterKit],
     content: `<p>${placeholder}</p>`,
@@ -160,6 +188,19 @@ const KnowledgeCardSAQ: React.FC<KnowledgeCardSAQProps> = ({
     },
   });
 
+  // Reset retry state only when a genuinely new result comes in
+  React.useEffect(() => {
+    if (result && result.userAnswer) {
+      const currentResultHash = `${result.userAnswer}-${result.isCorrect}-${result.remarks}`;
+      if (currentResultHash !== lastResultHash && !isLoading) {
+        setLastResultHash(currentResultHash);
+        if (isRetrying) {
+          setIsRetrying(false);
+        }
+      }
+    }
+  }, [result, isLoading, isRetrying, lastResultHash]);
+
   if (!editor) {
     return null;
   }
@@ -168,12 +209,27 @@ const KnowledgeCardSAQ: React.FC<KnowledgeCardSAQProps> = ({
     const answer = editor.getText();
     if (answer.trim() && !isLoading) {
       onSubmitAnswer(answer);
+      // Note: Don't reset isRetrying here, let the parent component handle result updates
     }
   };
 
-  // If there's a result, show it and disable further input
-  const showResult = result && result.userAnswer;
-  const isDisabled = isLoading || showResult;
+  const handleRetry = () => {
+    console.log('Retry button clicked', { result: result?.userAnswer });
+    setIsRetrying(true);
+    // 将之前的答案同步到编辑器
+    if (result?.userAnswer) {
+      editor.commands.setContent(result.userAnswer);
+      console.log('Content set to editor:', result.userAnswer);
+    }
+  };
+
+  // Check if editor is effectively empty (only contains placeholder or whitespace)
+  const isEditorEmpty = !editor.getText().trim() || editor.getText().trim() === placeholder;
+
+  // If there's a result and user is not retrying, show result
+  // Also show result if loading (to maintain the result view during submission)
+  const showResult = result && result.userAnswer && !isRetrying && !isLoading;
+  const showEditor = !showResult; // Show editor when no result or when retrying or when loading
 
   return (
     <SAQContainer>
@@ -181,7 +237,7 @@ const KnowledgeCardSAQ: React.FC<KnowledgeCardSAQProps> = ({
         <QuestionText>{question}</QuestionText>
       </QuestionSection>
       
-      {!showResult && (
+      {showEditor && (
         <>
           <EditorWrapper>
             <EditorContent editor={editor} />
@@ -195,8 +251,8 @@ const KnowledgeCardSAQ: React.FC<KnowledgeCardSAQProps> = ({
                 </div>
               ) : (
                 <PaperAirplaneIcon
-                  className={`w-5 h-5 ${editor.isEmpty ? 'opacity-50 cursor-not-allowed' : 'hover:brightness-125 cursor-pointer'}`}
-                  onClick={!editor.isEmpty ? handleSubmit : undefined}
+                  className={`w-5 h-5 ${(isEditorEmpty || isLoading) ? 'opacity-50 cursor-not-allowed' : 'hover:brightness-125 cursor-pointer'}`}
+                  onClick={(!isEditorEmpty && !isLoading) ? handleSubmit : undefined}
                   aria-label="提交答案"
                 >
                   <ToolTip text="提交答案" position="top">
@@ -225,6 +281,15 @@ const KnowledgeCardSAQ: React.FC<KnowledgeCardSAQProps> = ({
             <strong>评语：</strong>
             {result.remarks}
           </RemarksSection>
+
+          {/* 只有在答错的情况下才显示重试按钮 */}
+          {!result.isCorrect && (
+            <RetrySection>
+              <RetryButton onClick={handleRetry} disabled={isLoading}>
+                重新作答
+              </RetryButton>
+            </RetrySection>
+          )}
         </ResultSection>
       )}
     </SAQContainer>

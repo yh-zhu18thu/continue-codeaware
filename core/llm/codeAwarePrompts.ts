@@ -131,18 +131,20 @@ export function constructGenerateCodeFromStepsPrompt(
     }).join(",\n        ") : "";
     
     return `{
-        "task": "You are given existing code and a list of ordered steps to implement. Generate new code that completes exactly what is required by the abstract of each step - no more, no less. Then identify the correspondence between code chunks and each step/knowledge card separately.",
+        "task": "You are given existing code and a list of ordered steps to implement. You MUST generate new code that completes exactly what is required by the abstract of each step - implementing ALL ordered steps completely. Then identify the correspondence between code chunks and each step/knowledge card separately.",
         "requirements": [
-            "Generate code that implements exactly what each new step's abstract requires",
-            "Do not generate excessive code beyond what is needed for the current steps",
-            "Do not skip any required functionality mentioned in the abstracts",
-            "Include proper comments in the generated code to explain what each part does",
-            "Important: Choose only ONE step for the new code to correspond to. If the code is relevant to several steps, choose the one it most closely relates to.",
+            "CRITICAL: You must implement ALL steps listed in 'new_steps_to_implement'. Each step has an 'abstract' field that describes exactly what needs to be implemented - follow these abstracts precisely.",
+            "Generate code that implements exactly what each new step's abstract requires - read the abstract carefully and ensure all functionality described is implemented",
+            "You must complete ALL ordered steps - do not skip any step or leave any step partially implemented",
+            "Do not generate excessive code beyond what is needed for the current steps, but ensure you don't miss any functionality described in the step abstracts",
+            "Include proper comments in the generated code to explain what each part does and which step it corresponds to",
+            "Important: Choose only ONE step for each code chunk to correspond to. If the code is relevant to several steps, choose the one it most closely relates to.",
             "The code correspondence should be updated for previously generated steps as well, since new code generation may affect their positioning or integration",
             "For each knowledge card, identify the most relevant and precise code that relates to the knowledge card's theme",
             "If a knowledge card has no corresponding code, leave its code field empty",
             "The changed_code should include both existing code and newly generated code",
             "Be very precise in code chunk identification - include only the essential code that directly relates to each step/knowledge card",
+            "Ensure that every step in 'new_steps_to_implement' has corresponding code generated - verify this before responding",
             "Respond in the same language as the step descriptions",
             "You must follow this JSON format in your response: {\\"changed_code\\": \\"(complete code with both existing and new parts)\\", \\"steps_corresponding_code\\": [{\\"id\\": \\"step_id\\", \\"code\\": \\"(precise code for this step)\\"}], \\"knowledge_cards_corresponding_code\\": [{\\"id\\": \\"card_id\\", \\"code\\": \\"(precise code for this knowledge card, or empty string if no correspondence)\\"}]}",
             "The steps_corresponding_code and knowledge_cards_corresponding_code should include entries for ALL steps and knowledge cards (both new and previously generated)",
@@ -154,7 +156,8 @@ export function constructGenerateCodeFromStepsPrompt(
         ]${previousStepsText ? `,
         "previously_generated_steps": [
         ${previousStepsText}
-        ]` : ""}
+        ]` : ""},
+        "verification_reminder": "Before responding, verify that you have implemented ALL steps listed in 'new_steps_to_implement'. Each step must have corresponding code that fulfills its abstract requirements. Count the steps and ensure your steps_corresponding_code array contains an entry for every single step."
     }`;
 }
 

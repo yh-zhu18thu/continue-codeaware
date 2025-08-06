@@ -1117,7 +1117,7 @@ export const generateCodeFromSteps = createAsyncThunk<
                 filepath: filepath,
                 stepsCount: orderedSteps.length,
                 previouslyGeneratedStepsCount: previouslyGeneratedSteps?.length || 0,
-                steps: orderedSteps.map(s => ({ id: s.id, title: s.title })),
+                steps: orderedSteps.map(s => ({ id: s.id, title: s.title, abstract: s.abstract })),
                 previousSteps: previouslyGeneratedSteps?.map(s => ({ id: s.id, title: s.title })) || []
             });
 
@@ -1140,6 +1140,14 @@ export const generateCodeFromSteps = createAsyncThunk<
 
             // 构造提示词并发送请求，带重试机制
             const prompt = constructGenerateCodeFromStepsPrompt(existingCode, orderedSteps, previouslyGeneratedSteps);
+            
+            // 调试：验证prompt中包含了所有步骤的abstract信息
+            console.log("📝 构造的prompt中包含的步骤信息:");
+            orderedSteps.forEach(step => {
+                console.log(`- 步骤 ${step.id}: ${step.title}`);
+                console.log(`  摘要: ${step.abstract}`);
+            });
+            
             const maxRetries = 3;
             let lastError: Error | null = null;
             let result: any = null;

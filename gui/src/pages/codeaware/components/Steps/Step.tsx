@@ -23,6 +23,8 @@ const StepContainer = styled.div<{ isHovered: boolean; stepStatus?: StepStatus }
   border-radius: 4px;
   overflow: hidden;
   box-sizing: border-box;
+  position: relative;
+  z-index: 1;
   // Different opacity for different states
   opacity: ${({ stepStatus }) => {
     if (stepStatus === "generating") return 0.8; // Dimmed when generating
@@ -71,6 +73,8 @@ const AddQuestionButtonContainer = styled.div`
   align-items: center;
   margin-top: 8px;
   padding: 0px 0;
+  position: relative;
+  z-index: 100;
 `;
 
 const AddQuestionButton = styled.button`

@@ -3,11 +3,11 @@ import { PaperAirplaneIcon } from '@heroicons/react/24/solid';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import styled from 'styled-components';
 import {
-    defaultBorderRadius,
-    vscBackground,
-    vscForeground,
-    vscInputBackground,
-    vscInputBorder
+  defaultBorderRadius,
+  vscBackground,
+  vscForeground,
+  vscInputBackground,
+  vscInputBorder
 } from "../../../../components";
 
 const PopupOverlay = styled.div`
@@ -20,7 +20,7 @@ const PopupOverlay = styled.div`
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1000;
+  z-index: 10000;
   backdrop-filter: blur(2px);
 `;
 

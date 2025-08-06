@@ -558,11 +558,18 @@ export const generateKnowledgeCardDetail = createAsyncThunk<
                 try {
                     console.log(`🔄 知识卡片生成尝试 ${attempt}/${maxRetries}`);
                     
-                    const result = await extra.ideMessenger.request("llm/complete", {
+                    // 添加超时保护
+                    const timeoutPromise = new Promise((_, reject) => 
+                        setTimeout(() => reject(new Error("LLM请求超时")), 30000) // 30秒超时
+                    );
+                    
+                    const llmPromise = extra.ideMessenger.request("llm/complete", {
                         prompt: prompt,
                         completionOptions: {},
                         title: defaultModel.title
                     });
+                    
+                    const result: any = await Promise.race([llmPromise, timeoutPromise]);
 
                     if (result.status !== "success" || !result.content) {
                         throw new Error("LLM request failed or returned empty content");
@@ -665,6 +672,13 @@ export const generateKnowledgeCardThemes = createAsyncThunk<
                 throw new Error("Default model not defined");
             }
 
+            // 检查是否已经在生成中，防止重复调用
+            const currentStep = state.codeAwareSession.steps.find(step => step.id === stepId);
+            if (currentStep?.knowledgeCardGenerationStatus === "generating") {
+                console.warn(`⚠️ 步骤 ${stepId} 已经在生成知识卡片主题，跳过重复调用`);
+                return;
+            }
+
             // 设置生成状态
             dispatch(setKnowledgeCardGenerationStatus({ stepId, status: "generating" }));
 
@@ -682,7 +696,8 @@ export const generateKnowledgeCardThemes = createAsyncThunk<
                 stepId,
                 stepTitle,
                 stepAbstract,
-                learningGoal
+                learningGoal,
+                currentStatus: state.codeAwareSession.steps.find(s => s.id === stepId)?.knowledgeCardGenerationStatus
             });
 
             // 重试机制
@@ -694,11 +709,18 @@ export const generateKnowledgeCardThemes = createAsyncThunk<
                 try {
                     console.log(`🔄 知识卡片主题生成尝试 ${attempt}/${maxRetries}`);
                     
-                    result = await extra.ideMessenger.request("llm/complete", {
+                    // 添加超时保护
+                    const timeoutPromise = new Promise((_, reject) => 
+                        setTimeout(() => reject(new Error("LLM请求超时")), 30000) // 30秒超时
+                    );
+                    
+                    const llmPromise = extra.ideMessenger.request("llm/complete", {
                         prompt: prompt,
                         completionOptions: {},
                         title: defaultModel.title
                     });
+                    
+                    result = await Promise.race([llmPromise, timeoutPromise]);
 
                     if (result.status !== "success" || !result.content) {
                         throw new Error("LLM request failed or returned empty content");
@@ -789,6 +811,14 @@ export const generateKnowledgeCardThemes = createAsyncThunk<
             const errorMessage = error instanceof Error ? error.message : String(error);
             // 失败后回到empty状态，这样用户下次展开时可以重新生成
             dispatch(setKnowledgeCardGenerationStatus({ stepId, status: "empty" }));
+        } finally {
+            // 确保无论如何都不会卡在generating状态
+            const finalState = getState();
+            const currentStep = finalState.codeAwareSession.steps.find(step => step.id === stepId);
+            if (currentStep?.knowledgeCardGenerationStatus === "generating") {
+                console.warn(`⚠️ 检测到步骤 ${stepId} 仍处于generating状态，强制重置为empty`);
+                dispatch(setKnowledgeCardGenerationStatus({ stepId, status: "empty" }));
+            }
         }
     }
 );
@@ -825,6 +855,13 @@ export const generateKnowledgeCardThemesFromQuery = createAsyncThunk<
                 throw new Error("Default model not defined");
             }
 
+            // 检查是否已经在生成中，防止重复调用
+            const currentStepInfo = state.codeAwareSession.steps.find(step => step.id === stepId);
+            if (currentStepInfo?.knowledgeCardGenerationStatus === "generating") {
+                console.warn(`⚠️ 步骤 ${stepId} 已经在生成知识卡片主题，跳过重复调用`);
+                return;
+            }
+
             // 设置生成状态
             dispatch(setKnowledgeCardGenerationStatus({ stepId, status: "generating" }));
 
@@ -853,7 +890,8 @@ export const generateKnowledgeCardThemesFromQuery = createAsyncThunk<
                 currentCode: currentCode.substring(0, 100) + (currentCode.length > 100 ? "..." : ""), // 只记录前100个字符用于调试
                 existingThemes,
                 learningGoal,
-                task
+                task,
+                currentStatus: state.codeAwareSession.steps.find(s => s.id === stepId)?.knowledgeCardGenerationStatus
             });
 
             // 重试机制
@@ -865,11 +903,18 @@ export const generateKnowledgeCardThemesFromQuery = createAsyncThunk<
                 try {
                     console.log(`🔄 基于查询的知识卡片主题生成尝试 ${attempt}/${maxRetries}`);
                     
-                    result = await extra.ideMessenger.request("llm/complete", {
+                    // 添加超时保护
+                    const timeoutPromise = new Promise((_, reject) => 
+                        setTimeout(() => reject(new Error("LLM请求超时")), 30000) // 30秒超时
+                    );
+                    
+                    const llmPromise = extra.ideMessenger.request("llm/complete", {
                         prompt: prompt,
                         completionOptions: {},
                         title: defaultModel.title
                     });
+                    
+                    result = await Promise.race([llmPromise, timeoutPromise]);
 
                     if (result.status !== "success" || !result.content) {
                         throw new Error("LLM request failed or returned empty content");
@@ -1058,6 +1103,48 @@ export const generateKnowledgeCardThemesFromQuery = createAsyncThunk<
             const errorMessage = error instanceof Error ? error.message : String(error);
             // 失败后回到empty状态，这样用户可以重试
             dispatch(setKnowledgeCardGenerationStatus({ stepId, status: "empty" }));
+        } finally {
+            // 确保无论如何都不会卡在generating状态
+            const finalState = getState();
+            const currentStep = finalState.codeAwareSession.steps.find(step => step.id === stepId);
+            if (currentStep?.knowledgeCardGenerationStatus === "generating") {
+                console.warn(`⚠️ 检测到步骤 ${stepId} 仍处于generating状态，强制重置为empty`);
+                dispatch(setKnowledgeCardGenerationStatus({ stepId, status: "empty" }));
+            }
+        }
+    }
+);
+
+// 辅助函数：检查并清理卡住的知识卡片生成状态
+export const checkAndClearStuckGeneratingStatus = createAsyncThunk<
+    void,
+    void,
+    ThunkApiType
+>(
+    "codeAware/checkAndClearStuckGeneratingStatus",
+    async (_, { dispatch, getState }) => {
+        const state = getState();
+        const steps = state.codeAwareSession.steps;
+        
+        // 查找所有处于generating状态的步骤
+        const stuckSteps = steps.filter(step => 
+            step.knowledgeCardGenerationStatus === "generating"
+        );
+        
+        if (stuckSteps.length > 0) {
+            console.warn(`🔧 发现 ${stuckSteps.length} 个步骤卡在generating状态，正在清理...`);
+            
+            stuckSteps.forEach(step => {
+                console.log(`🔄 重置步骤 ${step.id} (${step.title}) 的生成状态`);
+                dispatch(setKnowledgeCardGenerationStatus({ 
+                    stepId: step.id, 
+                    status: "empty" 
+                }));
+            });
+            
+            console.log(`✅ 已清理 ${stuckSteps.length} 个卡住的生成状态`);
+        } else {
+            console.log("✅ 没有发现卡住的生成状态");
         }
     }
 );

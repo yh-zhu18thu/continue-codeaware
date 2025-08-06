@@ -434,7 +434,7 @@ const Step: React.FC<StepProps> = ({
         isHighlighted={isHighlighted || shouldKeepHighlighted}
         isFlickering={isFlickering}
         stepStatus={stepStatus}
-        isViewed={knowledgeCardGenerationStatus === "checked"}
+        isViewed={knowledgeCardGenerationStatus === "generating" || knowledgeCardGenerationStatus === "checked"}
         onToggle={handleToggle}
         onExecuteUntilStep={handleExecuteUntilStep}
         onRerunStep={handleRerunStep}

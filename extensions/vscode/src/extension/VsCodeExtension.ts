@@ -6,18 +6,19 @@ import { EXTENSION_NAME, getControlPlaneEnv } from "core/control-plane/env";
 import { Core } from "core/core";
 import { FromCoreProtocol, ToCoreProtocol } from "core/protocol";
 import { InProcessMessenger } from "core/protocol/messenger";
+import { codeAwareLogger } from "core/util/codeAwareLogger";
 import {
-  getConfigJsonPath,
-  getConfigTsPath,
-  getConfigYamlPath,
+    getConfigJsonPath,
+    getConfigTsPath,
+    getConfigYamlPath,
 } from "core/util/paths";
 import { v4 as uuidv4 } from "uuid";
 import * as vscode from "vscode";
 
 // import { MetaCompleteProvider } from "../autocomplete/metacomplete";
 import {
-  monitorBatteryChanges,
-  setupStatusBar
+    monitorBatteryChanges,
+    setupStatusBar
 } from "../autocomplete/statusBar";
 import { CodeAwareActionProvider } from "../codeActions/CodeAwareActionProvider";
 import { CodeEditModeManager } from "../CodeEditModeManager";
@@ -30,8 +31,8 @@ import { registerAllPromptFilesCompletionProviders } from "../lang-server/prompt
 import EditDecorationManager from "../quickEdit/EditDecorationManager";
 import { QuickEdit } from "../quickEdit/QuickEditQuickPick";
 import {
-  getControlPlaneSessionInfo,
-  WorkOsAuthProvider,
+    getControlPlaneSessionInfo,
+    WorkOsAuthProvider,
 } from "../stubs/WorkOsAuthProvider";
 import { Battery } from "../util/battery";
 import { FileSearch } from "../util/FileSearch";
@@ -72,6 +73,16 @@ export class VsCodeExtension {
 
   constructor(context: vscode.ExtensionContext) {
     console.log("VsCodeExtension: Initializing...");
+    
+    // CodeAware: 设置工作区根路径给 logger
+    const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+    if (workspaceRoot) {
+      codeAwareLogger.setWorkspaceRoot(workspaceRoot);
+      console.log("[VsCodeExtension] Set workspace root for CodeAware logger:", workspaceRoot);
+    } else {
+      console.warn("[VsCodeExtension] No workspace folder found, CodeAware logger will use fallback directory");
+    }
+    
     // Register auth provider
     this.workOsAuthProvider = new WorkOsAuthProvider(context);
     this.workOsAuthProvider.refreshSessions();
@@ -200,6 +211,17 @@ export class VsCodeExtension {
         }
       }
     });
+
+    // CodeAware: 监听工作区文件夹变化，更新日志目录
+    context.subscriptions.push(
+      vscode.workspace.onDidChangeWorkspaceFolders((event) => {
+        const newWorkspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+        if (newWorkspaceRoot) {
+          codeAwareLogger.setWorkspaceRoot(newWorkspaceRoot);
+          console.log("[VsCodeExtension] Workspace folder changed, updated CodeAware logger root:", newWorkspaceRoot);
+        }
+      })
+    );
 
     // Config Handler with output channel
     const outputChannel = vscode.window.createOutputChannel(

@@ -1,4 +1,4 @@
-import { useContext } from "react";
+import { useContext, useMemo } from "react";
 import { IdeMessengerContext } from "../context/IdeMessenger";
 
 /**
@@ -6,11 +6,24 @@ import { IdeMessengerContext } from "../context/IdeMessenger";
  * Provides logging functionality that communicates with the IDE logging service
  */
 export class CodeAwareWebViewLogger {
+  private static instance: CodeAwareWebViewLogger | null = null;
   private ideMessenger: any;
   private isSessionActive: boolean = false;
 
   constructor(ideMessenger: any) {
     this.ideMessenger = ideMessenger;
+  }
+
+  /**
+   * Get or create singleton instance
+   */
+  static getInstance(ideMessenger: any): CodeAwareWebViewLogger {
+    if (!CodeAwareWebViewLogger.instance) {
+      CodeAwareWebViewLogger.instance = new CodeAwareWebViewLogger(ideMessenger);
+    }
+    // Update the ideMessenger in case it changed
+    CodeAwareWebViewLogger.instance.ideMessenger = ideMessenger;
+    return CodeAwareWebViewLogger.instance;
   }
 
   /**
@@ -26,7 +39,9 @@ export class CodeAwareWebViewLogger {
       this.isSessionActive = true;
       console.log("📊 [CodeAware] Log session started:", { username, sessionName, codeAwareSessionId });
     } catch (error) {
+      this.isSessionActive = false;
       console.error("❌ [CodeAware] Failed to start log session:", error);
+      throw error; // 重新抛出错误，让调用者知道启动失败
     }
   }
 
@@ -80,5 +95,9 @@ export class CodeAwareWebViewLogger {
  */
 export function useCodeAwareLogger(): CodeAwareWebViewLogger {
   const ideMessenger = useContext(IdeMessengerContext);
-  return new CodeAwareWebViewLogger(ideMessenger);
+  
+  // Use useMemo to ensure we get the same instance across re-renders
+  return useMemo(() => {
+    return CodeAwareWebViewLogger.getInstance(ideMessenger);
+  }, [ideMessenger]);
 }

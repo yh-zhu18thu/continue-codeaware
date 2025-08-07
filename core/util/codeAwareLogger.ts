@@ -1,4 +1,5 @@
 import * as fs from "fs";
+import * as os from "os";
 import * as path from "path";
 
 import { CodeAwareLogEntry, CodeAwareLoggerConfig } from "../index";
@@ -13,11 +14,70 @@ export class CodeAwareLoggerService {
   private logDirectory: string;
   private currentSession: CodeAwareLoggerConfig | null = null;
   private currentLogFilePath: string | null = null;
+  private workspaceRootPath: string | null = null;
 
   private constructor() {
-    // Initialize log directory path
-    this.logDirectory = path.join(process.cwd(), ".codeaware-logs");
+    // Initialize log directory path - use a safer approach to determine the directory
+    const workspaceDir = this.getWorkspaceDirectory();
+    this.logDirectory = path.join(workspaceDir, ".codeaware-logs");
     this.ensureLogDirectoryExists();
+  }
+
+  /**
+   * Set workspace root path from VS Code extension context
+   * This should be called early in the extension activation
+   */
+  public setWorkspaceRoot(workspaceRoot: string | null): void {
+    this.workspaceRootPath = workspaceRoot;
+    if (workspaceRoot) {
+      this.logDirectory = path.join(workspaceRoot, ".codeaware-logs");
+      this.ensureLogDirectoryExists();
+      console.log("[CodeAwareLogger] Workspace root set to:", workspaceRoot);
+      console.log("[CodeAwareLogger] Log directory:", this.logDirectory);
+    }
+  }
+
+  /**
+   * Get workspace directory with fallback strategies
+   */
+  private getWorkspaceDirectory(): string {
+    // First priority: use explicitly set workspace root
+    if (this.workspaceRootPath && fs.existsSync(this.workspaceRootPath)) {
+      return this.workspaceRootPath;
+    }
+
+    // Second try: use process.cwd() but validate it's not root
+    try {
+      const cwd = process.cwd();
+      if (cwd !== "/" && cwd !== "C:\\" && cwd.length > 1) {
+        // Additional check: make sure it's not a system directory
+        if (!cwd.startsWith("/System") && !cwd.startsWith("/usr") && !cwd.startsWith("/var")) {
+          return cwd;
+        }
+      }
+    } catch (error) {
+      console.warn("[CodeAwareLogger] Failed to get current working directory:", error);
+    }
+
+    // Fallback 1: Try to find a reasonable project directory
+    const possibleProjectDirs = [
+      path.join(os.homedir(), "Documents"),
+      path.join(os.homedir(), "Projects"),
+      path.join(os.homedir(), "workspace"),
+      os.homedir()
+    ];
+
+    for (const dir of possibleProjectDirs) {
+      if (fs.existsSync(dir)) {
+        console.warn("[CodeAwareLogger] Using fallback directory:", dir);
+        return dir;
+      }
+    }
+
+    // Final fallback: use user's home directory
+    const homeDir = os.homedir();
+    console.warn("[CodeAwareLogger] Using home directory as final fallback:", homeDir);
+    return homeDir;
   }
 
   /**
@@ -28,6 +88,19 @@ export class CodeAwareLoggerService {
       CodeAwareLoggerService.instance = new CodeAwareLoggerService();
     }
     return CodeAwareLoggerService.instance;
+  }
+
+  /**
+   * Set custom workspace directory for logging
+   * Should be called before starting any log sessions
+   */
+  public setWorkspaceDirectory(workspaceDir: string): void {
+    if (workspaceDir && fs.existsSync(workspaceDir)) {
+      this.logDirectory = path.join(workspaceDir, ".codeaware-logs");
+      this.ensureLogDirectoryExists();
+    } else {
+      console.warn("[CodeAwareLogger] Invalid workspace directory:", workspaceDir);
+    }
   }
 
   /**
@@ -107,6 +180,13 @@ export class CodeAwareLoggerService {
    */
   public getCurrentLogFilePath(): string | null {
     return this.currentLogFilePath;
+  }
+
+  /**
+   * Get the current log directory path
+   */
+  public getLogDirectory(): string {
+    return this.logDirectory;
   }
 
   /**

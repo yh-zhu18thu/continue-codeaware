@@ -3,6 +3,7 @@ import { HighlightEvent, KnowledgeCardGenerationStatus, StepStatus } from "core"
 import React, { useEffect, useRef, useState } from 'react';
 import styled from "styled-components";
 import { vscBackground, vscForeground, vscInputBorder } from "../../../../components";
+import { useCodeAwareLogger } from '../../../../util/codeAwareWebViewLogger';
 import KnowledgeCard, { KnowledgeCardProps } from '../KnowledgeCard/KnowledgeCard';
 import KnowledgeCardLoader from '../KnowledgeCard/KnowledgeCardLoader';
 import QuestionPopup from '../QuestionPopup/QuestionPopup';
@@ -153,6 +154,7 @@ const Step: React.FC<StepProps> = ({
   onStepExpansionChange,
   disabled = false,
 }) => {
+  const logger = useCodeAwareLogger();
   const [isExpanded, setIsExpanded] = useState(forceExpanded || defaultExpanded);
   const [isFlickering, setIsFlickering] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
@@ -387,23 +389,44 @@ const Step: React.FC<StepProps> = ({
     // in the Redux slice will intelligently determine the correct status based on content changes
   };
 
-  const handleAddQuestionClick = () => {
+  const handleAddQuestionClick = async () => {
+    await logger.addLogEntry("user_click_add_question_button", {
+      stepId: stepId || "unknown",
+      timestamp: new Date().toISOString()
+    });
     setShowQuestionPopup(true);
   };
 
-  const handleQuestionSubmit = (question: string) => {
+  const handleQuestionSubmit = async (question: string) => {
+    await logger.addLogEntry("user_submit_question_from_popup", {
+      stepId: stepId || "unknown",
+      question: question.substring(0, 200),
+      timestamp: new Date().toISOString()
+    });
+    
     if (stepId && onQuestionSubmit) {
       onQuestionSubmit(stepId, '', question); // Empty string for selectedText
     }
     setShowQuestionPopup(false);
   };
 
-  const handleQuestionCancel = () => {
+  const handleQuestionCancel = async () => {
+    await logger.addLogEntry("user_cancel_question_popup", {
+      stepId: stepId || "unknown",
+      timestamp: new Date().toISOString()
+    });
     setShowQuestionPopup(false);
   };
 
-  const handleKnowledgeCardExpansionChange = (cardId: string, isExpanded: boolean) => {
+  const handleKnowledgeCardExpansionChange = async (cardId: string, isExpanded: boolean) => {
     console.log(`Knowledge Card ${cardId} expansion changed to: ${isExpanded}`);
+    
+    await logger.addLogEntry("user_toggle_knowledge_card_expansion", {
+      stepId: stepId || "unknown",
+      cardId,
+      isExpanded,
+      timestamp: new Date().toISOString()
+    });
     
     if (isExpanded) {
       // When a knowledge card is expanded, set it as the currently expanded card

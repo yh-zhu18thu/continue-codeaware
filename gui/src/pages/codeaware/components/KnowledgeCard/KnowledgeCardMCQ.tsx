@@ -9,6 +9,7 @@ import {
     vscFocusBorder,
     vscForeground
 } from "../../../../components";
+import { useCodeAwareLogger } from '../../../../util/codeAwareWebViewLogger';
 
 const QuestionContainer = styled.div`
   width: 100%;
@@ -143,17 +144,33 @@ const KnowledgeCardMCQ: React.FC<KnowledgeCardMCQProps> = ({
   correctAnswer,
   onSubmit,
 }) => {
+  const logger = useCodeAwareLogger();
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
 
-  const handleOptionClick = (option: string) => {
+  const handleOptionClick = async (option: string) => {
     if (submitted) return; // 提交后不允许更改
+    
+    await logger.addLogEntry("user_select_mcq_option", {
+      question: question.substring(0, 200),
+      selectedOption: option,
+      previousOption: selectedOption,
+      timestamp: new Date().toISOString()
+    });
+    
     setSelectedOption(option);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!selectedOption) return;
+
+    await logger.addLogEntry("user_submit_mcq_answer", {
+      question: question.substring(0, 200),
+      selectedOption,
+      correctAnswer,
+      timestamp: new Date().toISOString()
+    });
 
     const correct = selectedOption === correctAnswer;
     setIsCorrect(correct);

@@ -3,10 +3,11 @@ import { HighlightEvent } from "core";
 import React, { useEffect, useRef, useState } from 'react';
 import styled from "styled-components";
 import {
-  defaultBorderRadius,
-  lightGray,
-  vscForeground
+    defaultBorderRadius,
+    lightGray,
+    vscForeground
 } from "../../../../components";
+import { useCodeAwareLogger } from '../../../../util/codeAwareWebViewLogger';
 import KnowledgeCardContent from './KnowledgeCardContent';
 import KnowledgeCardLoader from './KnowledgeCardLoader';
 import KnowledgeCardMCQ from './KnowledgeCardMCQ';
@@ -185,6 +186,7 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
   disabled = false,
   onDisable,
 }) => {
+  const logger = useCodeAwareLogger();
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const [isTestMode, setIsTestMode] = useState(defaultTestMode);
   const [currentTestIndex, setCurrentTestIndex] = useState(0);
@@ -269,8 +271,17 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
     };
   }, [isHighlighted, cardId]);
 
-  const handleToggle = () => {
+  const handleToggle = async () => {
     const wasExpanded = isExpanded;
+    
+    await logger.addLogEntry("user_toggle_knowledge_card", {
+      cardId: cardId || "unknown",
+      stepId: stepId || "unknown", 
+      wasExpanded,
+      willExpand: !wasExpanded,
+      timestamp: new Date().toISOString()
+    });
+    
     setIsExpanded(!isExpanded);
     
     // Notify parent component about expansion change
@@ -327,18 +338,40 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
     console.log('Test Items:', testItems);
   }
 
-  const handlePreviousTest = () => {
-    setCurrentTestIndex(Math.max(currentTestIndex - 1, 0)); // 修正：减少索引去到前一题
+  const handlePreviousTest = async () => {
+    const newIndex = Math.max(currentTestIndex - 1, 0);
+    await logger.addLogEntry("user_navigate_to_previous_test", {
+      cardId: cardId || "unknown",
+      stepId: stepId || "unknown",
+      currentTestIndex,
+      newTestIndex: newIndex,
+      timestamp: new Date().toISOString()
+    });
+    setCurrentTestIndex(newIndex);
   };
 
-  const handleNextTest = () => {
-    setCurrentTestIndex(Math.min(currentTestIndex + 1, testItems.length - 1)); // 修正：增加索引去到下一题
+  const handleNextTest = async () => {
+    const newIndex = Math.min(currentTestIndex + 1, testItems.length - 1);
+    await logger.addLogEntry("user_navigate_to_next_test", {
+      cardId: cardId || "unknown", 
+      stepId: stepId || "unknown",
+      currentTestIndex,
+      newTestIndex: newIndex,
+      timestamp: new Date().toISOString()
+    });
+    setCurrentTestIndex(newIndex);
   };
 
   const currentTest = testItems[currentTestIndex];
 
   // Handle disable card
-  const handleDisableCard = () => {
+  const handleDisableCard = async () => {
+    await logger.addLogEntry("user_disable_knowledge_card", {
+      cardId: cardId || "unknown",
+      stepId: stepId || "unknown",
+      timestamp: new Date().toISOString()
+    });
+    
     if (stepId && cardId && onDisable) {
       onDisable(stepId, cardId);
     }

@@ -590,6 +590,20 @@ export interface GenerationContext{
     stopStep?: string;
 }
 
+// CodeAware Logger types
+export interface CodeAwareLogEntry {
+  timestamp: string; // ISO string format
+  codeAwareSessionId: string;
+  eventType: string;
+  payload: any; // Custom type for payload
+}
+
+export interface CodeAwareLoggerConfig {
+  username: string;
+  sessionName: string;
+  codeAwareSessionId: string;
+}
+
 export interface LLMFullCompletionOptions extends BaseCompletionOptions {
   log?: boolean;
   model?: string;

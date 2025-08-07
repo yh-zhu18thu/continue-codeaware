@@ -5,6 +5,7 @@ import {
   lightGray,
   vscForeground
 } from "../../components";
+import { SessionInfoDialog } from "../../components/dialogs/SessionInfoDialog";
 import PageHeader from "../../components/PageHeader";
 import { IdeMessengerContext } from "../../context/IdeMessenger";
 import { useWebviewListener } from "../../hooks/useWebviewListener";
@@ -16,6 +17,7 @@ import {
   resetIdeCommFlags,
   resetSessionExceptRequirement, // Add this import
   saveCodeEditModeSnapshot, // Add this import
+  selectCurrentSessionId,
   selectIsCodeEditModeEnabled, // Add this import for code edit mode
   selectIsRequirementInEditMode, // Import submitRequirementContent
   selectIsStepsGenerated,
@@ -44,6 +46,7 @@ import {
   processSaqSubmission,
   rerunStep
 } from "../../redux/thunks/codeAwareGeneration";
+import { useCodeAwareLogger } from "../../util/codeAwareWebViewLogger";
 import "./CodeAware.css";
 import CodeEditModeToggle from "./components/CodeEditModeToggle"; // Import the toggle component
 import RequirementDisplay from "./components/Requirements/RequirementDisplay"; // Import RequirementDisplay
@@ -217,8 +220,13 @@ const SpinnerIcon = styled.div`
 export const CodeAware = () => {
   //import the idemessenger that will communicate between core, gui and IDE
   const ideMessenger = useContext(IdeMessengerContext);
-
   const dispatch = useAppDispatch();
+
+  // CodeAware logger
+  const logger = useCodeAwareLogger();
+
+  // Dialog state for session info
+  const [isSessionDialogOpen, setIsSessionDialogOpen] = useState(false);
 
   //CodeAware: 增加一个指令，使得可以发送当前所选择的知识卡片id
   //CATODO: 参照着codeContextProvider的实现，利用上getAllSnippets的获取最近代码的功能，然后再通过coreToWebview的路径发送更新过来。
@@ -229,6 +237,7 @@ export const CodeAware = () => {
   const isStepsGenerated = useAppSelector(selectIsStepsGenerated); // Use the selector
   const isCodeEditModeEnabled = useAppSelector(selectIsCodeEditModeEnabled); // Get code edit mode state
   const sessionTitle = useAppSelector(selectTitle); // Get title from codeAwareSlice
+  const currentSessionId = useAppSelector(selectCurrentSessionId); // Get current session ID
   // 获取可能有的requirement内容
   const userRequirement = useAppSelector(
     (state) => state.codeAwareSession.userRequirement
@@ -368,11 +377,66 @@ export const CodeAware = () => {
     handleLocalCodeEditModeChange();
   }, [isCodeEditModeEnabled, ideMessenger, dispatch]);
 
+  // Add dialog handlers
+  const handleSessionInfoSubmit = useCallback(async (username: string, sessionName: string) => {
+    // First create new session
+    dispatch(newCodeAwareSession());
+    
+    // Start logging session
+    await logger.startLogSession(username, sessionName, currentSessionId);
+    
+    // Log session creation
+    await logger.addLogEntry("user_create_new_session", {
+      username,
+      sessionName,
+      timestamp: new Date().toISOString()
+    });
+    
+    // CodeAware: Create and open a new Python file with session name
+    try {
+      const pythonFilename = `${sessionName}.py`;
+      
+      await ideMessenger?.request("createAndOpenFile", {
+        filename: pythonFilename,
+        content: ""
+      });
+      
+      console.log(`📄 [CodeAware] Created and opened Python file: ${pythonFilename}`);
+      
+      // Log file creation
+      await logger.addLogEntry("system_create_session_file", {
+        filename: pythonFilename,
+        username,
+        sessionName,
+        timestamp: new Date().toISOString()
+      });
+      
+    } catch (error) {
+      console.error("❌ [CodeAware] Failed to create and open Python file:", error);
+      
+      // Log the error but don't prevent session creation
+      await logger.addLogEntry("system_create_session_file_error", {
+        error: error instanceof Error ? error.message : String(error),
+        username,
+        sessionName,
+        timestamp: new Date().toISOString()
+      });
+    }
+    
+    // Close dialog
+    setIsSessionDialogOpen(false);
+  }, [dispatch, logger, currentSessionId, ideMessenger]);
+
+  const handleSessionInfoCancel = useCallback(() => {
+    setIsSessionDialogOpen(false);
+  }, []);
+
   // Add webview listener for new session event to initialize CodeAware session
   useWebviewListener(
     "newSession",
     async () => {
-      dispatch(newCodeAwareSession());
+      // Show dialog to get user info
+      setIsSessionDialogOpen(true);
     },
     [dispatch]
   );
@@ -689,7 +753,7 @@ export const CodeAware = () => {
   );
 
   const AIHandleRequirementConfirmation = useCallback(
-    (requirement: string) => { // Expect requirement from editor
+    async (requirement: string) => { // Expect requirement from editor
       // Disable in code edit mode
       if (isCodeEditModeEnabled) {
         console.warn("⚠️ Requirement confirmation is disabled in code edit mode");
@@ -699,6 +763,13 @@ export const CodeAware = () => {
       if (!userRequirement) {
         return;
       }
+      
+      // Log requirement confirmation
+      await logger.addLogEntry("user_confirm_requirement", {
+        requirement: requirement.trim(),
+        originalRequirement: userRequirement.requirementDescription,
+        timestamp: new Date().toISOString()
+      });
       
       // 检查是否有修改：比较新的requirement和原来的requirementDescription
       const originalRequirement = userRequirement.requirementDescription;
@@ -710,42 +781,60 @@ export const CodeAware = () => {
         // 没有修改，直接回到finalized状态
         console.log("No changes detected, returning to finalized state");
         dispatch(setUserRequirementStatus("finalized"));
+        await logger.addLogEntry("user_no_change_requirement", {
+          requirement: requirement.trim()
+        });
         return;
       }
       
       // 有修改，重新生成步骤
       console.log("Changes detected, regenerating steps");
+      await logger.addLogEntry("user_modify_requirement", {
+        oldRequirement: originalRequirement,
+        newRequirement: requirement.trim()
+      });
       // Reset session except requirement first to ensure clean state
       dispatch(resetSessionExceptRequirement());
       dispatch(setUserRequirementStatus("confirmed"));
       dispatch(generateStepsFromRequirement({ userRequirement: requirement }))
-        .then(() => {
+        .then(async () => {
           console.log("Steps generated from requirement");
+          await logger.addLogEntry("user_regenerate_steps_completed", {
+            requirement: requirement.trim()
+          });
         });
     }
-  , [dispatch, userRequirement, isCodeEditModeEnabled]
+  , [dispatch, userRequirement, isCodeEditModeEnabled, logger]
   );
 
-  const handleEditRequirement = useCallback(() => {
+  const handleEditRequirement = useCallback(async () => {
     // Disable in code edit mode
     if (isCodeEditModeEnabled) {
       console.warn("⚠️ Requirement editing is disabled in code edit mode");
       return;
     }
     
+    await logger.addLogEntry("user_start_edit_requirement", {
+      currentRequirement: userRequirement?.requirementDescription || ""
+    });
+    
     dispatch(setUserRequirementStatus("editing"));
-  }, [dispatch, isCodeEditModeEnabled]);
+  }, [dispatch, isCodeEditModeEnabled, logger, userRequirement]);
 
-  const handleRegenerateSteps = useCallback(() => {
+  const handleRegenerateSteps = useCallback(async () => {
     // Disable in code edit mode
     if (isCodeEditModeEnabled) {
       console.warn("⚠️ Regeneration is disabled in code edit mode");
       return;
     }
     
+    await logger.addLogEntry("user_request_regenerate_steps", {
+      currentRequirement: userRequirement?.requirementDescription || ""
+    });
+    
     // 切换到编辑需求界面，而不是直接重新生成
     dispatch(setUserRequirementStatus("editing"));
-  }, [dispatch, isCodeEditModeEnabled]);
+  }, [dispatch, isCodeEditModeEnabled, logger, userRequirement]);
 
   // CodeAware: 获取学习目标和代码上下文
   const learningGoal = useAppSelector(selectLearningGoal);
@@ -753,8 +842,16 @@ export const CodeAware = () => {
 
   // 处理生成知识卡片内容
   const handleGenerateKnowledgeCardContent = useCallback(
-    (stepId: string, cardId: string, theme: string, learningGoal: string, codeContext: string) => {
+    async (stepId: string, cardId: string, theme: string, learningGoal: string, codeContext: string) => {
       console.log("Generating knowledge card content for:", { stepId, cardId, theme });
+      
+      // Log knowledge card generation
+      await logger.addLogEntry("user_start_view_knowledge_card", {
+        stepId,
+        cardId,
+        theme,
+        learningGoal
+      });
       
       // 如果没有提供代码上下文，从mapping中获取和cardId绑定的code chunk的内容
       let contextToUse = codeContext;
@@ -798,7 +895,7 @@ export const CodeAware = () => {
         codeContext: contextToUse
       }));
     },
-    [dispatch, allMappings, codeChunks]
+    [dispatch, allMappings, codeChunks, logger]
   );
 
   // 处理生成知识卡片主题列表
@@ -828,12 +925,25 @@ export const CodeAware = () => {
     [dispatch]
   );
 
-  const handleHighlightEvent = useCallback((e: HighlightEvent) => {
+  const handleHighlightEvent = useCallback(async (e: HighlightEvent) => {
+    // Log user highlight interaction
+    await logger.addLogEntry("user_check_highlight_mappings", {
+      sourceType: e.sourceType,
+      identifier: e.identifier,
+      additionalInfo: e.additionalInfo,
+      timestamp: new Date().toISOString()
+    });
+    
     // Special handling for knowledge card highlight events
     if (e.sourceType === "knowledgeCard") {
       // For knowledge cards, we want to highlight related elements but NOT trigger auto-scroll
       // We'll use the normal highlight logic but with a flag to prevent auto-scroll
       console.log("📝 [CodeAware] Handling knowledge card highlight event:", e.identifier);
+      
+      await logger.addLogEntry("user_check_knowledge_card_mappings", {
+        cardId: e.identifier,
+        additionalInfo: e.additionalInfo
+      });
       
       // Temporarily disable auto-scroll for knowledge card highlights
       setIsAutoScrollDisabled(true);
@@ -862,6 +972,24 @@ export const CodeAware = () => {
       return;
     }
     
+    // Log other types of highlight events
+    if (e.sourceType === "step") {
+      await logger.addLogEntry("user_check_step_mappings", {
+        stepId: e.identifier,
+        additionalInfo: e.additionalInfo
+      });
+    } else if (e.sourceType === "code") {
+      await logger.addLogEntry("user_check_code_chunk_mappings", {
+        chunkId: e.identifier,
+        additionalInfo: e.additionalInfo
+      });
+    } else if (e.sourceType === "requirement") {
+      await logger.addLogEntry("user_check_requirement_mappings", {
+        requirementId: e.identifier,
+        additionalInfo: e.additionalInfo
+      });
+    }
+    
     // Normal highlight logic for other types
     if (!e.additionalInfo){
       dispatch(updateHighlight({
@@ -875,9 +1003,13 @@ export const CodeAware = () => {
         additionalInfo: e.additionalInfo,
       }));
     }
-  }, [dispatch, allMappings, codeChunks]);
+  }, [dispatch, allMappings, codeChunks, logger]);
 
-  const removeHighlightEvent = useCallback(() => {
+  const removeHighlightEvent = useCallback(async () => {
+    await logger.addLogEntry("user_clear_all_highlights", {
+      timestamp: new Date().toISOString()
+    });
+    
     // Re-enable auto-scroll when highlights are cleared
     setIsAutoScrollDisabled(false);
     isAutoScrollDisabledRef.current = false; // Clear immediate ref
@@ -887,7 +1019,7 @@ export const CodeAware = () => {
     }
     // Dispatch action to clear all highlights
     dispatch(clearAllHighlights());
-  }, [dispatch]);
+  }, [dispatch, logger]);
 
   // Add new functions for step operations
   const executeUntilStep = useCallback(async (stepId: string) => {
@@ -899,11 +1031,21 @@ export const CodeAware = () => {
     
     console.log(`执行到步骤: ${stepId}`);
     
+    // Log step execution
+    await logger.addLogEntry("user_start_execute_steps", {
+      stepId,
+      timestamp: new Date().toISOString()
+    });
+    
     try {
       // 1. 根据step_id获取截止到该步骤的所有未执行步骤信息
       const targetStepIndex = steps.findIndex(step => step.id === stepId);
       if (targetStepIndex === -1) {
         console.error(`Step with id ${stepId} not found`);
+        await logger.addLogEntry("user_execute_steps_error", {
+          stepId,
+          error: "Step not found"
+        });
         return;
       }
 
@@ -934,12 +1076,31 @@ export const CodeAware = () => {
       console.log("📋 未执行的步骤信息:", stepsInfo);
       console.log("📋 已生成的步骤数量:", generatedSteps.length);
 
+      if (unexecutedSteps.length === 0) {
+        console.log("All steps up to target already executed");
+        await logger.addLogEntry("user_execute_steps_completed", {
+          stepId,
+          message: "All steps already executed"
+        });
+        return;
+      }
+
+      await logger.addLogEntry("user_execute_steps_batch_started", {
+        stepId,
+        unexecutedStepsCount: unexecutedSteps.length,
+        unexecutedStepIds: unexecutedSteps.map(s => s.id)
+      });
+
       // 2. 通过ideMessenger获取当前文件的所有代码
       const currentFileResponse = await ideMessenger?.request("getCurrentFile", undefined);
       
       // 检查响应是否成功并提取内容
       if (!currentFileResponse || currentFileResponse.status !== "success") {
         console.warn("⚠️ 无法获取当前文件信息");
+        await logger.addLogEntry("user_execute_steps_error", {
+          stepId,
+          error: "Unable to get current file information"
+        });
         // 恢复步骤状态为"confirmed"
         for (const step of unexecutedSteps) {
           dispatch(setStepStatus({ stepId: step.id, status: "confirmed" }));
@@ -951,6 +1112,10 @@ export const CodeAware = () => {
       
       if (!currentFile) {
         console.warn("⚠️ 当前没有打开的文件");
+        await logger.addLogEntry("user_execute_steps_error", {
+          stepId,
+          error: "No current file open"
+        });
         // 恢复步骤状态为"confirmed"
         for (const step of unexecutedSteps) {
           dispatch(setStepStatus({ stepId: step.id, status: "confirmed" }));
@@ -1037,6 +1202,10 @@ export const CodeAware = () => {
 
     } catch (error) {
       console.error("❌ 执行到步骤时发生错误:", error);
+      await logger.addLogEntry("user_execute_steps_error", {
+        stepId,
+        error: error instanceof Error ? error.message : String(error)
+      });
       // 恢复相关步骤状态为"confirmed"
       const targetStepIndex = steps.findIndex(step => step.id === stepId);
       if (targetStepIndex !== -1) {
@@ -1050,7 +1219,7 @@ export const CodeAware = () => {
       // 显示错误提示
       ideMessenger?.post("showToast", ["error", "代码生成过程中发生错误，请重试。"]);
     }
-  }, [steps, ideMessenger, dispatch, isCodeEditModeEnabled, allMappings, codeChunks]);
+  }, [steps, ideMessenger, dispatch, isCodeEditModeEnabled, allMappings, codeChunks, logger]);
 
   // Handle rerun step when step is dirty
   const handleRerunStep = useCallback(async (stepId: string) => {
@@ -1062,17 +1231,30 @@ export const CodeAware = () => {
     
     console.log(`重新运行步骤: ${stepId}`);
     
+    await logger.addLogEntry("user_start_rerun_step", {
+      stepId,
+      timestamp: new Date().toISOString()
+    });
+    
     try {
       // 找到对应的步骤
       const step = steps.find(s => s.id === stepId);
       if (!step) {
         console.error(`Step with id ${stepId} not found`);
+        await logger.addLogEntry("user_rerun_step_error", {
+          stepId,
+          error: "Step not found"
+        });
         return;
       }
 
       // 只有在step_dirty状态下才允许重新运行
       if (step.stepStatus !== "step_dirty") {
         console.warn(`Step ${stepId} is not in step_dirty status, current status: ${step.stepStatus}`);
+        await logger.addLogEntry("user_rerun_step_error", {
+          stepId,
+          error: `Invalid step status: ${step.stepStatus}, expected: step_dirty`
+        });
         return;
       }
 
@@ -1110,32 +1292,59 @@ export const CodeAware = () => {
       console.log("✅ 步骤重新运行成功");
       ideMessenger?.post("showToast", ["info", "步骤重新运行成功！"]);
       
+      await logger.addLogEntry("user_rerun_step_completed", {
+        stepId,
+        timestamp: new Date().toISOString()
+      });
+      
     } catch (error) {
       console.error("❌ 重新运行步骤时发生错误:", error);
+      await logger.addLogEntry("user_rerun_step_error", {
+        stepId,
+        error: error instanceof Error ? error.message : String(error)
+      });
       // 恢复状态
       dispatch(setStepStatus({ stepId, status: "step_dirty" }));
       ideMessenger?.post("showToast", ["error", "重新生成代码失败，请重试。"]);
     }
-  }, [steps, dispatch, ideMessenger, isCodeEditModeEnabled]);
+  }, [steps, dispatch, ideMessenger, isCodeEditModeEnabled, logger]);
 
-  const handleStepEdit = useCallback((stepId: string, newContent: string) => {
+  const handleStepEdit = useCallback(async (stepId: string, newContent: string) => {
     // Disable in code edit mode
     if (isCodeEditModeEnabled) {
       console.warn("⚠️ Step editing is disabled in code edit mode");
       return;
     }
     
+    await logger.addLogEntry("user_edit_step_content", {
+      stepId,
+      newContent: newContent.substring(0, 200), // Log first 200 chars to avoid huge logs
+      timestamp: new Date().toISOString()
+    });
+    
     // Update step abstract in Redux store
     dispatch(setStepAbstract({ stepId, abstract: newContent }));
-  }, [dispatch, isCodeEditModeEnabled]);
+  }, [dispatch, isCodeEditModeEnabled, logger]);
 
-  const handleStepStatusChange = useCallback((stepId: string, newStatus: StepStatus) => {
+  const handleStepStatusChange = useCallback(async (stepId: string, newStatus: StepStatus) => {
+    await logger.addLogEntry("user_change_step_status", {
+      stepId,
+      newStatus,
+      timestamp: new Date().toISOString()
+    });
+    
     // Update step status in Redux store
     dispatch(setStepStatus({ stepId, status: newStatus }));
-  }, [dispatch]);
+  }, [dispatch, logger]);
 
-  const handleStepExpansionChange = useCallback((stepId: string, isExpanded: boolean) => {
+  const handleStepExpansionChange = useCallback(async (stepId: string, isExpanded: boolean) => {
     console.log(`Step ${stepId} expansion changed to: ${isExpanded}`);
+    
+    await logger.addLogEntry("user_toggle_step_expansion", {
+      stepId,
+      isExpanded,
+      timestamp: new Date().toISOString()
+    });
     
     if (isExpanded) {
       // When a step is expanded, immediately set it as the currently expanded step
@@ -1145,15 +1354,26 @@ export const CodeAware = () => {
       // When a step is collapsed, clear the currently expanded step if it's this one
       setCurrentlyExpandedStepId(prev => prev === stepId ? null : prev);
     }
-  }, []);
+  }, [logger]);
 
   const handleQuestionSubmit = useCallback(async (stepId: string, selectedText: string, question: string) => {
     console.log('处理步骤问题提交:', { stepId, selectedText, question });
+    
+    await logger.addLogEntry("user_submit_question", {
+      stepId,
+      selectedText: selectedText.substring(0, 200), // Log first 200 chars
+      question: question.substring(0, 200), // Log first 200 chars
+      timestamp: new Date().toISOString()
+    });
     
     // 通过stepId查找对应的步骤信息
     const step = steps.find(s => s.id === stepId);
     if (!step) {
       console.error('未找到对应的步骤:', stepId);
+      await logger.addLogEntry("user_submit_question_error", {
+        stepId,
+        error: "Step not found"
+      });
       return;
     }
 
@@ -1188,8 +1408,17 @@ export const CodeAware = () => {
           status: "checked" 
         }));
         console.log("✅ Knowledge card themes generated successfully, status set to checked");
+        
+        await logger.addLogEntry("user_submit_question_completed", {
+          stepId,
+          timestamp: new Date().toISOString()
+        });
       } else if (generateKnowledgeCardThemesFromQuery.rejected.match(result)) {
         console.error("❌ Failed to generate knowledge card themes:", result.error.message);
+        await logger.addLogEntry("user_submit_question_error", {
+          stepId,
+          error: result.error.message || "Failed to generate knowledge card themes"
+        });
         // 如果生成失败，保持generating状态或设置为empty
         dispatch(setKnowledgeCardGenerationStatus({ 
           stepId, 
@@ -1198,13 +1427,17 @@ export const CodeAware = () => {
       }
     } catch (error) {
       console.error("❌ Error in handleQuestionSubmit:", error);
+      await logger.addLogEntry("user_submit_question_error", {
+        stepId,
+        error: error instanceof Error ? error.message : String(error)
+      });
       dispatch(setKnowledgeCardGenerationStatus({ 
         stepId, 
         status: "empty" 
       }));
     }
 
-  }, [steps, learningGoal, task, dispatch]);
+  }, [steps, learningGoal, task, dispatch, logger]);
 
   // Add webview listener for questions from code selection
   useWebviewListener(
@@ -1222,9 +1455,22 @@ export const CodeAware = () => {
     }) => {
       console.log("📝 [CodeAware] Received question from code selection:", data);
       
+      await logger.addLogEntry("user_trigger_question_from_code_selection", {
+        selectedText: data.selectedText.substring(0, 200),
+        question: data.question.substring(0, 200),
+        filePath: data.filePath,
+        selectedLines: data.selectedLines,
+        fileName: data.contextInfo.fileName,
+        language: data.contextInfo.language,
+        timestamp: new Date().toISOString()
+      });
+      
       try {
         // 检查是否有活跃的步骤，如果没有则提示用户
         if (steps.length === 0) {
+          await logger.addLogEntry("user_trigger_question_from_code_selection_error", {
+            error: "No steps available"
+          });
           ideMessenger?.post("showToast", [
             "warning", 
             "请先在 CodeAware 中设置项目需求，然后生成步骤。"
@@ -1247,9 +1493,19 @@ export const CodeAware = () => {
           const lastStep = steps[steps.length - 1];
           stepIdToUse = lastStep.id;
           console.log("🔍 [CodeAware] No direct mapping found, using last step:", stepIdToUse);
+          
+          await logger.addLogEntry("user_check_code_step_mappings", {
+            result: "no_direct_mapping",
+            selectedStepId: stepIdToUse
+          });
         } else {
           stepIdToUse = targetStepId;
           console.log("🎯 [CodeAware] Found most relevant step:", stepIdToUse);
+          
+          await logger.addLogEntry("user_check_code_step_mappings", {
+            result: "direct_mapping_found",
+            selectedStepId: stepIdToUse
+          });
         }
         
         // 设置知识卡片生成状态为generating
@@ -1270,8 +1526,16 @@ export const CodeAware = () => {
           `问题已添加到相关步骤中，正在生成知识卡片...`
         ]);
         
+        await logger.addLogEntry("user_trigger_question_from_code_selection_completed", {
+          stepId: stepIdToUse,
+          timestamp: new Date().toISOString()
+        });
+        
       } catch (error) {
         console.error("❌ [CodeAware] Failed to process question from selection:", error);
+        await logger.addLogEntry("user_trigger_question_from_code_selection_error", {
+          error: error instanceof Error ? error.message : String(error)
+        });
         ideMessenger?.post("showToast", [
           "error", 
           "处理问题时发生错误，请重试。"
@@ -1537,6 +1801,13 @@ export const CodeAware = () => {
           <SpinnerIcon />
         </LoadingOverlay>
       )}
+
+      {/* Session Info Dialog */}
+      <SessionInfoDialog
+        isOpen={isSessionDialogOpen}
+        onSubmit={handleSessionInfoSubmit}
+        onCancel={handleSessionInfoCancel}
+      />
     </CodeAwareDiv>
   );
 };

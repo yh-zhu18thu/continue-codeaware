@@ -4,13 +4,14 @@ import StarterKit from "@tiptap/starter-kit";
 import React from 'react';
 import styled from "styled-components";
 import {
-  defaultBorderRadius,
-  lightGray,
-  vscButtonBackground,
-  vscForeground
+    defaultBorderRadius,
+    lightGray,
+    vscButtonBackground,
+    vscForeground
 } from "../../../../components";
 import { ToolTip } from "../../../../components/gui/Tooltip";
 import HoverItem from "../../../../components/mainInput/InputToolbar/HoverItem";
+import { useCodeAwareLogger } from '../../../../util/codeAwareWebViewLogger';
 
 const SAQContainer = styled.div`
   margin-top: 4px;
@@ -175,6 +176,7 @@ const KnowledgeCardSAQ: React.FC<KnowledgeCardSAQProps> = ({
   isLoading = false,
   result,
 }) => {
+  const logger = useCodeAwareLogger();
   const [isRetrying, setIsRetrying] = React.useState(false);
   const [lastResultHash, setLastResultHash] = React.useState<string>('');
   
@@ -205,16 +207,29 @@ const KnowledgeCardSAQ: React.FC<KnowledgeCardSAQProps> = ({
     return null;
   }
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const answer = editor.getText();
     if (answer.trim() && !isLoading) {
+      await logger.addLogEntry("user_submit_saq_answer", {
+        question: question.substring(0, 200),
+        answer: answer.substring(0, 500),
+        timestamp: new Date().toISOString()
+      });
+      
       onSubmitAnswer(answer);
       // Note: Don't reset isRetrying here, let the parent component handle result updates
     }
   };
 
-  const handleRetry = () => {
+  const handleRetry = async () => {
     console.log('Retry button clicked', { result: result?.userAnswer });
+    
+    await logger.addLogEntry("user_retry_saq_answer", {
+      question: question.substring(0, 200),
+      previousAnswer: result?.userAnswer || "",
+      timestamp: new Date().toISOString()
+    });
+    
     setIsRetrying(true);
     // 将之前的答案同步到编辑器
     if (result?.userAnswer) {

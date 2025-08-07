@@ -1115,6 +1115,12 @@ export const selectTestLoadingState = createSelector(
     }
 );
 
+// Selector for current session ID
+export const selectCurrentSessionId = createSelector(
+    (state: RootState) => state.codeAwareSession.currentSessionId,
+    (currentSessionId) => currentSessionId
+);
+
 export default codeAwareSessionSlice.reducer;
 
 

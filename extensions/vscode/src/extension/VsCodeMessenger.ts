@@ -3,18 +3,19 @@ import { ConfigHandler } from "core/config/ConfigHandler";
 import { getModelByRole } from "core/config/util";
 import { applyCodeBlock } from "core/edit/lazy/applyCodeBlock";
 import {
-  FromCoreProtocol,
-  FromWebviewProtocol,
-  ToCoreProtocol,
+    FromCoreProtocol,
+    FromWebviewProtocol,
+    ToCoreProtocol,
 } from "core/protocol";
 import { ToWebviewFromCoreProtocol } from "core/protocol/coreWebview";
 import { ToIdeFromWebviewOrCoreProtocol } from "core/protocol/ide";
 import { ToIdeFromCoreProtocol } from "core/protocol/ideCore";
 import { InProcessMessenger, Message } from "core/protocol/messenger";
 import {
-  CORE_TO_WEBVIEW_PASS_THROUGH,
-  WEBVIEW_TO_CORE_PASS_THROUGH,
+    CORE_TO_WEBVIEW_PASS_THROUGH,
+    WEBVIEW_TO_CORE_PASS_THROUGH,
 } from "core/protocol/passThrough";
+import { codeAwareLogger } from "core/util/codeAwareLogger";
 import { stripImages } from "core/util/messageContent";
 import { getUriPathBasename } from "core/util/uri";
 import * as vscode from "vscode";
@@ -23,8 +24,8 @@ import { CodeEditModeManager } from "../CodeEditModeManager";
 import { VerticalDiffManager } from "../diff/vertical/manager";
 import EditDecorationManager from "../quickEdit/EditDecorationManager";
 import {
-  getControlPlaneSessionInfo,
-  WorkOsAuthProvider,
+    getControlPlaneSessionInfo,
+    WorkOsAuthProvider,
 } from "../stubs/WorkOsAuthProvider";
 import { showTutorial } from "../util/tutorial";
 import { getExtensionUri } from "../util/vscode";
@@ -343,6 +344,22 @@ export class VsCodeMessenger {
       });
     });
 
+    // CodeAware: 日志记录相关
+    this.onWebview("startCodeAwareLogSession", async (msg) => {
+      console.log("📊 [CodeAware] Starting log session:", msg.data);
+      codeAwareLogger.startLogSession(msg.data);
+    });
+
+    this.onWebview("addCodeAwareLogEntry", async (msg) => {
+      console.log("📝 [CodeAware] Adding log entry:", msg.data.eventType);
+      codeAwareLogger.addLogEntry(msg.data.eventType, msg.data.payload);
+    });
+
+    this.onWebview("endCodeAwareLogSession", async (msg) => {
+      console.log("📊 [CodeAware] Ending log session");
+      codeAwareLogger.endLogSession();
+    });
+
     /** PASS THROUGH FROM WEBVIEW TO CORE AND BACK **/
     WEBVIEW_TO_CORE_PASS_THROUGH.forEach((messageType) => {
       this.onWebview(messageType, async (msg) => {
@@ -411,6 +428,12 @@ export class VsCodeMessenger {
     this.onWebviewOrCore("openFile", async (msg) => {
       return ide.openFile(msg.data.path);
     });
+    
+    // CodeAware: Handle createAndOpenFile requests
+    this.onWebviewOrCore("createAndOpenFile", async (msg) => {
+      return ide.createAndOpenFile(msg.data.filename, msg.data.content);
+    });
+    
     this.onWebviewOrCore("runCommand", async (msg) => {
       await ide.runCommand(msg.data.command);
     });

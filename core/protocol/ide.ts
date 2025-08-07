@@ -108,6 +108,15 @@ export type ToIdeFromWebviewOrCoreProtocol = {
     },
     void,
   ];
+  
+  // CodeAware: Create and open a new file
+  createAndOpenFile: [
+    {
+      filename: string;
+      content?: string;
+    },
+    void,
+  ];
 };
 
 export type ToWebviewOrCoreFromIdeProtocol = {

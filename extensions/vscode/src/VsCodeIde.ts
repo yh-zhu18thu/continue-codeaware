@@ -17,18 +17,18 @@ import { getExtensionUri, openEditorAndRevealRange } from "./util/vscode";
 import { VsCodeWebviewProtocol } from "./webviewProtocol";
 
 import type {
-  ContinueRcJson,
-  FileStatsMap,
-  FileType,
-  IDE,
-  IdeInfo,
-  IdeSettings,
-  IndexTag,
-  Location,
-  Problem,
-  RangeInFile,
-  TerminalOptions,
-  Thread,
+    ContinueRcJson,
+    FileStatsMap,
+    FileType,
+    IDE,
+    IdeInfo,
+    IdeSettings,
+    IndexTag,
+    Location,
+    Problem,
+    RangeInFile,
+    TerminalOptions,
+    Thread,
 } from "core";
 
 
@@ -432,6 +432,35 @@ class VsCodeIde implements IDE {
 
   async openFile(fileUri: string): Promise<void> {
     await this.ideUtils.openFile(vscode.Uri.parse(fileUri));
+  }
+
+  // CodeAware: Create and open a new file
+  async createAndOpenFile(filename: string, content: string = ""): Promise<void> {
+    try {
+      // Get the first workspace folder
+      const workspaceFolders = vscode.workspace.workspaceFolders;
+      if (!workspaceFolders || workspaceFolders.length === 0) {
+        throw new Error("No workspace folder is open");
+      }
+
+      // Create the full file path in the workspace root
+      const workspaceUri = workspaceFolders[0].uri;
+      const fileUri = vscode.Uri.joinPath(workspaceUri, filename);
+
+      // Write the file with the provided content
+      await vscode.workspace.fs.writeFile(
+        fileUri,
+        Buffer.from(content, 'utf8')
+      );
+
+      // Open the file in the editor
+      await this.ideUtils.openFile(fileUri);
+
+      console.log(`📄 [VsCodeIde] Created and opened file: ${fileUri.toString()}`);
+    } catch (error) {
+      console.error(`❌ [VsCodeIde] Failed to create and open file ${filename}:`, error);
+      throw error;
+    }
   }
 
   async showLines(

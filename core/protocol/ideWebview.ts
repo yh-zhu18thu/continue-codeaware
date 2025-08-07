@@ -2,12 +2,12 @@ import { ToIdeFromWebviewOrCoreProtocol } from "./ide";
 import { ToWebviewFromIdeOrCoreProtocol } from "./webview";
 
 import type {
-    ApplyState,
-    CodeChunk,
-    CodeToEdit,
-    EditStatus,
-    MessageContent,
-    RangeInFileWithContents
+  ApplyState,
+  CodeChunk,
+  CodeToEdit,
+  EditStatus,
+  MessageContent,
+  RangeInFileWithContents
 } from "../";
 
 export type ToIdeFromWebviewProtocol = ToIdeFromWebviewOrCoreProtocol & {
@@ -67,6 +67,10 @@ export type ToIdeFromWebviewProtocol = ToIdeFromWebviewOrCoreProtocol & {
   getCodeAwareContext: [undefined, { userRequirement: string; currentStep: string; nextStep: string; stepFinished: boolean }];
   //CodeAware: 设置代码编辑模式
   setCodeEditMode: [{ enabled: boolean }, void];
+  //CodeAware: 日志记录相关
+  startCodeAwareLogSession: [{ username: string; sessionName: string; codeAwareSessionId: string }, void];
+  addCodeAwareLogEntry: [{ eventType: string; payload: any }, void];
+  endCodeAwareLogSession: [undefined, void];
 };
 
 export type ToWebviewFromIdeProtocol = ToWebviewFromIdeOrCoreProtocol & {

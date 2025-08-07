@@ -19,6 +19,7 @@ import { refreshSessionMetadata } from "../redux/thunks/session";
 import { streamResponseThunk } from "../redux/thunks/streamResponse";
 import { updateFileSymbolsFromHistory } from "../redux/thunks/updateFileSymbols";
 import { isJetBrains } from "../util";
+import { useCodeAwareLogger } from "../util/codeAwareWebViewLogger";
 import { setLocalStorage } from "../util/localStorage";
 import { useWebviewListener } from "./useWebviewListener";
 
@@ -32,6 +33,9 @@ function useSetup() {
   
   // 使用 selector 获取 CodeAware 相关数据
   const codeChunks = useAppSelector(selectCodeChunks);
+  
+  // CodeAware logger
+  const logger = useCodeAwareLogger();
 
   const hasLoadedConfig = useRef(false);
 
@@ -258,9 +262,16 @@ function useSetup() {
       previousSelection: codeChunks.filter(chunk => chunk.isHighlighted && !chunk.disabled)
     });
 
+    // Log code selection cleared event
+    await logger.addLogEntry("user_clear_code_selection", {
+      filePath,
+      previouslyHighlightedChunks: codeChunks.filter(chunk => chunk.isHighlighted && !chunk.disabled).length,
+      timestamp: new Date().toISOString()
+    });
+
     // 清除所有高亮
     dispatch(clearAllHighlights());
-  }, [dispatch]);
+  }, [dispatch, logger, codeChunks]);
 
   // CodeAware: 监听代码选择变化事件
   useWebviewListener("codeSelectionChanged", async (data) => {
@@ -271,6 +282,15 @@ function useSetup() {
       selectedLines,
       selectedContent: selectedContent.substring(0, 100) + "...", // 只
       // 显示前100个字符
+    });
+
+    // Log code selection changed event
+    await logger.addLogEntry("user_change_code_selection", {
+      filePath,
+      selectedLines,
+      selectedContentLength: selectedContent.length,
+      selectedContentPreview: selectedContent.substring(0, 200), // Store first 200 chars for analysis
+      timestamp: new Date().toISOString()
     });
 
     // 存储符合条件的代码块
@@ -337,6 +357,19 @@ function useSetup() {
       }
     }
 
+    // Log code chunk matching results
+    await logger.addLogEntry("user_check_code_selection_mappings", {
+      filePath,
+      selectedLines,
+      fullyContainedChunksCount: fullyContainedChunks.length,
+      overlappingChunksCount: overlappingChunks.length,
+      highlightEventsCount: highlightEvents.length,
+      bestOverlapRatio: overlappingChunks.length > 0 ? overlappingChunks[0].overlapRatio : null,
+      fullyContainedChunkIds: fullyContainedChunks.map(chunk => chunk.id),
+      bestOverlappingChunkId: overlappingChunks.length > 0 ? overlappingChunks[0].chunk.id : null,
+      timestamp: new Date().toISOString()
+    });
+
     // 如果有要高亮的代码块，触发高亮更新
     if (highlightEvents.length > 0) {
       dispatch(updateHighlight(highlightEvents));
@@ -353,7 +386,7 @@ function useSetup() {
       bestOverlapRatio: overlappingChunks.length > 0 ? overlappingChunks[0].overlapRatio : null,
       CodeChunks: codeChunks,
     });
-  }, [codeChunks, dispatch]);
+  }, [codeChunks, dispatch, logger]);
 }
 
 export default useSetup;

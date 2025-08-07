@@ -305,6 +305,65 @@ export const CodeAware = () => {
     syncCodeEditModeToIde();
   }, [isCodeEditModeEnabled, ideMessenger]);
 
+  // Monitor knowledge card generation completion and log events
+  const prevStepsRef = useRef<StepItem[]>([]);
+  useEffect(() => {
+    const currentSteps = steps;
+    const previousSteps = prevStepsRef.current;
+    
+    // Check for knowledge card generation status changes
+    currentSteps.forEach(currentStep => {
+      const previousStep = previousSteps.find(s => s.id === currentStep.id);
+      
+      if (previousStep) {
+        // Log knowledge card generation completion
+        if (previousStep.knowledgeCardGenerationStatus === "generating" && 
+            currentStep.knowledgeCardGenerationStatus === "checked") {
+          logger.addLogEntry("system_knowledge_card_themes_generated", {
+            stepId: currentStep.id,
+            stepTitle: currentStep.title,
+            knowledgeCardCount: currentStep.knowledgeCards.length,
+            timestamp: new Date().toISOString()
+          });
+        }
+        
+        // Log step generation completion
+        if (previousStep.stepStatus === "generating" && 
+            currentStep.stepStatus === "generated") {
+          logger.addLogEntry("system_step_generated", {
+            stepId: currentStep.id,
+            stepTitle: currentStep.title,
+            timestamp: new Date().toISOString()
+          });
+        }
+      }
+      
+      // Log individual knowledge card content generation completion
+      currentStep.knowledgeCards.forEach(currentCard => {
+        const previousCard = previousStep?.knowledgeCards.find(c => c.id === currentCard.id);
+        
+        if (previousCard &&
+            previousCard.content === "::LOADING::" && 
+            currentCard.content !== "::LOADING::" &&
+            currentCard.content && 
+            currentCard.content.trim() !== "") {
+          logger.addLogEntry("system_knowledge_card_content_generated", {
+            stepId: currentStep.id,
+            cardId: currentCard.id,
+            cardTitle: currentCard.title,
+            contentLength: currentCard.content.length,
+            hasTests: (currentCard.tests?.length || 0) > 0,
+            testCount: currentCard.tests?.length || 0,
+            timestamp: new Date().toISOString()
+          });
+        }
+      });
+    });
+    
+    // Update the ref with current steps
+    prevStepsRef.current = [...currentSteps];
+  }, [steps, logger]);
+
   // Handle local code edit mode changes (from toggle button)
   useEffect(() => {
     const handleLocalCodeEditModeChange = async () => {
@@ -435,10 +494,15 @@ export const CodeAware = () => {
   useWebviewListener(
     "newSession",
     async () => {
+      // Log new session request
+      await logger.addLogEntry("user_request_new_session", {
+        timestamp: new Date().toISOString()
+      });
+      
       // Show dialog to get user info
       setIsSessionDialogOpen(true);
     },
-    [dispatch]
+    [dispatch, logger]
   );
 
   // Add webview listener for code edit mode changes from IDE

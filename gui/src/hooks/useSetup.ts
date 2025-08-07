@@ -269,6 +269,15 @@ function useSetup() {
       timestamp: new Date().toISOString()
     });
 
+    // Log mapping check for code selection clearing
+    await logger.addLogEntry("user_check_clear_selection_mappings", {
+      filePath,
+      totalCodeChunks: codeChunks.length,
+      activeCodeChunks: codeChunks.filter(chunk => !chunk.disabled).length,
+      highlightedChunks: codeChunks.filter(chunk => chunk.isHighlighted && !chunk.disabled).length,
+      timestamp: new Date().toISOString()
+    });
+
     // 清除所有高亮
     dispatch(clearAllHighlights());
   }, [dispatch, logger, codeChunks]);

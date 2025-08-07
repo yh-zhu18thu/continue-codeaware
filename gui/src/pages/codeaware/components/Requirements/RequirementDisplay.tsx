@@ -1,26 +1,27 @@
 import { CheckCircle } from "@mui/icons-material";
 import {
-    Paper,
-    Step,
-    StepIcon,
-    StepLabel,
-    Stepper,
-    Typography
+  Paper,
+  Step,
+  StepIcon,
+  StepLabel,
+  Stepper,
+  Typography
 } from "@mui/material";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 import { HighlightEvent } from "core";
 import { useEffect, useRef, useState } from "react";
 import styled, { css, keyframes } from "styled-components";
 import {
-    defaultBorderRadius,
-    vscForeground
+  defaultBorderRadius,
+  vscForeground
 } from "../../../../components";
 import { useAppSelector } from "../../../../redux/hooks";
 import {
-    selectHighLevelSteps,
-    selectRequirementHighlightChunks,
-    selectRequirementText
+  selectHighLevelSteps,
+  selectRequirementHighlightChunks,
+  selectRequirementText
 } from "../../../../redux/slices/codeAwareSlice";
+import { useCodeAwareLogger } from "../../../../util/codeAwareWebViewLogger";
 // import RequirementDisplayToolBar from "./RequirementDisplayToolbar"; // 移除工具栏导入
 
 // Flickering animation for highlight state changes
@@ -249,6 +250,9 @@ export default function RequirementDisplay({
     const requirementText = useAppSelector(selectRequirementText);
     const highlightChunks = useAppSelector(selectRequirementHighlightChunks);
     const highLevelSteps = useAppSelector(selectHighLevelSteps);
+
+    // CodeAware logger
+    const logger = useCodeAwareLogger();
 
     // Track previous highlight states for flickering animation using useRef to avoid circular dependency
     const previousHighlightStatesRef = useRef<Map<string, boolean>>(new Map());

@@ -272,9 +272,19 @@ const Step: React.FC<StepProps> = ({
     };
   }, []);
 
-  const handleToggle = () => {
+  const handleToggle = async () => {
     const wasExpanded = isExpanded;
     const willBeExpanded = !isExpanded;
+    
+    // Log step expansion change
+    await logger.addLogEntry("user_toggle_step_expansion", {
+      stepId: stepId || "unknown",
+      wasExpanded,
+      willBeExpanded,
+      stepTitle: title || "unknown",
+      timestamp: new Date().toISOString()
+    });
+    
     setIsExpanded(willBeExpanded);
     
     // Set protection flag when user is expanding

@@ -1,6 +1,6 @@
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import styled from "styled-components";
 import {
     defaultBorderRadius,
@@ -12,6 +12,7 @@ import {
     vscInputBorderFocus
 } from "../../../../components";
 import { useAppSelector } from "../../../../redux/hooks";
+import { useCodeAwareLogger } from "../../../../util/codeAwareWebViewLogger";
 import RequirementEditToolBar from "./RequirementEditToolBar";
 
 const InputBoxDiv = styled.div<{}>`
@@ -85,8 +86,15 @@ interface RequirementEditorProps {
 
 export default function RequirementEditor({ onConfirm, onAIProcess, disabled = false }: RequirementEditorProps){
     const userRequirementContent = useAppSelector((state) => state.codeAwareSession.userRequirement?.requirementDescription || "");
-
+    
     const userRequirementStatus = useAppSelector((state) => state.codeAwareSession.userRequirement?.requirementStatus || "empty");
+    
+    // CodeAware logger
+    const logger = useCodeAwareLogger();
+    
+    // Track if user has started editing
+    const hasStartedEditingRef = useRef(false);
+    const editingStartTimeRef = useRef<number | null>(null);
     // 2. 定义占位符内容
     const placeholderContent = '<p>请输入项目需求、当前您自身的水平与学习目标</p>';
 
@@ -99,6 +107,26 @@ export default function RequirementEditor({ onConfirm, onAIProcess, disabled = f
         ],
         content: currentTargetContent, // 4. 使用 currentTargetContent 初始化编辑器
         editable: !disabled, // Disable editing when disabled prop is true
+        onUpdate: ({ editor }) => {
+            // Log when user starts editing
+            if (!hasStartedEditingRef.current) {
+                hasStartedEditingRef.current = true;
+                editingStartTimeRef.current = Date.now();
+                
+                logger.addLogEntry("user_start_editing_requirement", {
+                    initialContent: currentTargetContent,
+                    timestamp: new Date().toISOString()
+                });
+            }
+        },
+        onFocus: () => {
+            // Log when user focuses on the editor (if not already editing)
+            if (!hasStartedEditingRef.current) {
+                logger.addLogEntry("user_focus_requirement_editor", {
+                    timestamp: new Date().toISOString()
+                });
+            }
+        }
     });
 
         // 5. 使用 useEffect 监听用户需求状态的变化，确保编辑器内容同步更新

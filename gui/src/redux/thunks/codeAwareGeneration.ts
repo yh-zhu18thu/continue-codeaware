@@ -598,6 +598,11 @@ export const generateKnowledgeCardDetail = createAsyncThunk<
                         }));
                         
                         console.log("✅ 知识卡片生成成功");
+                        
+                        // Log knowledge card generation completion
+                        // We need to access extra.ideMessenger to log, but createAsyncThunk doesn't pass it through extra in a simple way
+                        // Instead, we'll add the log in the calling component
+                        
                         return; // 成功，退出函数
                         
                     } catch (parseError) {
@@ -794,6 +799,9 @@ export const generateKnowledgeCardThemes = createAsyncThunk<
                     dispatch(setKnowledgeCardGenerationStatus({ stepId, status: "checked" }));
                     
                     console.log(`✅ 生成 ${themes.length} 个知识卡片主题，步骤: ${stepId}`);
+                    
+                    // Log knowledge card themes generation completion
+                    // We'll add the log in the calling component
                 } else {
                     console.warn("No valid themes returned from LLM");
                     dispatch(setKnowledgeCardGenerationStatus({ stepId, status: "checked" }));

@@ -1412,7 +1412,7 @@ export const generateCodeFromSteps = createAsyncThunk<
                     jsonContent = jsonContent.substring(jsonStart, jsonEnd);
                 }
                 
-                console.log("🔍 清理后的第二步响应内容:", jsonContent.substring(0, 200) + "...");
+                console.log("🔍 清理后的第二步响应内容:", jsonContent);
                 
                 const mappingResponse = JSON.parse(jsonContent);
                 const stepsCorrespondingCodeRaw = mappingResponse.steps_correspond_code || [];

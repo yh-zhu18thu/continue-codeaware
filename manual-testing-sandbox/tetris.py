@@ -199,7 +199,43 @@ def move_tetromino(tetromino, locked_grid, dx, dy):
         return True
     return False
 
-# =================== 主循环示例代码，演示键盘移动方块 (对应s-9) ===================
+# =================== s-10: 实现方块的旋转 ===================
+def is_valid_rotation(tetromino, locked_grid):
+    """
+    检查当前方块在尝试旋转后的位置是否合法（不越界，不冲突）。
+    返回True合法，False不合法。
+    """
+    # 临时旋转
+    tetromino.rotate()
+    shape = tetromino.get_shape()
+    valid = True
+    for r, row_shape in enumerate(shape):
+        for c, value in enumerate(row_shape):
+            if value:
+                new_x = tetromino.pos[0] + c
+                new_y = tetromino.pos[1] + r
+                if new_x < 0 or new_x >= GRID_COLS or new_y < 0 or new_y >= GRID_ROWS:
+                    valid = False
+                    break
+                if locked_grid[new_y][new_x]:
+                    valid = False
+                    break
+        if not valid:
+            break
+    # 回退旋转
+    tetromino.rotate_back()
+    return valid
+
+def rotate_tetromino_if_possible(tetromino, locked_grid):
+    """
+    如果方块旋转后合法，则执行旋转，否则不变。
+    """
+    if is_valid_rotation(tetromino, locked_grid):
+        tetromino.rotate()
+        return True
+    return False
+
+# =================== 主循环示例代码，演示键盘移动方块和旋转 (增加旋转操作:s-10) ===================
 running = True
 while running:
     for event in pygame.event.get():
@@ -213,6 +249,9 @@ while running:
                 move_tetromino(current_tetromino, locked_grid, 1, 0)   # 向右
             elif event.key == pygame.K_DOWN:
                 move_tetromino(current_tetromino, locked_grid, 0, 1)   # 向下
+            # =================== 新增旋转操作 (s-10) ===================
+            elif event.key == pygame.K_UP:
+                rotate_tetromino_if_possible(current_tetromino, locked_grid)  # 按上键尝试顺时针旋转，边界&冲突检测
     # 绘制界面
     window.fill(BLACK)
     draw_grid(window)

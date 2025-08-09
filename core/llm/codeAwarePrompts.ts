@@ -95,9 +95,61 @@ export function constructAnalyzeCompletionStepPrompt(
 }
 
 
-export function constructGenerateCodeFromStepsPrompt(
+// 第一步：专注于代码生成的 prompt
+export function constructGenerateCodePrompt(
     existingCode: string,
-    orderedSteps: Array<{
+    newStepsToImplement: Array<{
+        id: string;
+        title: string;
+        abstract: string;
+    }>,
+    previouslyGeneratedSteps?: Array<{
+        id: string;
+        title: string;
+        abstract: string;
+    }>,
+    taskDescription?: string
+): string {
+    const newStepsText = newStepsToImplement.map(step => 
+        `{"id": "${step.id}", "title": "${step.title}", "abstract": "${step.abstract}"}`
+    ).join(",\n        ");
+    
+    const previousStepsText = previouslyGeneratedSteps ? previouslyGeneratedSteps.map(step => 
+        `{"id": "${step.id}", "title": "${step.title}", "abstract": "${step.abstract}"}`
+    ).join(",\n        ") : "";
+    
+    return `{
+        "task": "You are on the way to implement a project incrementally. You are given existing code and a list of new steps to implement. Your ONLY job is to generate clean, complete code that implements the new steps while maintaining the existing code structure.",
+        ${taskDescription ? `,
+        "task_description": "${taskDescription}"` : ""},
+        "existing_code": "${existingCode}",
+        "new_steps_to_implement": [
+        ${newStepsText}
+        ]${previousStepsText ? `,
+        "previously_generated_steps_context": [
+        ${previousStepsText}
+        ]` : ""}
+        "requirements": [
+            "STRICT RULE 1: You MUST implement ONLY the steps listed in 'new_steps_to_implement'. Do NOT generate code for future steps or complete the entire project at once.",
+            "STRICT RULE 2: Generated code must be clean with concise, clear comments that explain what each part does.",
+            "STRICT RULE 3: Preserve the existing code structure as much as possible while adding new functionality for the required steps.",
+            "Read each step's abstract carefully and implement exactly what is described - no more, no less.",
+            "Include helpful comments in the code to explain the purpose of new additions.",
+            "Maintain code consistency and follow good programming practices.",
+            "The output should be the complete code file including both existing and newly added code.",
+            "Ensure all new functionality is properly integrated with existing code.",
+            "Respond in the same language as the step descriptions.",
+            "You must follow this JSON format in your response: {\\"complete_code\\": \\"(the complete code with existing code preserved and new steps implemented)\\"}",
+            "CRITICAL: Return ONLY a valid JSON object. Do not add any explanatory text before or after the JSON. Do not use code block markers. The response should start with { and end with }.",
+            "Please do not use invalid code block characters to envelope the JSON response, just return the JSON object directly."
+        ],
+    }`;
+}
+
+// 第二步：专注于代码映射的 prompt  
+export function constructMapCodeToStepsPrompt(
+    completeCode: string,
+    allSteps: Array<{
         id: string;
         title: string;
         abstract: string;
@@ -105,59 +157,37 @@ export function constructGenerateCodeFromStepsPrompt(
             id: string;
             title: string;
         }>;
-    }>,
-    previouslyGeneratedSteps?: Array<{
-        id: string;
-        title: string;
-        knowledge_cards: Array<{
-            id: string;
-            title: string;
-        }>;
-        current_corresponding_code?: string;
     }>
 ): string {
-    const stepsText = orderedSteps.map(step => {
+    const stepsText = allSteps.map(step => {
         const knowledgeCardsText = step.knowledge_cards.map(kc => 
-            `{"id": "${kc.id}", "title": "${kc.title}"}`
+            `{"kc_id": "${kc.id}", "title": "${kc.title}"}`
         ).join(", ");
-        return `{"id": "${step.id}", "title": "${step.title}", "abstract": "${step.abstract}", "knowledge_cards": [${knowledgeCardsText}]}`;
+        return `{"step_id": "${step.id}", "title": "${step.title}", "abstract": "${step.abstract}", "knowledge_cards": [${knowledgeCardsText}]}`;
     }).join(",\n        ");
     
-    const previousStepsText = previouslyGeneratedSteps ? previouslyGeneratedSteps.map(step => {
-        const knowledgeCardsText = step.knowledge_cards.map(kc => 
-            `{"id": "${kc.id}", "title": "${kc.title}"}`
-        ).join(", ");
-        return `{"id": "${step.id}", "title": "${step.title}", "knowledge_cards": [${knowledgeCardsText}], "current_corresponding_code": "${step.current_corresponding_code || ""}"}`;
-    }).join(",\n        ") : "";
-    
     return `{
-        "task": "You are given existing code and a list of ordered steps to implement. You MUST generate new code that completes exactly what is required by the abstract of each step - implementing ALL ordered steps completely. Then identify the correspondence between code chunks and each step/knowledge card separately.",
-        "requirements": [
-            "CRITICAL: You must implement ALL steps listed in 'new_steps_to_implement'. Each step has an 'abstract' field that describes exactly what needs to be implemented - follow these abstracts precisely.",
-            "Generate code that implements exactly what each new step's abstract requires - read the abstract carefully and ensure all functionality described is implemented",
-            "You must complete ALL ordered steps - do not skip any step or leave any step partially implemented",
-            "Do not generate excessive code beyond what is needed for the current steps, but ensure you don't miss any functionality described in the step abstracts",
-            "Include proper comments in the generated code to explain what each part does and which step it corresponds to",
-            "Important: Choose only ONE step for each code chunk to correspond to. If the code is relevant to several steps, choose the one it most closely relates to.",
-            "The code correspondence should be updated for previously generated steps as well, since new code generation may affect their positioning or integration",
-            "For each knowledge card, identify the most relevant and precise code that relates to the knowledge card's theme",
-            "If a knowledge card has no corresponding code, leave its code field empty",
-            "The changed_code should include both existing code and newly generated code",
-            "Be very precise in code chunk identification - include only the essential code that directly relates to each step/knowledge card",
-            "Ensure that every step in 'new_steps_to_implement' has corresponding code generated - verify this before responding",
-            "Respond in the same language as the step descriptions",
-            "You must follow this JSON format in your response: {\\"changed_code\\": \\"(complete code with both existing and new parts)\\", \\"steps_corresponding_code\\": [{\\"id\\": \\"step_id\\", \\"code\\": \\"(precise code for this step)\\"}], \\"knowledge_cards_corresponding_code\\": [{\\"id\\": \\"card_id\\", \\"code\\": \\"(precise code for this knowledge card, or empty string if no correspondence)\\"}]}",
-            "The steps_corresponding_code and knowledge_cards_corresponding_code should include entries for ALL steps and knowledge cards (both new and previously generated)",
-            "Please do not use invalid \`\`\`json character to envelope the JSON response, just return the JSON object directly."
-        ],
-        "existing_code": "${existingCode}",
-        "new_steps_to_implement": [
+        "task": "You are given complete code and a list of steps with their knowledge cards. Your job is to create precise mappings between code chunks and steps/knowledge cards.",
+        "complete_code": "${completeCode}",
+        "steps_with_knowledge_cards": [
         ${stepsText}
-        ]${previousStepsText ? `,
-        "previously_generated_steps": [
-        ${previousStepsText}
-        ]` : ""},
-        "verification_reminder": "Before responding, verify that you have implemented ALL steps listed in 'new_steps_to_implement'. Each step must have corresponding code that fulfills its abstract requirements. Count the steps and ensure your steps_corresponding_code array contains an entry for every single step."
+        ],
+        "requirements": [
+            "STRICT RULE 1: Code chunks must be identified by line-based ranges. The minimum unit is a line.",
+            "STRICT RULE 2: For each step, find ALL code chunks that relate to it, even if they appear in non-consecutive locations.",
+            "STRICT RULE 3: Ensure each code chunk corresponds to exactly ONE most appropriate step to avoid overlapping mappings.",
+            "STRICT RULE 4: For knowledge cards within steps, find the most precise and relevant code chunks that relate to the knowledge card's theme.",
+            "Analyze the code line by line to identify which parts implement each step's requirements.",
+            "For each step, extract all relevant code chunks (can be multiple non-consecutive chunks).",
+            "For knowledge cards, identify the most specific code that relates to the card's educational theme.",
+            "If a knowledge card has no corresponding code, leave its code_chunk field empty.",
+            "Code chunks should be precise - include only the essential lines that directly relate to the step/knowledge card.",
+            "Use line numbers or actual code content to clearly identify each chunk.",
+            "Respond in the same language as the step descriptions.",
+            "You must follow this JSON format in your response: {\\"steps_correspond_code\\": [{\\"id\\": \\"step_id\\", \\"code_chunks\\": [\\"code_chunk_1\\", \\"code_chunk_2\\"], \\"knowledge_cards_correspond_code\\": [{\\"id\\": \\"kc_id\\", \\"code_chunk\\": \\"precise_code_chunk\\"}]}]}",
+            "CRITICAL: Return ONLY a valid JSON object. Do not add any explanatory text before or after the JSON. Do not use code block markers. The response should start with { and end with }.",
+            "Please do not use invalid code block characters to envelope the JSON response, just return the JSON object directly."
+        ],
     }`;
 }
 

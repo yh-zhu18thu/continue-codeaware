@@ -35,6 +35,7 @@ export function constructGenerateStepsPrompt(
             "Multiple steps can belong to the same task - this is encouraged to break down complex tasks into manageable pieces",
             "You must follow this JSON format in your response: {"title": "(title of the project)", "high_level_steps": ["(high-level task 1)", "(high-level task 2)", ...], "learning_goal": "(exactly the same learning goals cut out from the input description)", "steps": [{"title": "(title of the step)", "abstract": "(description of the step, can contain Markdown)", "task_corresponding_high_level_task": "(the exact text from high_level_steps array that this step belongs to)"]}]}.",
             "Respond in the same language as the content in \"description\" section, EXCEPT FOR THE JSON FIELD NAMES, which must be in English.",
+            "IMPORTANT: Properly escape all special characters in JSON strings. Use \\n for newlines, \\\\ for backslashes, \\\" for quotes, \\t for tabs, etc. Ensure the JSON is valid and parseable.",
             "Please do not use invalid \`\`\`json character to envelope the JSON response, just return the JSON object directly.",
         ],
         "description": "${userRequirement}"
@@ -59,6 +60,7 @@ export function constructGenerateKnowledgeCardDetailPrompt(
             "Consider the task context when generating explanations and examples to make them more relevant and practical.",
             "Respond in the same language as the project description. You may use Markdown in the content to make it more readable.",
             "You must follow this JSON format in your response: {\\"title\\": \\"(title of the knowledge card)\\", \\"content\\": \\"(content of the knowledge card. Markdown can be used here)\\", \\"tests\\":[{\\"question_type\\": \\"shortAnswer\\", \\"question\\": {\\"stem\\": \\"(the question itself)\\", \\"standard_answer\\": \\"(the correct answer)\\"}}]}",
+            "IMPORTANT: Properly escape all special characters in JSON strings. Use \\\\n for newlines, \\\\\\\\ for backslashes, \\\\\" for quotes, \\\\t for tabs, etc. Ensure the JSON is valid and parseable.",
             "Please do not use invalid \`\`\`json character to envelope the JSON response, just return the JSON object directly."
         ],
         "knowledge_card_theme": "${knowledgeCardTheme}",
@@ -85,6 +87,7 @@ export function constructAnalyzeCompletionStepPrompt(
             "The knowledge card themes should contain concepts the user might be interested in or questions they might have, aligned with the learning goals",
             "Respond in the same language as the project description.",
             "You must follow this JSON format in your response: {\\"current_step\\": \\"(step id from the provided list)\\", \\"step_finished\\": (true or false), \\"knowledge_card_themes\\": [\\"(theme 1)\\", \\"(theme 2)\\", ...]}",
+            "IMPORTANT: Properly escape all special characters in JSON strings. Use \\\\n for newlines, \\\\\\\\ for backslashes, \\\\\" for quotes, \\\\t for tabs, etc. Ensure the JSON is valid and parseable.",
             "Please do not use invalid \`\`\`json character to envelope the JSON response, just return the JSON object directly.",
         ],
         "prefix_code": "${prefixCode}",
@@ -141,6 +144,7 @@ export function constructGenerateCodePrompt(
             "Respond in the same language as the step descriptions.",
             "You must follow this JSON format in your response: {\\"complete_code\\": \\"(the complete code with existing code preserved and new steps implemented)\\"}",
             "CRITICAL: Return ONLY a valid JSON object. Do not add any explanatory text before or after the JSON. Do not use code block markers. The response should start with { and end with }.",
+            "IMPORTANT: Properly escape all special characters in JSON strings. Use \\\\n for newlines, \\\\\\\\ for backslashes, \\\\\" for quotes, \\\\t for tabs, etc. Ensure the JSON is valid and parseable.",
             "Please do not use invalid code block characters to envelope the JSON response, just return the JSON object directly."
         ],
     }`;
@@ -186,6 +190,7 @@ export function constructMapCodeToStepsPrompt(
             "Respond in the same language as the step descriptions.",
             "You must follow this JSON format in your response: {\\"steps_correspond_code\\": [{\\"id\\": \\"step_id\\", \\"code_chunks\\": [\\"code_chunk_1\\", \\"code_chunk_2\\"], \\"knowledge_cards_correspond_code\\": [{\\"id\\": \\"kc_id\\", \\"code_chunk\\": \\"precise_code_chunk\\"}]}]}",
             "CRITICAL: Return ONLY a valid JSON object. Do not add any explanatory text before or after the JSON. Do not use code block markers. The response should start with { and end with }.",
+            "IMPORTANT: Properly escape all special characters in JSON strings. Use \\\\n for newlines, \\\\\\\\ for backslashes, \\\\\" for quotes, \\\\t for tabs, etc. Ensure the JSON is valid and parseable.",
             "Please do not use invalid code block characters to envelope the JSON response, just return the JSON object directly."
         ],
     }`;
@@ -206,6 +211,7 @@ export function constructGenerateKnowledgeCardThemesPrompt(
             "Each theme should be a concise phrase or question (no more than 10-15 words)",
             "Respond in the same language as the task description",
             "You must follow this JSON format in your response: [\\"(theme 1)\\", \\"(theme 2)\\", \\"(theme 3)\\", ...]",
+            "IMPORTANT: Properly escape all special characters in JSON strings. Use \\\\n for newlines, \\\\\\\\ for backslashes, \\\\\" for quotes, \\\\t for tabs, etc. Ensure the JSON is valid and parseable.",
             "Please do not use invalid \`\`\`json character to envelope the JSON response, just return the JSON array directly."
         ],
         "task_description": "${taskDescription}",
@@ -241,6 +247,7 @@ export function constructGenerateKnowledgeCardThemesFromQueryPrompt(
             "If corresponding code exists, extract the relevant code chunk; if not, leave it empty",
             "Respond in the same language as the task description",
             "You must follow this JSON format in your response: [{\\"reason\\":\\"(your thoughts on what the user need to know or may be interested in)\\", \\"title\\": \\"(theme title)\\", \\"corresponding_code_chunk\\": \\"(relevant code or empty string)\\"}]",
+            "IMPORTANT: Properly escape all special characters in JSON strings. Use \\\\n for newlines, \\\\\\\\ for backslashes, \\\\\" for quotes, \\\\t for tabs, etc. Ensure the JSON is valid and parseable.",
             "Please do not use invalid \`\`\`json character to envelope the JSON response, just return the JSON array directly."
         ],
         "query_context": {
@@ -308,6 +315,7 @@ export function constructRerunStepPrompt(
             "If a knowledge card has no corresponding code, leave its corresponding_code empty",
             "Respond in the same language as the step descriptions",
             "You must follow this JSON format in your response: {\\"analysis\\": \\"(your analysis of the changes in the abstract and the things that need modification)\\", \\"updated_code\\": \\"(complete updated code)\\", \\"step_updates\\": {\\"id\\": \\"${previousStep.id}\\", \\"title\\": \\"(possibly updated title)\\", \\"corresponding_code\\": \\"(precise code for this step, not the entire file)\\"}, \\"knowledge_cards_updates\\": [{\\"id\\": \\"card_id\\", \\"needs_update\\": true/false, \\"title\\": \\"(possibly updated title)\\", \\"corresponding_code\\": \\"(relevant code or empty string)\\"}]}",
+            "IMPORTANT: Properly escape all special characters in JSON strings. Use \\\\n for newlines, \\\\\\\\ for backslashes, \\\\\" for quotes, \\\\t for tabs, etc. Ensure the JSON is valid and parseable.",
             "Please do not use invalid \`\`\`json character to envelope the JSON response, just return the JSON object directly."
         ],
         "existing_code": "${existingCode}",${currentCodeMappingText}
@@ -365,6 +373,7 @@ export function constructProcessCodeChangesPrompt(
             "The corresponding_code should include the relevant portions from the current_code (after changes)",
             "Respond in the same language as the step descriptions",
             "You must follow this JSON format in your response: {\\"analysis\\": \\"(your analysis of the changes in the code and the things that need modification)\\", \\"updated_steps\\": [{\\"id\\": \\"step_id\\", \\"needs_update\\": true/false, \\"code_broken\\": true/false, \\"title\\": \\"(updated or original title)\\", \\"abstract\\": \\"(updated or original abstract)\\", \\"corresponding_code\\": \\"(relevant code from current_code)\\"}], \\"knowledge_cards\\": [{\\"id\\": \\"card_id\\", \\"needs_update\\": true/false, \\"title\\": \\"(updated or original title)\\", \\"corresponding_code\\": \\"(relevant code from current_code)\\"}]}",
+            "IMPORTANT: Properly escape all special characters in JSON strings. Use \\\\n for newlines, \\\\\\\\ for backslashes, \\\\\" for quotes, \\\\t for tabs, etc. Ensure the JSON is valid and parseable.",
             "Please do not use invalid \`\`\`json character to envelope the JSON response, just return the JSON object directly."
         ],
         "previous_code": "${previousCode}",
@@ -394,6 +403,7 @@ export function constructEvaluateSaqAnswerPrompt(
             "Keep the feedback concise and educational - aim for 1-2 sentences",
             "Respond in the same language as the question",
             "You must follow this JSON format in your response: {\\"isCorrect\\": true/false, \\"remarks\\": \\"(your feedback message)\\"}",
+            "IMPORTANT: Properly escape all special characters in JSON strings. Use \\\\n for newlines, \\\\\\\\ for backslashes, \\\\\" for quotes, \\\\t for tabs, etc. Ensure the JSON is valid and parseable.",
             "Please do not use invalid \`\`\`json character to envelope the JSON response, just return the JSON object directly."
         ],
         "question": "${question.replace(/"/g, "\"")}",

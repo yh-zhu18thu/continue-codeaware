@@ -238,3 +238,27 @@ if (jsonStart !== -1 && jsonEnd > jsonStart) {
 
 ---
 
+_**User**_
+
+我发现生成json时有部分符号没有正确转义（比如"""），请再prompt中强调这一点
+
+---
+
+_**Assistant**_
+
+我看到您手动编辑了文件，让我检查当前的内容并在prompt中强调JSON转义的重要性。 现在让我为所有涉及JSON生成的prompt函数添加JSON转义的强调。首先是第一步的代码生成prompt： 
+```
+
+```
+现在为第二步的映射prompt添加JSON转义强调： 
+```
+
+```
+现在为其他也返回JSON的prompt函数添加转义强调。首先是步骤生成prompt： 
+```
+
+```
+
+
+---
+

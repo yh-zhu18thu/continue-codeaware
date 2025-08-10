@@ -969,7 +969,7 @@ export const generateKnowledgeCardThemesFromQuery = createAsyncThunk<
                         for (let index = 0; index < themeResponses.length; index++) {
                             const themeResponse = themeResponses[index];
                             const theme = themeResponse.title || themeResponse.theme || themeResponse;
-                            const correspondingCodeChunk = themeResponse.corresponding_code_chunk || "";
+                            const correspondingCodeChunk = themeResponse.corresponding_code_snippet || "";
                             
                             const cardId = `${stepId}-kc-${existingCardCount + index + 1}`;
                             
@@ -1420,7 +1420,7 @@ export const generateCodeFromSteps = createAsyncThunk<
                 // 将新格式转换为旧格式以保持兼容性
                 stepsCorrespondingCode = stepsCorrespondingCodeRaw.map((step: any) => ({
                     id: step.id,
-                    code: step.code_chunks ? step.code_chunks.join('\n\n') : "" // 合并多个代码块
+                    code: step.code_snippets ? step.code_snippets.join('\n\n') : "" // 合并多个代码片段
                 }));
 
                 // 提取所有知识卡片的映射
@@ -1429,7 +1429,7 @@ export const generateCodeFromSteps = createAsyncThunk<
                         step.knowledge_cards_correspond_code.forEach((kc: any) => {
                             knowledgeCardsCorrespondingCode.push({
                                 id: kc.id,
-                                code: kc.code_chunk || ""
+                                code: kc.code_snippet || ""
                             });
                         });
                     }

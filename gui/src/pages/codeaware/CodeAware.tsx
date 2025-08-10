@@ -1207,6 +1207,7 @@ export const CodeAware = () => {
           return {
             id: step.id,
             title: step.title,
+            abstract: step.abstract, // Add the missing abstract property
             knowledge_cards: step.knowledgeCards.map(card => ({
               id: card.id,
               title: card.title
@@ -1640,56 +1641,11 @@ export const CodeAware = () => {
   useEffect(() => {
     console.log("Code chunks to highlight in IDE:", codeChunksToHighlightInIde);
     if (codeChunksToHighlightInIde.length > 0) {
-      // Merge multiple code chunks into one for efficient highlighting
-      if (codeChunksToHighlightInIde.length === 1) {
-        // Single chunk, send as is
-        try {
-          ideMessenger?.post("highlightCodeChunk", codeChunksToHighlightInIde[0]);
-        } catch (error) {
-          console.error("Failed to highlight code in IDE:", error);
-        }
-      } else {
-        // Multiple chunks, merge them
-        const groupedByFile = codeChunksToHighlightInIde.reduce((acc, chunk) => {
-          if (!acc[chunk.filePath]) {
-            acc[chunk.filePath] = [];
-          }
-          acc[chunk.filePath].push(chunk);
-          return acc;
-        }, {} as Record<string, typeof codeChunksToHighlightInIde>);
-
-        // Process each file separately
-        Object.entries(groupedByFile).forEach(([filePath, chunks]) => {
-          try {
-            if (chunks.length === 1) {
-              // Single chunk in this file
-              ideMessenger?.post("highlightCodeChunk", chunks[0]);
-            } else {
-              // Multiple chunks in same file, merge them
-              const sortedChunks = chunks.sort((a, b) => a.range[0] - b.range[0]);
-              const minLine = Math.min(...sortedChunks.map(chunk => chunk.range[0]));
-              const maxLine = Math.max(...sortedChunks.map(chunk => chunk.range[1]));
-              
-              // Merge content with line breaks between chunks
-              const mergedContent = sortedChunks
-                .map(chunk => chunk.content)
-                .join('\n...\n'); // Add separator between chunks
-
-              const mergedChunk = {
-                id: `merged-${sortedChunks.map(c => c.id).join('-')}`,
-                content: mergedContent,
-                range: [minLine, maxLine] as [number, number],
-                isHighlighted: true,
-                disabled: false,
-                filePath: filePath
-              };
-
-              ideMessenger?.post("highlightCodeChunk", mergedChunk);
-            }
-          } catch (error) {
-            console.error("Failed to highlight code in IDE:", error);
-          }
-        });
+      try {
+        // Use the new highlightCodeChunks method to avoid merging
+        ideMessenger?.post("highlightCodeChunks", codeChunksToHighlightInIde);
+      } catch (error) {
+        console.error("Failed to highlight code chunks in IDE:", error);
       }
       
       // Reset the flag

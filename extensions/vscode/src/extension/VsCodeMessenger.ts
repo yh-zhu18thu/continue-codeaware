@@ -329,6 +329,11 @@ export class VsCodeMessenger {
       await this.highlightCodeManager.highlightCodeChunk(msg.data);
     });
 
+    this.onWebview("highlightCodeChunks", async (msg) => {
+      console.log("highlightCodeChunks", msg.data);
+      await this.highlightCodeManager.highlightCodeChunks(msg.data);
+    });
+
     this.onWebview("clearCodeHighlight", async (msg) => {
       this.highlightCodeManager.clearAllHighlights();
     });

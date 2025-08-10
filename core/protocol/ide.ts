@@ -1,20 +1,20 @@
 import { ControlPlaneSessionInfo } from "../control-plane/client";
 
 import type {
-  ContinueRcJson,
-  DiffLine,
-  FileStatsMap,
-  FileType,
-  IDE,
-  IdeInfo,
-  IdeSettings,
-  IndexTag,
-  Location,
-  Problem,
-  Range,
-  RangeInFile,
-  TerminalOptions,
-  Thread,
+    ContinueRcJson,
+    DiffLine,
+    FileStatsMap,
+    FileType,
+    IDE,
+    IdeInfo,
+    IdeSettings,
+    IndexTag,
+    Location,
+    Problem,
+    Range,
+    RangeInFile,
+    TerminalOptions,
+    Thread,
 } from "../";
 
 export interface GetGhTokenArgs {
@@ -115,6 +115,19 @@ export type ToIdeFromWebviewOrCoreProtocol = {
       filename: string;
       content?: string;
     },
+    void,
+  ];
+  
+  // CodeAware: Highlight multiple code chunks
+  highlightCodeChunks: [
+    Array<{
+      id: string;
+      content: string;
+      range: [number, number];
+      isHighlighted: boolean;
+      disabled: boolean;
+      filePath: string;
+    }>,
     void,
   ];
 };

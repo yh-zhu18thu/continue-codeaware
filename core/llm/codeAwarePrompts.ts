@@ -209,7 +209,7 @@ export function constructGenerateKnowledgeCardThemesPrompt(
             "The themes should be focused on concepts, techniques, or common questions that learners might have when working on this step",
             "The themes should align with the learning goals provided. But you can include more general topics in addition to ones directly relevant to the project at hand. You can also add topics that might interest the user.",
             "Each theme should be a concise phrase or question (no more than 10-15 words)",
-            "Respond in the same language as the task description",
+            "Respond in the same language as the task_description",
             "You must follow this JSON format in your response: [\\"(theme 1)\\", \\"(theme 2)\\", \\"(theme 3)\\", ...]",
             "IMPORTANT: Properly escape all special characters in JSON strings. Ensure the JSON is valid and parseable.",
             "Please do not use invalid \`\`\`json character to envelope the JSON response, just return the JSON array directly."

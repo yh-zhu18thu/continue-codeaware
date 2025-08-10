@@ -199,7 +199,7 @@ function calculateCodeChunkRange(fullCode: string, chunkCode: string): [number, 
     return [1, Math.min(chunkLines.length, fullCodeLines.length)];
 }
 
-// 辅助函数：获取步骤对应的最大代码块内容
+// 辅助函数：获取步骤对应的所有代码块内容
 export async function getStepCorrespondingCode(
     stepId: string, 
     mappings: any[], 
@@ -222,39 +222,62 @@ export async function getStepCorrespondingCode(
         return "";
     }
     
-    // 找到范围最大的代码块（即范围覆盖最多行的代码块）
-    const maxRangeChunk = correspondingCodeChunks.reduce((max, current) => {
-        const maxRange = max.range[1] - max.range[0] + 1;
-        const currentRange = current.range[1] - current.range[0] + 1;
-        return currentRange > maxRange ? current : max;
-    });
+    // 按范围起始行号排序，确保代码片段按在文件中的顺序排列
+    correspondingCodeChunks.sort((a, b) => a.range[0] - b.range[0]);
     
     // 尝试从当前IDE文件获取最新内容，以确保代码是最新的
+    let allCodeSnippets: string[] = [];
+    
     try {
         const currentFileResponse = await ideMessenger.request("getCurrentFile", undefined);
         
         if (currentFileResponse?.status === "success" && currentFileResponse.content) {
             const currentFile = currentFileResponse.content;
+            const fileLines = currentFile.contents ? currentFile.contents.split('\n') : [];
             
-            // 如果文件路径匹配，从当前文件内容中提取对应行号的代码
-            if (currentFile.path === maxRangeChunk.filePath && currentFile.contents) {
-                const lines = currentFile.contents.split('\n');
-                const startLine = Math.max(0, maxRangeChunk.range[0] - 1); // 转换为0基索引
-                const endLine = Math.min(lines.length, maxRangeChunk.range[1]); // 确保不超出范围
-                
-                const currentCode = lines.slice(startLine, endLine).join('\n');
-                console.log(`📖 从当前文件获取步骤 ${stepId} 对应的代码 (行${maxRangeChunk.range[0]}-${maxRangeChunk.range[1]}):`, 
-                    currentCode.substring(0, 100) + (currentCode.length > 100 ? "..." : ""));
-                
-                return currentCode;
+            // 为每个代码块获取最新内容
+            for (const chunk of correspondingCodeChunks) {
+                // 如果文件路径匹配，从当前文件内容中提取对应行号的代码
+                if (currentFile.path === chunk.filePath && fileLines.length > 0) {
+                    const startLine = Math.max(0, chunk.range[0] - 1); // 转换为0基索引
+                    const endLine = Math.min(fileLines.length, chunk.range[1]); // 确保不超出范围
+                    
+                    const currentCode = fileLines.slice(startLine, endLine).join('\n');
+                    allCodeSnippets.push(currentCode);
+                    
+                    console.log(`📖 从当前文件获取步骤 ${stepId} 代码片段 ${chunk.id} (行${chunk.range[0]}-${chunk.range[1]}):`, 
+                        currentCode.substring(0, 100) + (currentCode.length > 100 ? "..." : ""));
+                } else {
+                    // 如果文件路径不匹配或没有文件内容，使用缓存的代码块内容
+                    allCodeSnippets.push(chunk.content);
+                    console.log(`📖 使用缓存的代码块内容 ${chunk.id}:`, 
+                        chunk.content.substring(0, 100) + (chunk.content.length > 100 ? "..." : ""));
+                }
             }
+        } else {
+            // 如果无法获取当前文件，使用所有缓存的代码块内容
+            allCodeSnippets = correspondingCodeChunks.map(chunk => chunk.content);
+            console.warn("⚠️ 无法从IDE获取当前文件内容，使用所有缓存的代码块内容");
         }
     } catch (error) {
-        console.warn("⚠️ 无法从IDE获取当前文件内容，使用缓存的代码块内容:", error);
+        console.warn("⚠️ 无法从IDE获取当前文件内容，使用所有缓存的代码块内容:", error);
+        allCodeSnippets = correspondingCodeChunks.map(chunk => chunk.content);
     }
     
-    // 如果无法从IDE获取最新内容，返回缓存的代码块内容
-    return maxRangeChunk.content;
+    // 将所有代码片段合并，用适当的分隔符分开
+    if (allCodeSnippets.length === 0) {
+        return "";
+    } else if (allCodeSnippets.length === 1) {
+        return allCodeSnippets[0];
+    } else {
+        // 多个代码片段时，用注释和空行分隔
+        const combinedCode = allCodeSnippets.map((snippet, index) => {
+            return `// --- 代码片段 ${index + 1} ---\n${snippet}`;
+        }).join('\n\n');
+        
+        console.log(`📦 合并了 ${allCodeSnippets.length} 个代码片段，总长度: ${combinedCode.length}`);
+        return combinedCode;
+    }
 }
 
 //异步对用户需求和当前知识状态进行生成
@@ -691,11 +714,30 @@ export const generateKnowledgeCardThemes = createAsyncThunk<
             // 获取任务描述
             const taskDescription = state.codeAwareSession.userRequirement?.requirementDescription || "";
 
+            // 尝试获取当前步骤对应的代码块内容
+            let currentCode: string | undefined;
+            try {
+                currentCode = await getStepCorrespondingCode(
+                    stepId, 
+                    state.codeAwareSession.codeAwareMappings,
+                    state.codeAwareSession.codeChunks,
+                    extra.ideMessenger
+                );
+                // 如果代码为空字符串，设置为 undefined
+                if (!currentCode || currentCode.trim() === "") {
+                    currentCode = undefined;
+                }
+            } catch (error) {
+                console.warn("⚠️ 无法获取步骤对应的代码，将只生成主题不包含代码对应关系:", error);
+                currentCode = undefined;
+            }
+
             // 构造提示词
             const prompt = constructGenerateKnowledgeCardThemesPrompt(
                 taskDescription,
                 { title: stepTitle, abstract: stepAbstract },
-                learningGoal
+                learningGoal,
+                currentCode
             );
 
             console.log("generateKnowledgeCardThemes called with:", {
@@ -763,38 +805,151 @@ export const generateKnowledgeCardThemes = createAsyncThunk<
                     const existingMappings = state.codeAwareSession.codeAwareMappings.filter(
                         mapping => mapping.stepId === stepId
                     );
+                    const existingCodeChunks = state.codeAwareSession.codeChunks;
                     
-                    // 为每个主题创建知识卡片
-                    themes.forEach((theme: string, index: number) => {
-                        const cardId = `${stepId}-kc-${index + 1}`;
-                        
-                        // 创建知识卡片
-                        dispatch(createKnowledgeCard({
-                            stepId,
-                            cardId,
-                            theme
-                        }));
+                    // 检查是否为新格式（包含代码对应关系）
+                    const isNewFormat = themes.length > 0 && typeof themes[0] === "object" && themes[0].theme;
+                    
+                    if (isNewFormat) {
+                        // 新格式：处理包含代码对应关系的主题
+                        for (let index = 0; index < themes.length; index++) {
+                            const themeWithCode = themes[index] as { theme: string, corresponding_code_snippets?: string[] };
+                            const cardId = `${stepId}-kc-${index + 1}`;
+                            
+                            // 创建知识卡片
+                            dispatch(createKnowledgeCard({
+                                stepId,
+                                cardId,
+                                theme: themeWithCode.theme
+                            }));
 
-                        // 为每个现有映射创建包含新知识卡片的映射关系
-                        if (existingMappings.length > 0) {
-                            existingMappings.forEach(existingMapping => {
+                            // 如果有对应的代码片段，为每个片段创建代码块和映射
+                            const codeSnippets = themeWithCode.corresponding_code_snippets || [];
+                            if (codeSnippets.length > 0) {
+                                // 获取当前active文件的内容来推断行号
+                                let currentFilePath = "";
+                                let currentFileContents = "";
+                                
+                                try {
+                                    const currentFileResponse = await extra.ideMessenger.request("getCurrentFile", undefined);
+                                    
+                                    if (currentFileResponse?.status === "success" && currentFileResponse.content) {
+                                        const currentFile = currentFileResponse.content;
+                                        currentFilePath = currentFile.path || "";
+                                        currentFileContents = currentFile.contents || "";
+                                    } else {
+                                        console.warn("⚠️ 无法获取当前文件内容，使用默认行号范围");
+                                    }
+                                } catch (fileError) {
+                                    console.warn("⚠️ 获取当前文件信息失败，使用默认行号范围:", fileError);
+                                }
+
+                                // 为每个代码片段创建代码块和映射
+                                for (const codeSnippet of codeSnippets) {
+                                    if (codeSnippet && codeSnippet.trim() !== "") {
+                                        let codeChunkRange: [number, number] = [1, codeSnippet.split('\n').length];
+                                        
+                                        // 使用当前文件内容来计算准确的行号范围
+                                        if (currentFileContents) {
+                                            codeChunkRange = calculateCodeChunkRange(currentFileContents, codeSnippet.trim());
+                                            console.log(`📍 为知识卡片代码块计算行号范围: ${codeChunkRange[0]}-${codeChunkRange[1]}`);
+                                        }
+
+                                        // 创建新的代码块
+                                        dispatch(createOrGetCodeChunk({
+                                            content: codeSnippet.trim(),
+                                            range: codeChunkRange,
+                                            filePath: currentFilePath
+                                        }));
+
+                                        // 获取新创建的代码块
+                                        const updatedState = getState();
+                                        const trimmedSnippet = codeSnippet.trim();
+                                        const newCodeChunk = updatedState.codeAwareSession.codeChunks.find(chunk => 
+                                            chunk.content === trimmedSnippet &&
+                                            chunk.range[0] === codeChunkRange[0] && chunk.range[1] === codeChunkRange[1]
+                                        );
+
+                                        if (newCodeChunk) {
+                                            // 创建映射关系
+                                            dispatch(createCodeAwareMapping({
+                                                codeChunkId: newCodeChunk.id,
+                                                stepId,
+                                                knowledgeCardId: cardId,
+                                                isHighlighted: false
+                                            }));
+                                        } else {
+                                            console.warn("⚠️ 无法找到新创建的代码块，为该代码片段创建基础映射");
+                                        }
+                                    }
+                                }
+                                
+                                // 如果没有成功创建任何映射，创建基础映射
+                                const updatedState = getState();
+                                const cardMappings = updatedState.codeAwareSession.codeAwareMappings.filter(
+                                    mapping => mapping.knowledgeCardId === cardId
+                                );
+                                if (cardMappings.length === 0) {
+                                    dispatch(createCodeAwareMapping({
+                                        stepId,
+                                        knowledgeCardId: cardId,
+                                        isHighlighted: false
+                                    }));
+                                }
+                            } else {
+                                // 没有代码对应关系，使用现有映射或创建基础映射
+                                if (existingMappings.length > 0) {
+                                    existingMappings.forEach(existingMapping => {
+                                        dispatch(createCodeAwareMapping({
+                                            codeChunkId: existingMapping.codeChunkId,
+                                            requirementChunkId: existingMapping.requirementChunkId,
+                                            stepId,
+                                            knowledgeCardId: cardId,
+                                            isHighlighted: false
+                                        }));
+                                    });
+                                } else {
+                                    dispatch(createCodeAwareMapping({
+                                        stepId,
+                                        knowledgeCardId: cardId,
+                                        isHighlighted: false
+                                    }));
+                                }
+                            }
+                        }
+                    } else {
+                        // 旧格式：处理简单的字符串主题列表
+                        themes.forEach((theme: string, index: number) => {
+                            const cardId = `${stepId}-kc-${index + 1}`;
+                            
+                            // 创建知识卡片
+                            dispatch(createKnowledgeCard({
+                                stepId,
+                                cardId,
+                                theme
+                            }));
+
+                            // 为每个现有映射创建包含新知识卡片的映射关系
+                            if (existingMappings.length > 0) {
+                                existingMappings.forEach(existingMapping => {
+                                    dispatch(createCodeAwareMapping({
+                                        codeChunkId: existingMapping.codeChunkId,
+                                        requirementChunkId: existingMapping.requirementChunkId,
+                                        stepId,
+                                        knowledgeCardId: cardId,
+                                        isHighlighted: false
+                                    }));
+                                });
+                            } else {
+                                // 如果没有现有映射，创建基础映射关系
                                 dispatch(createCodeAwareMapping({
-                                    codeChunkId: existingMapping.codeChunkId,
-                                    requirementChunkId: existingMapping.requirementChunkId,
                                     stepId,
                                     knowledgeCardId: cardId,
                                     isHighlighted: false
                                 }));
-                            });
-                        } else {
-                            // 如果没有现有映射，创建基础映射关系
-                            dispatch(createCodeAwareMapping({
-                                stepId,
-                                knowledgeCardId: cardId,
-                                isHighlighted: false
-                            }));
-                        }
-                    });
+                            }
+                        });
+                    }
 
                     // 设置生成完成状态
                     dispatch(setKnowledgeCardGenerationStatus({ stepId, status: "checked" }));
@@ -969,7 +1124,7 @@ export const generateKnowledgeCardThemesFromQuery = createAsyncThunk<
                         for (let index = 0; index < themeResponses.length; index++) {
                             const themeResponse = themeResponses[index];
                             const theme = themeResponse.title || themeResponse.theme || themeResponse;
-                            const correspondingCodeChunk = themeResponse.corresponding_code_snippet || "";
+                            const correspondingCodeChunks = themeResponse.corresponding_code_snippets || [];
                             
                             const cardId = `${stepId}-kc-${existingCardCount + index + 1}`;
                             
@@ -981,12 +1136,10 @@ export const generateKnowledgeCardThemesFromQuery = createAsyncThunk<
                             }));
                             
                             // 处理代码块对应关系
-                            if (correspondingCodeChunk && correspondingCodeChunk.trim()) {
-                                // 如果有对应的代码块，需要创建或获取代码块，并创建映射
-                                
-                                // 首先获取当前active文件的内容来推断行号
-                                let codeChunkRange: [number, number] = [1, correspondingCodeChunk.split('\n').length];
+                            if (correspondingCodeChunks.length > 0) {
+                                // 获取当前active文件的内容来推断行号
                                 let currentFilePath = "";
+                                let currentFileContents = "";
                                 
                                 try {
                                     const currentFileResponse = await extra.ideMessenger.request("getCurrentFile", undefined);
@@ -994,77 +1147,85 @@ export const generateKnowledgeCardThemesFromQuery = createAsyncThunk<
                                     if (currentFileResponse?.status === "success" && currentFileResponse.content) {
                                         const currentFile = currentFileResponse.content;
                                         currentFilePath = currentFile.path || "";
-                                        
-                                        // 使用当前文件内容来计算准确的行号范围
-                                        if (currentFile.contents) {
-                                            codeChunkRange = calculateCodeChunkRange(currentFile.contents, correspondingCodeChunk.trim());
-                                            console.log(`📍 为代码块计算行号范围: ${codeChunkRange[0]}-${codeChunkRange[1]}`);
-                                        }
+                                        currentFileContents = currentFile.contents || "";
                                     } else {
                                         console.warn("⚠️ 无法获取当前文件内容，使用默认行号范围");
                                     }
                                 } catch (fileError) {
                                     console.warn("⚠️ 获取当前文件信息失败，使用默认行号范围:", fileError);
                                 }
-                                
-                                // 尝试在现有代码块中找到匹配或重叠的代码块
-                                const matchingChunk = currentState.codeAwareSession.codeChunks.find(chunk => 
-                                    chunk.content.includes(correspondingCodeChunk.trim()) || 
-                                    correspondingCodeChunk.trim().includes(chunk.content)
-                                );
-                                
-                                if (matchingChunk) {
-                                    // 如果找到了匹配的代码块，使用现有的映射或创建新的
-                                    const existingMapping = existingMappings.find(mapping => 
-                                        mapping.codeChunkId === matchingChunk.id
-                                    );
-                                    
-                                    if (existingMapping) {
-                                        // 基于现有映射创建新的映射
-                                        dispatch(createCodeAwareMapping({
-                                            codeChunkId: existingMapping.codeChunkId,
-                                            requirementChunkId: existingMapping.requirementChunkId,
-                                            stepId,
-                                            knowledgeCardId: cardId,
-                                            isHighlighted: false
-                                        }));
-                                    } else {
-                                        // 创建基础映射
-                                        dispatch(createCodeAwareMapping({
-                                            codeChunkId: matchingChunk.id,
-                                            stepId,
-                                            knowledgeCardId: cardId,
-                                            isHighlighted: false
-                                        }));
-                                    }
-                                } else {
-                                    // 如果没有找到匹配的代码块，创建新的代码块
-                                    
-                                    // 创建新代码块，使用准确计算的行号范围和文件路径
-                                    dispatch(createOrGetCodeChunk({
-                                        content: correspondingCodeChunk.trim(),
-                                        range: codeChunkRange,
-                                        filePath: currentFilePath
-                                    }));
-                                    
-                                    // 获取新创建的代码块（通过内容和范围匹配）
-                                    const updatedState = getState();
-                                    const newCodeChunk = updatedState.codeAwareSession.codeChunks.find(chunk => 
-                                        chunk.content === correspondingCodeChunk.trim() &&
-                                        chunk.range[0] === codeChunkRange[0] &&
-                                        chunk.range[1] === codeChunkRange[1]
-                                    );
-                                    
-                                    if (newCodeChunk) {
-                                        // 创建映射关系
-                                        dispatch(createCodeAwareMapping({
-                                            codeChunkId: newCodeChunk.id,
-                                            stepId,
-                                            knowledgeCardId: cardId,
-                                            isHighlighted: false
-                                        }));
+
+                                // 为每个代码片段处理映射关系
+                                for (const correspondingCodeChunk of correspondingCodeChunks) {
+                                    if (correspondingCodeChunk && correspondingCodeChunk.trim()) {
+                                        let codeChunkRange: [number, number] = [1, correspondingCodeChunk.split('\n').length];
                                         
-                                        console.log(`✅ 为知识卡片 ${cardId} 创建了新代码块: ${newCodeChunk.id} (${codeChunkRange[0]}-${codeChunkRange[1]}行)`);
+                                        // 使用当前文件内容来计算准确的行号范围
+                                        if (currentFileContents) {
+                                            codeChunkRange = calculateCodeChunkRange(currentFileContents, correspondingCodeChunk.trim());
+                                            console.log(`📍 为代码块计算行号范围: ${codeChunkRange[0]}-${codeChunkRange[1]}`);
+                                        }
+                                        
+                                        // 尝试在现有代码块中找到匹配或重叠的代码块
+                                        const matchingChunk = currentState.codeAwareSession.codeChunks.find(chunk => 
+                                            chunk.content.includes(correspondingCodeChunk.trim()) || 
+                                            correspondingCodeChunk.trim().includes(chunk.content)
+                                        );
+                                        
+                                        if (matchingChunk) {
+                                            // 如果找到了匹配的代码块，使用现有的映射或创建新的
+                                            const existingMapping = existingMappings.find(mapping => 
+                                                mapping.codeChunkId === matchingChunk.id
+                                            );
+                                            
+                                            if (existingMapping) {
+                                                // 基于现有映射创建新的映射
+                                                dispatch(createCodeAwareMapping({
+                                                    codeChunkId: existingMapping.codeChunkId,
+                                                    requirementChunkId: existingMapping.requirementChunkId,
+                                                    stepId,
+                                                    knowledgeCardId: cardId,
+                                                    isHighlighted: false
+                                                }));
+                                            } else {
+                                                // 创建基础映射
+                                                dispatch(createCodeAwareMapping({
+                                                    codeChunkId: matchingChunk.id,
+                                                    stepId,
+                                                    knowledgeCardId: cardId,
+                                                    isHighlighted: false
+                                                }));
+                                            }
+                                        } else {
+                                            // 如果没有找到匹配的代码块，创建新的代码块
+                                            
+                                            // 创建新代码块，使用准确计算的行号范围和文件路径
+                                            dispatch(createOrGetCodeChunk({
+                                                content: correspondingCodeChunk.trim(),
+                                                range: codeChunkRange,
+                                                filePath: currentFilePath
+                                            }));
+                                            
+                                            // 获取新创建的代码块（通过内容和范围匹配）
+                                            const updatedState = getState();
+                                            const newCodeChunk = updatedState.codeAwareSession.codeChunks.find(chunk => 
+                                                chunk.content === correspondingCodeChunk.trim() &&
+                                                chunk.range[0] === codeChunkRange[0] &&
+                                                chunk.range[1] === codeChunkRange[1]
+                                            );
+                                            
+                                            if (newCodeChunk) {
+                                                // 创建映射关系
+                                                dispatch(createCodeAwareMapping({
+                                                    codeChunkId: newCodeChunk.id,
+                                                    stepId,
+                                                    knowledgeCardId: cardId,
+                                                    isHighlighted: false
+                                                }));
+                                                
+                                                console.log(`✅ 为知识卡片 ${cardId} 创建了新代码块: ${newCodeChunk.id} (${codeChunkRange[0]}-${codeChunkRange[1]}行)`);
+                                            }
+                                        }
                                     }
                                 }
                             } else {

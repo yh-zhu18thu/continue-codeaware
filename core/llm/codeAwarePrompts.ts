@@ -9,7 +9,7 @@ export function constructParaphraseUserIntentPrompt(
     return `{
         "task": "You are given a brief description of a coding project. Provide a clear implementation plan and learning goals.",
         "requirements": [
-            "For the implementation plan: list the basic approach and key steps needed to complete the project. Use simple terms and analogies, no code or technical jargon.",
+            "For the implementation plan: list the basic approach and key steps needed to complete the project. Use simple terms, no code or technical jargon except those users themselves have mentioned.",
             "IMPORTANT: if the user specify any technical or design preferences, please respect the user's preferences and incorporate them into the implementation plan.",
             "For learning goals: identify what the learner will gain from this project. Create goals if none are provided.",
             "Respond in the same language as the project description.",
@@ -181,7 +181,7 @@ export function constructMapCodeToStepsPrompt(
         "requirements": [
             "STRICT RULE 1: Code snippets must be identified by line-based ranges. The minimum unit is a line.",
             "STRICT RULE 2: For each step, find ALL code snippets that relate to it, even if they appear in non-consecutive locations. This includes: the main implementation code, function definitions that implement the step's functionality, function calls that invoke the step's functionality, variable declarations and assignments related to the step, and any supporting code that directly contributes to the step's purpose. However, do NOT include code that deals with different themes or unrelated functionality (e.g., if a step is about 'pygame game loop', do not include specific game logic implementations within that loop).",
-            "STRICT RULE 3: For knowledge cards within steps, find the most precise and relevant code snippets that relate to the knowledge card's theme.",
+            "STRICT RULE 3: For knowledge cards within steps, find the most precise and relevant code snippets (typically one line) that relate to the knowledge card's theme.",
             "IMPORTANT: Try to ensure that every line of code is assigned to at least one step so that students understand the purpose of each line. Avoid leaving code lines unassigned",
             "Analyze the code line by line to identify which parts implement each step's requirements.",
             "For each step, extract all relevant code snippets (can be multiple non-consecutive snippets) that directly contribute to achieving the step's goals.",
@@ -202,27 +202,65 @@ export function constructMapCodeToStepsPrompt(
 export function constructGenerateKnowledgeCardThemesPrompt(
     taskDescription: string,
     currentStep: { title: string, abstract: string },
-    learningGoal: string
+    learningGoal: string,
+    currentCode?: string
 ): string {
-    return `{
-        "task": "You are given a programming task, information about the current step, and learning goals. Generate a list of potential knowledge card themes that would be helpful for the user to understand this step better.",
-        "requirements": [
-            "Generate several (typically 3+) knowledge card themes that are relevant to the current step",
-            "The themes should cover concepts, techniques, or common questions and issues that learners might have when working on this step",
-            "The themes should align with the learning goals provided. But you can include more general topics in addition to ones directly relevant to the project at hand. You can also add topics that might interest the user.",
-            "Each theme should be a concise phrase or question (no more than 10-15 words)",
-            "Respond in the same language as the task_description",
-            "You must follow this JSON format in your response: [\\"(theme 1)\\", \\"(theme 2)\\", \\"(theme 3)\\", ...]",
-            "IMPORTANT: Properly escape all special characters in JSON strings. Ensure the JSON is valid and parseable.",
-            "Please do not use invalid \`\`\`json character to envelope the JSON response, just return the JSON array directly."
-        ],
-        "task_description": "${taskDescription}",
-        "current_step": {
-            "title": "${currentStep.title}",
-            "abstract": "${currentStep.abstract}"
-        },
-        "learning_goal": "${learningGoal}"
-    }`;
+    const codeContext = currentCode ? `
+        "current_code": "${currentCode}",` : "";
+    
+    const codeRequirements = currentCode ? [
+        "For each theme, identify if there is corresponding code in the current_code that relates to this theme",
+        "If corresponding code exists, extract the most precise and relevant code snippets that relate to the knowledge card's theme. Focus on the specific lines that directly demonstrate the concept rather than including large code blocks",
+        "A knowledge card can have multiple code snippets if different parts of the code relate to the same theme",
+        "If a theme has no corresponding code, leave the corresponding_code_snippets array empty",
+        "Code snippets should be precise and focused - include lines that directly relate to the theme's specific educational purpose"
+    ] : [
+        "Since no code is available for this step yet, focus only on generating relevant themes"
+    ];
+    
+    if (currentCode) {
+        return `{
+            "task": "You are given a programming task, information about the current step, and learning goals. Generate a list of potential knowledge card themes that would be helpful for the user to understand this step better.",
+            "requirements": [
+                "Generate several (typically 3+) knowledge card themes that are relevant to the current step",
+                "The themes should cover concepts, techniques, or common questions and issues that learners might have when working on this step",
+                "The themes should align with the learning goals provided. But you can include more general topics in addition to ones directly relevant to the project at hand. You can also add topics that might interest the user.",
+                "Each theme should be a concise phrase or question (no more than 10-15 words)",
+                ${codeRequirements.map(req => `"${req}"`).join(",\n                ")},
+                "Respond in the same language as the task_description",
+                "You must follow this JSON format in your response: [{\\"theme\\": \\"(theme title)\\", \\"corresponding_code_snippets\\": [\\"(relevant code snippet 1)\\", \\"(relevant code snippet 2)\\", ...]}]",
+                "IMPORTANT: Properly escape all special characters in JSON strings. Ensure the JSON is valid and parseable.",
+                "Please do not use invalid \`\`\`json character to envelope the JSON response, just return the JSON array directly."
+            ],
+            "task_description": "${taskDescription}",${codeContext}
+            "current_step": {
+                "title": "${currentStep.title}",
+                "abstract": "${currentStep.abstract}"
+            },
+            "learning_goal": "${learningGoal}"
+        }`;
+    } else {
+        return `{
+            "task": "You are given a programming task, information about the current step, and learning goals. Generate a list of potential knowledge card themes that would be helpful for the user to understand this step better.",
+            "requirements": [
+                "Generate several (typically 3+) knowledge card themes that are relevant to the current step",
+                "The themes should cover concepts, techniques, or common questions and issues that learners might have when working on this step",
+                "The themes should align with the learning goals provided. But you can include more general topics in addition to ones directly relevant to the project at hand. You can also add topics that might interest the user.",
+                "Each theme should be a concise phrase or question (no more than 10-15 words)",
+                "Since no code is available for this step yet, focus only on generating relevant themes",
+                "Respond in the same language as the task_description",
+                "You must follow this JSON format in your response: [\\"(theme 1)\\", \\"(theme 2)\\", \\"(theme 3)\\", ...]",
+                "IMPORTANT: Properly escape all special characters in JSON strings. Ensure the JSON is valid and parseable.",
+                "Please do not use invalid \`\`\`json character to envelope the JSON response, just return the JSON array directly."
+            ],
+            "task_description": "${taskDescription}",
+            "current_step": {
+                "title": "${currentStep.title}",
+                "abstract": "${currentStep.abstract}"
+            },
+            "learning_goal": "${learningGoal}"
+        }`;
+    }
 }
 
 export function constructGenerateKnowledgeCardThemesFromQueryPrompt(
@@ -246,9 +284,10 @@ export function constructGenerateKnowledgeCardThemesFromQueryPrompt(
             "The themes should be relevant to the current step and align with the learning goals",
             "Each theme should be a concise phrase or question (no more than 15 words)",
             "For each theme, identify if there is corresponding code in the current_code that relates to this theme",
-            "If corresponding code exists, extract the relevant code chunk; if not, leave it empty",
+            "If corresponding code exists, extract the relevant code chunks; if not, leave the array empty",
+            "A knowledge card can have multiple code snippets if different parts of the code relate to the same theme",
             "Respond in the same language as the task description",
-            "You must follow this JSON format in your response: [{\\"reason\\":\\"(your thoughts on what the user need to know or may be interested in)\\", \\"title\\": \\"(theme title)\\", \\"corresponding_code_snippet\\": \\"(relevant code or empty string)\\"}]",
+            "You must follow this JSON format in your response: [{\\"reason\\":\\"(your thoughts on what the user need to know or may be interested in)\\", \\"title\\": \\"(theme title)\\", \\"corresponding_code_snippets\\": [\\"(relevant code snippet 1)\\", \\"(relevant code snippet 2)\\", ...]}]",
             "IMPORTANT: Properly escape all special characters in JSON strings. Ensure the JSON is valid and parseable.",
             "Please do not use invalid \`\`\`json character to envelope the JSON response, just return the JSON array directly."
         ],

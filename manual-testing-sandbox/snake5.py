@@ -1,34 +1,33 @@
-# 导入pygame及相关模块
-import pygame  # 用于开发2D游戏的库
-import sys     # 用于系统相关操作（如退出）
+# 导入pygame和必要包
+import pygame  # 用于游戏窗口、绘图和事件处理
+import sys     # 便于退出程序
 
 # 初始化pygame
 pygame.init()
 
-# 设置窗口大小
-WINDOW_WIDTH = 640  # 窗口宽度
-WINDOW_HEIGHT = 480 # 窗口高度
+# 设置窗口尺寸和标题
+WINDOW_WIDTH = 640
+WINDOW_HEIGHT = 480
+WINDOW_TITLE = "贪吃蛇小游戏"
+FPS = 15  # 刷新帧率
 
-# 创建游戏主窗口
-window = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
-# 设置窗口标题
-pygame.display.set_caption('贪吃蛇游戏')
+# 创建窗口和设置标题
+screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
+pygame.display.set_caption(WINDOW_TITLE)
+clock = pygame.time.Clock()  # 用于控制游戏循环刷新速度
 
-# 创建游戏时钟，用于控制刷新频率
-clock = pygame.time.Clock()
-
-# 程序主循环的占位符（仅防止窗口闪退，未来会完善）
-while True:
+# =============== 主游戏循环 ===============
+# 游戏主循环会持续运行，接收并处理事件（如键盘输入）、刷新画面等
+running = True
+while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             pygame.quit()
-            sys.exit()
+            sys.exit()  # 完全退出程序
     
-    # 刷新窗口填充背景色（暂时为黑色）
-    window.fill((0, 0, 0))
-    
-    # 更新显示内容
-    pygame.display.update()
-    
-    # 控制帧率（例如每秒15帧）
-    clock.tick(15)
+    # 用白色填充背景
+    screen.fill((255, 255, 255))
+
+    # 刷新显示内容
+    pygame.display.flip()
+    clock.tick(FPS)  # 控制帧率，避免运行过快

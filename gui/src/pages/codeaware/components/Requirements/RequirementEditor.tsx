@@ -81,10 +81,11 @@ const SpinnerIcon = styled.div`
 interface RequirementEditorProps {
     onConfirm: (requirement: string) => void;
     onAIProcess: (requirement: string) => void;
+    onContentChange?: (hasChanges: boolean) => void; // 新增：内容变化时的回调
     disabled?: boolean; // Optional disabled state
 }
 
-export default function RequirementEditor({ onConfirm, onAIProcess, disabled = false }: RequirementEditorProps){
+export default function RequirementEditor({ onConfirm, onAIProcess, onContentChange, disabled = false }: RequirementEditorProps){
     const userRequirementContent = useAppSelector((state) => state.codeAwareSession.userRequirement?.requirementDescription || "");
     
     const userRequirementStatus = useAppSelector((state) => state.codeAwareSession.userRequirement?.requirementStatus || "empty");
@@ -115,6 +116,30 @@ export default function RequirementEditor({ onConfirm, onAIProcess, disabled = f
                 
                 logger.addLogEntry("user_start_editing_requirement", {
                     initialContent: currentTargetContent,
+                    timestamp: new Date().toISOString()
+                });
+            }
+            
+            // Check if user has made actual changes to content
+            const currentContent = editor.getText().trim();
+            const originalContent = userRequirementContent.trim();
+            const hasChanges = currentContent !== originalContent;
+            
+            // 特殊处理：如果是从empty状态开始输入，直接设置为editing状态
+            if (userRequirementStatus === "empty" && currentContent.length > 0) {
+                // 这将在父组件中被handleRequirementContentChange处理
+            }
+            
+            // Notify parent component about content changes
+            if (onContentChange) {
+                onContentChange(hasChanges);
+            }
+            
+            // If content has changed, log it
+            if (hasChanges) {
+                logger.addLogEntry("user_content_modified", {
+                    originalContent,
+                    currentContent,
                     timestamp: new Date().toISOString()
                 });
             }
@@ -149,6 +174,13 @@ export default function RequirementEditor({ onConfirm, onAIProcess, disabled = f
 
     // 检查是否正在进行 AI 处理
     const isParaphrasing = userRequirementStatus === "paraphrasing";
+    
+    // 更简单的逻辑：只有当状态是"ai_processed"时，才允许提交
+    const hasContent = editor && editor.getText().trim().length > 0;
+    const canSubmit = userRequirementStatus === "ai_processed" && hasContent;
+    
+    // 如果有内容但不在AI处理过的状态，就需要AI处理
+    const needsAIProcessing = hasContent && userRequirementStatus !== "ai_processed" && !isParaphrasing;
 
     // 
     return (
@@ -189,8 +221,9 @@ export default function RequirementEditor({ onConfirm, onAIProcess, disabled = f
                     }}
                     isUndoDisabled={!editor.can().undo() || isParaphrasing || disabled}
                     isRedoDisabled={!editor.can().redo() || isParaphrasing || disabled}
-                    isSubmitDisabled={editor.isEmpty || isParaphrasing || disabled}
+                    isSubmitDisabled={!canSubmit || isParaphrasing || disabled}
                     isAIProcessDisabled={editor.isEmpty || isParaphrasing || disabled}
+                    needsAIProcessing={needsAIProcessing}
                     // isSubmitDisabled={editor.isEmpty || !editor.can().run()}
                 />
             </div>

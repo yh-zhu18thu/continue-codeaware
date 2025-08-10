@@ -2,8 +2,8 @@ import { HighlightEvent, KnowledgeCardItem, StepItem, StepStatus } from "core";
 import { Key, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import styled from "styled-components";
 import {
-  lightGray,
-  vscForeground
+    lightGray,
+    vscForeground
 } from "../../components";
 import { SessionInfoDialog } from "../../components/dialogs/SessionInfoDialog";
 import PageHeader from "../../components/PageHeader";
@@ -11,40 +11,40 @@ import { IdeMessengerContext } from "../../context/IdeMessenger";
 import { useWebviewListener } from "../../hooks/useWebviewListener";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks";
 import {
-  clearAllHighlights,
-  clearCodeEditModeSnapshot,
-  newCodeAwareSession, // Add this import
-  resetIdeCommFlags,
-  resetSessionExceptRequirement, // Add this import
-  saveCodeEditModeSnapshot, // Add this import
-  selectCurrentSessionId,
-  selectIsCodeEditModeEnabled, // Add this import for code edit mode
-  selectIsRequirementInEditMode, // Import submitRequirementContent
-  selectIsStepsGenerated,
-  selectLearningGoal, // Add this import
-  selectTask,
-  selectTitle, // Add this import for reading title
-  setCodeEditMode, // Add this import for code edit mode action
-  setKnowledgeCardDisabled, // Add this import for knowledge card disable
-  setKnowledgeCardGenerationStatus, // Add this import for knowledge card generation status
-  setStepAbstract, // Add this import for step editing
-  setStepStatus, // Add this import for step status change
-  setUserRequirementStatus,
-  submitRequirementContent, // Add this import
-  updateHighlight
+    clearAllHighlights,
+    clearCodeEditModeSnapshot,
+    newCodeAwareSession, // Add this import
+    resetIdeCommFlags,
+    resetSessionExceptRequirement, // Add this import
+    saveCodeEditModeSnapshot, // Add this import
+    selectCurrentSessionId,
+    selectIsCodeEditModeEnabled, // Add this import for code edit mode
+    selectIsRequirementInEditMode, // Import submitRequirementContent
+    selectIsStepsGenerated,
+    selectLearningGoal, // Add this import
+    selectTask,
+    selectTitle, // Add this import for reading title
+    setCodeEditMode, // Add this import for code edit mode action
+    setKnowledgeCardDisabled, // Add this import for knowledge card disable
+    setKnowledgeCardGenerationStatus, // Add this import for knowledge card generation status
+    setStepAbstract, // Add this import for step editing
+    setStepStatus, // Add this import for step status change
+    setUserRequirementStatus,
+    submitRequirementContent, // Add this import
+    updateHighlight
 } from "../../redux/slices/codeAwareSlice";
 import {
-  checkAndUpdateHighLevelStepCompletion,
-  generateCodeFromSteps,
-  generateKnowledgeCardDetail,
-  generateKnowledgeCardThemes,
-  generateKnowledgeCardThemesFromQuery,
-  generateStepsFromRequirement,
-  getStepCorrespondingCode,
-  paraphraseUserIntent,
-  processCodeChanges,
-  processSaqSubmission,
-  rerunStep
+    checkAndUpdateHighLevelStepCompletion,
+    generateCodeFromSteps,
+    generateKnowledgeCardDetail,
+    generateKnowledgeCardThemes,
+    generateKnowledgeCardThemesFromQuery,
+    generateStepsFromRequirement,
+    getStepCorrespondingCode,
+    paraphraseUserIntent,
+    processCodeChanges,
+    processSaqSubmission,
+    rerunStep
 } from "../../redux/thunks/codeAwareGeneration";
 import { useCodeAwareLogger } from "../../util/codeAwareWebViewLogger";
 import "./CodeAware.css";
@@ -793,6 +793,21 @@ export const CodeAware = () => {
       observer.disconnect();
     };
   }, [userRequirementStatus, isEditMode]); // 在需求状态或编辑模式变化时重新设置 observer
+
+  const handleRequirementContentChange = useCallback((hasChanges: boolean) => {
+    if (!userRequirement) return;
+    
+    const currentStatus = userRequirement.requirementStatus;
+    
+    // 简化逻辑：任何时候用户修改内容，都重置为editing状态
+    // 这样用户就必须重新通过AI处理才能提交
+    if (hasChanges && (currentStatus === "ai_processed" || currentStatus === "empty")) {
+      dispatch(setUserRequirementStatus("editing"));
+    } else if (!hasChanges && currentStatus === "editing" && userRequirement.requirementDescription.trim().length > 0) {
+      // 如果用户撤销修改回到原始内容，且原始内容已经AI处理过，恢复ai_processed状态
+      dispatch(setUserRequirementStatus("ai_processed"));
+    }
+  }, [dispatch, userRequirement]);
 
   const AIPolishUserRequirement = useCallback(
     (requirement: string) => { // Expect requirement from editor
@@ -1700,6 +1715,7 @@ export const CodeAware = () => {
           <RequirementEditor
             onConfirm={AIHandleRequirementConfirmation}
             onAIProcess={AIPolishUserRequirement}
+            onContentChange={handleRequirementContentChange}
             disabled={isCodeEditModeEnabled} // Disable in code edit mode
           />
         ) : (

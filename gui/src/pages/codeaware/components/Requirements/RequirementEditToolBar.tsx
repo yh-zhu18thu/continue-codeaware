@@ -32,6 +32,7 @@ interface RequirementEditToolBarProps {
     isRedoDisabled: boolean;
     isAIProcessDisabled: boolean;
     isSubmitDisabled: boolean;
+    needsAIProcessing?: boolean; // 新增：指示是否需要AI处理
 }
 
 export default function RequirementEditToolBar({
@@ -43,6 +44,7 @@ export default function RequirementEditToolBar({
     isRedoDisabled,
     isSubmitDisabled,
     isAIProcessDisabled,
+    needsAIProcessing = false,
 }: RequirementEditToolBarProps) {
     return (
     
@@ -79,7 +81,11 @@ export default function RequirementEditToolBar({
                         className={`w-4 h-4 ${isAIProcessDisabled ? 'opacity-50 cursor-not-allowed' : 'hover:brightness-125 cursor-pointer'}`}
                         onClick={!isAIProcessDisabled ? onAIProcess : undefined}
                     >
-                        <ToolTip text="AI Process" position="top">
+                        <ToolTip text={
+                            needsAIProcessing ? "需要AI优化处理后才能确认" : 
+                            isAIProcessDisabled ? "请先输入内容" : 
+                            "AI优化处理"
+                        } position="top">
                             AI Process
                         </ToolTip>
                     </SparklesIcon>
@@ -91,7 +97,11 @@ export default function RequirementEditToolBar({
                         className={`w-4 h-4 ${isSubmitDisabled ? 'opacity-50 cursor-not-allowed' : 'hover:brightness-125 cursor-pointer'}`}
                         onClick={!isSubmitDisabled ? onSubmit : undefined}
                     >
-                        <ToolTip text="Submit" position="top">
+                        <ToolTip text={
+                            needsAIProcessing ? "请先使用AI优化处理" : 
+                            isSubmitDisabled ? "无法确认" : 
+                            "确认需求"
+                        } position="top">
                             Submit
                         </ToolTip>
                     </CheckIcon>

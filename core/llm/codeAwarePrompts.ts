@@ -9,7 +9,8 @@ export function constructParaphraseUserIntentPrompt(
     return `{
         "task": "You are given a brief description of a coding project. Provide a clear implementation plan and learning goals.",
         "requirements": [
-            "For the implementation plan: list the basic approach and key steps needed to complete the project. Use simple terms, no code or technical jargon.",
+            "For the implementation plan: list the basic approach and key steps needed to complete the project. Use simple terms and analogies, no code or technical jargon.",
+            "IMPORTANT: if the user specify any technical or design preferences, please respect the user's preferences and incorporate them into the implementation plan.",
             "For learning goals: identify what the learner will gain from this project. Create goals if none are provided.",
             "Respond in the same language as the project description.",
             "Use first person tone as if taking notes.",
@@ -181,6 +182,7 @@ export function constructMapCodeToStepsPrompt(
             "STRICT RULE 1: Code snippets must be identified by line-based ranges. The minimum unit is a line.",
             "STRICT RULE 2: For each step, find ALL code snippets that relate to it, even if they appear in non-consecutive locations. This includes: the main implementation code, function definitions that implement the step's functionality, function calls that invoke the step's functionality, variable declarations and assignments related to the step, and any supporting code that directly contributes to the step's purpose. However, do NOT include code that deals with different themes or unrelated functionality (e.g., if a step is about 'pygame game loop', do not include specific game logic implementations within that loop).",
             "STRICT RULE 3: For knowledge cards within steps, find the most precise and relevant code snippets that relate to the knowledge card's theme.",
+            "IMPORTANT: Try to ensure that every line of code is assigned to at least one step so that students understand the purpose of each line. Avoid leaving code lines unassigned",
             "Analyze the code line by line to identify which parts implement each step's requirements.",
             "For each step, extract all relevant code snippets (can be multiple non-consecutive snippets) that directly contribute to achieving the step's goals.",
             "For knowledge cards, identify the most specific code that relates to the card's educational theme.",
@@ -205,8 +207,8 @@ export function constructGenerateKnowledgeCardThemesPrompt(
     return `{
         "task": "You are given a programming task, information about the current step, and learning goals. Generate a list of potential knowledge card themes that would be helpful for the user to understand this step better.",
         "requirements": [
-            "Generate 1-3 knowledge card themes that are relevant to the current step",
-            "The themes should be focused on concepts, techniques, or common questions that learners might have when working on this step",
+            "Generate several (typically 3+) knowledge card themes that are relevant to the current step",
+            "The themes should cover concepts, techniques, or common questions and issues that learners might have when working on this step",
             "The themes should align with the learning goals provided. But you can include more general topics in addition to ones directly relevant to the project at hand. You can also add topics that might interest the user.",
             "Each theme should be a concise phrase or question (no more than 10-15 words)",
             "Respond in the same language as the task_description",

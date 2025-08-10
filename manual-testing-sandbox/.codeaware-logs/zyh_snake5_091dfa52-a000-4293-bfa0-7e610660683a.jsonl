@@ -1,0 +1,3 @@
+{"timestamp":"2025-08-10T11:55:23.754Z","codeAwareSessionId":"091dfa52-a000-4293-bfa0-7e610660683a","eventType":"session_start","payload":{"username":"zyh","sessionName":"snake5","codeAwareSessionId":"091dfa52-a000-4293-bfa0-7e610660683a"}}
+{"timestamp":"2025-08-10T11:55:23.757Z","codeAwareSessionId":"091dfa52-a000-4293-bfa0-7e610660683a","eventType":"user_create_new_session","payload":{"username":"zyh","sessionName":"snake5","timestamp":"2025-08-10T11:55:23.756Z"}}
+{"timestamp":"2025-08-10T11:55:23.779Z","codeAwareSessionId":"091dfa52-a000-4293-bfa0-7e610660683a","eventType":"system_create_session_file","payload":{"filename":"snake5.py","username":"zyh","sessionName":"snake5","timestamp":"2025-08-10T11:55:23.776Z"}}

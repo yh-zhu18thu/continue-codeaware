@@ -8,7 +8,7 @@ import * as vscode from "vscode";
 // CodeAware: 抑制 SQLite 实验性警告和 Buffer 弃用警告
 process.removeAllListeners('warning');
 process.on('warning', (warning) => {
-  // 抑制 SQLite 相关的实验性警告
+  // 抑制 SQLite 相关的实o验性警告
   if (warning.name === 'ExperimentalWarning' && 
       warning.message.includes('SQLite')) {
     return; // 忽略 SQLite 实验性警告

@@ -2,48 +2,50 @@ import { HighlightEvent, KnowledgeCardItem, StepItem, StepStatus } from "core";
 import { Key, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import styled from "styled-components";
 import {
-    lightGray,
-    vscForeground
+  lightGray,
+  vscForeground
 } from "../../components";
 import { SessionInfoDialog } from "../../components/dialogs/SessionInfoDialog";
+import GlobalQuestionModal from "../../components/GlobalQuestionModal";
 import PageHeader from "../../components/PageHeader";
 import { IdeMessengerContext } from "../../context/IdeMessenger";
 import { useWebviewListener } from "../../hooks/useWebviewListener";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks";
 import {
-    clearAllHighlights,
-    clearCodeEditModeSnapshot,
-    newCodeAwareSession, // Add this import
-    resetIdeCommFlags,
-    resetSessionExceptRequirement, // Add this import
-    saveCodeEditModeSnapshot, // Add this import
-    selectCurrentSessionId,
-    selectIsCodeEditModeEnabled, // Add this import for code edit mode
-    selectIsRequirementInEditMode, // Import submitRequirementContent
-    selectIsStepsGenerated,
-    selectLearningGoal, // Add this import
-    selectTask,
-    selectTitle, // Add this import for reading title
-    setCodeEditMode, // Add this import for code edit mode action
-    setKnowledgeCardDisabled, // Add this import for knowledge card disable
-    setKnowledgeCardGenerationStatus, // Add this import for knowledge card generation status
-    setStepAbstract, // Add this import for step editing
-    setStepStatus, // Add this import for step status change
-    setUserRequirementStatus,
-    submitRequirementContent, // Add this import
-    updateHighlight
+  clearAllHighlights,
+  clearCodeEditModeSnapshot,
+  newCodeAwareSession, // Add this import
+  resetIdeCommFlags,
+  resetSessionExceptRequirement, // Add this import
+  saveCodeEditModeSnapshot, // Add this import
+  selectCurrentSessionId,
+  selectIsCodeEditModeEnabled, // Add this import for code edit mode
+  selectIsRequirementInEditMode, // Import submitRequirementContent
+  selectIsStepsGenerated,
+  selectLearningGoal, // Add this import
+  selectTask,
+  selectTitle, // Add this import for reading title
+  setCodeEditMode, // Add this import for code edit mode action
+  setKnowledgeCardDisabled, // Add this import for knowledge card disable
+  setKnowledgeCardGenerationStatus, // Add this import for knowledge card generation status
+  setStepAbstract, // Add this import for step editing
+  setStepStatus, // Add this import for step status change
+  setUserRequirementStatus,
+  submitRequirementContent, // Add this import
+  updateHighlight
 } from "../../redux/slices/codeAwareSlice";
 import {
-    checkAndUpdateHighLevelStepCompletion,
-    generateCodeFromSteps,
-    generateKnowledgeCardDetail,
-    generateKnowledgeCardThemes,
-    generateKnowledgeCardThemesFromQuery,
-    generateStepsFromRequirement,
-    getStepCorrespondingCode,
-    processCodeChanges,
-    processSaqSubmission,
-    rerunStep
+  checkAndUpdateHighLevelStepCompletion,
+  generateCodeFromSteps,
+  generateKnowledgeCardDetail,
+  generateKnowledgeCardThemes,
+  generateKnowledgeCardThemesFromQuery,
+  generateStepsFromRequirement,
+  getStepCorrespondingCode,
+  processCodeChanges,
+  processGlobalQuestion,
+  processSaqSubmission,
+  rerunStep
 } from "../../redux/thunks/codeAwareGeneration";
 import { useCodeAwareLogger } from "../../util/codeAwareWebViewLogger";
 import "./CodeAware.css";
@@ -638,6 +640,10 @@ export const CodeAware = () => {
   const [isAutoScrollDisabled, setIsAutoScrollDisabled] = useState<boolean>(false);
   const autoScrollDisableTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isAutoScrollDisabledRef = useRef<boolean>(false); // Immediate ref for sync access
+
+  // Global question modal state
+  const [isGlobalQuestionModalOpen, setIsGlobalQuestionModalOpen] = useState<boolean>(false);
+  const [isGlobalQuestionLoading, setIsGlobalQuestionLoading] = useState<boolean>(false);
 
   // Effect to remove steps from forceExpandedSteps when their status changes from generating to checked
   useEffect(() => {
@@ -1492,6 +1498,123 @@ export const CodeAware = () => {
 
   }, [steps, learningGoal, task, dispatch, logger]);
 
+  // Handle global question submission
+  const handleGlobalQuestionSubmit = useCallback(async (question: string) => {
+    console.log('处理全局提问:', { question });
+    
+    setIsGlobalQuestionLoading(true);
+    
+    await logger.addLogEntry("user_submit_global_question", {
+      question: question.substring(0, 200), // Log first 200 chars
+      timestamp: new Date().toISOString()
+    });
+
+    try {
+      // 获取当前代码
+      const currentFileResponse = await ideMessenger?.request("getCurrentFile", undefined);
+      
+      if (!currentFileResponse || currentFileResponse.status !== "success" || !currentFileResponse.content) {
+        throw new Error("无法获取当前文件内容");
+      }
+      
+      const currentCode = currentFileResponse.content.contents || "";
+      
+      // 调用全局提问处理thunk
+      const result = await dispatch(processGlobalQuestion({
+        question,
+        currentCode
+      }));
+
+      if (processGlobalQuestion.fulfilled.match(result)) {
+        const { selectedStepId, themes, knowledgeCardIds } = result.payload;
+        
+        console.log("✅ Global question processed successfully:", { selectedStepId, themes, knowledgeCardIds });
+        
+        // 关闭对话框
+        setIsGlobalQuestionModalOpen(false);
+        
+        // 高亮选择的步骤
+        dispatch(updateHighlight({
+          sourceType: "step",
+          identifier: selectedStepId,
+        }));
+        
+        // 强制展开该步骤
+        setForceExpandedSteps(prev => new Set([...prev, selectedStepId]));
+        setCurrentlyExpandedStepId(selectedStepId);
+        
+        // 高亮生成的知识卡片
+        // 给知识卡片一些时间被创建，然后高亮它们
+        setTimeout(() => {
+          knowledgeCardIds.forEach(cardId => {
+            dispatch(updateHighlight({
+              sourceType: "knowledgeCard",
+              identifier: cardId,
+            }));
+          });
+        }, 100);
+        
+        // 显示成功消息
+        ideMessenger?.post("showToast", [
+          "info", 
+          `已为您找到相关步骤并生成了 ${themes.length} 个知识卡片主题`
+        ]);
+        
+        await logger.addLogEntry("user_submit_global_question_completed", {
+          selectedStepId,
+          themesCount: themes.length,
+          knowledgeCardIds,
+          timestamp: new Date().toISOString()
+        });
+        
+      } else if (processGlobalQuestion.rejected.match(result)) {
+        console.error("❌ Failed to process global question:", result.error.message);
+        await logger.addLogEntry("user_submit_global_question_error", {
+          error: result.error.message || "Failed to process global question"
+        });
+        
+        ideMessenger?.post("showToast", [
+          "error", 
+          "处理问题时发生错误，请重试"
+        ]);
+      }
+    } catch (error) {
+      console.error("❌ Error in handleGlobalQuestionSubmit:", error);
+      await logger.addLogEntry("user_submit_global_question_error", {
+        error: error instanceof Error ? error.message : String(error)
+      });
+      
+      ideMessenger?.post("showToast", [
+        "error", 
+        "处理问题时发生错误，请重试"
+      ]);
+    } finally {
+      setIsGlobalQuestionLoading(false);
+    }
+  }, [dispatch, ideMessenger, logger, setForceExpandedSteps, setCurrentlyExpandedStepId]);
+
+  // Handle opening global question modal
+  const handleOpenGlobalQuestion = useCallback(async () => {
+    console.log('打开全局提问对话框');
+    
+    await logger.addLogEntry("user_open_global_question_modal", {
+      timestamp: new Date().toISOString()
+    });
+    
+    setIsGlobalQuestionModalOpen(true);
+  }, [logger]);
+
+  // Handle closing global question modal
+  const handleCloseGlobalQuestion = useCallback(async () => {
+    console.log('关闭全局提问对话框');
+    
+    await logger.addLogEntry("user_close_global_question_modal", {
+      timestamp: new Date().toISOString()
+    });
+    
+    setIsGlobalQuestionModalOpen(false);
+  }, [logger]);
+
   // Add webview listener for questions from code selection
   useWebviewListener(
     "codeAwareQuestionFromSelection",
@@ -1665,6 +1788,8 @@ export const CodeAware = () => {
       {/* CodeAware Header with Edit Mode Toggle - 固定在顶部 */}
       <PageHeader
         title={displayTitle}
+        onGlobalQuestion={handleOpenGlobalQuestion}
+        showGlobalQuestionButton={userRequirementStatus === "finalized" && steps.length > 0}
         rightContent={
           <CodeEditModeToggle 
             onRegenerateSteps={handleRegenerateSteps}
@@ -1815,6 +1940,14 @@ export const CodeAware = () => {
         isOpen={isSessionDialogOpen}
         onSubmit={handleSessionInfoSubmit}
         onCancel={handleSessionInfoCancel}
+      />
+
+      {/* Global Question Modal */}
+      <GlobalQuestionModal
+        isOpen={isGlobalQuestionModalOpen}
+        onClose={handleCloseGlobalQuestion}
+        onSubmit={handleGlobalQuestionSubmit}
+        isLoading={isGlobalQuestionLoading}
       />
     </CodeAwareDiv>
   );

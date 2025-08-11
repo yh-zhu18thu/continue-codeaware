@@ -30,6 +30,7 @@ export function constructGenerateStepsPrompt(
             "First, identify 4-8 major high-level tasks that represent the overall workflow of the project（in reasonable implementation order）. These should be conceptual phases like 'Setup and Configuration', 'Data Processing', 'User Interface Development', etc.",
             "If the project requires importing packages or involves specific frameworks (such as PyGame, Flask, etc.), include a high-level task at the beginning for 'Project Setup and Dependencies' or similar. This task should cover importing necessary packages and setting up any framework-specific boilerplate code that every project using that framework requires.",
             "Then, for each major task, generate fine-grained steps. The steps should be atomic - if the title of a step is 'A and B', divide it into two steps 'A' and 'B'.",
+            "IMPORTANT: For core steps which are too hard to be understood by beginners, you can break them down into multiple steps to make them easier to understand and implement.",
             "Keep the title brief and readable. You must not put any code in the title.",
             "Generate an abstract for each step that is designed for learners to understand. The abstract can contain Markdown formatting. The abstract should clearly explain all actions the code should implement in this step using beginner-friendly language. Describe the necessary programming concepts for the current step, using analogies and simple terms to make them understandable for learners. End the abstract with the practical outcome that will be achieved when finishing this step (e.g. what feature will be supported, how this creates the foundation for future steps, what phenomenon can be seen). The abstract should be mostly in natural language with minimal code examples, prioritizing clarity and educational value for students.",
             "IMPORTANT: Remember that the high-level tasks and steps must describe the complete workflow to finish the project, while being presented in a clear, learner-friendly manner that helps students understand both what to do and why they're doing it.",
@@ -499,5 +500,45 @@ export function constructRerunStepCodeUpdatePrompt(
             "IMPORTANT: Properly escape all special characters in JSON strings. Ensure the JSON is valid and parseable.",
             "Please do not use invalid code block characters to envelope the JSON response, just return the JSON object directly."
         ]
+    }`;
+}
+
+// 构建全局提问的prompt - 根据问题选择最相关的步骤并生成知识卡片主题
+export function constructGlobalQuestionPrompt(
+    question: string,
+    currentCode: string,
+    allSteps: Array<{
+        id: string;
+        title: string;
+        abstract: string;
+    }>,
+    learningGoal: string,
+    taskDescription: string
+): string {
+    const stepsText = allSteps.map(step =>
+        `{"id": "${step.id}", "title": "${step.title}", "abstract": "${step.abstract}"}`
+    ).join(",\n        ");
+
+    return `{
+        "task": "You are given a question about a coding project, along with the current code and all available steps. Choose the most relevant step that the question relates to, and generate knowledge card themes that would help answer the question.",
+        "requirements": [
+            "Analyze the question and determine which step from the provided list is most relevant to answering it",
+            "The question might be about concepts, implementation details, or understanding specific parts of the code",
+            "Select the step that best matches the topic or area of concern in the question",
+            "Generate 1-3 knowledge card themes that would help answer the user's question",
+            "The themes should be specific to the question asked and relevant to the selected step",
+            "Consider both the learning goals and the current code context when generating themes",
+            "Respond in the same language as the question and step descriptions",
+            "You must follow this JSON format in your response: {\\"selected_step_id\\": \\"(the id of the most relevant step)\\", \\"knowledge_card_themes\\": [\\"(theme 1)\\", \\"(theme 2)\\", \\"(theme 3)\\"]}",
+            "IMPORTANT: Properly escape all special characters in JSON strings. Ensure the JSON is valid and parseable.",
+            "Please do not use invalid code block characters to envelope the JSON response, just return the JSON object directly."
+        ],
+        "question": "${question}",
+        "current_code": "${currentCode}",
+        "all_steps": [
+        ${stepsText}
+        ],
+        "learning_goal": "${learningGoal}",
+        "task_description": "${taskDescription}"
     }`;
 }

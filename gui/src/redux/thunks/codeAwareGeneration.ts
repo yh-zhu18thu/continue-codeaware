@@ -15,6 +15,7 @@ import {
     constructGenerateKnowledgeCardThemesFromQueryPrompt,
     constructGenerateKnowledgeCardThemesPrompt,
     constructGenerateStepsPrompt,
+    constructGlobalQuestionPrompt,
     constructMapCodeToStepsPrompt,
     constructParaphraseUserIntentPrompt,
     constructProcessCodeChangesPrompt
@@ -3074,6 +3075,136 @@ export const processSaqSubmission = createAsyncThunk<
                 }));
             }
             
+            throw error;
+        }
+    }
+);
+
+// 异步处理全局提问 - 根据问题选择相关步骤并生成知识卡片主题
+export const processGlobalQuestion = createAsyncThunk<
+    { selectedStepId: string; themes: string[]; knowledgeCardIds: string[] },
+    {
+        question: string;
+        currentCode: string;
+    },
+    ThunkApiType
+>(
+    "codeAware/processGlobalQuestion",
+    async ({ question, currentCode }, { getState, dispatch, extra }) => {
+        try {
+            console.log("🔍 [CodeAware] Processing global question:", question);
+            
+            const state = getState();
+            const steps = state.codeAwareSession.steps;
+            const learningGoal = state.codeAwareSession.learningGoal || '';
+            const taskDescription = state.codeAwareSession.userRequirement?.requirementDescription || '';
+            const defaultModel = selectDefaultModel(state);
+            
+            if (!defaultModel) {
+                throw new Error("没有可用的默认模型");
+            }
+            
+            if (steps.length === 0) {
+                throw new Error("没有可用的步骤，请先生成步骤");
+            }
+            
+            // 构建所有步骤的信息
+            const allStepsInfo = steps.map(step => ({
+                id: step.id,
+                title: step.title,
+                abstract: step.abstract
+            }));
+            
+            // 构建全局提问的prompt
+            const prompt = constructGlobalQuestionPrompt(
+                question,
+                currentCode,
+                allStepsInfo,
+                learningGoal,
+                taskDescription
+            );
+            
+            console.log("📤 [CodeAware] Sending global question request to LLM");
+            
+            // 发送请求到LLM
+            const result = await extra.ideMessenger.request("llm/complete", {
+                prompt: prompt,
+                completionOptions: {},
+                title: defaultModel.title
+            });
+            
+            console.log("📥 [CodeAware] Received global question response:", result);
+            
+            if (result.status !== "success" || !result.content || !result.content.trim()) {
+                throw new Error("LLM 返回了空响应或失败状态");
+            }
+            
+            const fullResponse = result.content;
+            
+            // 解析响应
+            let parsedResponse: {
+                selected_step_id: string;
+                knowledge_card_themes: string[];
+            };
+            
+            try {
+                parsedResponse = JSON.parse(fullResponse);
+            } catch (parseError) {
+                console.error("❌ [CodeAware] Failed to parse LLM response:", parseError);
+                throw new Error("无法解析 LLM 响应，请重试");
+            }
+            
+            const { selected_step_id, knowledge_card_themes } = parsedResponse;
+            
+            if (!selected_step_id || !knowledge_card_themes || !Array.isArray(knowledge_card_themes)) {
+                throw new Error("LLM 响应格式不正确");
+            }
+            
+            // 验证选择的步骤ID是否有效
+            const selectedStep = steps.find(step => step.id === selected_step_id);
+            if (!selectedStep) {
+                throw new Error(`无效的步骤ID: ${selected_step_id}`);
+            }
+            
+            console.log(`✅ [CodeAware] Selected step: ${selected_step_id}, themes:`, knowledge_card_themes);
+            
+            // 为选择的步骤创建知识卡片
+            const createdCardIds: string[] = [];
+            for (const theme of knowledge_card_themes) {
+                const cardId = `kc-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+                createdCardIds.push(cardId);
+                
+                dispatch(createKnowledgeCard({
+                    stepId: selected_step_id,
+                    cardId,
+                    theme
+                }));
+                
+                // 创建知识卡片与步骤的映射关系
+                dispatch(createCodeAwareMapping({
+                    stepId: selected_step_id,
+                    knowledgeCardId: cardId,
+                    isHighlighted: false
+                }));
+            }
+            
+            // 设置知识卡片生成状态为checked
+            dispatch(setKnowledgeCardGenerationStatus({
+                stepId: selected_step_id,
+                status: "checked"
+            }));
+            
+            console.log("✅ [CodeAware] Global question processed successfully");
+            
+            // 返回选择的步骤ID和创建的知识卡片ID，用于高亮和展开
+            return { 
+                selectedStepId: selected_step_id, 
+                themes: knowledge_card_themes,
+                knowledgeCardIds: createdCardIds
+            };
+            
+        } catch (error) {
+            console.error("❌ [CodeAware] processGlobalQuestion failed:", error);
             throw error;
         }
     }

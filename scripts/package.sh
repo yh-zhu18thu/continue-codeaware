@@ -9,11 +9,9 @@ cd ..
 
 # Build VSCode extension
 cd extensions/vscode
-npm run package
+npm run package-all
 cd ../..
 
-# Copy the .vsix file to the root directory
-cp extensions/vscode/build/continue-*.vsix codeaware-extension.vsix
 
 # To install the extension, you can use the following command:
 # code --install-extension codeaware-extension.vsix

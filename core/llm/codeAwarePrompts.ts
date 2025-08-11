@@ -126,7 +126,7 @@ export function constructGenerateCodePrompt(
     return `{
         "task": "You are on the way to implement a project incrementally. You are given existing code and a list of new steps to implement. Your ONLY job is to generate clean, complete code that implements the new steps while maintaining the existing code structure.",
         ${taskDescription ? `,
-        "task_description": "${taskDescription}"` : ""},
+        "project_description": "${taskDescription}"` : ""},
         "existing_code": "${existingCode}",
         "new_steps_to_implement": [
         ${newStepsText}
@@ -138,6 +138,7 @@ export function constructGenerateCodePrompt(
             "STRICT RULE 1: You MUST implement ONLY the steps listed in 'new_steps_to_implement'. Do NOT generate code for future steps or complete the entire project at once.",
             "STRICT RULE 2: Generated code must be clean with concise, clear comments that explain what each part does.",
             "STRICT RULE 3: Preserve the existing code structure as much as possible while adding new functionality for the required steps.",
+            "STRICT RULE 4: If the project_description contains user-specified file formats, algorithms, packages, or technical preferences, you MUST strictly adhere to these specifications when implementing the code.",
             "Read each step's abstract carefully and implement exactly what is described - no more, no less.",
             "Include helpful comments in the code to explain the purpose of new additions.",
             "Maintain code consistency and follow good programming practices.",

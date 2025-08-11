@@ -1,6 +1,16 @@
-读取rt_object.txt中的场景设置，实现Whitted-style ray tracing算法。
+# rt_objects.txt
+# 格式说明：
+# 物体类型 参数 ...
+# 可能有空行、注释行（以#开头）
+# 支持类型：SPHERE, LIGHT, CAMERA
+#
+# 材质参数：color=[r,g,b] reflect=0.0 refract=0.0 ior=1.0 emission=[r,g,b]
+# 材质参数除color外均可选
+#
+# SPHERE center=[x,y,z] radius=... ...材质参数...
+# LIGHT center=[x,y,z] size=[w,h] emission=[r,g,b]
+# CAMERA pos=[x,y,z] look=[x,y,z] up=[x,y,z] fov=...
 
-rt_objects.txt内容如下：
 # 房间六面（大球近似）
 SPHERE center=[-100002,0,0] radius=100000 color=[0.8,0.2,0.2]
 SPHERE center=[100002,0,0] radius=100000 color=[0.2,0.8,0.2]
@@ -9,8 +19,10 @@ SPHERE center=[0,0,100002] radius=100000 color=[0.8,0.8,0.8]
 SPHERE center=[0,-100000,0] radius=100000 color=[0.8,0.8,0.8]
 SPHERE center=[0,100004,0] radius=100000 color=[0.8,0.8,0.8]
 
-# 光源
-LIGHT center=[0,3.99,0.5] emission=[18,18,18]
+# 面光源
+# LIGHT center=[0,3.99,0.5] size=[1.2,1.2] emission=[18,18,18]
+LIGHT center=[0,3.99,0.5] emission=[12,12,12]
+# SPHERE center=[0,21.995,0.5] radius=18.005 color=[1,1,1] emission=[18,18,18]
 
 # 球体
 SPHERE center=[0.7,0.7,-0.7] radius=0.7 color=[0.99,0.99,0.99] reflect=0.9

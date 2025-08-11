@@ -452,3 +452,51 @@ export function constructEvaluateSaqAnswerPrompt(
         "user_answer": "${userAnswer.replace(/"/g, "\"")}"
     }`;
 }
+
+// 针对 rerunStep 场景第一步：某个步骤的 abstract 发生变化，要求 LLM 只做必要的最小修改
+export function constructRerunStepCodeUpdatePrompt(
+    existingCode: string,
+    allSteps: Array<{
+        id: string;
+        title: string;
+        abstract: string;
+    }>,
+    stepId: string,
+    oldAbstract: string,
+    newAbstract: string,
+    taskDescription?: string
+): string {
+    const stepsText = allSteps.map(step =>
+        `{"id": "${step.id}", "title": "${step.title}", "abstract": "${step.abstract}"}`
+    ).join(",\n        ");
+    
+    return `{
+        "task": "You are given existing code and information about a specific step whose abstract has changed. Update the code minimally to reflect the new abstract while preserving all unrelated functionality.",
+        ${taskDescription ? `"task_description": "${taskDescription}",` : ""}
+        "existing_code": "${existingCode}",
+        "all_steps": [
+        ${stepsText}
+        ],
+        "updated_step": {
+            "id": "${stepId}",
+            "old_abstract": "${oldAbstract}",
+            "new_abstract": "${newAbstract}"
+        },
+        "requirements": [
+            "STRICT RULE 1: Make MINIMAL changes to the existing code. Only modify what is absolutely necessary to reflect the new abstract for the specified step.",
+            "STRICT RULE 2: Do NOT break or remove functionality that is working and relates to other steps.",
+            "STRICT RULE 3: The updated code should maintain the same overall structure and all existing functionality while incorporating the changes required by the new abstract.",
+            "Analyze the difference between the old_abstract and new_abstract for the specified step",
+            "Identify which parts of the existing code need to be modified to match the new requirements",
+            "Preserve all code that implements other steps or is not directly related to the changed step",
+            "Make surgical changes only to the relevant sections",
+            "Maintain code consistency and follow good programming practices",
+            "The output should be the complete updated code file",
+            "Respond in the same language as the step descriptions",
+            "You must follow this JSON format in your response: {\\"complete_code\\": \\"(the complete updated code with minimal changes)\\"}",
+            "CRITICAL: Return ONLY a valid JSON object. Do not add any explanatory text before or after the JSON. Do not use code block markers. The response should start with { and end with }.",
+            "IMPORTANT: Properly escape all special characters in JSON strings. Ensure the JSON is valid and parseable.",
+            "Please do not use invalid code block characters to envelope the JSON response, just return the JSON object directly."
+        ]
+    }`;
+}

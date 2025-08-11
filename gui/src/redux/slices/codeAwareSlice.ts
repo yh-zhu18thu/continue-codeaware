@@ -267,6 +267,11 @@ export const codeAwareSessionSlice = createSlice({
                     chunk.isHighlighted = false;
                 });
             }
+            // Reset highlight status for all high level steps
+            state.highLevelSteps = state.highLevelSteps.map(step => ({
+                ...step,
+                isHighlighted: false
+            }));
             // Reset highlight status for all steps
             state.steps = state.steps.map(step => {
                 return {
@@ -451,6 +456,18 @@ export const codeAwareSessionSlice = createSlice({
                         }
                     });
                 }
+
+                // Update high level steps highlights (同步更新高级步骤的高亮状态)
+                requirementChunkIds.forEach(requirementChunkId => {
+                    const highLevelStepIndex = state.highLevelSteps.findIndex(step => step.id === requirementChunkId);
+                    if (highLevelStepIndex !== -1) {
+                        console.log(`🎯 Highlighting high level step ${requirementChunkId} at index:`, highLevelStepIndex);
+                        state.highLevelSteps[highLevelStepIndex] = {
+                            ...state.highLevelSteps[highLevelStepIndex],
+                            isHighlighted: true
+                        };
+                    }
+                });
                 
                 // Update step highlights
                 stepIds.forEach(stepId => {

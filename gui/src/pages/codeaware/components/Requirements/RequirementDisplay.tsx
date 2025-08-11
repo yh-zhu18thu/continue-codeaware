@@ -4,8 +4,7 @@ import {
   Step,
   StepIcon,
   StepLabel,
-  Stepper,
-  Typography
+  Stepper
 } from "@mui/material";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 import { HighlightEvent } from "core";
@@ -97,6 +96,23 @@ const AnimatedStepIcon = styled(StepIcon)<{ isFlickering: boolean; isHighlighted
   &:hover {
     transform: scale(1.05);
   }
+`;
+
+// Custom animated typography component for step text with flickering animation
+const AnimatedStepText = styled.span<{ isFlickering: boolean; isHighlighted: boolean }>`
+  ${props => props.isFlickering && css`
+    animation: ${flicker} 0.6s ease-in-out 3;
+  `}
+  
+  color: ${props => props.isHighlighted ? '#00BFFF' : '#ffffff'} !important;
+  font-weight: ${props => props.isHighlighted ? 'bold' : 'normal'} !important;
+  font-size: 16px !important;
+  line-height: 1.3 !important;
+  display: flex !important;
+  align-items: center !important;
+  max-width: 500px !important;
+  word-break: break-word !important;
+  transition: all 0.3s ease;
 `;
 
 // 完成状态的绿色对钩图标
@@ -261,23 +277,37 @@ export default function RequirementDisplay({
 
     // Monitor highlight state changes and trigger flickering
     useEffect(() => {
-        console.log("Highlight chunks updated:", highlightChunks);
+        console.log("🔍 RequirementDisplay state updated:");
+        console.log("- Highlight chunks:", highlightChunks.map(chunk => ({
+            id: chunk.id,
+            content: chunk.content.substring(0, 30) + "...",
+            isHighlighted: chunk.isHighlighted
+        })));
+        console.log("- High level steps:", highLevelSteps.map(step => ({
+            id: step.id,
+            content: step.content.substring(0, 30) + "...",
+            isHighlighted: step.isHighlighted
+        })));
 
         const newFlickering = new Set<string>();
         
-        // Check each chunk for state changes - only flicker items that become highlighted
-        highlightChunks.forEach(chunk => {
-            const previousState = previousHighlightStatesRef.current.get(chunk.id);
-            // Only add to flickering if the chunk becomes highlighted (false -> true)
-            if (previousState === false && chunk.isHighlighted === true) {
-                console.log(`Chunk ${chunk.id} became highlighted: ${previousState} -> ${chunk.isHighlighted}`);
-                newFlickering.add(chunk.id);
+        // 根据实际使用的数据源来决定监听哪个
+        const activeSteps = highLevelSteps.length > 0 ? highLevelSteps : highlightChunks;
+        console.log("✨ Active steps source:", highLevelSteps.length > 0 ? "highLevelSteps" : "highlightChunks");
+        
+        // Check each step for state changes - only flicker items that become highlighted
+        activeSteps.forEach(step => {
+            const previousState = previousHighlightStatesRef.current.get(step.id);
+            // Only add to flickering if the step becomes highlighted (false -> true)
+            if (previousState === false && step.isHighlighted === true) {
+                console.log(`⚡ Step ${step.id} became highlighted, will flicker`);
+                newFlickering.add(step.id);
             }
         });
 
         // Only update flickering state if there are actually new flickering chunks
         if (newFlickering.size > 0) {
-            console.log("Setting flickering chunks:", Array.from(newFlickering));
+            console.log("🎬 Starting flicker animation for:", Array.from(newFlickering));
             setFlickeringChunks(prev => {
                 // Merge with existing flickering chunks to avoid conflicts
                 const merged = new Set([...prev, ...newFlickering]);
@@ -296,11 +326,11 @@ export default function RequirementDisplay({
 
         // Update previous states after processing
         const newPreviousStates = new Map(previousHighlightStatesRef.current);
-        highlightChunks.forEach(chunk => {
-            newPreviousStates.set(chunk.id, chunk.isHighlighted);
+        activeSteps.forEach(step => {
+            newPreviousStates.set(step.id, step.isHighlighted);
         });
         previousHighlightStatesRef.current = newPreviousStates;
-    }, [highlightChunks]);
+    }, [highlightChunks, highLevelSteps]); // 监听两个数据源的变化
 
     // Cleanup timeout on unmount
     useEffect(() => {
@@ -356,26 +386,30 @@ export default function RequirementDisplay({
     const createSteps = () => {
         // 优先使用高级步骤数据
         if (highLevelSteps.length > 0) {
-            return highLevelSteps.map((highLevelStep, index) => ({
+            const steps = highLevelSteps.map((highLevelStep, index) => ({
                 id: highLevelStep.id,
                 content: highLevelStep.content,
                 isHighlighted: highLevelStep.isHighlighted,
                 isCompleted: highLevelStep.isCompleted,
                 label: highLevelStep.content,
             }));
+            console.log("📋 Using high level steps as data source");
+            return steps;
         }
 
         // 回退到 highlight chunks
         if (!highlightChunks.length) {
             // If no highlight chunks, split requirement text by lines or sentences
             const sentences = requirementText.split(/[.!?]+/).filter(s => s.trim().length > 0);
-            return sentences.map((sentence, index) => ({
+            const steps = sentences.map((sentence, index) => ({
                 id: `sentence-${index}`,
                 content: sentence.trim(),
                 isHighlighted: false,
                 isCompleted: false,
                 label: sentence.trim(), // Use sentence content as label
             }));
+            console.log("📋 Using sentences as data source");
+            return steps;
         }
 
         // Sort chunks by their position in the text and create steps
@@ -385,13 +419,15 @@ export default function RequirementDisplay({
             return indexA - indexB;
         });
 
-        return sortedChunks.map((chunk, index) => ({
+        const steps = sortedChunks.map((chunk, index) => ({
             id: chunk.id,
             content: chunk.content,
             isHighlighted: chunk.isHighlighted,
             isCompleted: false, // 默认未完成
             label: chunk.content, // Use chunk content as label
         }));
+        console.log("📋 Using highlight chunks as data source");
+        return steps;
     };
 
     const steps = createSteps();
@@ -447,23 +483,13 @@ export default function RequirementDisplay({
                                                     }
                                                 }}
                                             >
-                                                <Typography 
-                                                    variant="body2" 
-                                                    component="span"
-                                                    sx={{
-                                                        color: isHighlighted ? '#00BFFF' : '#ffffff', // Brighter highlight color
-                                                        fontWeight: isHighlighted ? 'bold' : 'normal',
-                                                        fontSize: '16px', // Larger font size
-                                                        lineHeight: '1.3',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        maxWidth: '500px',
-                                                        wordBreak: 'break-word',
-                                                    }}
+                                                <AnimatedStepText
+                                                    isFlickering={isFlickering}
+                                                    isHighlighted={isHighlighted}
                                                 >
                                                     <span style={{ flex: 1 }}>{step.label}</span>
                                                     {step.isCompleted && <CompletionIcon />}
-                                                </Typography>
+                                                </AnimatedStepText>
                                             </StepLabel>
                                         </Step>
                                     );

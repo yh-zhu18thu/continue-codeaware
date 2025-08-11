@@ -457,7 +457,7 @@ export interface ChatHistoryItem {
 
 //CODEAWARE: 以下是codeaware中所用到的数据结构定义：
 
-export type CollaborationStatus = "empty" | "editing" | "needs_ai_processing" | "paraphrasing" | "ai_processed" | "confirmed" | "finalized";
+export type CollaborationStatus = "empty" | "editing" | "confirmed" | "finalized";
 
 // CODEAWARE: 代码高亮的单位
 export type CodeChunk = {

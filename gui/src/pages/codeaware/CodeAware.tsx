@@ -41,7 +41,6 @@ import {
     generateKnowledgeCardThemesFromQuery,
     generateStepsFromRequirement,
     getStepCorrespondingCode,
-    paraphraseUserIntent,
     processCodeChanges,
     processSaqSubmission,
     rerunStep
@@ -799,37 +798,11 @@ export const CodeAware = () => {
     
     const currentStatus = userRequirement.requirementStatus;
     
-    // 简化逻辑：任何时候用户修改内容，都重置为editing状态
-    // 这样用户就必须重新通过AI处理才能提交
-    if (hasChanges && (currentStatus === "ai_processed" || currentStatus === "empty")) {
+    // 简化逻辑：当用户开始输入时，从empty状态切换到editing状态
+    if (currentStatus === "empty" && hasChanges) {
       dispatch(setUserRequirementStatus("editing"));
-    } else if (!hasChanges && currentStatus === "editing" && userRequirement.requirementDescription.trim().length > 0) {
-      // 如果用户撤销修改回到原始内容，且原始内容已经AI处理过，恢复ai_processed状态
-      dispatch(setUserRequirementStatus("ai_processed"));
     }
   }, [dispatch, userRequirement]);
-
-  const AIPolishUserRequirement = useCallback(
-    (requirement: string) => { // Expect requirement from editor
-      // Disable in code edit mode
-      if (isCodeEditModeEnabled) {
-        console.warn("⚠️ AI requirement polishing is disabled in code edit mode");
-        return;
-      }
-      
-      if (!userRequirement) {
-        return;
-      }
-      dispatch(submitRequirementContent(requirement)); // Submit content first
-      dispatch(setUserRequirementStatus("paraphrasing"));
-      dispatch(
-        paraphraseUserIntent({ programRequirement: { ...userRequirement, requirementDescription: requirement } })
-      ).then(() => {
-        console.log("Requirement submitted to AI");
-      });
-    },
-    [dispatch, userRequirement, isCodeEditModeEnabled]
-  );
 
   const AIHandleRequirementConfirmation = useCallback(
     async (requirement: string) => { // Expect requirement from editor
@@ -1714,7 +1687,6 @@ export const CodeAware = () => {
         {isEditMode ? (
           <RequirementEditor
             onConfirm={AIHandleRequirementConfirmation}
-            onAIProcess={AIPolishUserRequirement}
             onContentChange={handleRequirementContentChange}
             disabled={isCodeEditModeEnabled} // Disable in code edit mode
           />

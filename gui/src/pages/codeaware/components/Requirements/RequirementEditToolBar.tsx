@@ -1,4 +1,4 @@
-import { ArrowUturnLeftIcon, ArrowUturnRightIcon, CheckIcon, SparklesIcon } from "@heroicons/react/24/outline";
+import { ArrowUturnLeftIcon, ArrowUturnRightIcon, CheckIcon } from "@heroicons/react/24/outline";
 import styled from "styled-components";
 import {
     vscInputBackground
@@ -26,25 +26,19 @@ const StyledDiv = styled.div<{ isHidden?: boolean }>`
 interface RequirementEditToolBarProps {
     onUndo: () => void;
     onRedo: () => void;
-    onAIProcess: () => void;
     onSubmit: () => void;
     isUndoDisabled: boolean;
     isRedoDisabled: boolean;
-    isAIProcessDisabled: boolean;
     isSubmitDisabled: boolean;
-    needsAIProcessing?: boolean; // 新增：指示是否需要AI处理
 }
 
 export default function RequirementEditToolBar({
     onSubmit,
     onUndo,
     onRedo,
-    onAIProcess,
     isUndoDisabled,
     isRedoDisabled,
     isSubmitDisabled,
-    isAIProcessDisabled,
-    needsAIProcessing = false,
 }: RequirementEditToolBarProps) {
     return (
     
@@ -75,22 +69,6 @@ export default function RequirementEditToolBar({
                     </ArrowUturnRightIcon>
                 </HoverItem>
 
-                {/* AI Process */}
-                <HoverItem>
-                    <SparklesIcon
-                        className={`w-4 h-4 ${isAIProcessDisabled ? 'opacity-50 cursor-not-allowed' : 'hover:brightness-125 cursor-pointer'}`}
-                        onClick={!isAIProcessDisabled ? onAIProcess : undefined}
-                    >
-                        <ToolTip text={
-                            needsAIProcessing ? "需要AI优化处理后才能确认" : 
-                            isAIProcessDisabled ? "请先输入内容" : 
-                            "AI优化处理"
-                        } position="top">
-                            AI Process
-                        </ToolTip>
-                    </SparklesIcon>
-                </HoverItem>
-
                 {/* Submit */}
                 <HoverItem>
                     <CheckIcon
@@ -98,9 +76,7 @@ export default function RequirementEditToolBar({
                         onClick={!isSubmitDisabled ? onSubmit : undefined}
                     >
                         <ToolTip text={
-                            needsAIProcessing ? "请先使用AI优化处理" : 
-                            isSubmitDisabled ? "无法确认" : 
-                            "确认需求"
+                            isSubmitDisabled ? "请先输入内容" : "确认需求"
                         } position="top">
                             Submit
                         </ToolTip>

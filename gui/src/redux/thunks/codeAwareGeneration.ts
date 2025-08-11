@@ -362,7 +362,7 @@ export const paraphraseUserIntent = createAsyncThunk<
 
             console.log("LLM response:", result.content);
             dispatch(submitRequirementContent(result.content));
-            dispatch(setUserRequirementStatus("ai_processed")); // 设置为ai_processed，表示已经AI处理过可以确认
+            dispatch(setUserRequirementStatus("confirmed")); // 直接设置为confirmed，跳过AI处理步骤
         } catch(error) {
             console.error("Error during LLM request:", error);
             dispatch(setUserRequirementStatus("editing"));

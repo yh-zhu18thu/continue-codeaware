@@ -919,9 +919,6 @@ export const codeAwareSessionSlice = createSlice({
             }
             return state.userRequirement.requirementStatus === "editing" || 
                    state.userRequirement.requirementStatus === "empty" || 
-                   state.userRequirement.requirementStatus === "needs_ai_processing" ||
-                   state.userRequirement.requirementStatus === "paraphrasing" || 
-                   state.userRequirement.requirementStatus === "ai_processed" ||
                    state.userRequirement.requirementStatus === "confirmed";
         },
         selectIsStepsGenerated: (state: CodeAwareSessionState) => {

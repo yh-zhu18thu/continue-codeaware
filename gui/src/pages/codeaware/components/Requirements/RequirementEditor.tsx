@@ -49,43 +49,14 @@ const InputBoxDiv = styled.div<{}>`
   position: relative;
 `;
 
-const LoadingOverlay = styled.div`
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.3);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  border-radius: ${defaultBorderRadius};
-  z-index: 10;
-`;
-
-const SpinnerIcon = styled.div`
-  width: 24px;
-  height: 24px;
-  border: 2px solid ${lightGray};
-  border-top: 2px solid ${vscForeground};
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-
-  @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-  }
-`;
-
 
 interface RequirementEditorProps {
     onConfirm: (requirement: string) => void;
-    onAIProcess: (requirement: string) => void;
     onContentChange?: (hasChanges: boolean) => void; // 新增：内容变化时的回调
     disabled?: boolean; // Optional disabled state
 }
 
-export default function RequirementEditor({ onConfirm, onAIProcess, onContentChange, disabled = false }: RequirementEditorProps){
+export default function RequirementEditor({ onConfirm, onContentChange, disabled = false }: RequirementEditorProps){
     const userRequirementContent = useAppSelector((state) => state.codeAwareSession.userRequirement?.requirementDescription || "");
     
     const userRequirementStatus = useAppSelector((state) => state.codeAwareSession.userRequirement?.requirementStatus || "empty");
@@ -172,26 +143,13 @@ export default function RequirementEditor({ onConfirm, onAIProcess, onContentCha
         return <div>Loading...</div>; // 等待编辑器初始化
     }
 
-    // 检查是否正在进行 AI 处理
-    const isParaphrasing = userRequirementStatus === "paraphrasing";
-    
-    // 更简单的逻辑：只有当状态是"ai_processed"时，才允许提交
+    // 检查是否有内容并可以提交
     const hasContent = editor && editor.getText().trim().length > 0;
-    const canSubmit = userRequirementStatus === "ai_processed" && hasContent;
-    
-    // 如果有内容但不在AI处理过的状态，就需要AI处理
-    const needsAIProcessing = hasContent && userRequirementStatus !== "ai_processed" && !isParaphrasing;
+    const canSubmit = hasContent;
 
     // 
     return (
         <InputBoxDiv>
-            {/* Loading Overlay */}
-            {isParaphrasing && (
-                <LoadingOverlay>
-                    <SpinnerIcon />
-                </LoadingOverlay>
-            )}
-            
             {/* Editor Content */}
             <div className="px-2.5 pb-1 pt-2">
                 <EditorContent
@@ -214,17 +172,9 @@ export default function RequirementEditor({ onConfirm, onAIProcess, onContentCha
                         if (disabled) return;
                         editor.chain().focus().redo().run();
                     }}
-                    onAIProcess={() => {
-                        if (disabled) return;
-                        const requirement = editor.getText();
-                        onAIProcess(requirement);
-                    }}
-                    isUndoDisabled={!editor.can().undo() || isParaphrasing || disabled}
-                    isRedoDisabled={!editor.can().redo() || isParaphrasing || disabled}
-                    isSubmitDisabled={!canSubmit || isParaphrasing || disabled}
-                    isAIProcessDisabled={editor.isEmpty || isParaphrasing || disabled}
-                    needsAIProcessing={needsAIProcessing}
-                    // isSubmitDisabled={editor.isEmpty || !editor.can().run()}
+                    isUndoDisabled={!editor.can().undo() || disabled}
+                    isRedoDisabled={!editor.can().redo() || disabled}
+                    isSubmitDisabled={!canSubmit || disabled}
                 />
             </div>
         </InputBoxDiv>

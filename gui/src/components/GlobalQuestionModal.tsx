@@ -15,12 +15,27 @@ const PopupOverlay = styled.div`
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: rgba(0, 0, 0, 0.65);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 10000;
-  backdrop-filter: blur(2px);
+  backdrop-filter: blur(4px);
+  /* 禁用下方内容的交互 */
+  pointer-events: auto;
+  /* 添加淡入动画 */
+  animation: overlayFadeIn 0.2s ease-out;
+  
+  @keyframes overlayFadeIn {
+    from {
+      opacity: 0;
+      backdrop-filter: blur(0px);
+    }
+    to {
+      opacity: 1;
+      backdrop-filter: blur(4px);
+    }
+  }
 `;
 
 const PopupContainer = styled.div`
@@ -28,27 +43,43 @@ const PopupContainer = styled.div`
   border: 1px solid ${vscInputBorder};
   border-radius: ${defaultBorderRadius};
   padding: 12px;
-  max-width: 350px;
-  width: 90%;
+  max-width: 320px;
+  width: 85%;
   max-height: 50vh;
   overflow-y: auto;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  /* 确保模态框本身可以交互 */
+  pointer-events: auto;
+  /* 添加动画效果 */
+  animation: modalFadeIn 0.25s ease-out;
+  
+  @keyframes modalFadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(-20px) scale(0.9);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
 `;
 
 const QuestionInput = styled.textarea`
-  width: calc(100% - 24px);
+  width: 100%;
   min-height: 60px;
   max-height: 120px;
   background-color: ${vscInputBackground};
   border: 1px solid ${vscInputBorder};
   border-radius: ${defaultBorderRadius};
   color: ${vscForeground};
-  padding: 6px 12px;
+  padding: 6px 10px;
   font-size: 12px;
   font-family: inherit;
   resize: vertical;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
   line-height: 1.3;
+  box-sizing: border-box;
 
   &:focus {
     outline: none;
@@ -167,6 +198,11 @@ export default function GlobalQuestionModal({
     }
   };
 
+  const handleContainerClick = (e: React.MouseEvent) => {
+    // 阻止事件冒泡，防止点击模态框内容时关闭模态框
+    e.stopPropagation();
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {
       handleClose();
@@ -181,11 +217,11 @@ export default function GlobalQuestionModal({
 
   return (
     <PopupOverlay onClick={handleOverlayClick}>
-      <PopupContainer onKeyDown={handleKeyDown}>
+      <PopupContainer onKeyDown={handleKeyDown} onClick={handleContainerClick}>
         <QuestionInput
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
-          placeholder="请输入您的问题，例如：这个项目中的数据结构是如何设计的？"
+          placeholder="请输入您的问题，例如：项目的整体架构是什么？"
           disabled={isLoading}
           onKeyDown={handleKeyDown}
           autoFocus

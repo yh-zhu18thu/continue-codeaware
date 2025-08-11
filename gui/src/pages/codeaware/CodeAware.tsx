@@ -2,8 +2,8 @@ import { HighlightEvent, KnowledgeCardItem, StepItem, StepStatus } from "core";
 import { Key, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import styled from "styled-components";
 import {
-  lightGray,
-  vscForeground
+    lightGray,
+    vscForeground
 } from "../../components";
 import { SessionInfoDialog } from "../../components/dialogs/SessionInfoDialog";
 import GlobalQuestionModal from "../../components/GlobalQuestionModal";
@@ -12,40 +12,40 @@ import { IdeMessengerContext } from "../../context/IdeMessenger";
 import { useWebviewListener } from "../../hooks/useWebviewListener";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks";
 import {
-  clearAllHighlights,
-  clearCodeEditModeSnapshot,
-  newCodeAwareSession, // Add this import
-  resetIdeCommFlags,
-  resetSessionExceptRequirement, // Add this import
-  saveCodeEditModeSnapshot, // Add this import
-  selectCurrentSessionId,
-  selectIsCodeEditModeEnabled, // Add this import for code edit mode
-  selectIsRequirementInEditMode, // Import submitRequirementContent
-  selectIsStepsGenerated,
-  selectLearningGoal, // Add this import
-  selectTask,
-  selectTitle, // Add this import for reading title
-  setCodeEditMode, // Add this import for code edit mode action
-  setKnowledgeCardDisabled, // Add this import for knowledge card disable
-  setKnowledgeCardGenerationStatus, // Add this import for knowledge card generation status
-  setStepAbstract, // Add this import for step editing
-  setStepStatus, // Add this import for step status change
-  setUserRequirementStatus,
-  submitRequirementContent, // Add this import
-  updateHighlight
+    clearAllHighlights,
+    clearCodeEditModeSnapshot,
+    newCodeAwareSession, // Add this import
+    resetIdeCommFlags,
+    resetSessionExceptRequirement, // Add this import
+    saveCodeEditModeSnapshot, // Add this import
+    selectCurrentSessionId,
+    selectIsCodeEditModeEnabled, // Add this import for code edit mode
+    selectIsRequirementInEditMode, // Import submitRequirementContent
+    selectIsStepsGenerated,
+    selectLearningGoal, // Add this import
+    selectTask,
+    selectTitle, // Add this import for reading title
+    setCodeEditMode, // Add this import for code edit mode action
+    setKnowledgeCardDisabled, // Add this import for knowledge card disable
+    setKnowledgeCardGenerationStatus, // Add this import for knowledge card generation status
+    setStepAbstract, // Add this import for step editing
+    setStepStatus, // Add this import for step status change
+    setUserRequirementStatus,
+    submitRequirementContent, // Add this import
+    updateHighlight
 } from "../../redux/slices/codeAwareSlice";
 import {
-  checkAndUpdateHighLevelStepCompletion,
-  generateCodeFromSteps,
-  generateKnowledgeCardDetail,
-  generateKnowledgeCardThemes,
-  generateKnowledgeCardThemesFromQuery,
-  generateStepsFromRequirement,
-  getStepCorrespondingCode,
-  processCodeChanges,
-  processGlobalQuestion,
-  processSaqSubmission,
-  rerunStep
+    checkAndUpdateHighLevelStepCompletion,
+    generateCodeFromSteps,
+    generateKnowledgeCardDetail,
+    generateKnowledgeCardThemes,
+    generateKnowledgeCardThemesFromQuery,
+    generateStepsFromRequirement,
+    getStepCorrespondingCode,
+    processCodeChanges,
+    processGlobalQuestion,
+    processSaqSubmission,
+    rerunStep
 } from "../../redux/thunks/codeAwareGeneration";
 import { useCodeAwareLogger } from "../../util/codeAwareWebViewLogger";
 import "./CodeAware.css";
@@ -625,6 +625,9 @@ export const CodeAware = () => {
   // Track steps that should be force expanded due to code selection questions
   const [forceExpandedSteps, setForceExpandedSteps] = useState<Set<string>>(new Set());
 
+  // Track steps that were expanded due to global questions (should remain expanded)
+  const [globalQuestionExpandedSteps, setGlobalQuestionExpandedSteps] = useState<Set<string>>(new Set());
+
   // Track currently expanded step for auto-collapse functionality
   const [currentlyExpandedStepId, setCurrentlyExpandedStepId] = useState<string | null>(null);
 
@@ -646,9 +649,12 @@ export const CodeAware = () => {
   const [isGlobalQuestionLoading, setIsGlobalQuestionLoading] = useState<boolean>(false);
 
   // Effect to remove steps from forceExpandedSteps when their status changes from generating to checked
+  // But keep global question expanded steps expanded
   useEffect(() => {
     steps.forEach(step => {
-      if (forceExpandedSteps.has(step.id) && step.knowledgeCardGenerationStatus === "checked") {
+      if (forceExpandedSteps.has(step.id) && 
+          step.knowledgeCardGenerationStatus === "checked" &&
+          !globalQuestionExpandedSteps.has(step.id)) { // Don't remove global question expanded steps
         setForceExpandedSteps(prev => {
           const newSet = new Set(prev);
           newSet.delete(step.id);
@@ -657,7 +663,7 @@ export const CodeAware = () => {
         console.log(`🔄 [CodeAware] Removed step ${step.id} from force expanded list as status is now checked`);
       }
     });
-  }, [steps, forceExpandedSteps]);
+  }, [steps, forceExpandedSteps, globalQuestionExpandedSteps]);
 
   // Auto-scroll to highlighted steps
   useEffect(() => {
@@ -1412,6 +1418,18 @@ export const CodeAware = () => {
     } else {
       // When a step is collapsed, clear the currently expanded step if it's this one
       setCurrentlyExpandedStepId(prev => prev === stepId ? null : prev);
+      
+      // Also remove from both force expanded sets when manually collapsed
+      setForceExpandedSteps(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(stepId);
+        return newSet;
+      });
+      setGlobalQuestionExpandedSteps(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(stepId);
+        return newSet;
+      });
     }
   }, [logger]);
 
@@ -1541,6 +1559,7 @@ export const CodeAware = () => {
         
         // 强制展开该步骤
         setForceExpandedSteps(prev => new Set([...prev, selectedStepId]));
+        setGlobalQuestionExpandedSteps(prev => new Set([...prev, selectedStepId])); // Mark as global question expanded
         setCurrentlyExpandedStepId(selectedStepId);
         
         // 高亮生成的知识卡片
@@ -1564,6 +1583,7 @@ export const CodeAware = () => {
           selectedStepId,
           themesCount: themes.length,
           knowledgeCardIds,
+          stepExpanded: true, // Log that step was expanded
           timestamp: new Date().toISOString()
         });
         
@@ -1844,8 +1864,8 @@ export const CodeAware = () => {
               stepId={step.id}
               stepStatus={step.stepStatus}
               knowledgeCardGenerationStatus={step.knowledgeCardGenerationStatus} // Pass knowledge card generation status
-              forceExpanded={forceExpandedSteps.has(step.id) && step.knowledgeCardGenerationStatus === "generating"} // Force expand only when generating
-              shouldCollapse={currentlyExpandedStepId !== null && currentlyExpandedStepId !== step.id} // Collapse if another step is expanded
+              forceExpanded={forceExpandedSteps.has(step.id)} // Force expand when marked for expansion
+              shouldCollapse={currentlyExpandedStepId !== null && currentlyExpandedStepId !== step.id && !forceExpandedSteps.has(step.id) && !globalQuestionExpandedSteps.has(step.id)} // Don't collapse force expanded or global question expanded steps
               onHighlightEvent={handleHighlightEvent}
               onClearHighlight={removeHighlightEvent} // Pass the clear highlight function
               onExecuteUntilStep={executeUntilStep} // Pass execute until step function

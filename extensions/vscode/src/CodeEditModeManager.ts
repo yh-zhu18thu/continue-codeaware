@@ -74,10 +74,12 @@ export class CodeEditModeManager {
   public endProgrammaticUpdate(): void {
     this.programmaticUpdateInProgress = false;
     
-    // 更新所有文档的快照以反映程序化更新后的状态
+    // 更新Python文档的快照以反映程序化更新后的状态
     if (!this.isCodeEditModeEnabled) {
       vscode.window.visibleTextEditors.forEach(editor => {
-        this.captureDocumentSnapshot(editor.document);
+        if (this.shouldBlockEdit(editor.document)) {
+          this.captureDocumentSnapshot(editor.document);
+        }
       });
     }
     
@@ -92,7 +94,7 @@ export class CodeEditModeManager {
     this.disposables.push(
       vscode.window.onDidChangeActiveTextEditor((editor) => {
         this.lastActiveEditor = editor;
-        if (!this.isCodeEditModeEnabled && editor) {
+        if (!this.isCodeEditModeEnabled && editor && this.shouldBlockEdit(editor.document)) {
           this.captureDocumentSnapshot(editor.document);
           this.applyReadOnlyMode(editor);
         }
@@ -112,15 +114,20 @@ export class CodeEditModeManager {
     this.disposables.push(
       vscode.workspace.onWillSaveTextDocument((event) => {
         if (!this.isCodeEditModeEnabled && !this.programmaticUpdateInProgress && !this.restoringContent) {
-          // 如果在webview-only模式下，阻止用户主动保存，但允许程序化保存
-          event.waitUntil(Promise.reject(new Error('代码编辑已禁用，请先切换到代码编辑模式')));
+          // 只阻止 .py 文件的保存
+          if (this.shouldBlockEdit(event.document)) {
+            // 如果在webview-only模式下，阻止用户主动保存Python文件，但允许程序化保存
+            event.waitUntil(Promise.reject(new Error('Python文件编辑已禁用，请先切换到代码编辑模式')));
+          }
         }
       })
     );
 
-    // 初始化当前打开的文档快照
+    // 初始化当前打开的Python文档快照
     vscode.window.visibleTextEditors.forEach(editor => {
-      this.captureDocumentSnapshot(editor.document);
+      if (this.shouldBlockEdit(editor.document)) {
+        this.captureDocumentSnapshot(editor.document);
+      }
     });
   }
 
@@ -131,9 +138,11 @@ export class CodeEditModeManager {
     // 清理文档快照
     this.documentSnapshots.clear();
     
-    // 移除只读状态
+    // 移除Python文件的只读状态
     vscode.window.visibleTextEditors.forEach(editor => {
-      this.removeReadOnlyMode(editor);
+      if (this.shouldBlockEdit(editor.document)) {
+        this.removeReadOnlyMode(editor);
+      }
     });
 
     // 显示状态栏信息
@@ -144,18 +153,22 @@ export class CodeEditModeManager {
    * 禁用代码编辑
    */
   private disableCodeEditing(): void {
-    // 捕获所有当前文档的快照
+    // 只捕获Python文档的快照
     vscode.window.visibleTextEditors.forEach(editor => {
-      this.captureDocumentSnapshot(editor.document);
+      if (this.shouldBlockEdit(editor.document)) {
+        this.captureDocumentSnapshot(editor.document);
+      }
     });
 
-    // 对所有可见编辑器应用只读模式
+    // 对Python文件应用只读模式
     vscode.window.visibleTextEditors.forEach(editor => {
-      this.applyReadOnlyMode(editor);
+      if (this.shouldBlockEdit(editor.document)) {
+        this.applyReadOnlyMode(editor);
+      }
     });
 
     // 显示状态栏信息
-    vscode.window.setStatusBarMessage('🚫 代码编辑已禁用（webview-only模式）', 3000);
+    vscode.window.setStatusBarMessage('🚫 Python文件编辑已禁用（webview-only模式）', 3000);
   }
 
   /**
@@ -166,27 +179,41 @@ export class CodeEditModeManager {
   }
 
   /**
+   * 检查是否应该阻止编辑该文件
+   */
+  private shouldBlockEdit(document: vscode.TextDocument): boolean {
+    // 只阻止编辑 .py 文件
+    return document.fileName.toLowerCase().endsWith('.py');
+  }
+
+  /**
    * 处理文档变化
    */
   private handleDocumentChange(event: vscode.TextDocumentChangeEvent): void {
     const document = event.document;
+    
+    // 只对 .py 文件进行编辑阻止
+    if (!this.shouldBlockEdit(document)) {
+      return;
+    }
+    
     const originalContent = this.documentSnapshots.get(document);
     
-    console.log(`📝 CodeEditModeManager: Document change detected in ${document.fileName}`);
+    console.log(`📝 CodeEditModeManager: Python file change detected in ${document.fileName}`);
     console.log(`   - isCodeEditModeEnabled: ${this.isCodeEditModeEnabled}`);
     console.log(`   - preventionActive: ${this.preventionActive}`);
     console.log(`   - programmaticUpdateInProgress: ${this.programmaticUpdateInProgress}`);
     
     if (!originalContent) {
       // 如果没有快照，立即捕获当前内容作为基准
-      console.log("📸 Capturing new document snapshot");
+      console.log("📸 Capturing new Python file snapshot");
       this.captureDocumentSnapshot(document);
       return;
     }
 
     // 检查是否有实际的内容变化
     if (event.contentChanges.length > 0) {
-      console.log(`🚫 Blocking user edit in webview-only mode`);
+      console.log(`🚫 Blocking user edit of Python file in webview-only mode`);
       
       // 设置防止递归标志
       this.preventionActive = true;
@@ -241,7 +268,7 @@ export class CodeEditModeManager {
    */
   private showEditDisabledWarning(): void {
     vscode.window.showWarningMessage(
-      '代码编辑已禁用。请切换到代码编辑模式后再进行修改。',
+      'Python文件编辑已禁用。请切换到代码编辑模式后再进行修改。',
       '切换到代码编辑模式'
     ).then(selection => {
       if (selection === '切换到代码编辑模式') {
@@ -259,7 +286,7 @@ export class CodeEditModeManager {
     
     // 显示只读模式提示
     vscode.window.setStatusBarMessage(
-      `🚫 ${editor.document.fileName.split('/').pop()} 处于只读模式`, 
+      `🚫 ${editor.document.fileName.split('/').pop()} (Python文件) 处于只读模式`, 
       2000
     );
   }

@@ -2965,6 +2965,10 @@ export const processSaqSubmission = createAsyncThunk<
     async ({ testId, userAnswer }, { getState, dispatch, extra }) => {
         try {
             const state = getState();
+            const defaultModel = selectDefaultModel(state);
+            if (!defaultModel) {
+                throw new Error("Default model not defined");
+            }
             
             // Get test information using the selector
             const testInfo = selectTestByTestId(state, testId);
@@ -3001,7 +3005,7 @@ export const processSaqSubmission = createAsyncThunk<
             const result = await extra.ideMessenger.request("llm/complete", {
                 prompt,
                 completionOptions: {},
-                title: "SAQ Answer Evaluation"
+                title: defaultModel.title
             });
 
             if (result.status !== "success" || !result.content) {

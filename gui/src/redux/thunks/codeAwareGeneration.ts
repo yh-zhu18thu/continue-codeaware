@@ -1020,11 +1020,12 @@ export const generateKnowledgeCardThemesFromQuery = createAsyncThunk<
             }
 
             // 检查是否已经在生成中，防止重复调用
+            /*
             const currentStepInfo = state.codeAwareSession.steps.find(step => step.id === stepId);
             if (currentStepInfo?.knowledgeCardGenerationStatus === "generating") {
                 console.warn(`⚠️ 步骤 ${stepId} 已经在生成知识卡片主题，跳过重复调用`);
                 return;
-            }
+            }*/
 
             // 设置生成状态
             dispatch(setKnowledgeCardGenerationStatus({ stepId, status: "generating" }));

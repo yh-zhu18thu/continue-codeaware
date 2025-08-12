@@ -306,7 +306,154 @@ _**User**_
 
 _**Assistant**_
 
+我来帮你应用修改，将 `GlobalQuestionModal` 的样式调整为与 `QuestionPopup` 一致。 
+```
 
+```
+
+```
+
+```
+完成！我已经成功应用了修改，主要更改包括：
+
+1. **PopupOverlay 样式调整**：
+   - 背景透明度从 `rgba(0, 0, 0, 0.65)` 改为 `rgba(0, 0, 0, 0.5)`
+   - 背景模糊从 `blur(4px)` 改为 `blur(2px)`
+   - 更新了注释从"禁用下方内容的交互"到"确保覆盖层接收点击事件"
+
+2. **PopupContainer 样式调整**：
+   - 最大宽度从 `320px` 改为 `350px`
+   - 宽度从 `85%` 改为 `90%`
+   - 阴影从 `0 12px 40px rgba(0, 0, 0, 0.5)` 改为 `0 8px 24px rgba(0, 0, 0, 0.3)`
+
+现在 `GlobalQuestionModal` 的样式已经与 `QuestionPopup` 保持一致，应该能够：
+- 正确在屏幕中央显示
+- 完全覆盖并禁用其他组件的交互
+- 支持点击窗口外部关闭模态框
+- 具有与 `QuestionPopup` 一致的视觉效果
+
+---
+
+_**User**_
+
+刚刚还是好的，不知道为啥又不行了，请你再检查一下
+
+---
+
+_**Assistant**_
+
+我来帮你检查一下现在的代码状态。让我先看看当前的文件内容，然后对比一下 QuestionPopup 的实现。 现在让我对比一下这两个文件的差异。我发现可能的问题：GlobalQuestionModal 中缺少了一些关键的事件处理逻辑。让我查看 QuestionPopup 的完整实现： 我发现了问题！QuestionPopup 的 `PopupContainer` 没有 `onClick={handleContainerClick}` 事件处理器，但是 GlobalQuestionModal 有。这可能导致事件处理出现问题。让我修复这个差异： 
+```
+
+```
+现在我也要移除不必要的 `handleContainerClick` 函数，因为 QuestionPopup 中没有这个函数： 
+```
+
+```
+现在让我检查一下 QuestionPopup 的输入框样式，确保我们的样式完全一致： 我发现了另一个差异！QuestionPopup 的输入框使用 `width: calc(100% - 24px)` 和不同的 padding，而 GlobalQuestionModal 使用 `width: 100%`。让我修复这个： 
+```
+
+```
+现在让我检查按钮的样式差异： 我发现按钮样式也有细微差异。QuestionPopup 的按钮 hover 和 active 状态没有 `:not(:disabled)` 限制。让我修复这个： 
+```
+
+```
+现在修改已经完成。我总结一下主要的修复：
+
+1. **移除了多余的 `handleContainerClick` 函数** - QuestionPopup 中没有这个函数
+2. **移除了 `PopupContainer` 的 `onClick` 事件处理器** - 与 QuestionPopup 保持一致
+3. **修复了输入框样式**：
+   - 宽度从 `width: 100%` 改为 `width: calc(100% - 24px)`
+   - 最小高度从 `60px` 改为 `28px`
+   - 最大高度从 `120px` 改为 `100px`
+   - padding 从 `6px 10px` 改为 `6px 12px`
+   - margin-bottom 从 `10px` 改为 `8px`
+   - 移除了 `box-sizing: border-box`
+4. **修复了按钮样式** - 移除了 `:not(:disabled)` 限制，与 QuestionPopup 保持一致
+
+现在 `GlobalQuestionModal` 应该与 `QuestionPopup` 完全一致，能够正确地：
+- 在屏幕中央垂直居中显示
+- 覆盖其他组件并阻止后台交互
+- 支持点击外部区域关闭模态框
+- 支持 ESC 键和 Ctrl/Cmd+Enter 快捷键
+
+请尝试一下，看看现在是否正常工作了！
+
+---
+
+_**User**_
+
+我发现popupoverlay遮盖范围（主要是对questionpopup）不够，一旦整体页面下滑就盖不住了，似乎globalquestion没有这个问题
+
+---
+
+_**Assistant**_
+
+我理解了问题！你发现 QuestionPopup 的 PopupOverlay 在页面滚动时覆盖范围不够，而 GlobalQuestionModal 没有这个问题。这通常是因为 `position: fixed` 的定位上下文问题。
+
+让我检查一下当前的 GlobalQuestionModal 是否有任何特殊处理，然后修复 QuestionPopup 的问题： 我看到 GlobalQuestionModal 和 QuestionPopup 的 PopupOverlay 样式基本相同。问题可能出现在它们的渲染位置或者父容器的影响上。让我为 QuestionPopup 的 PopupOverlay 添加一些额外的CSS属性来确保它能够正确覆盖整个视口： 
+```
+
+```
+现在让我也为 GlobalQuestionModal 添加相同的改进，确保两者完全一致： 
+```
+
+```
+我已经修复了 QuestionPopup 的 PopupOverlay 样式问题。主要修改包括：
+
+1. **添加了明确的视口尺寸**：
+   - `width: 100vw` - 确保覆盖整个视口宽度
+   - `height: 100vh` - 确保覆盖整个视口高度
+
+2. **添加了更好的注释**：
+   - "确保覆盖整个视口"
+   - "确保不受父容器影响"
+
+3. **确保两个组件完全一致**：
+   - QuestionPopup 和 GlobalQuestionModal 现在有相同的 PopupOverlay 样式
+
+这些修改应该解决页面滚动时覆盖范围不够的问题。添加 `width: 100vw` 和 `height: 100vh` 可以确保即使在有滚动的情况下，模态框的覆盖层也能完全覆盖整个视口，而不受父容器或页面滚动位置的影响。
+
+现在无论页面如何滚动，QuestionPopup 都应该能够正确地覆盖整个屏幕，并且行为与 GlobalQuestionModal 完全一致。
+
+---
+
+_**User**_
+
+似乎并没有效，似乎遮盖范围截止到了展开的这个步骤，下方的步骤没有被遮住
+
+---
+
+_**Assistant**_
+
+我明白了问题！看起来遮盖层可能被其他元素的 z-index 影响了，或者可能是容器的渲染上下文问题。让我检查一下 CodeAware 组件的结构，看看是否有其他元素影响了模态框的层级。
+
+从代码中我看到 `GlobalQuestionModal` 是在 `CodeAwareDiv` 内部渲染的，这可能导致它被限制在某个容器内。让我尝试几个解决方案： 
+```
+
+```
+现在让我也对 QuestionPopup 应用相同的修复： 
+```
+
+```
+我进行了以下关键修改来解决遮盖范围的问题：
+
+1. **提高了 z-index**：
+   - 从 `z-index: 10000` 提高到 `z-index: 99999`
+   - 这确保了模态框能够覆盖页面上几乎所有其他元素
+
+2. **强制创建新的层叠上下文**：
+   - 添加了 `transform: translateZ(0)`
+   - 添加了 `will-change: transform`
+   - 这些CSS属性强制浏览器为模态框创建一个新的合成层，确保它不受父容器的层叠上下文影响
+
+3. **保持了现有的视口覆盖属性**：
+   - `width: 100vw` 和 `height: 100vh` 确保覆盖整个视口
+   - `position: fixed` 确保相对于视口定位
+
+这些修改应该解决步骤展开时模态框遮盖范围不够的问题。`transform: translateZ(0)` 和更高的 `z-index` 组合应该确保模态框能够完全覆盖页面上的所有内容，包括展开的步骤。
+
+现在两个模态框组件（`GlobalQuestionModal` 和 `QuestionPopup`）都应该能够正确地覆盖整个页面，无论内容如何滚动或展开。
 
 ---
 

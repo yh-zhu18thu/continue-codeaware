@@ -1,6 +1,7 @@
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { PaperAirplaneIcon } from '@heroicons/react/24/solid';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import styled from 'styled-components';
 import {
   defaultBorderRadius,
@@ -183,7 +184,8 @@ const QuestionPopup: React.FC<QuestionPopupProps> = ({
     }
   }, [handleCancel, handleSubmit]);
 
-  return (
+  // Render the popup using React Portal to ensure it appears above all other content
+  const popupContent = (
     <PopupOverlay onClick={handleOverlayClick}>
       <PopupContainer onKeyDown={handleKeyDown}>
         {selectedText && selectedText.trim() && (
@@ -216,6 +218,9 @@ const QuestionPopup: React.FC<QuestionPopupProps> = ({
       </PopupContainer>
     </PopupOverlay>
   );
+
+  // Use createPortal to render the popup at the document body level
+  return createPortal(popupContent, document.body);
 };
 
 export default QuestionPopup;

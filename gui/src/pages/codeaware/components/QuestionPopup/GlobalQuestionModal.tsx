@@ -1,5 +1,6 @@
 import { PaperAirplaneIcon, XMarkIcon } from "@heroicons/react/24/solid";
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import styled from "styled-components";
 import {
   defaultBorderRadius,
@@ -66,20 +67,19 @@ const PopupContainer = styled.div`
 `;
 
 const QuestionInput = styled.textarea`
-  width: 100%;
-  min-height: 60px;
-  max-height: 120px;
+  width: calc(100% - 24px);
+  min-height: 28px;
+  max-height: 100px;
   background-color: ${vscInputBackground};
   border: 1px solid ${vscInputBorder};
   border-radius: ${defaultBorderRadius};
   color: ${vscForeground};
-  padding: 6px 10px;
+  padding: 6px 12px;
   font-size: 12px;
   font-family: inherit;
   resize: vertical;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
   line-height: 1.3;
-  box-sizing: border-box;
 
   &:focus {
     outline: none;
@@ -117,12 +117,12 @@ const Button = styled.button<{ variant: 'primary' | 'secondary' }>`
     color: white;
     border: 1px solid #007acc;
     
-    &:hover:not(:disabled) {
+    &:hover {
       background-color: #005a9e;
       border-color: #005a9e;
     }
     
-    &:active:not(:disabled) {
+    &:active {
       background-color: #004578;
       border-color: #004578;
     }
@@ -131,11 +131,11 @@ const Button = styled.button<{ variant: 'primary' | 'secondary' }>`
     color: ${vscForeground};
     border: 1px solid ${vscInputBorder};
     
-    &:hover:not(:disabled) {
+    &:hover {
       background-color: rgba(255, 255, 255, 0.1);
     }
     
-    &:active:not(:disabled) {
+    &:active {
       background-color: rgba(255, 255, 255, 0.2);
     }
   `}
@@ -198,11 +198,6 @@ export default function GlobalQuestionModal({
     }
   };
 
-  const handleContainerClick = (e: React.MouseEvent) => {
-    // 阻止事件冒泡，防止点击模态框内容时关闭模态框
-    e.stopPropagation();
-  };
-
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {
       handleClose();
@@ -215,9 +210,10 @@ export default function GlobalQuestionModal({
     }
   };
 
-  return (
+  // Render the modal using React Portal to ensure it appears above all other content
+  const modalContent = (
     <PopupOverlay onClick={handleOverlayClick}>
-      <PopupContainer onKeyDown={handleKeyDown} onClick={handleContainerClick}>
+      <PopupContainer onKeyDown={handleKeyDown}>
         <QuestionInput
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
@@ -252,4 +248,7 @@ export default function GlobalQuestionModal({
       </PopupContainer>
     </PopupOverlay>
   );
+
+  // Use createPortal to render the modal at the document body level
+  return createPortal(modalContent, document.body);
 }

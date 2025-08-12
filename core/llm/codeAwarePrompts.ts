@@ -259,7 +259,7 @@ export function constructGenerateKnowledgeCardThemesPrompt(
         return `{
             "task": "You are given a programming task, information about the current step, and learning goals. Generate a list of potential knowledge card themes that would be helpful for the user to understand this step better.",
             "requirements": [
-                "Generate several (typically 3+) knowledge card themes that are relevant to the current step",
+                "Generate 1-3 knowledge card themes that are relevant to the current step",
                 "The themes should cover concepts, techniques, or common questions and issues that learners might have when working on this step",
                 "The themes should align with the learning goals provided. But you can include more general topics in addition to ones directly relevant to the project at hand. You can also add topics that might interest the user.",
                 "Each theme should be a concise phrase or question (no more than 10-15 words)",
@@ -294,7 +294,7 @@ export function constructGenerateKnowledgeCardThemesFromQueryPrompt(
     return `{
         "task": "You are given a user query in the context of a programming learning session. Based on the query, current step information, current code, existing knowledge card themes, and learning goals, generate new knowledge card themes that address the user's question and complement existing ones.",
         "requirements": [
-            "Generate 1-3 new knowledge card themes that directly address the user's query",
+            "Generate 1-2 new knowledge card themes that directly address the user's query",
             "The themes should complement, not duplicate, the existing themes",
             "Consider why the existing themes might not fully address the user's question. Think about why the user still has questions, and what topic they may need to know or be interested in.",
             "The themes should be relevant to the current step and align with the learning goals",

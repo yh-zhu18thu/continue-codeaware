@@ -6,7 +6,6 @@ import {
   vscForeground
 } from "../../components";
 import { SessionInfoDialog } from "../../components/dialogs/SessionInfoDialog";
-import GlobalQuestionModal from "../../components/GlobalQuestionModal";
 import PageHeader from "../../components/PageHeader";
 import { IdeMessengerContext } from "../../context/IdeMessenger";
 import { useWebviewListener } from "../../hooks/useWebviewListener";
@@ -52,6 +51,7 @@ import {
 import { useCodeAwareLogger } from "../../util/codeAwareWebViewLogger";
 import "./CodeAware.css";
 import CodeEditModeToggle from "./components/CodeEditModeToggle"; // Import the toggle component
+import GlobalQuestionModal from "./components/QuestionPopup/GlobalQuestionModal";
 import RequirementDisplay from "./components/Requirements/RequirementDisplay"; // Import RequirementDisplay
 import RequirementEditor from "./components/Requirements/RequirementEditor"; // Import RequirementEditor
 import RequirementSummary from "./components/Requirements/RequirementSummary"; // Import RequirementSummary

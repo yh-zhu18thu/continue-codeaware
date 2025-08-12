@@ -3,12 +3,12 @@ import { SparklesIcon } from "@heroicons/react/24/solid";
 import { useCallback, useState } from "react";
 import styled from "styled-components";
 import {
-  lightGray,
-  vscButtonBackground,
-  vscButtonForeground,
-  vscForeground,
-  vscInputBackground,
-  vscListActiveBackground
+    lightGray,
+    vscButtonBackground,
+    vscButtonForeground,
+    vscForeground,
+    vscInputBackground,
+    vscListActiveBackground
 } from "../../../components";
 import { useAppDispatch, useAppSelector } from "../../../redux/hooks";
 import { selectIsCodeEditModeEnabled, toggleCodeEditMode } from "../../../redux/slices/codeAwareSlice";
@@ -105,14 +105,14 @@ const Tooltip = styled.div<{ show: boolean }>`
 
 interface CodeEditModeToggleProps {
   className?: string;
-  onRegenerateSteps?: () => void;
-  showRegenerateSteps?: boolean;
+  onRegenerateCode?: () => void;
+  showRegenerateCode?: boolean;
 }
 
 export default function CodeEditModeToggle({ 
   className, 
-  onRegenerateSteps,
-  showRegenerateSteps = false 
+  onRegenerateCode,
+  showRegenerateCode = false 
 }: CodeEditModeToggleProps) {
   const dispatch = useAppDispatch();
   const isCodeEditModeEnabled = useAppSelector(selectIsCodeEditModeEnabled);
@@ -123,11 +123,11 @@ export default function CodeEditModeToggle({
     dispatch(toggleCodeEditMode());
   }, [dispatch]);
 
-  const handleRegenerateSteps = useCallback(() => {
-    if (onRegenerateSteps) {
-      onRegenerateSteps();
+  const handleRegenerateCode = useCallback(() => {
+    if (onRegenerateCode) {
+      onRegenerateCode();
     }
-  }, [onRegenerateSteps]);
+  }, [onRegenerateCode]);
 
   return (
     <ButtonContainer className={className}>
@@ -146,7 +146,7 @@ export default function CodeEditModeToggle({
         </Tooltip>
       </TooltipContainer>
       
-      {showRegenerateSteps && (
+      {showRegenerateCode && (
         <TooltipContainer
           onMouseEnter={() => setShowRegenerateTooltip(true)}
           onMouseLeave={() => setShowRegenerateTooltip(false)}
@@ -154,12 +154,12 @@ export default function CodeEditModeToggle({
           <ToggleButton 
             isActive={false} 
             variant="primary"
-            onClick={handleRegenerateSteps}
+            onClick={handleRegenerateCode}
           >
             <ArrowPathIcon />
           </ToggleButton>
           <Tooltip show={showRegenerateTooltip}>
-            重新编辑需求
+            重新生成代码
           </Tooltip>
         </TooltipContainer>
       )}

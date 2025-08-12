@@ -926,6 +926,30 @@ export const codeAwareSessionSlice = createSlice({
                     }
                 }
             }
+        },
+        // Clear all code-related data and mappings
+        clearAllCodeAndMappings: (state) => {
+            // Clear all code chunks
+            state.codeChunks = [];
+            
+            // Clear all code-related mappings (keep step-to-requirement mappings)
+            state.codeAwareMappings = state.codeAwareMappings.filter(mapping => 
+                // 保留只包含stepId和requirementChunkId的映射（步骤到需求的映射）
+                mapping.stepId && mapping.requirementChunkId && !mapping.codeChunkId && !mapping.knowledgeCardId
+            );
+            
+            // Clear code chunks to highlight in IDE
+            state.codeChunksToHighlightInIde = [];
+            
+            // Reset all steps to confirmed status (from generated)
+            state.steps.forEach(step => {
+                if (step.stepStatus === "generated") {
+                    step.stepStatus = "confirmed";
+                }
+            });
+            
+            // Clear highlights
+            codeAwareSessionSlice.caseReducers.clearAllHighlights(state);
         }
     },
     selectors:{
@@ -1068,7 +1092,8 @@ export const {
     markStepsCodeDirty,
     updateCodeChunkPositions,
     updateSaqTestResult,
-    setSaqTestLoading
+    setSaqTestLoading,
+    clearAllCodeAndMappings
 } = codeAwareSessionSlice.actions
 
 export const {

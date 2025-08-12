@@ -12,6 +12,7 @@ import { IdeMessengerContext } from "../../context/IdeMessenger";
 import { useWebviewListener } from "../../hooks/useWebviewListener";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks";
 import {
+  clearAllCodeAndMappings,
   clearAllHighlights,
   clearCodeEditModeSnapshot,
   newCodeAwareSession, // Add this import
@@ -886,20 +887,146 @@ export const CodeAware = () => {
     dispatch(setUserRequirementStatus("editing"));
   }, [dispatch, isCodeEditModeEnabled, logger, userRequirement]);
 
-  const handleRegenerateSteps = useCallback(async () => {
+  const handleRegenerateCode = useCallback(async () => {
     // Disable in code edit mode
     if (isCodeEditModeEnabled) {
-      console.warn("⚠️ Regeneration is disabled in code edit mode");
+      console.warn("⚠️ Code regeneration is disabled in code edit mode");
       return;
     }
     
-    await logger.addLogEntry("user_request_regenerate_steps", {
-      currentRequirement: userRequirement?.requirementDescription || ""
+    await logger.addLogEntry("user_request_regenerate_code", {
+      timestamp: new Date().toISOString()
     });
     
-    // 切换到编辑需求界面，而不是直接重新生成
-    dispatch(setUserRequirementStatus("editing"));
-  }, [dispatch, isCodeEditModeEnabled, logger, userRequirement]);
+    try {
+      console.log("🔄 [CodeAware] Starting code regeneration...");
+      
+      // 1. Clear all code chunks and mappings
+      dispatch(clearAllCodeAndMappings());
+      
+      await logger.addLogEntry("user_clear_code_and_mappings", {
+        timestamp: new Date().toISOString()
+      });
+      
+      // 2. Get current file content
+      const currentFileResponse = await ideMessenger?.request("getCurrentFile", undefined);
+      
+      if (!currentFileResponse || currentFileResponse.status !== "success" || !currentFileResponse.content) {
+        throw new Error("无法获取当前文件内容");
+      }
+      
+      const currentFile = currentFileResponse.content;
+      
+      // 3. Clear the file content in IDE
+      try {
+        await ideMessenger?.request("writeFile", {
+          path: currentFile.path,
+          contents: ""
+        });
+        console.log("📄 [CodeAware] Cleared file content in IDE");
+        
+        await logger.addLogEntry("user_clear_file_content", {
+          filePath: currentFile.path,
+          timestamp: new Date().toISOString()
+        });
+      } catch (error) {
+        console.warn("⚠️ [CodeAware] Failed to clear file content:", error);
+        // Continue even if clearing fails
+      }
+      
+      // 4. Find all generated steps
+      const generatedSteps = steps.filter(step => step.stepStatus === "generated");
+      
+      if (generatedSteps.length === 0) {
+        console.log("📝 [CodeAware] No generated steps found");
+        ideMessenger?.post("showToast", ["info", "没有已生成的步骤需要重新生成代码。"]);
+        
+        await logger.addLogEntry("user_regenerate_code_no_steps", {
+          timestamp: new Date().toISOString()
+        });
+        return;
+      }
+      
+      // 5. Set all generated steps to generating status
+      generatedSteps.forEach(step => {
+        dispatch(setStepStatus({ stepId: step.id, status: "generating" }));
+      });
+      
+      console.log(`📋 [CodeAware] Found ${generatedSteps.length} generated steps to regenerate code`);
+      
+      // 6. Prepare ordered steps for code generation
+      const orderedSteps = generatedSteps.map(step => ({
+        id: step.id,
+        title: step.title,
+        abstract: step.abstract,
+        knowledge_cards: step.knowledgeCards.map(kc => ({
+          id: kc.id,
+          title: kc.title
+        }))
+      }));
+      
+      // 7. Generate code from steps
+      console.log("🚀 [CodeAware] Starting code generation from generated steps...");
+      const result = await dispatch(generateCodeFromSteps({
+        existingCode: "", // Start with empty code
+        filepath: currentFile.path,
+        orderedSteps: orderedSteps,
+        previouslyGeneratedSteps: undefined // No previous steps since we're regenerating everything
+      }));
+      
+      if (generateCodeFromSteps.fulfilled.match(result)) {
+        console.log("✅ [CodeAware] Code regeneration completed!", result.payload);
+        
+        // Set all steps back to generated status
+        generatedSteps.forEach(step => {
+          dispatch(setStepStatus({ stepId: step.id, status: "generated" }));
+        });
+        
+        // Check and update high level step completion
+        dispatch(checkAndUpdateHighLevelStepCompletion());
+        
+        ideMessenger?.post("showToast", ["info", `成功重新生成了 ${generatedSteps.length} 个步骤的代码！`]);
+        
+        await logger.addLogEntry("user_regenerate_code_completed", {
+          stepsCount: generatedSteps.length,
+          stepIds: generatedSteps.map(s => s.id),
+          timestamp: new Date().toISOString()
+        });
+        
+      } else if (generateCodeFromSteps.rejected.match(result)) {
+        console.error("❌ [CodeAware] Code regeneration failed:", result.error.message);
+        
+        // Restore steps to generated status on failure
+        generatedSteps.forEach(step => {
+          dispatch(setStepStatus({ stepId: step.id, status: "generated" }));
+        });
+        
+        ideMessenger?.post("showToast", ["error", "代码重新生成失败，请重试。"]);
+        
+        await logger.addLogEntry("user_regenerate_code_error", {
+          error: result.error.message || "Code regeneration failed",
+          stepsCount: generatedSteps.length,
+          timestamp: new Date().toISOString()
+        });
+      }
+      
+    } catch (error) {
+      console.error("❌ [CodeAware] Error during code regeneration:", error);
+      
+      // Restore all generating steps to generated status on error
+      const generatingSteps = steps.filter(step => step.stepStatus === "generating");
+      generatingSteps.forEach(step => {
+        dispatch(setStepStatus({ stepId: step.id, status: "generated" }));
+      });
+      
+      ideMessenger?.post("showToast", ["error", "代码重新生成过程中发生错误，请重试。"]);
+      
+      await logger.addLogEntry("user_regenerate_code_error", {
+        error: error instanceof Error ? error.message : String(error),
+        timestamp: new Date().toISOString()
+      });
+    }
+  }, [steps, ideMessenger, dispatch, isCodeEditModeEnabled, logger]);
 
   // CodeAware: 获取学习目标和代码上下文
   const learningGoal = useAppSelector(selectLearningGoal);
@@ -1822,8 +1949,8 @@ export const CodeAware = () => {
         showGlobalQuestionButton={userRequirementStatus === "finalized" && steps.length > 0}
         rightContent={
           <CodeEditModeToggle 
-            onRegenerateSteps={handleRegenerateSteps}
-            showRegenerateSteps={userRequirementStatus === "finalized"}
+            onRegenerateCode={handleRegenerateCode}
+            showRegenerateCode={userRequirementStatus === "finalized"}
           />
         }
       />

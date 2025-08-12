@@ -1,4 +1,4 @@
-import { ChevronDownIcon, QuestionMarkCircleIcon } from '@heroicons/react/24/outline';
+import { AcademicCapIcon, BookOpenIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
 import { XMarkIcon } from '@heroicons/react/24/solid';
 import React from 'react';
 import styled from "styled-components";
@@ -81,6 +81,8 @@ interface KnowledgeCardToolBarProps {
   isQuestionDisabled?: boolean;
   isHighlighted?: boolean;
   isFlickering?: boolean;
+  isTestMode?: boolean; // 新增：是否在测试模式
+  hasCorrectAnswer?: boolean; // 新增：是否有正确答案
 }
 
 const KnowledgeCardToolBar: React.FC<KnowledgeCardToolBarProps> = ({
@@ -92,6 +94,8 @@ const KnowledgeCardToolBar: React.FC<KnowledgeCardToolBarProps> = ({
   isQuestionDisabled = false,
   isHighlighted = false,
   isFlickering = false,
+  isTestMode = false, // 新增默认值
+  hasCorrectAnswer = false, // 新增默认值
 }) => {
   return (
     <ToolBarContainer isHighlighted={isHighlighted} isFlickering={isFlickering}>
@@ -115,17 +119,28 @@ const KnowledgeCardToolBar: React.FC<KnowledgeCardToolBarProps> = ({
         </Title>
       </TitleSection>
 
-      {/* Question button */}
+      {/* Test/Knowledge toggle button */}
       <QuestionButtonContainer>
         <HoverItem>
-          <QuestionMarkCircleIcon
-            className={`w-5 h-5 ${isQuestionDisabled ? 'opacity-50 cursor-not-allowed' : 'hover:brightness-125 cursor-pointer'}`}
-            onClick={!isQuestionDisabled ? onQuestionClick : undefined}
-          >
-            <ToolTip text="Test Your Mastery" position="top">
-              Test Your Mastery
-            </ToolTip>
-          </QuestionMarkCircleIcon>
+          {isTestMode ? (
+            <BookOpenIcon
+              className={`w-5 h-5 hover:brightness-125 cursor-pointer`}
+              onClick={onQuestionClick}
+            >
+              <ToolTip text="返回知识卡片" position="top">
+                返回知识卡片
+              </ToolTip>
+            </BookOpenIcon>
+          ) : (
+            <AcademicCapIcon
+              className={`w-5 h-5 ${isQuestionDisabled ? 'opacity-50 cursor-not-allowed' : 'hover:brightness-125 cursor-pointer'} ${hasCorrectAnswer ? 'text-green-500' : ''}`}
+              onClick={!isQuestionDisabled ? onQuestionClick : undefined}
+            >
+              <ToolTip text="查看测试题" position="top">
+                查看测试题
+              </ToolTip>
+            </AcademicCapIcon>
+          )}
         </HoverItem>
       </QuestionButtonContainer>
 

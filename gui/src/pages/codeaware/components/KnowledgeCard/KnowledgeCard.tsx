@@ -364,6 +364,9 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
 
   const currentTest = testItems[currentTestIndex];
 
+  // Check if user has answered any question correctly
+  const hasCorrectAnswer = testItems.some(test => test.result?.isCorrect === true);
+
   // Handle disable card
   const handleDisableCard = async () => {
     await logger.addLogEntry("user_disable_knowledge_card", {
@@ -394,6 +397,8 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
         isQuestionDisabled={testItems.length === 0} // 没有测试项目时禁用问号按钮
         isHighlighted={isHighlighted}
         isFlickering={isFlickering}
+        isTestMode={isTestMode} // 传递测试模式状态
+        hasCorrectAnswer={hasCorrectAnswer} // 传递正确答案状态
       />
       <ContentArea isVisible={isExpanded}>
 

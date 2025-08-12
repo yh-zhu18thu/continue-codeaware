@@ -3,6 +3,7 @@ import {
     CodeAwareMapping,
     CodeChunk,
     HighLevelStepItem,
+    HighlightEvent,
     ProgramRequirement,
     RequirementChunk,
     StepItem,
@@ -2249,7 +2250,7 @@ export const generateCodeFromSteps = createAsyncThunk<
                                 }
                                 return null;
                             })
-                            .filter(event => event !== null);
+                            .filter(event => event !== null) as HighlightEvent[];
                         
                         if (highlightEvents.length > 0) {
                             dispatch(updateHighlight(highlightEvents));

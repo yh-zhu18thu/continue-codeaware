@@ -2,8 +2,8 @@ import { HighlightEvent, KnowledgeCardItem, StepItem, StepStatus } from "core";
 import { Key, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import styled from "styled-components";
 import {
-    lightGray,
-    vscForeground
+  lightGray,
+  vscForeground
 } from "../../components";
 import { SessionInfoDialog } from "../../components/dialogs/SessionInfoDialog";
 import GlobalQuestionModal from "../../components/GlobalQuestionModal";
@@ -12,40 +12,41 @@ import { IdeMessengerContext } from "../../context/IdeMessenger";
 import { useWebviewListener } from "../../hooks/useWebviewListener";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks";
 import {
-    clearAllHighlights,
-    clearCodeEditModeSnapshot,
-    newCodeAwareSession, // Add this import
-    resetIdeCommFlags,
-    resetSessionExceptRequirement, // Add this import
-    saveCodeEditModeSnapshot, // Add this import
-    selectCurrentSessionId,
-    selectIsCodeEditModeEnabled, // Add this import for code edit mode
-    selectIsRequirementInEditMode, // Import submitRequirementContent
-    selectIsStepsGenerated,
-    selectLearningGoal, // Add this import
-    selectTask,
-    selectTitle, // Add this import for reading title
-    setCodeEditMode, // Add this import for code edit mode action
-    setKnowledgeCardDisabled, // Add this import for knowledge card disable
-    setKnowledgeCardGenerationStatus, // Add this import for knowledge card generation status
-    setStepAbstract, // Add this import for step editing
-    setStepStatus, // Add this import for step status change
-    setUserRequirementStatus,
-    submitRequirementContent, // Add this import
-    updateHighlight
+  clearAllHighlights,
+  clearCodeEditModeSnapshot,
+  newCodeAwareSession, // Add this import
+  resetIdeCommFlags,
+  resetSessionExceptRequirement, // Add this import
+  saveCodeEditModeSnapshot, // Add this import
+  selectCurrentSessionId,
+  selectIsCodeEditModeEnabled, // Add this import for code edit mode
+  selectIsRequirementInEditMode, // Import submitRequirementContent
+  selectIsStepsGenerated,
+  selectLearningGoal, // Add this import
+  selectTask,
+  selectTitle, // Add this import for reading title
+  setCodeEditMode, // Add this import for code edit mode action
+  setKnowledgeCardDisabled, // Add this import for knowledge card disable
+  setKnowledgeCardGenerationStatus, // Add this import for knowledge card generation status
+  setStepAbstract, // Add this import for step editing
+  setStepStatus, // Add this import for step status change
+  setUserRequirementStatus,
+  submitRequirementContent, // Add this import
+  updateHighlight
 } from "../../redux/slices/codeAwareSlice";
 import {
-    checkAndUpdateHighLevelStepCompletion,
-    generateCodeFromSteps,
-    generateKnowledgeCardDetail,
-    generateKnowledgeCardThemes,
-    generateKnowledgeCardThemesFromQuery,
-    generateStepsFromRequirement,
-    getStepCorrespondingCode,
-    processCodeChanges,
-    processGlobalQuestion,
-    processSaqSubmission,
-    rerunStep
+  checkAndMapKnowledgeCardsToCode,
+  checkAndUpdateHighLevelStepCompletion,
+  generateCodeFromSteps,
+  generateKnowledgeCardDetail,
+  generateKnowledgeCardThemes,
+  generateKnowledgeCardThemesFromQuery,
+  generateStepsFromRequirement,
+  getStepCorrespondingCode,
+  processCodeChanges,
+  processGlobalQuestion,
+  processSaqSubmission,
+  rerunStep
 } from "../../redux/thunks/codeAwareGeneration";
 import { useCodeAwareLogger } from "../../util/codeAwareWebViewLogger";
 import "./CodeAware.css";
@@ -1415,6 +1416,15 @@ export const CodeAware = () => {
       // When a step is expanded, immediately set it as the currently expanded step
       // This ensures the step stays expanded while other steps are collapsed
       setCurrentlyExpandedStepId(stepId);
+      
+      // 检查知识卡片是否有代码映射，如果没有则生成映射
+      try {
+        await dispatch(checkAndMapKnowledgeCardsToCode({ stepId }));
+        console.log(`✅ 完成步骤 ${stepId} 的知识卡片代码映射检查`);
+      } catch (error) {
+        console.warn(`⚠️ 步骤 ${stepId} 的知识卡片代码映射检查失败:`, error);
+        // 不抛出错误，让展开操作继续进行
+      }
     } else {
       // When a step is collapsed, clear the currently expanded step if it's this one
       setCurrentlyExpandedStepId(prev => prev === stepId ? null : prev);
@@ -1431,7 +1441,7 @@ export const CodeAware = () => {
         return newSet;
       });
     }
-  }, [logger]);
+  }, [dispatch, logger, setCurrentlyExpandedStepId, setForceExpandedSteps, setGlobalQuestionExpandedSteps]);
 
   const handleQuestionSubmit = useCallback(async (stepId: string, selectedText: string, question: string) => {
     console.log('处理步骤问题提交:', { stepId, selectedText, question });

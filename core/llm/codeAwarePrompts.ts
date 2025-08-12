@@ -28,7 +28,7 @@ export function constructGenerateStepsPrompt(
         "task": "You are given a description of a coding project (will be written in a single file, all sources and data are ready, necessary packages has been installed). First, provide a high-level breakdown of the project into major tasks, then provide detailed steps for each task.",
         "requirements": [
             "First, identify 4-8 major high-level tasks that represent the overall workflow of the project（in reasonable implementation order）. These should be conceptual phases like 'Setup and Configuration', 'Data Processing', 'User Interface Development', etc.",
-            "If the project requires importing packages or involves specific frameworks (such as PyGame, Flask, etc.), include a high-level task at the beginning for 'Project Setup and Dependencies' or similar. This task should cover importing necessary packages and setting up any framework-specific boilerplate code that every project using that framework requires.",
+            "IMPORTANT: If the project requires importing packages or involves specific frameworks (such as PyGame, Flask, etc.), include a high-level task at the beginning for 'Project Setup and Dependencies' or similar. This task should cover importing necessary packages and setting up any framework-specific boilerplate code (e.g. game loop, main function, template functions) that every project using that framework requires.",
             "Then, for each major task, generate fine-grained steps. The steps should be atomic - if the title of a step is 'A and B', divide it into two steps 'A' and 'B'.",
             "IMPORTANT: For core steps which are too hard to be understood by beginners, you can break them down into multiple steps to make them easier to understand and implement.",
             "Keep the title brief and readable. You must not put any code in the title.",
@@ -114,7 +114,8 @@ export function constructGenerateCodePrompt(
         title: string;
         abstract: string;
     }>,
-    taskDescription?: string
+    taskDescription?: string,
+    isLastStep?: boolean
 ): string {
     const newStepsText = newStepsToImplement.map(step => 
         `{"id": "${step.id}", "title": "${step.title}", "abstract": "${step.abstract}"}`
@@ -123,6 +124,10 @@ export function constructGenerateCodePrompt(
     const previousStepsText = previouslyGeneratedSteps ? previouslyGeneratedSteps.map(step => 
         `{"id": "${step.id}", "title": "${step.title}", "abstract": "${step.abstract}"}`
     ).join(",\n        ") : "";
+    
+    const rule1Text = isLastStep 
+        ? "You MUST ensure the complete project functionality is implemented. This is the final step, so make sure all features work together to create a fully functional project."
+        : "You MUST implement ONLY the steps listed in 'new_steps_to_implement'. Do NOT generate code for future steps or complete the entire project at once.";
     
     return `{
         "task": "You are on the way to implement a project incrementally. You are given existing code and a list of new steps to implement. Your ONLY job is to generate clean, complete code that implements the new steps while maintaining the existing code structure.",
@@ -136,10 +141,11 @@ export function constructGenerateCodePrompt(
         ${previousStepsText}
         ]` : ""}
         "requirements": [
-            "STRICT RULE 1: You MUST implement ONLY the steps listed in 'new_steps_to_implement'. Do NOT generate code for future steps or complete the entire project at once.",
+            "STRICT RULE 1: ${rule1Text}",
             "STRICT RULE 2: Generated code must be clean with concise, clear comments that explain what each part does.",
             "STRICT RULE 3: Preserve the existing code structure as much as possible while adding new functionality for the required steps.",
             "STRICT RULE 4: If the project_description contains user-specified file formats, algorithms, packages, or technical preferences, you MUST strictly adhere to these specifications when implementing the code.",
+            "STRICT RULE 5: The generated code MUST be syntactically correct and runnable without errors, even if incomplete.",
             "Read each step's abstract carefully and implement exactly what is described - no more, no less.",
             "Include helpful comments in the code to explain the purpose of new additions.",
             "Maintain code consistency and follow good programming practices.",
@@ -154,49 +160,57 @@ export function constructGenerateCodePrompt(
     }`;
 }
 
-// 第二步：专注于代码映射的 prompt  
+// 第二步：专注于代码映射的 prompt - 将代码块映射到相关步骤（只输出行号范围）
 export function constructMapCodeToStepsPrompt(
     completeCode: string,
     allSteps: Array<{
         id: string;
         title: string;
         abstract: string;
-        knowledge_cards: Array<{
-            id: string;
-            title: string;
-        }>;
     }>
 ): string {
-    const stepsText = allSteps.map(step => {
-        const knowledgeCardsText = step.knowledge_cards.map(kc => 
-            `{"kc_id": "${kc.id}", "title": "${kc.title}"}`
-        ).join(", ");
-        return `{"step_id": "${step.id}", "title": "${step.title}", "abstract": "${step.abstract}", "knowledge_cards": [${knowledgeCardsText}]}`;
-    }).join(",\n        ");
+    const stepsText = allSteps.map(step => 
+        `{"step_id": "${step.id}", "title": "${step.title}", "abstract": "${step.abstract}"}`
+    ).join(",\n        ");
+    
+    // 计算代码总行数
+    const totalLines = completeCode.split("\n").length;
     
     return `{
-        "task": "You are given complete code and a list of steps with their knowledge cards. Your job is to create precise mappings between code chunks and steps/knowledge cards.",
+        "task": "You are given complete code and a list of implementation steps. Your job is to analyze the code structure, group consecutive lines that belong to the same semantic unit, and map each semantic code chunk to the relevant steps. You only need to output the line number ranges for each chunk.",
         "complete_code": "${completeCode}",
-        "steps_with_knowledge_cards": [
+        "total_lines": ${totalLines},
+        "steps": [
         ${stepsText}
         ],
         "requirements": [
-            "STRICT RULE 1: Code snippets must be identified by line-based ranges. The minimum unit is a line.",
-            "STRICT RULE 2: For each step, find ALL code snippets that relate to it, even if they appear in non-consecutive locations. This includes: the main implementation code, function definitions that implement the step's functionality, function calls that invoke the step's functionality, variable declarations and assignments related to the step, and any supporting code that directly contributes to the step's purpose. However, do NOT include code that deals with different themes or unrelated functionality (e.g., if a step is about 'pygame game loop', do not include specific game logic implementations within that loop).",
-            "STRICT RULE 3: For knowledge cards within steps, find the most precise and relevant code snippets (typically one line) that relate to the knowledge card's theme.",
-            "IMPORTANT: Try to ensure that every line of code is assigned to at least one step so that students understand the purpose of each line. Avoid leaving code lines unassigned",
-            "Analyze the code line by line to identify which parts implement each step's requirements.",
-            "For each step, extract all relevant code snippets (can be multiple non-consecutive snippets) that directly contribute to achieving the step's goals.",
-            "For knowledge cards, identify the most specific code that relates to the card's educational theme.",
-            "If a knowledge card has no corresponding code, leave its code_snippet field empty.",
-            "Code snippets should be precise and focused - include lines that directly relate to the step/knowledge card's specific theme, but gather all such relevant lines even if scattered.",
-            "Use line numbers or actual code content to clearly identify each snippet.",
-            "Respond in the same language as the step descriptions.",
-            "You must follow this JSON format in your response: {\\"steps_correspond_code\\": [{\\"id\\": \\"step_id\\", \\"code_snippets\\": [\\"code_snippet_1\\", \\"code_snippet_2\\"], \\"knowledge_cards_correspond_code\\": [{\\"id\\": \\"kc_id\\", \\"code_snippet\\": \\"precise_code_snippet\\"}]}]}",
-            "CRITICAL: Return ONLY a valid JSON object. Do not add any explanatory text before or after the JSON. Do not use code block markers. The response should start with { and end with }.",
-            "IMPORTANT: Properly escape all special characters in JSON strings. Ensure the JSON is valid and parseable.",
-            "Please do not use invalid code block characters to envelope the JSON response, just return the JSON object directly."
-        ],
+            "STRICT RULE 1: Process the code from line 1 to the last line sequentially. Do NOT skip any lines. Every single line must be included in exactly one semantic chunk.",
+            "STRICT RULE 2: Group consecutive lines that have the same semantic meaning into chunks. A semantic chunk should be as fine-grained as possible while still being meaningful (e.g., import statements, variable declarations, a single function, a comment block explaining one concept, etc.).",
+            "STRICT RULE 3: Each code chunk must consist of consecutive lines only. You cannot combine non-consecutive lines into one chunk.",
+            "STRICT RULE 4: Each code chunk must correspond to at least one step. Every step must have at least one code chunk mapped to it.",
+            "COVERAGE GOAL: Every line from line 1 to the last line must be assigned to exactly one semantic chunk. No line should be missing or duplicated. All chunks must be seamless (no gaps between chunks).",
+            "SEMANTIC ANALYSIS PROCESS:",
+            "- Start from line 1 and work your way down sequentially",
+            "- Identify where one semantic unit ends and another begins (e.g., end of imports, end of a function, end of a comment block)",
+            "- Create fine-grained chunks: separate import statements from function definitions, separate different functions, separate variable declarations, etc.",
+            "- Include comment lines with the code they describe, or group them as separate comment chunks if they stand alone",
+            "- For each chunk, determine which step(s) this code chunk helps implement based on the step abstracts",
+            "- Ensure every step has at least one code chunk mapped to it",
+            "CHUNK CREATION RULES:",
+            "- Prefer smaller, more focused chunks over large ones",
+            "- Each chunk should represent one clear semantic concept",
+            "- Chunks must be consecutive lines only - no gaps or skips",
+            "- A chunk can be as small as a single line if it represents a distinct semantic unit",
+            "- The chunks must cover all lines from 1 to ${totalLines} with no gaps",
+            "OUTPUT FORMAT:",
+            "- You must follow this JSON format: {\\"code_chunks\\": [{\\"start_line\\": number, \\"end_line\\": number, \\"semantic_description\\": \\"(brief description of what this chunk does)\\", \\"corresponding_steps\\": [\\"step_id_1\\", \\"step_id_2\\", ...]}]}",
+            "- start_line and end_line indicate the line number range (inclusive, 1-based indexing)",
+            "- semantic_description should briefly explain what this chunk represents (e.g., 'import statements', 'main function definition', 'game loop logic')",
+            "- corresponding_steps should include ALL step IDs that this code chunk helps implement",
+            "- Every step in the steps array must appear in at least one corresponding_steps array",
+            "- Return ONLY a valid JSON object. No explanatory text before or after. No code block markers. Response must start with { and end with }.",
+            "- Properly escape all special characters in JSON strings to ensure valid JSON"
+        ]
     }`;
 }
 
@@ -315,49 +329,30 @@ export function constructRerunStepPrompt(
         id: string;
         title: string;
         abstract: string;
-        knowledge_cards: Array<{
-            id: string;
-            title: string;
-        }>;
     },
     changedStepAbstract: string,
     currentStepCodeChunks?: {
         stepCode: string;
-        knowledgeCardCodes: Array<{
-            id: string;
-            title: string;
-            code: string;
-        }>;
     }
 ): string {
-    const knowledgeCardsText = previousStep.knowledge_cards.map(kc => 
-        `{"id": "${kc.id}", "title": "${kc.title}"}`
-    ).join(", ");
-    
     // 构建当前代码映射信息的文本
     const currentCodeMappingText = currentStepCodeChunks ? `
         "current_code_mappings": {
-            "step_code": "${currentStepCodeChunks.stepCode}",
-            "knowledge_card_codes": [${currentStepCodeChunks.knowledgeCardCodes.map(kc => 
-                `{"id": "${kc.id}", "title": "${kc.title}", "code": "${kc.code}"}`
-            ).join(", ")}]
+            "step_code": "${currentStepCodeChunks.stepCode}"
         },` : "";
     
     const currentCodeMappingRequirement = currentStepCodeChunks ? 
-        "Use the current_code_mappings as a reference to understand which parts of the code currently correspond to this step and its knowledge cards. This will help you identify the relevant code sections more accurately.," : "";
+        "Use the current_code_mappings as a reference to understand which parts of the code currently correspond to this step. This will help you identify the relevant code sections more accurately.," : "";
     
     return `{
-        "task": "You are given existing code and a step whose abstract has been modified. You also have information about which code parts currently correspond to this step and its knowledge cards. Analyze the changes and update the code minimally to match the new abstract, then determine the correspondence between the updated code and the step/knowledge cards.",
+        "task": "You are given existing code and a step whose abstract has been modified. You also have information about which code parts currently correspond to this step. Analyze the changes and update the code minimally to match the new abstract, then determine the correspondence between the updated code and the step.",
         "requirements": [
             "Analyze the differences between the previous abstract and the changed abstract. If the abstract is changed substantially, update the title of the step if necessary.",
             "Update the code minimally to match the changed abstract - make only necessary changes. Keep as much of the code unchanged as possible. At the very least, you must keep the code structure recognizable to the user.",
             "${currentCodeMappingRequirement}"
             "For the step, identify which parts of the updated code correspond to this step - try to be precise and avoid including the entire file. Focus on the code sections that directly implement the step's functionality.",
-            "For each knowledge card, determine if the abstract change affects its content (needs_update: true/false)",
-            "Extract the most relevant and precise code chunks that correspond to each knowledge card - avoid including large irrelevant sections",
-            "If a knowledge card has no corresponding code, leave its corresponding_code empty",
             "Respond in the same language as the step descriptions",
-            "You must follow this JSON format in your response: {\\"analysis\\": \\"(your analysis of the changes in the abstract and the things that need modification)\\", \\"updated_code\\": \\"(complete updated code)\\", \\"step_updates\\": {\\"id\\": \\"${previousStep.id}\\", \\"title\\": \\"(possibly updated title)\\", \\"corresponding_code\\": \\"(precise code for this step, not the entire file)\\"}, \\"knowledge_cards_updates\\": [{\\"id\\": \\"card_id\\", \\"needs_update\\": true/false, \\"title\\": \\"(possibly updated title)\\", \\"corresponding_code\\": \\"(relevant code or empty string)\\"}]}",
+            "You must follow this JSON format in your response: {\\"analysis\\": \\"(your analysis of the changes in the abstract and the things that need modification)\\", \\"updated_code\\": \\"(complete updated code)\\", \\"step_updates\\": {\\"id\\": \\"${previousStep.id}\\", \\"title\\": \\"(possibly updated title)\\", \\"corresponding_code\\": \\"(precise code for this step, not the entire file)\\"}}",
             "IMPORTANT: Properly escape all special characters in JSON strings. Ensure the JSON is valid and parseable.",
             "Please do not use invalid \`\`\`json character to envelope the JSON response, just return the JSON object directly."
         ],
@@ -365,8 +360,7 @@ export function constructRerunStepPrompt(
         "previous_step": {
             "id": "${previousStep.id}",
             "title": "${previousStep.title}",
-            "abstract": "${previousStep.abstract}",
-            "knowledge_cards": [${knowledgeCardsText}]
+            "abstract": "${previousStep.abstract}"
         },
         "changed_step_abstract": "${changedStepAbstract}"
     }`;
@@ -381,27 +375,18 @@ export function constructProcessCodeChangesPrompt(
         id: string;
         title: string;
         abstract: string;
-        knowledge_cards: Array<{
-            id: string;
-            title: string;
-        }>;
     }>
 ): string {
-    const stepsText = relevantSteps.map(step => {
-        const knowledgeCardsText = step.knowledge_cards.map(kc => 
-            `{"id": "${kc.id}", "title": "${kc.title}"}`
-        ).join(", ");
-        
-        return `{
+    const stepsText = relevantSteps.map(step => 
+        `{
             "id": "${step.id}",
             "title": "${step.title}",
-            "abstract": "${step.abstract}",
-            "knowledge_cards": [${knowledgeCardsText}]
-        }`;
-    }).join(", ");
+            "abstract": "${step.abstract}"
+        }`
+    ).join(", ");
     
     return `{
-        "task": "You are given the previous code, current code after changes, a code diff for reference, and a list of relevant steps that were affected by these code changes. Analyze whether these changes require updates to the step abstracts and knowledge card titles/content, and determine if any steps have become functionally incomplete and need regeneration.",
+        "task": "You are given the previous code, current code after changes, a code diff for reference, and a list of relevant steps that were affected by these code changes. Analyze whether these changes require updates to the step abstracts and determine if any steps have become functionally incomplete and need regeneration.",
         "requirements": [
             "Compare the previous_code and current_code to understand what changes were made",
             "The code_diff is provided for reference to help you understand the changes, but focus on comparing the previous and current code directly",
@@ -410,12 +395,10 @@ export function constructProcessCodeChangesPrompt(
             "A step has code_broken when: the code changes have removed or broken core functionality described in the step's abstract, making the step's implementation incomplete or non-functional",
             "A step only needs_update when: minor adjustments to title/abstract are needed but the core functionality remains intact",
             "If a step needs update, provide the updated title and abstract that reflect the code changes",
-            "For each knowledge card, determine if its content needs to be regenerated based on the changes (needs_update: true/false)",
-            "If a knowledge card needs update, provide an updated title that better reflects the new code",
-            "Extract the most relevant code parts that correspond to each updated step and knowledge card",
+            "Extract the most relevant code parts that correspond to each updated step",
             "The corresponding_code should include the relevant portions from the current_code (after changes)",
             "Respond in the same language as the step descriptions",
-            "You must follow this JSON format in your response: {\\"analysis\\": \\"(your analysis of the changes in the code and the things that need modification)\\", \\"updated_steps\\": [{\\"id\\": \\"step_id\\", \\"needs_update\\": true/false, \\"code_broken\\": true/false, \\"title\\": \\"(updated or original title)\\", \\"abstract\\": \\"(updated or original abstract)\\", \\"corresponding_code\\": \\"(relevant code from current_code)\\"}], \\"knowledge_cards\\": [{\\"id\\": \\"card_id\\", \\"needs_update\\": true/false, \\"title\\": \\"(updated or original title)\\", \\"corresponding_code\\": \\"(relevant code from current_code)\\"}]}",
+            "You must follow this JSON format in your response: {\\"analysis\\": \\"(your analysis of the changes in the code and the things that need modification)\\", \\"updated_steps\\": [{\\"id\\": \\"step_id\\", \\"needs_update\\": true/false, \\"code_broken\\": true/false, \\"title\\": \\"(updated or original title)\\", \\"abstract\\": \\"(updated or original abstract)\\", \\"corresponding_code\\": \\"(relevant code from current_code)\\"}]}",
             "IMPORTANT: Properly escape all special characters in JSON strings. Ensure the JSON is valid and parseable.",
             "Please do not use invalid \`\`\`json character to envelope the JSON response, just return the JSON object directly."
         ],
@@ -540,5 +523,95 @@ export function constructGlobalQuestionPrompt(
         ],
         "learning_goal": "${learningGoal}",
         "task_description": "${taskDescription}"
+    }`;
+}
+
+// 构建检查知识卡片代码映射的prompt
+export function constructMapKnowledgeCardsToCodePrompt(
+    stepCode: string[],
+    knowledgeCardTitles: string[]
+): string {
+    const codeLines = stepCode.map(line => 
+        JSON.stringify(line)
+    ).join(",\n        ");
+    
+    const knowledgeCardTitlesText = knowledgeCardTitles.map(title => 
+        JSON.stringify(title)
+    ).join(",\n        ");
+    
+    return `{
+        "task": "You are given code lines for a specific step and knowledge card titles that don't have code mappings yet. Your job is to create precise mappings between complete code lines and knowledge card titles based on their themes.",
+        "code_lines": [
+        ${codeLines}
+        ],
+        "knowledge_card_titles": [
+        ${knowledgeCardTitlesText}
+        ],
+        "requirements": [
+            "STRICT RULE 1: Code snippets must be complete lines from the code_lines array. Never use partial lines or fragments.",
+            "STRICT RULE 2: For each knowledge card title, find ALL complete lines that relate to its theme or topic. Focus on lines that directly demonstrate or implement the concept described by the knowledge card title.",
+            "STRICT RULE 3: Every code snippet must be an exact copy of a complete line from the code_lines array.",
+            "MAPPING PROCESS:",
+            "- Analyze each knowledge card title to understand what programming concept or technique it represents",
+            "- For each title, identify which code lines directly relate to that concept",
+            "- Extract all relevant complete lines (can be non-consecutive) that help explain or demonstrate the knowledge card's topic",
+            "- Include comment lines when they explain the concept related to the knowledge card",
+            "- If a knowledge card title doesn't match any code lines, return an empty code_snippets array for that card",
+            "OUTPUT FORMAT:",
+            "- You must follow this JSON format: {\\"knowledge_card_mappings\\": [{\\"title\\": \\"knowledge_card_title\\", \\"code_snippets\\": [\\"code_line_1\\", \\"code_line_2\\"]}]}",
+            "- Return ONLY a valid JSON object. No explanatory text before or after. No code block markers. Response must start with { and end with }.",
+            "- Properly escape all special characters in JSON strings to ensure valid JSON",
+            "- If no relevant code is found for a knowledge card, include it with an empty code_snippets array"
+        ]
+    }`;
+}
+
+// 新增：从完整代码中找到与特定步骤相关的代码行
+export function constructFindStepRelatedCodeLinesPrompt(
+    completeCode: string,
+    stepTitle: string,
+    stepAbstract: string
+): string {
+    const codeLines = completeCode.split("\n");
+    const totalLines = codeLines.length;
+    
+    // 生成带行号的代码内容，便于分析
+    const numberedCodeLines = codeLines.map((line, index) => 
+        `${index + 1}: ${line}`
+    ).join("\n");
+    
+    return `{
+        "task": "You are given complete code and information about a specific implementation step. Your job is to identify and return ALL code lines that are related to implementing this specific step. Return the exact line content (without line numbers) for each relevant line.",
+        "complete_code_with_line_numbers": "${numberedCodeLines}",
+        "total_lines": ${totalLines},
+        "step_info": {
+            "title": "${stepTitle}",
+            "abstract": "${stepAbstract}"
+        },
+        "requirements": [
+            "STRICT RULE 1: Analyze the step title and abstract to understand exactly what this step is supposed to implement or accomplish.",
+            "STRICT RULE 2: Go through the code line by line and identify ALL lines that are directly related to implementing this specific step.",
+            "STRICT RULE 3: Include code lines that:",
+            "  - Directly implement the functionality described in the step abstract",
+            "  - Are helper functions or variables specifically used by this step's implementation",
+            "  - Are imports that are only used by this step's functionality",
+            "  - Are comments that explain this step's implementation",
+            "STRICT RULE 4: Do NOT include lines that:",
+            "  - Implement other steps or unrelated functionality",
+            "  - Are general utility functions used by multiple steps (unless they are specifically created for this step)",
+            "  - Are global imports or setup code used by the entire program (unless specific to this step)",
+            "ANALYSIS PROCESS:",
+            "- First understand what the step is trying to accomplish based on its title and abstract",
+            "- Then scan through all code lines and identify which ones contribute to achieving this step's goal",
+            "- Be selective but comprehensive - include all relevant lines but avoid including unrelated code",
+            "- Consider both direct implementation lines and supporting code (variables, helper functions, comments)",
+            "OUTPUT FORMAT:",
+            "- Return ONLY the exact line content (without line numbers) for each relevant line",
+            "- Maintain the original line content exactly as it appears in the code",
+            "- You must follow this JSON format: {\\"related_code_lines\\": [\\"exact_line_content_1\\", \\"exact_line_content_2\\", ...]}",
+            "- Return ONLY a valid JSON object. No explanatory text before or after. No code block markers.",
+            "- If no relevant code lines are found, return {\\"related_code_lines\\": []}",
+            "- Properly escape all special characters in JSON strings to ensure valid JSON"
+        ]
     }`;
 }

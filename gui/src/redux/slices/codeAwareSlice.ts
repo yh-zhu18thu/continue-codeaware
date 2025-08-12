@@ -814,6 +814,13 @@ export const codeAwareSessionSlice = createSlice({
                 return true;
             });
         },
+        // 清除所有知识卡片的代码映射（保留步骤到需求的映射）
+        clearKnowledgeCardCodeMappings: (state) => {
+            state.codeAwareMappings = state.codeAwareMappings.filter(mapping => {
+                // 保留不包含知识卡片ID或代码块ID的映射（即步骤到需求的映射）
+                return !mapping.knowledgeCardId && !mapping.codeChunkId;
+            });
+        },
         resetSessionExceptRequirement: (state) => {
             // Clear all highlights first
             codeAwareSessionSlice.caseReducers.clearAllHighlights(state);
@@ -1035,6 +1042,7 @@ export const {
     setCodeChunkDisabled,
     updateCodeAwareMappings,
     removeCodeAwareMappings,
+    clearKnowledgeCardCodeMappings,
     setCodeAwareTitle,
     setLearningGoal,
     resetIdeCommFlags,

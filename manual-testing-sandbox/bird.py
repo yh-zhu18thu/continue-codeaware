@@ -1,278 +1,268 @@
-import pygame  # 导入PyGame库
-import random  # 导入random库，便于后续使用
-import math    # 导入math库，便于后续计算
+import arcade  # 导入Arcade库用于可视化与窗口管理
+import math     # 导入math标准库，用于数学计算
+import random   # 导入random标准库，用于随机数生成
+from collections import deque  # 可选，后续如果需要高效的队列操作
 
-# 初始化PyGame模块
-pygame.init()
+# 定义一些常量，方便后续维护和魔法数字消除
+SCREEN_WIDTH = 800
+SCREEN_HEIGHT = 600
+SCREEN_TITLE = "Boids 群鸟模拟 - 动态可视化"
+BACKGROUND_COLOR = arcade.color.WHITE
+FPS = 60
 
-# 设置窗口尺寸与标题
-WINDOW_WIDTH = 800     
-WINDOW_HEIGHT = 600    
+# ------ 群行为参数 ------
+SEPARATION_RADIUS = 26.0  # 分离感知半径
+ALIGNMENT_RADIUS  = 55.0  # 对齐感知半径
+COHESION_RADIUS   = 55.0  # 凝聚感知半径
+SEPARATION_FORCE  = 0.09  # 分离力权重
+ALIGNMENT_FORCE   = 0.05  # 对齐力权重
+COHESION_FORCE    = 0.035 # 凝聚力权重
 
-# 创建窗口
-screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))  
-# 设置窗口标题
-pygame.display.set_caption('群鸟算法演示 Bird Flocking Demo')  
-
-# ========== s-5: 定义鸟类的数据结构与属性 ==========
-class Bird:
+# ---------------- 新增代码部分 ----------------
+class Boid:
     """
-    鸟类对象。其中每只鸟有自己的位置和速度，用于群体行为模拟。
+    表示一只Boid（鸟），拥有位置、速度、加速度等属性。
+    便于后续实现各种行为和状态。
     """
-    def __init__(self, x, y, vx, vy):
-        self.x = x          # 鸟的水平方向位置
-        self.y = y          # 鸟的竖直方向位置
-        self.vx = vx        # 鸟的水平方向速度
-        self.vy = vy        # 鸟的竖直方向速度
-        # 美化: 鸟拥有各自的颜色、尺寸
-        self.size = random.randint(7, 11)
-        self.base_color = random.choice([
-            (245, 215, 80),   # 温和黄
-            (130, 198, 255),  # 清新蓝
-            (240, 120, 90),   # 活力橙
-            (90, 210, 130),   # 绿色调
-            (225, 130, 220)   # 紫粉色
-        ])
-        # 状态高亮（如鼠标附近）后续可用
-    
-    def get_pos(self):
-        """获取当前位置"""
-        return (self.x, self.y)
-    
-    def get_velocity(self):
-        """获取当前速度"""
-        return (self.vx, self.vy)
+    def __init__(self, position, velocity):
+        self.position = arcade.Vector(position[0], position[1])  # 位置(x, y)
+        self.velocity = arcade.Vector(velocity[0], velocity[1])  # 速度(x, y)
+        self.acceleration = arcade.Vector(0, 0)                  # 加速度(x, y)
+        self.radius = 6  # 绘制半径，可根据实际调整
 
-# ========== s-6: 实现鸟的初始化及生成函数 ==========
-# 参数设定：鸟群数量
-NUM_BIRDS = 90
+    def update(self):
+        """
+        更新Boid的位置和速度，并进行边界处理，使其不会飞出屏幕。
+        """
+        # 更新速度和位置
+        self.velocity += self.acceleration
+        # 限制最大速度
+        max_speed = 4.0
+        if self.velocity.length > max_speed:
+            self.velocity = self.velocity.normalize() * max_speed
+        self.position += self.velocity
+        # 清空加速度（每帧由行为重新累加）
+        self.acceleration = arcade.Vector(0, 0)
+        # 边界环绕处理（使Boid从一侧出去会从另一侧进来）
+        if self.position.x < 0:
+            self.position.x += SCREEN_WIDTH
+        if self.position.x >= SCREEN_WIDTH:
+            self.position.x -= SCREEN_WIDTH
+        if self.position.y < 0:
+            self.position.y += SCREEN_HEIGHT
+        if self.position.y >= SCREEN_HEIGHT:
+            self.position.y -= SCREEN_HEIGHT
 
-# 鸟的最大速度，用于限制运动速度
-MAX_SPEED = 1.0
+    # 添加Boid的行为（仅供主程序调用）
+    def apply_force(self, force):
+        """
+        对Boid累加一个力（向量），用于行为作用。
+        """
+        self.acceleration += force
 
-# 鸟的最小速度，避免静止和重叠bug
-MIN_SPEED = 0.18  # s-15: 异常修复，速度不能过慢
+    def separation(self, neighbors):
+        """
+        分离规则：避免与邻居距离过近。
+        neighbors: 在感知半径内的其它Boid列表。
+        返回分离力（Vector）。
+        """
+        steer = arcade.Vector(0.0, 0.0)
+        total = 0
+        for other in neighbors:
+            distance = (self.position - other.position).length
+            if 0 < distance < SEPARATION_RADIUS:
+                # 朝远离对方的方向施加力, 距离越近，力越大
+                diff = (self.position - other.position)
+                if diff.length > 0:
+                    diff = diff.normalize()
+                steer += diff / max(distance, 0.01)  # 距离分之一加权
+                total += 1
+        if total > 0:
+            steer /= total
+        if steer.length > 0:
+            # 转换为期望最大速度，然后减去自身速度
+            steer = steer.normalize() * 4.0 - self.velocity
+            # 限制最大分离力
+            max_force = 0.35
+            if steer.length > max_force:
+                steer = steer.normalize() * max_force
+        return steer * SEPARATION_FORCE
 
-# 生成鸟群的初始化方法
+    def alignment(self, neighbors):
+        """
+        对齐规则：趋向于与邻近Boid的平均方向一致（速度对齐）。
+        neighbors: 在感知半径内的其它Boid列表。
+        返回对齐力（Vector）。
+        """
+        if not neighbors:
+            return arcade.Vector(0.0, 0.0)
+        avg_vel = arcade.Vector(0.0, 0.0)
+        total = 0
+        for other in neighbors:
+            avg_vel += other.velocity
+            total += 1
+        avg_vel /= total
+        if avg_vel.length > 0:
+            avg_vel = avg_vel.normalize() * 4.0
+            steer = avg_vel - self.velocity
+            max_force = 0.12
+            if steer.length > max_force:
+                steer = steer.normalize() * max_force
+            return steer * ALIGNMENT_FORCE
+        return arcade.Vector(0.0, 0.0)
 
-def generate_birds(num_birds):
+    def cohesion(self, neighbors):
+        """
+        凝聚规则：趋向于邻居群的中心。
+        neighbors: 在感知半径内的其它Boid列表。
+        返回凝聚力（Vector）。
+        """
+        if not neighbors:
+            return arcade.Vector(0.0, 0.0)
+        center = arcade.Vector(0.0, 0.0)
+        total = 0
+        for other in neighbors:
+            center += other.position
+            total += 1
+        center /= total
+        # 指向邻居中心方向的向量
+        to_center = center - self.position
+        if to_center.length > 0:
+            to_center = to_center.normalize() * 4.0
+            steer = to_center - self.velocity
+            max_force = 0.1
+            if steer.length > max_force:
+                steer = steer.normalize() * max_force
+            return steer * COHESION_FORCE
+        return arcade.Vector(0.0, 0.0)
+
+class Obstacle:
     """
-    生成指定数量的Bird对象，随机分布于屏幕，各自有随机速度。
+    表示一个静态障碍物，拥有位置和半径。
     """
-    birds = []
-    for _ in range(num_birds):
-        x = random.uniform(50, WINDOW_WIDTH - 50)
-        y = random.uniform(50, WINDOW_HEIGHT - 50)
-        angle = random.uniform(0, 2 * math.pi)
-        speed = random.uniform(MAX_SPEED * 0.5, MAX_SPEED)
-        vx = math.cos(angle) * speed
-        vy = math.sin(angle) * speed
-        birds.append(Bird(x, y, vx, vy))
-    return birds
+    def __init__(self, position, radius):
+        self.position = arcade.Vector(position[0], position[1])  # 位置(x, y)
+        self.radius = radius                                     # 障碍物半径
 
-# 实例化鸟群
-birds = generate_birds(NUM_BIRDS)
-
-# ========== s-7: 实现鸟的单独移动与边界处理 ==========
-
-def move_bird(bird):
+# ---------------- 主应用程序部分 ----------------
+class BoidsApp(arcade.Window):
     """
-    鸟的基础移动逻辑，并处理边界：鸟将环绕屏幕。
+    主应用程序类，继承自arcade.Window。
+    负责窗口的生命周期管理、绘制和更新。
     """
-    bird.x += bird.vx
-    bird.y += bird.vy
+    def __init__(self, width, height, title):
+        # 初始化父类（Arcade窗口）
+        super().__init__(width, height, title)
+        # 设置背景色
+        arcade.set_background_color(BACKGROUND_COLOR)
+        # 初始化boids和障碍物的数据结构
+        self.boids = []            # Boid对象列表
+        self.obstacles = []        # 障碍物对象列表
 
-    # 边界处理（环绕方式）
-    if bird.x < 0:
-        bird.x += WINDOW_WIDTH
-    elif bird.x >= WINDOW_WIDTH:
-        bird.x -= WINDOW_WIDTH
-    if bird.y < 0:
-        bird.y += WINDOW_HEIGHT
-    elif bird.y >= WINDOW_HEIGHT:
-        bird.y -= WINDOW_HEIGHT
+    def setup(self):
+        """
+        初始化或重置游戏的状态，在游戏开始或重置时调用。
+        初始化一组Boid和若干障碍物实例，并随机分布。
+        """
+        self.boids = []
+        self.obstacles = []
+        # 随机生成boids
+        num_boids = 30
+        for _ in range(num_boids):
+            pos = (
+                random.uniform(0, SCREEN_WIDTH),
+                random.uniform(0, SCREEN_HEIGHT)
+            )
+            angle = random.uniform(0, 2 * math.pi)
+            speed = random.uniform(1.0, 3.5)
+            vel = (math.cos(angle)*speed, math.sin(angle)*speed)
+            boid = Boid(pos, vel)
+            self.boids.append(boid)
+        # 随机生成障碍物
+        num_obstacles = 5
+        for _ in range(num_obstacles):
+            # 为避免障碍物太靠边，可以设定一定边距
+            margin = 40
+            pos = (
+                random.uniform(margin, SCREEN_WIDTH - margin),
+                random.uniform(margin, SCREEN_HEIGHT - margin)
+            )
+            radius = random.uniform(25, 45)
+            obstacle = Obstacle(pos, radius)
+            self.obstacles.append(obstacle)
 
-# ========== s-8: 实现鸟之间的靠拢规则 ==========
+    def on_draw(self):
+        """
+        每帧绘制回调，负责渲染内容。
+        绘制Boid和障碍物。
+        """
+        arcade.start_render()
+        # 绘制障碍物
+        for obstacle in self.obstacles:
+            arcade.draw_circle_filled(
+                obstacle.position.x, obstacle.position.y,
+                obstacle.radius, arcade.color.GRAY)
+        # 绘制boids
+        for boid in self.boids:
+            # 画三角形代表鸟的朝向
+            direction = boid.velocity.normalize() if boid.velocity.length > 0 else arcade.Vector(1, 0)
+            perp = arcade.Vector(-direction.y, direction.x)
+            tip = boid.position + direction * (boid.radius * 2.3)
+            left = boid.position + perp * boid.radius * 0.8 - direction * boid.radius * 0.8
+            right = boid.position - perp * boid.radius * 0.8 - direction * boid.radius * 0.8
+            arcade.draw_triangle_filled(tip.x, tip.y, left.x, left.y, right.x, right.y, arcade.color.BLUE)
+            # 可选：画圆辅助视野
+            # arcade.draw_circle_outline(boid.position.x, boid.position.y, boid.radius, arcade.color.BLUE, 1)
 
-def rule_cohesion(bird, birds):
-    """
-    群体靠拢：让鸟向邻居中心靠近。
-    """
-    NEIGHBOR_DIST = 60  # 靠拢影响距离
-    center_x = 0.0
-    center_y = 0.0
-    count = 0
-    for other in birds:
-        if other is not bird:
-            dist = math.hypot(bird.x - other.x, bird.y - other.y)
-            if dist < NEIGHBOR_DIST:
-                center_x += other.x
-                center_y += other.y
-                count += 1
-    if count > 0:
-        # 计算群体中心并返回指向中心的微小速度修正
-        center_x /= count
-        center_y /= count
-        dx = (center_x - bird.x) * 0.005  # 调节系数
-        dy = (center_y - bird.y) * 0.005
-        return dx, dy
-    return 0.0, 0.0
+    def on_update(self, delta_time):
+        """
+        每帧刷新回调，负责逻辑更新。
+        新增实现：
+        1. 计算每只Boid的邻居列表（分离、对齐、凝聚三组邻居可分别设定不同半径）；
+        2. 对每只Boid分别叠加三则群行为产生的加速度。
+        """
+        # 为避免重复，为每只boid预计算邻居（为效率可用空间分区/哈希，但此处暴力遍历）
+        boids_count = len(self.boids)
+        for i in range(boids_count):
+            boid = self.boids[i]
+            separation_neighbors = []
+            alignment_neighbors = []
+            cohesion_neighbors = []
+            for j in range(boids_count):
+                if i == j:
+                    continue
+                other = self.boids[j]
+                # 环绕距离处理（因为边界环绕，计算最小周期距离）
+                dx = abs(boid.position.x - other.position.x)
+                if dx > SCREEN_WIDTH / 2:
+                    dx = SCREEN_WIDTH - dx
+                dy = abs(boid.position.y - other.position.y)
+                if dy > SCREEN_HEIGHT / 2:
+                    dy = SCREEN_HEIGHT - dy
+                distance = math.hypot(dx, dy)
+                # 给每一个规则收集独立的邻居
+                if distance < SEPARATION_RADIUS:
+                    separation_neighbors.append(other)
+                if distance < ALIGNMENT_RADIUS:
+                    alignment_neighbors.append(other)
+                if distance < COHESION_RADIUS:
+                    cohesion_neighbors.append(other)
+            # 分离力
+            sep = boid.separation(separation_neighbors)
+            # 对齐力
+            ali = boid.alignment(alignment_neighbors)
+            # 凝聚力
+            coh = boid.cohesion(cohesion_neighbors)
+            # 应用总力
+            boid.apply_force(sep)
+            boid.apply_force(ali)
+            boid.apply_force(coh)
+        # 更新运动学
+        for boid in self.boids:
+            boid.update()  # 更新每只Boid的位置
 
-# ========== s-9: 实现鸟之间的分离规则 ==========
-
-def rule_separation(bird, birds):
-    """
-    防撞分离：让鸟远离过于靠近的其他鸟。
-    """
-    AVOID_DIST = 25  # 分离距离
-    move_x = 0.0
-    move_y = 0.0
-    for other in birds:
-        if other is not bird:
-            dx = bird.x - other.x
-            dy = bird.y - other.y
-            dist = math.hypot(dx, dy)
-            if dist < AVOID_DIST and dist > 0:
-                move_x += dx / dist   # 单位向量反推
-                move_y += dy / dist
-    move_x *= 0.05  # 调节系数
-    move_y *= 0.05
-    return move_x, move_y
-
-# ========== s-10: 实现鸟之间的趋同规则 ==========
-
-def rule_alignment(bird, birds):
-    """
-    方向趋同：让鸟群速度逐渐一致。
-    """
-    ALIGN_DIST = 60  # 趋同影响距离
-    avg_vx = 0.0
-    avg_vy = 0.0
-    count = 0
-    for other in birds:
-        if other is not bird:
-            dist = math.hypot(bird.x - other.x, bird.y - other.y)
-            if dist < ALIGN_DIST:
-                avg_vx += other.vx
-                avg_vy += other.vy
-                count += 1
-    if count > 0:
-        avg_vx /= count
-        avg_vy /= count
-        # 调节当前速度略微靠近邻居平均速度
-        dvx = (avg_vx - bird.vx) * 0.05
-        dvy = (avg_vy - bird.vy) * 0.05
-        return dvx, dvy
-    return 0.0, 0.0
-
-# ========== s-11: 组合并应用所有鸟群规则 ==========
-
-def update_bird(bird, birds):
-    """
-    鸟的全局行为：结合靠拢、分离、趋同规则。
-    """
-    dx1, dy1 = rule_cohesion(bird, birds)
-    dx2, dy2 = rule_separation(bird, birds)
-    dx3, dy3 = rule_alignment(bird, birds)
-    # 权重混合
-    bird.vx += dx1 + dx2 + dx3
-    bird.vy += dy1 + dy2 + dy3
-
-    # s-15: 限制速度范围，避免速度异常与鸟重叠
-    speed = math.hypot(bird.vx, bird.vy)
-    if speed > MAX_SPEED:
-        scale = MAX_SPEED / speed
-        bird.vx *= scale
-        bird.vy *= scale
-    elif speed < MIN_SPEED:
-        # 保证速度>MIN_SPEED，防止鸟停下导致重叠
-        if speed == 0.0:
-            # 随机重新来一个小速度，防止死鸟
-            angle = random.uniform(0, 2*math.pi)
-            bird.vx = math.cos(angle) * MIN_SPEED
-            bird.vy = math.sin(angle) * MIN_SPEED
-        else:
-            scale = MIN_SPEED / speed
-            bird.vx *= scale
-            bird.vy *= scale
-
-# ========== s-4: 定义游戏主循环结构 ========== 
-running = True  # 主循环标志
-clock = pygame.time.Clock() # s-14: 控制帧率使动画流畅
-
-while running:
-    # 事件检测部分：用于响应退出等基础事件
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False  # 用户点击关闭按钮则退出主循环
-
-    # 鼠标互动（s-16），鼠标影响鸟群聚集
-    mouse_pos = pygame.mouse.get_pos()
-    mouse_pressed = pygame.mouse.get_pressed()[0]
-    
-    # 鸟群行为并移动
-    for bird in birds:
-        if mouse_pressed:
-            # 鼠标左键按下时，附近鸟主动靠近指针，仿造'喂食'聚集效果
-            mx, my = mouse_pos
-            dist = math.hypot(bird.x - mx, bird.y - my)
-            if dist < 100:
-                dx = (mx - bird.x) * 0.008
-                dy = (my - bird.y) * 0.008
-                bird.vx += dx
-                bird.vy += dy
-        update_bird(bird, birds)
-        move_bird(bird)
-
-    # 清空屏幕并刷新背景 ========== s-12 ==========
-    # s-16: 背景美化，渐变星空效果
-    sky_color_top = (30, 30, 48)
-    sky_color_bottom = (70, 100, 180)
-    for y in range(0, WINDOW_HEIGHT, 4):
-        blend = y / WINDOW_HEIGHT
-        r = int(sky_color_top[0] * (1-blend) + sky_color_bottom[0] * blend)
-        g = int(sky_color_top[1] * (1-blend) + sky_color_bottom[1] * blend)
-        b = int(sky_color_top[2] * (1-blend) + sky_color_bottom[2] * blend)
-        pygame.draw.rect(screen, (r,g,b), (0,y,WINDOW_WIDTH,4))
-    # 随机星点（仅美化无性能影响）
-    for _ in range(6):
-        x = random.randint(0,WINDOW_WIDTH)
-        y = random.randint(0,WINDOW_HEIGHT//2)
-        pygame.draw.circle(screen, (255,255,220), (x,y), 1)
-
-    # ========== s-13: 绘制所有鸟的图像 ==========
-    for bird in birds:
-        # 鸟的朝向角度计算：用于小三角形绘制
-        angle = math.atan2(bird.vy, bird.vx)
-        size = bird.size # s-16: 每只鸟不同大小
-        col = bird.base_color
-
-        # s-16: 鼠标高亮鸟群
-        mx, my = mouse_pos
-        dist_mouse = math.hypot(bird.x-mx, bird.y-my)
-        if dist_mouse < 24:
-            col = (255,255,255)
-        # 羽毛色彩渐变（根据方向速度微调更生动）
-        highlight = min(35,int(abs(bird.vx+bird.vy)*110))
-        draw_color = (
-            min(255,col[0]+highlight),
-            min(255,col[1]+highlight//2),
-            min(255,col[2]+highlight//2)
-        )
-        # 计算三角形三个顶点（前端、左翼、右翼）
-        tip = (bird.x + math.cos(angle) * size, bird.y + math.sin(angle) * size)
-        left = (bird.x + math.cos(angle + 2.5) * size * 0.7, bird.y + math.sin(angle + 2.5) * size * 0.7)
-        right = (bird.x + math.cos(angle - 2.5) * size * 0.7, bird.y + math.sin(angle - 2.5) * size * 0.7)
-        points = [tip, left, right]
-        pygame.draw.polygon(screen, draw_color, points)
-        # s-16: 鸟身虚影，增加立体感
-        mid_x = (tip[0] + bird.x) / 2
-        mid_y = (tip[1] + bird.y) / 2
-        pygame.draw.circle(screen, (draw_color[0]//2, draw_color[1]//2, draw_color[2]//2), (int(mid_x), int(mid_y)), max(2, size//3))
-
-    # s-14: 更新屏幕显示使动画流畅
-    pygame.display.flip()  # 按帧刷新全部内容显示到窗口
-    clock.tick(60)  # 控制帧率最高为60帧，保证不卡顿、动画平滑
-
-# 游戏主循环结束，安全退出PyGame
-pygame.quit()
+if __name__ == "__main__":
+    # 创建应用实例并运行
+    app = BoidsApp(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
+    app.setup()
+    arcade.run()

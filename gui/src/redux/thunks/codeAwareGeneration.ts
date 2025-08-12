@@ -2225,6 +2225,37 @@ export const generateCodeFromSteps = createAsyncThunk<
                         });
                         console.log("✅ 所有步骤状态已更新为 'generated'");
                         
+                        // 调用各个步骤的 checkAndMapKnowledgeCardsToCode
+                        console.log("🧭 开始为所有步骤检查和映射知识卡片...");
+                        orderedSteps.forEach(step => {
+                            // 不等待完成，直接调用
+                            dispatch(checkAndMapKnowledgeCardsToCode({ stepId: step.id }));
+                            console.log(`🎯 已触发步骤 ${step.id} 的知识卡片映射检查`);
+                        });
+                        
+                        // 触发有序步骤的高亮显示
+                        console.log("🌟 触发有序步骤高亮显示...");
+                        const finalState = getState();
+                        const highlightEvents = orderedSteps
+                            .map(step => {
+                                const stepInfo = finalState.codeAwareSession.steps.find(s => s.id === step.id);
+                                if (stepInfo) {
+                                    console.log(`🔆 准备高亮步骤 ${step.id}: ${step.title}`);
+                                    return {
+                                        sourceType: "step" as const,
+                                        identifier: step.id,
+                                        additionalInfo: stepInfo
+                                    };
+                                }
+                                return null;
+                            })
+                            .filter(event => event !== null);
+                        
+                        if (highlightEvents.length > 0) {
+                            dispatch(updateHighlight(highlightEvents));
+                            console.log(`✨ 同时触发了 ${highlightEvents.length} 个步骤的高亮事件`);
+                        }
+                        
                     } else {
                         console.warn("⚠️ 无法获取当前文件信息，跳过代码应用");
                     }
@@ -2646,6 +2677,15 @@ export const rerunStep = createAsyncThunk<
             }
 
             console.log("✅ 步骤重新运行完成");
+            
+            // 标记步骤为已生成
+            dispatch(setStepStatus({ stepId: stepId, status: "generated" }));
+            console.log(`✅ 步骤 ${stepId} 状态已更新为 'generated'`);
+            
+            // 调用 checkAndMapKnowledgeCardsToCode
+            console.log(`🧭 为步骤 ${stepId} 检查和映射知识卡片...`);
+            dispatch(checkAndMapKnowledgeCardsToCode({ stepId: stepId }));
+            console.log(`🎯 已触发步骤 ${stepId} 的知识卡片映射检查`);
             
             // 触发highlight事件，以step为source高亮重新运行的步骤变化
             const latestState = getState();
@@ -3222,6 +3262,11 @@ export const processCodeUpdates = createAsyncThunk<
 
                         // Set step status to generated (only if code is not broken)
                         dispatch(setStepStatus({ stepId, status: "generated" }));
+                        
+                        // 调用 checkAndMapKnowledgeCardsToCode
+                        console.log(`🧭 为步骤 ${stepId} 检查和映射知识卡片...`);
+                        dispatch(checkAndMapKnowledgeCardsToCode({ stepId: stepId }));
+                        console.log(`🎯 已触发步骤 ${stepId} 的知识卡片映射检查`);
                     } catch (stepError) {
                         console.error(`❌ Error processing step ${stepId}:`, stepError);
                         // Set this step back to generated status if processing fails

@@ -1,13 +1,14 @@
 import { PaperAirplaneIcon } from "@heroicons/react/24/outline";
+import Placeholder from "@tiptap/extension-placeholder";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import React from 'react';
 import styled from "styled-components";
 import {
-    defaultBorderRadius,
-    lightGray,
-    vscButtonBackground,
-    vscForeground
+  defaultBorderRadius,
+  lightGray,
+  vscButtonBackground,
+  vscForeground
 } from "../../../../components";
 import { ToolTip } from "../../../../components/gui/Tooltip";
 import HoverItem from "../../../../components/mainInput/InputToolbar/HoverItem";
@@ -190,8 +191,13 @@ const KnowledgeCardSAQ: React.FC<KnowledgeCardSAQProps> = ({
   const [lastResultHash, setLastResultHash] = React.useState<string>('');
   
   const editor = useEditor({
-    extensions: [StarterKit],
-    content: initialContent || `<p>${placeholder}</p>`,
+    extensions: [
+      StarterKit,
+      Placeholder.configure({
+        placeholder: placeholder,
+      }),
+    ],
+    content: initialContent || '', // 使用空字符串而不是包含placeholder的HTML
     editorProps: {
       attributes: {
         class: "prose dark:prose-invert prose-sm sm:prose-base",
@@ -268,7 +274,7 @@ const KnowledgeCardSAQ: React.FC<KnowledgeCardSAQProps> = ({
   };
 
   // Check if editor is effectively empty (only contains placeholder or whitespace)
-  const isEditorEmpty = !editor.getText().trim() || editor.getText().trim() === placeholder;
+  const isEditorEmpty = !editor.getText().trim(); // 简化判断逻辑，不需要检查placeholder
 
   // If there's a result and user is not retrying, show result
   // Also show result if loading (to maintain the result view during submission)

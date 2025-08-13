@@ -1,3 +1,4 @@
+import Placeholder from "@tiptap/extension-placeholder";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { useEffect, useRef } from "react";
@@ -67,15 +68,19 @@ export default function RequirementEditor({ onConfirm, onContentChange, disabled
     // Track if user has started editing
     const hasStartedEditingRef = useRef(false);
     const editingStartTimeRef = useRef<number | null>(null);
-    // 2. 定义占位符内容
-    const placeholderContent = '<p>请输入项目需求、当前您自身的水平与学习目标</p>';
+    
+    // 2. 定义占位符文本
+    const placeholderText = '请输入项目需求、当前您自身的水平与学习目标';
 
     // 3. 决定编辑器当前应该显示的内容
-    const currentTargetContent = userRequirementContent || placeholderContent;
+    const currentTargetContent = userRequirementContent || ''; // 使用空字符串而不是placeholder HTML
 
     const editor = useEditor({
         extensions: [
             StarterKit,
+            Placeholder.configure({
+                placeholder: placeholderText, // 使用Placeholder扩展
+            }),
         ],
         content: currentTargetContent, // 4. 使用 currentTargetContent 初始化编辑器
         editable: !disabled, // Disable editing when disabled prop is true
@@ -86,7 +91,7 @@ export default function RequirementEditor({ onConfirm, onContentChange, disabled
                 editingStartTimeRef.current = Date.now();
                 
                 logger.addLogEntry("user_start_editing_requirement", {
-                    initialContent: currentTargetContent,
+                    initialContent: userRequirementContent, // 使用实际内容而不是包含placeholder的内容
                     timestamp: new Date().toISOString()
                 });
             }
@@ -127,10 +132,10 @@ export default function RequirementEditor({ onConfirm, onContentChange, disabled
 
         // 5. 使用 useEffect 监听用户需求状态的变化，确保编辑器内容同步更新
     useEffect(() => {
-        if (editor && currentTargetContent !== editor.getHTML()) {
-            editor.commands.setContent(currentTargetContent);
+        if (editor && userRequirementContent !== editor.getHTML()) {
+            editor.commands.setContent(userRequirementContent || ''); // 使用实际内容或空字符串
         }
-    }, [userRequirementContent, editor, currentTargetContent]);
+    }, [userRequirementContent, editor]);
 
     // Update editor editable state when disabled prop changes
     useEffect(() => {

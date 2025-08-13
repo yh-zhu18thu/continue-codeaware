@@ -198,6 +198,44 @@ export class HighlightCodeManager implements vscode.Disposable {
   }
 
   /**
+   * Finds the largest range from an array of ranges based on the number of lines
+   * @param ranges Array of ranges to compare
+   * @returns The range with the most lines
+   */
+  private findLargestRange(ranges: vscode.Range[]): vscode.Range {
+    if (ranges.length === 0) {
+      throw new Error('Cannot find largest range from empty array');
+    }
+
+    if (ranges.length === 1) {
+      return ranges[0];
+    }
+
+    let largestRange = ranges[0];
+    let maxLineCount = this.calculateRangeLineCount(largestRange);
+
+    for (let i = 1; i < ranges.length; i++) {
+      const currentLineCount = this.calculateRangeLineCount(ranges[i]);
+      if (currentLineCount > maxLineCount) {
+        maxLineCount = currentLineCount;
+        largestRange = ranges[i];
+      }
+    }
+
+    console.log(`Found largest range with ${maxLineCount} lines: [${largestRange.start.line + 1}, ${largestRange.end.line + 1}]`);
+    return largestRange;
+  }
+
+  /**
+   * Calculates the number of lines in a range
+   * @param range The range to calculate
+   * @returns The number of lines in the range
+   */
+  private calculateRangeLineCount(range: vscode.Range): number {
+    return range.end.line - range.start.line + 1;
+  }
+
+  /**
    * Highlights multiple code chunks in a single file
    * @param normalizedFilepath The normalized file path
    * @param codeChunks Array of code chunks in the same file
@@ -295,9 +333,10 @@ export class HighlightCodeManager implements vscode.Disposable {
       // Apply blinking effect for all merged ranges simultaneously
       await this.applyBlinkEffectForMultipleRanges(editor, mergedRanges, decorations, normalizedFilepath);
       
-      // Reveal the first range in the editor
+      // Reveal the largest range in the editor
       if (mergedRanges.length > 0) {
-        editor.revealRange(mergedRanges[0], vscode.TextEditorRevealType.InCenter);
+        const largestRange = this.findLargestRange(mergedRanges);
+        editor.revealRange(largestRange, vscode.TextEditorRevealType.InCenter);
       }
       
     } catch (error) {

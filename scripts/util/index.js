@@ -46,7 +46,14 @@ function validateFilesPresent(pathsToVerify) {
   let missingFiles = [];
   let emptyFiles = [];
   for (const path of pathsToVerify) {
-    if (!fs.existsSync(path)) {
+    // 特殊处理可执行文件，检查不同平台的文件扩展名
+    let fileExists = fs.existsSync(path);
+    if (!fileExists && path.includes('rg')) {
+      // 在 Windows 上检查 .exe 扩展名
+      fileExists = fs.existsSync(path + '.exe');
+    }
+    
+    if (!fileExists) {
       const parentFolder = path.split("/").slice(0, -1).join("/");
       const grandparentFolder = path.split("/").slice(0, -2).join("/");
       const grandGrandparentFolder = path.split("/").slice(0, -3).join("/");
@@ -82,9 +89,15 @@ function validateFilesPresent(pathsToVerify) {
       missingFiles.push(path);
     }
 
-    if (fs.existsSync(path) && fs.statSync(path).size === 0) {
-      console.error(`File ${path} is empty`);
-      emptyFiles.push(path);
+    // 检查文件是否为空，确定实际存在的文件路径
+    let actualPath = path;
+    if (!fs.existsSync(path) && path.includes('rg') && fs.existsSync(path + '.exe')) {
+      actualPath = path + '.exe';
+    }
+
+    if (fs.existsSync(actualPath) && fs.statSync(actualPath).size === 0) {
+      console.error(`File ${actualPath} is empty`);
+      emptyFiles.push(actualPath);
     }
   }
 

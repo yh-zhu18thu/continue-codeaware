@@ -1,8 +1,8 @@
 import {
-  ArrowLeftIcon,
-  ChatBubbleOvalLeftIcon,
-  CodeBracketSquareIcon,
-  ExclamationTriangleIcon,
+    ArrowLeftIcon,
+    ChatBubbleOvalLeftIcon,
+    CodeBracketSquareIcon,
+    ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline";
 import { Editor, JSONContent } from "@tiptap/react";
 import { InputModifiers, RangeInFileWithContents, ToolCallState } from "core";
@@ -14,12 +14,13 @@ import { ErrorBoundary } from "react-error-boundary";
 import { useSelector } from "react-redux";
 import styled from "styled-components";
 import {
-  Button,
-  defaultBorderRadius,
-  lightGray,
-  vscBackground,
+    Button,
+    defaultBorderRadius,
+    lightGray,
+    vscBackground,
 } from "../../components";
 import CodeToEditCard from "../../components/CodeToEditCard";
+import { CodeStudySessionDialog } from "../../components/dialogs/CodeStudySessionDialog";
 import FeedbackDialog from "../../components/dialogs/FeedbackDialog";
 import FreeTrialOverDialog from "../../components/dialogs/FreeTrialOverDialog";
 import { useFindWidget } from "../../components/find/FindWidget";
@@ -31,8 +32,8 @@ import resolveEditorContent from "../../components/mainInput/resolveInput";
 import { TutorialCard } from "../../components/mainInput/TutorialCard";
 import AssistantSelect from "../../components/modelSelection/platform/AssistantSelect";
 import {
-  OnboardingCard,
-  useOnboardingCard,
+    OnboardingCard,
+    useOnboardingCard,
 } from "../../components/OnboardingCard";
 import { PlatformOnboardingCard } from "../../components/OnboardingCard/platform/PlatformOnboardingCard";
 import PageHeader from "../../components/PageHeader";
@@ -48,16 +49,16 @@ import { selectCurrentToolCall } from "../../redux/selectors/selectCurrentToolCa
 import { selectDefaultModel } from "../../redux/slices/configSlice";
 import { submitEdit } from "../../redux/slices/editModeState";
 import {
-  clearLastEmptyResponse,
-  newSession,
-  selectIsInEditMode,
-  selectIsSingleRangeEditOrInsertion,
-  setInactive,
+    clearLastEmptyResponse,
+    newSession,
+    selectIsInEditMode,
+    selectIsSingleRangeEditOrInsertion,
+    setInactive,
 } from "../../redux/slices/sessionSlice";
 import {
-  setDialogEntryOn,
-  setDialogMessage,
-  setShowDialog,
+    setDialogEntryOn,
+    setDialogMessage,
+    setShowDialog,
 } from "../../redux/slices/uiSlice";
 import { RootState } from "../../redux/store";
 import { cancelStream } from "../../redux/thunks/cancelStream";
@@ -65,13 +66,14 @@ import { exitEditMode } from "../../redux/thunks/exitEditMode";
 import { loadLastSession } from "../../redux/thunks/session";
 import { streamResponseThunk } from "../../redux/thunks/streamResponse";
 import {
-  getFontSize,
-  getMetaKeyLabel,
-  isMetaEquivalentKeyPressed,
+    getFontSize,
+    getMetaKeyLabel,
+    isMetaEquivalentKeyPressed,
 } from "../../util";
+import { useCodeStudyLogger } from "../../util/codeStudyLogger";
 import {
-  FREE_TRIAL_LIMIT_REQUESTS,
-  incrementFreeTrialCount,
+    FREE_TRIAL_LIMIT_REQUESTS,
+    incrementFreeTrialCount,
 } from "../../util/freeTrial";
 import getMultifileEditPrompt from "../../util/getMultifileEditPrompt";
 import { getLocalStorage, setLocalStorage } from "../../util/localStorage";
@@ -227,6 +229,11 @@ export function Chat() {
   );
   const lastSessionId = useAppSelector((state) => state.session.lastSessionId);
   const useHub = useAppSelector(selectUseHub);
+  const currentSessionId = useAppSelector((state) => state.session.id);
+
+  // CodeStudy related state
+  const [showCodeStudyDialog, setShowCodeStudyDialog] = useState(false);
+  const codeStudyLogger = useCodeStudyLogger();
 
   useEffect(() => {
     // Cmd + Backspace to delete current step
@@ -245,6 +252,30 @@ export function Chat() {
       window.removeEventListener("keydown", listener);
     };
   }, [isStreaming]);
+
+  // Log AI response completion for CodeStudy
+  useEffect(() => {
+    if (!isStreaming && history.length > 0) {
+      const lastMessage = history[history.length - 1];
+      if (lastMessage.message.role === "assistant" && codeStudyLogger.getCurrentSession()) {
+        let responseText = "";
+        const content = lastMessage.message.content;
+        
+        if (typeof content === "string") {
+          responseText = content;
+        } else if (Array.isArray(content)) {
+          responseText = content
+            .filter((part: any) => part.type === "text")
+            .map((part: any) => part.text)
+            .join("");
+        }
+        
+        if (responseText) {
+          codeStudyLogger.logAICompleteResponse(responseText).catch(console.error);
+        }
+      }
+    }
+  }, [isStreaming, history]);
 
   const { widget, highlights } = useFindWidget(stepsDivRef);
 
@@ -290,6 +321,32 @@ export function Chat() {
       const promptPreamble = isInEditMode
         ? getMultifileEditPrompt(codeToEdit)
         : undefined;
+
+      // Log user sending message for CodeStudy
+      // Extract text content from editorState for logging
+      const extractTextFromEditor = (editorState: JSONContent): string => {
+        let text = "";
+        if (editorState?.content) {
+          for (const node of editorState.content) {
+            if (node.type === "paragraph" && node.content) {
+              for (const item of node.content) {
+                if (item.type === "text" && item.text) {
+                  text += item.text;
+                } else if (item.type === "mention" && item.attrs?.id) {
+                  text += `@${item.attrs.id}`;
+                }
+              }
+              text += "\n";
+            }
+          }
+        }
+        return text.trim();
+      };
+      
+      const messageText = extractTextFromEditor(editorState);
+      if (codeStudyLogger.getCurrentSession() && messageText) {
+        codeStudyLogger.logUserSendMessage(messageText).catch(console.error);
+      }
 
       dispatch(
         streamResponseThunk({ editorState, modifiers, promptPreamble, index }),
@@ -351,11 +408,31 @@ export function Chat() {
   useWebviewListener(
     "newSession",
     async () => {
+      // Show CodeStudy session dialog when a new session starts
+      setShowCodeStudyDialog(true);
       // unwrapResult(response) // errors if session creation failed
       mainTextInputRef.current?.focus?.();
     },
     [mainTextInputRef],
   );
+
+  // CodeStudy handlers
+  const handleCodeStudySessionStart = async (
+    username: string,
+    sessionName: string,
+  ) => {
+    try {
+      await codeStudyLogger.startLogSession(username, sessionName, currentSessionId);
+      setShowCodeStudyDialog(false);
+      console.log("[CodeStudy] Session started:", { username, sessionName, sessionId: currentSessionId });
+    } catch (error) {
+      console.error("[CodeStudy] Failed to start session:", error);
+    }
+  };
+
+  const handleCodeStudySessionCancel = () => {
+    setShowCodeStudyDialog(false);
+  };
 
   const isLastUserInput = useCallback(
     (index: number): boolean => {
@@ -597,6 +674,13 @@ export function Chat() {
       >
         <ChatIndexingPeeks />
       </div>
+
+      {/* CodeStudy Session Dialog */}
+      <CodeStudySessionDialog
+        isOpen={showCodeStudyDialog}
+        onSubmit={handleCodeStudySessionStart}
+        onCancel={handleCodeStudySessionCancel}
+      />
     </>
   );
 }

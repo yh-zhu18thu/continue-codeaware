@@ -6,12 +6,13 @@ import * as URI from "uri-js";
 import { v4 as uuidv4 } from "uuid";
 
 import { CompletionProvider } from "./autocomplete/CompletionProvider";
+import { codeStudyLogger } from "./codeStudy";
 import { ConfigHandler } from "./config/ConfigHandler";
 import { SYSTEM_PROMPT_DOT_FILE } from "./config/getSystemPromptDotFile";
 import {
-  setupBestConfig,
-  setupLocalConfig,
-  setupQuickstartConfig,
+    setupBestConfig,
+    setupLocalConfig,
+    setupQuickstartConfig,
 } from "./config/onboarding";
 import { addContextProvider, addModel, deleteModel } from "./config/util";
 import CodebaseContextProvider from "./context/providers/CodebaseContextProvider";
@@ -35,9 +36,9 @@ import { clipboardCache } from "./util/clipboardCache";
 import { GlobalContext } from "./util/GlobalContext";
 import historyManager from "./util/history";
 import {
-  editConfigJson,
-  getConfigJsonPath,
-  migrateV1DevDataFiles,
+    editConfigJson,
+    getConfigJsonPath,
+    migrateV1DevDataFiles,
 } from "./util/paths";
 import { localPathToUri } from "./util/pathToUri";
 import { Telemetry } from "./util/posthog";
@@ -45,12 +46,12 @@ import { getSymbolsForManyFiles } from "./util/treeSitter";
 import { TTS } from "./util/tts";
 
 import {
-  ChatMessage,
-  DiffLine,
-  PromptLog,
-  type ContextItemId,
-  type IDE,
-  type IndexingProgressUpdate,
+    ChatMessage,
+    DiffLine,
+    PromptLog,
+    type ContextItemId,
+    type IDE,
+    type IndexingProgressUpdate,
 } from ".";
 
 import type { FromCoreProtocol, ToCoreProtocol } from "./protocol";
@@ -341,6 +342,25 @@ export class Core {
 
     on("controlPlane/listOrganizations", async (msg) => {
       return await this.configHandler.listOrganizations();
+    });
+
+    // CodeStudy Logger
+    on("codeStudy/startLogSession", async (msg) => {
+      const { username, sessionName, sessionId } = msg.data;
+      codeStudyLogger.startLogSession({
+        username,
+        sessionName,
+        codeStudySessionId: sessionId,
+      });
+    });
+
+    on("codeStudy/addLogEntry", async (msg) => {
+      const { eventType, payload } = msg.data;
+      codeStudyLogger.addLogEntry(eventType, payload);
+    });
+
+    on("codeStudy/endLogSession", async (msg) => {
+      codeStudyLogger.endLogSession();
     });
 
     // Context providers
@@ -1030,6 +1050,7 @@ export class Core {
   }
 
   private indexingCancellationController: AbortController | undefined;
+
   private async sendIndexingErrorTelemetry(update: IndexingProgressUpdate) {
     console.debug(
       "Indexing failed with error: ",

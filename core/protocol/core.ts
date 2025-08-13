@@ -1,34 +1,33 @@
-import { ConfigResult, ModelRole } from "@continuedev/config-yaml";
+import { ConfigResult, DevDataLogEvent, ModelRole } from "@continuedev/config-yaml";
 
 import { AutocompleteInput } from "../autocomplete/util/types";
 import { ProfileDescription } from "../config/ConfigHandler";
 import { OrganizationDescription } from "../config/ProfileLifecycleManager";
 import { SharedConfigSchema } from "../config/sharedConfig";
-
-import { DevDataLogEvent } from "@continuedev/config-yaml";
-import type {
-  BrowserSerializedContinueConfig,
-  ChatMessage,
-  ContextItem,
-  ContextItemWithId,
-  ContextProviderWithParams,
-  ContextSubmenuItem,
-  DiffLine,
-  DocsIndexingDetails,
-  ExperimentalModelRoles,
-  FileSymbolMap,
-  IdeSettings,
-  LLMFullCompletionOptions,
-  ModelDescription,
-  PromptLog,
-  RangeInFile,
-  SerializedContinueConfig,
-  Session,
-  SessionMetadata,
-  SiteIndexingConfig,
-  ToolCall,
-} from "../";
 import { GlobalContextModelSelections } from "../util/GlobalContext";
+
+import type {
+    BrowserSerializedContinueConfig,
+    ChatMessage,
+    ContextItem,
+    ContextItemWithId,
+    ContextProviderWithParams,
+    ContextSubmenuItem,
+    DiffLine,
+    DocsIndexingDetails,
+    ExperimentalModelRoles,
+    FileSymbolMap,
+    IdeSettings,
+    LLMFullCompletionOptions,
+    ModelDescription,
+    PromptLog,
+    RangeInFile,
+    SerializedContinueConfig,
+    Session,
+    SessionMetadata,
+    SiteIndexingConfig,
+    ToolCall,
+} from "../";
 
 export type OnboardingModes = "Local" | "Best" | "Custom" | "Quickstart";
 
@@ -202,4 +201,12 @@ export type ToCoreFromIdeOrWebviewProtocol = {
   "clipboardCache/add": [{ content: string }, void];
   "controlPlane/openUrl": [{ path: string; orgSlug: string | undefined }, void];
   "controlPlane/listOrganizations": [undefined, OrganizationDescription[]];
+
+  // CodeStudy Logger
+  "codeStudy/startLogSession": [
+    { username: string; sessionName: string; sessionId: string },
+    void,
+  ];
+  "codeStudy/addLogEntry": [{ eventType: string; payload: any }, void];
+  "codeStudy/endLogSession": [undefined, void];
 };

@@ -2,10 +2,10 @@ import { SessionMetadata } from "core";
 import MiniSearch from "minisearch";
 import React, { Fragment, useEffect, useMemo, useRef, useState } from "react";
 
-import { getFontSize, getMetaKeyLabel } from "../../util";
-import { HistoryTableRow } from "./HistoryTableRow";
 import { XMarkIcon } from "@heroicons/react/24/solid";
 import { useAppSelector } from "../../redux/hooks";
+import { getFontSize, getMetaKeyLabel } from "../../util";
+import { HistoryTableRow } from "./HistoryTableRow";
 
 const parseDate = (date: string): Date => {
   let dateObj = new Date(date);

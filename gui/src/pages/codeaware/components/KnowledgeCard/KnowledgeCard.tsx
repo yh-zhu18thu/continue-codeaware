@@ -392,7 +392,7 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
     }
   };
 
-  const onQuestionMarkClick = () => {
+  const onQuestionMarkClick = async () => {
     const wasInTestMode = isTestMode;
     
     // 如果当前不在测试模式，切换到测试模式
@@ -409,9 +409,37 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
         }
       }
       setIsTestMode(true);
+      
+      // Log user switching to test mode
+      await logger.addLogEntry("user_switch_to_knowledge_card_test_mode", {
+        cardTitle: title,
+        cardContent: markdownContent ? (markdownContent.length > 200 ? markdownContent.substring(0, 200) + "..." : markdownContent) : "",
+        testItemsCount: testItems.length,
+        currentTestPreview: testItems.length > 0 ? {
+          questionType: testItems[currentTestIndex]?.questionType,
+          question: testItems[currentTestIndex]?.questionType === 'multipleChoice' 
+            ? testItems[currentTestIndex]?.mcqQuestion 
+            : testItems[currentTestIndex]?.saqQuestion
+        } : null,
+        timestamp: new Date().toISOString()
+      });
     } else {
       // 如果当前在测试模式，切换回知识卡片模式
       setIsTestMode(false);
+      
+      // Log user switching to content mode
+      await logger.addLogEntry("user_switch_to_knowledge_card_content_mode", {
+        cardTitle: title,
+        cardContent: markdownContent ? (markdownContent.length > 200 ? markdownContent.substring(0, 200) + "..." : markdownContent) : "",
+        testItemsCount: testItems.length,
+        lastViewedTestPreview: testItems.length > 0 ? {
+          questionType: testItems[currentTestIndex]?.questionType,
+          question: testItems[currentTestIndex]?.questionType === 'multipleChoice' 
+            ? testItems[currentTestIndex]?.mcqQuestion 
+            : testItems[currentTestIndex]?.saqQuestion
+        } : null,
+        timestamp: new Date().toISOString()
+      });
       
       // If exiting test mode, clear all highlights
       if (onClearHighlight) {
@@ -425,12 +453,56 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
 
   const handlePreviousTest = async () => {
     const newIndex = Math.max(currentTestIndex - 1, 0);
-    setCurrentTestIndex(newIndex);
+    if (newIndex !== currentTestIndex) {
+      // Log test navigation
+      await logger.addLogEntry("user_navigate_knowledge_card_test", {
+        cardTitle: title,
+        direction: "previous",
+        fromTestIndex: currentTestIndex,
+        toTestIndex: newIndex,
+        fromTestPreview: testItems[currentTestIndex] ? {
+          questionType: testItems[currentTestIndex].questionType,
+          question: testItems[currentTestIndex].questionType === 'multipleChoice' 
+            ? testItems[currentTestIndex].mcqQuestion 
+            : testItems[currentTestIndex].saqQuestion
+        } : null,
+        toTestPreview: testItems[newIndex] ? {
+          questionType: testItems[newIndex].questionType,
+          question: testItems[newIndex].questionType === 'multipleChoice' 
+            ? testItems[newIndex].mcqQuestion 
+            : testItems[newIndex].saqQuestion
+        } : null,
+        timestamp: new Date().toISOString()
+      });
+      setCurrentTestIndex(newIndex);
+    }
   };
 
   const handleNextTest = async () => {
     const newIndex = Math.min(currentTestIndex + 1, testItems.length - 1);
-    setCurrentTestIndex(newIndex);
+    if (newIndex !== currentTestIndex) {
+      // Log test navigation
+      await logger.addLogEntry("user_navigate_knowledge_card_test", {
+        cardTitle: title,
+        direction: "next",
+        fromTestIndex: currentTestIndex,
+        toTestIndex: newIndex,
+        fromTestPreview: testItems[currentTestIndex] ? {
+          questionType: testItems[currentTestIndex].questionType,
+          question: testItems[currentTestIndex].questionType === 'multipleChoice' 
+            ? testItems[currentTestIndex].mcqQuestion 
+            : testItems[currentTestIndex].saqQuestion
+        } : null,
+        toTestPreview: testItems[newIndex] ? {
+          questionType: testItems[newIndex].questionType,
+          question: testItems[newIndex].questionType === 'multipleChoice' 
+            ? testItems[newIndex].mcqQuestion 
+            : testItems[newIndex].saqQuestion
+        } : null,
+        timestamp: new Date().toISOString()
+      });
+      setCurrentTestIndex(newIndex);
+    }
   };  const currentTest = testItems[currentTestIndex];
 
   // Check if user has answered any question correctly

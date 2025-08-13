@@ -85,6 +85,9 @@
 - **user_finished_viewing_step**: 用户完成查看步骤
 - **user_view_and_highlight_knowledge_card**: 用户查看并高亮知识卡片
 - **user_finished_viewing_knowledge_card**: 用户完成查看知识卡片
+- **user_switch_to_knowledge_card_test_mode**: 用户切换到知识卡片测试模式
+- **user_switch_to_knowledge_card_content_mode**: 用户切换到知识卡片内容模式
+- **user_navigate_knowledge_card_test**: 用户在知识卡片测试题之间导航
 - **user_view_and_highlight_code_chunk**: 用户查看并高亮代码块
 - **user_finished_viewing_code_chunk**: 用户完成查看代码块
 - **user_view_and_highlight_high_level_step**: 用户查看并高亮高级步骤
@@ -115,6 +118,7 @@
 - 步骤需求编辑开始和提交日志
 - 代码编辑模式切换日志
 - 查看与高亮交互日志（已统一为 user_view_and_highlight_* 系列事件）
+- 知识卡片模式切换日志（内容模式与测试模式切换）
 - 知识卡片删除/禁用日志
 
 ### 🎯 重要改进

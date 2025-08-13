@@ -3538,6 +3538,9 @@ export const processSaqSubmission = createAsyncThunk<
 >(
     "codeAware/processSaqSubmission",
     async ({ testId, userAnswer }, { getState, dispatch, extra }) => {
+        const maxRetries = 3; // 最大重试次数
+        let lastError: Error | null = null;
+        
         try {
             const state = getState();
             const defaultModel = selectDefaultModel(state);
@@ -3576,54 +3579,92 @@ export const processSaqSubmission = createAsyncThunk<
                 userAnswer
             );
 
-            // Get LLM response
-            const result = await extra.ideMessenger.request("llm/complete", {
-                prompt,
-                completionOptions: {},
-                title: defaultModel.title
-            });
+            // 重试机制
+            for (let attempt = 1; attempt <= maxRetries; attempt++) {
+                try {
+                    console.log(`🔄 [CodeAware] SAQ评估尝试 ${attempt}/${maxRetries} for test: ${testId}`);
 
-            if (result.status !== "success" || !result.content) {
-                throw new Error("LLM request failed");
-            }
+                    // Get LLM response
+                    const result = await extra.ideMessenger.request("llm/complete", {
+                        prompt,
+                        completionOptions: {},
+                        title: defaultModel.title
+                    });
 
-            console.log("📝 [CodeAware] LLM evaluation response:", result.content);
+                    if (result.status !== "success" || !result.content) {
+                        throw new Error("LLM request failed");
+                    }
 
-            // Parse the response
-            try {
-                const evaluationResult = JSON.parse(result.content.trim()) as {
-                    isCorrect: boolean;
-                    remarks: string;
-                };
+                    console.log("📝 [CodeAware] LLM evaluation response:", result.content);
 
-                // Update the test result in Redux store
-                dispatch(updateSaqTestResult({
-                    stepId,
-                    knowledgeCardId,
-                    testId,
-                    userAnswer,
-                    isCorrect: evaluationResult.isCorrect,
-                    remarks: evaluationResult.remarks
-                }));
+                    // Parse the response
+                    try {
+                        const evaluationResult = JSON.parse(result.content.trim()) as {
+                            isCorrect: boolean;
+                            remarks: string;
+                        };
 
-                console.log("✅ [CodeAware] SAQ evaluation completed:", {
-                    testId,
-                    isCorrect: evaluationResult.isCorrect,
-                    remarks: evaluationResult.remarks
-                });
+                        // Update the test result in Redux store
+                        dispatch(updateSaqTestResult({
+                            stepId,
+                            knowledgeCardId,
+                            testId,
+                            userAnswer,
+                            isCorrect: evaluationResult.isCorrect,
+                            remarks: evaluationResult.remarks
+                        }));
 
-            } catch (parseError) {
-                console.error("❌ [CodeAware] Failed to parse LLM evaluation response:", parseError);
-                
-                // Fallback: just save the user answer without evaluation
-                dispatch(updateSaqTestResult({
-                    stepId,
-                    knowledgeCardId,
-                    testId,
-                    userAnswer,
-                    isCorrect: false,
-                    remarks: "无法评估答案，请稍后重试。"
-                }));
+                        console.log("✅ [CodeAware] SAQ evaluation completed:", {
+                            testId,
+                            isCorrect: evaluationResult.isCorrect,
+                            remarks: evaluationResult.remarks
+                        });
+
+                        // 成功，跳出重试循环
+                        break;
+
+                    } catch (parseError) {
+                        console.error(`❌ [CodeAware] SAQ评估尝试 ${attempt} 解析失败:`, parseError);
+                        
+                        if (attempt === maxRetries) {
+                            // 最后一次尝试仍然失败，使用fallback
+                            console.log("🔄 [CodeAware] 所有重试失败，使用fallback保存用户答案");
+                            dispatch(updateSaqTestResult({
+                                stepId,
+                                knowledgeCardId,
+                                testId,
+                                userAnswer,
+                                isCorrect: false,
+                                remarks: `无法评估答案（已重试${maxRetries}次），请稍后重试。`
+                            }));
+                            break;
+                        } else {
+                            // 继续重试
+                            throw parseError;
+                        }
+                    }
+
+                } catch (attemptError) {
+                    lastError = attemptError instanceof Error ? attemptError : new Error(String(attemptError));
+                    console.warn(`⚠️ [CodeAware] SAQ评估尝试 ${attempt} 失败:`, lastError.message);
+                    
+                    if (attempt === maxRetries) {
+                        console.error(`❌ [CodeAware] SAQ评估最终失败，已重试 ${maxRetries} 次`);
+                        // 最后一次尝试仍然失败，使用fallback
+                        dispatch(updateSaqTestResult({
+                            stepId,
+                            knowledgeCardId,
+                            testId,
+                            userAnswer,
+                            isCorrect: false,
+                            remarks: `评估失败（已重试${maxRetries}次）: ${lastError.message}`
+                        }));
+                        break;
+                    }
+                    
+                    // 等待一段时间再重试
+                    await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+                }
             }
 
             // Clear loading state
@@ -3665,6 +3706,9 @@ export const processGlobalQuestion = createAsyncThunk<
 >(
     "codeAware/processGlobalQuestion",
     async ({ question, currentCode }, { getState, dispatch, extra }) => {
+        const maxRetries = 3; // 最大重试次数
+        let lastError: Error | null = null;
+        
         try {
             console.log("🔍 [CodeAware] Processing global question:", question);
             
@@ -3698,35 +3742,73 @@ export const processGlobalQuestion = createAsyncThunk<
             
             console.log("📤 [CodeAware] Sending global question request to LLM");
             
-            // 发送请求到LLM
-            const result = await extra.ideMessenger.request("llm/complete", {
-                prompt: prompt,
-                completionOptions: {},
-                title: defaultModel.title
-            });
+            // 重试机制
+            let result: any = null;
+            for (let attempt = 1; attempt <= maxRetries; attempt++) {
+                try {
+                    console.log(`🔄 [CodeAware] 全局提问尝试 ${attempt}/${maxRetries}`);
+                    
+                    // 发送请求到LLM
+                    result = await extra.ideMessenger.request("llm/complete", {
+                        prompt: prompt,
+                        completionOptions: {},
+                        title: defaultModel.title
+                    });
+                    
+                    console.log("📥 [CodeAware] Received global question response:", result);
+                    
+                    if (result.status !== "success" || !result.content || !result.content.trim()) {
+                        throw new Error("LLM 返回了空响应或失败状态");
+                    }
+                    
+                    // 如果到达这里，说明请求成功，跳出重试循环
+                    break;
+                    
+                } catch (attemptError) {
+                    lastError = attemptError instanceof Error ? attemptError : new Error(String(attemptError));
+                    console.warn(`⚠️ [CodeAware] 全局提问尝试 ${attempt} 失败:`, lastError.message);
+                    
+                    if (attempt === maxRetries) {
+                        console.error(`❌ [CodeAware] 全局提问最终失败，已重试 ${maxRetries} 次`);
+                        throw lastError;
+                    }
+                    
+                    // 等待一段时间再重试
+                    await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+                }
+            }
             
-            console.log("📥 [CodeAware] Received global question response:", result);
-            
-            if (result.status !== "success" || !result.content || !result.content.trim()) {
-                throw new Error("LLM 返回了空响应或失败状态");
+            // 如果所有重试都失败了，抛出最后一个错误
+            if (!result || result.status !== "success" || !result.content) {
+                throw lastError || new Error("全局提问处理失败");
             }
             
             const fullResponse = result.content;
             
-            // 解析响应
+            // 解析响应（带重试机制）
             let parsedResponse: {
                 selected_step_id: string;
                 knowledge_card_themes: string[];
             };
             
-            try {
-                parsedResponse = JSON.parse(fullResponse);
-            } catch (parseError) {
-                console.error("❌ [CodeAware] Failed to parse LLM response:", parseError);
-                throw new Error("无法解析 LLM 响应，请重试");
+            for (let parseAttempt = 1; parseAttempt <= maxRetries; parseAttempt++) {
+                try {
+                    parsedResponse = JSON.parse(fullResponse);
+                    break; // 解析成功，跳出循环
+                } catch (parseError) {
+                    console.error(`❌ [CodeAware] 全局提问响应解析尝试 ${parseAttempt} 失败:`, parseError);
+                    
+                    if (parseAttempt === maxRetries) {
+                        throw new Error(`无法解析 LLM 响应（已重试${maxRetries}次），请重试`);
+                    }
+                    
+                    // 对于解析错误，我们不能重新发送请求，因为响应内容是固定的
+                    // 但我们可以稍等一下再试，以防是临时的处理问题
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                }
             }
             
-            const { selected_step_id, knowledge_card_themes } = parsedResponse;
+            const { selected_step_id, knowledge_card_themes } = parsedResponse!;
             
             if (!selected_step_id || !knowledge_card_themes || !Array.isArray(knowledge_card_themes)) {
                 throw new Error("LLM 响应格式不正确");

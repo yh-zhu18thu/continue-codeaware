@@ -19,7 +19,6 @@ import {
     constructGenerateKnowledgeCardThemesPrompt,
     constructGenerateStepsPrompt,
     constructGlobalQuestionPrompt,
-    constructMapCodeToStepsPrompt,
     constructMapKnowledgeCardsToCodePrompt,
     constructParaphraseUserIntentPrompt,
     constructProcessCodeChangesPrompt
@@ -2772,117 +2771,161 @@ export const rerunStep = createAsyncThunk<
                 throw new Error("解析LLM代码生成响应失败");
             }
 
-            // 第二步：建立代码映射关系
-            console.log("🎯 第二步：开始建立代码映射关系...");
-
-            // 准备所有步骤信息
-            const allStepsForMapping = steps.map(step => ({
+            // 第二步：并行为每个步骤找到相关的代码行
+            console.log("🎯 第二步：开始并行查找步骤相关代码行...");
+            
+            // 准备所有需要处理的步骤（使用更新后的abstract）
+            const allStepsToProcess = steps.map(step => ({
                 id: step.id,
                 title: step.title,
                 abstract: step.id === stepId ? changedStepAbstract : step.abstract
             }));
 
-            // 构造第二步的提示词
-            const mappingPrompt = constructMapCodeToStepsPrompt(updatedCode, allStepsForMapping);
+            console.log("📝 准备处理的步骤:", allStepsToProcess.map(s => ({ id: s.id, title: s.title })));
 
-            console.log("第二步映射提示词:", mappingPrompt);
-
-            // 第二步：调用LLM建立映射关系，带重试机制
-            let mappingResult: any = null;
-
-            for (let attempt = 1; attempt <= maxRetries; attempt++) {
-                try {
-                    console.log(`🔄 映射关系建立尝试 ${attempt}/${maxRetries}`);
-                    
-                    // 添加超时保护
-                    const timeoutPromise = new Promise((_, reject) => 
-                        setTimeout(() => reject(new Error("LLM请求超时")), 60000) // 60秒超时
-                    );
-                    
-                    const llmPromise = extra.ideMessenger.request("llm/complete", {
-                        prompt: mappingPrompt,
-                        completionOptions: {},
-                        title: defaultModel.title
-                    });
-                    
-                    mappingResult = await Promise.race([llmPromise, timeoutPromise]);
-
-                    if (mappingResult.status !== "success" || !mappingResult.content) {
-                        throw new Error("LLM request failed or returned empty content");
-                    }
-
-                    break; // 成功，跳出重试循环
-                } catch (error) {
-                    lastError = error instanceof Error ? error : new Error(String(error));
-                    console.warn(`⚠️ 映射关系建立第 ${attempt} 次尝试失败:`, lastError.message);
-                    
-                    // 如果不是最后一次尝试，等待一段时间再重试
-                    if (attempt < maxRetries) {
-                        const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000); // 指数退避
-                        console.log(`⏱️ 等待 ${delay}ms 后重试...`);
-                        await new Promise(resolve => setTimeout(resolve, delay));
-                    }
-                }
-            }
-
-            if (!mappingResult || mappingResult.status !== "success" || !mappingResult.content) {
-                throw lastError || new Error("映射关系建立失败");
-            }
-
-            // 解析第二步的响应
-            let stepsCorrespondingCode: Array<{ id: string; code: string; }> = [];
-            let stepsCodeLines = new Map<string, string[]>(); // 保存原始行数组
-
-            try {
-                // 尝试清理和解析JSON响应
-                let jsonContent = mappingResult.content.trim();
-                
-                // 移除可能的代码块标记
-                if (jsonContent.startsWith('```json')) {
-                    jsonContent = jsonContent.replace(/^```json\s*/, '').replace(/\s*```$/, '');
-                } else if (jsonContent.startsWith('```')) {
-                    jsonContent = jsonContent.replace(/^```\s*/, '').replace(/\s*```$/, '');
-                }
-                
-                // 尝试找到JSON对象的开始和结束位置
-                const jsonStart = jsonContent.indexOf('{');
-                const jsonEnd = jsonContent.lastIndexOf('}') + 1;
-                
-                if (jsonStart !== -1 && jsonEnd > jsonStart) {
-                    jsonContent = jsonContent.substring(jsonStart, jsonEnd);
-                }
-                
-                const mappingResponse = JSON.parse(jsonContent);
-                
-                // 验证代码块映射的完整性
-                const validationResult = validateCodeChunkMapping(
-                    mappingResponse.code_chunks || [], 
-                    updatedCode
+            // 为每个步骤并行创建查找相关代码行的请求
+            const stepCodeLinePromises = allStepsToProcess.map(async (step): Promise<{
+                stepId: string;
+                stepTitle: string;
+                stepAbstract: string;
+                result: any | null;
+            }> => {
+                const prompt = constructFindStepRelatedCodeLinesPrompt(
+                    updatedCode,
+                    step.title,
+                    step.abstract
                 );
-                
-                if (!validationResult.isValid) {
-                    console.warn("⚠️ rerunStep 代码块映射不完整，但继续处理:", {
-                        coverage: validationResult.coverage,
-                        gaps: validationResult.gaps.length,
-                        overlaps: validationResult.overlaps.length
-                    });
+
+                console.log(`🔍 为步骤 ${step.id} 创建查找代码行请求...`);
+
+                // 为每个步骤的请求添加重试机制
+                for (let attempt = 1; attempt <= maxRetries; attempt++) {
+                    try {
+                        const result = await extra.ideMessenger.request("llm/complete", {
+                            prompt: prompt,
+                            completionOptions: {},
+                            title: defaultModel.title
+                        });
+
+                        if (result.status === "success" && result.content) {
+                            console.log(`✅ 步骤 ${step.id} 代码行查找成功`);
+                            return {
+                                stepId: step.id,
+                                stepTitle: step.title,
+                                stepAbstract: step.abstract,
+                                result: result
+                            };
+                        } else {
+                            throw new Error(`LLM request failed for step ${step.id}: status=${result.status}`);
+                        }
+                    } catch (error) {
+                        console.warn(`⚠️ 步骤 ${step.id} 代码行查找尝试 ${attempt}/${maxRetries} 失败:`, error);
+                        
+                        if (attempt < maxRetries) {
+                            const waitTime = Math.pow(2, attempt) * 1000;
+                            await new Promise(resolve => setTimeout(resolve, waitTime));
+                        } else {
+                            console.error(`❌ 步骤 ${step.id} 代码行查找最终失败`);
+                            return {
+                                stepId: step.id,
+                                stepTitle: step.title,
+                                stepAbstract: step.abstract,
+                                result: null
+                            };
+                        }
+                    }
                 }
                 
-                // 使用新的辅助函数处理代码块映射
-                const { stepsCorrespondingCode: processedStepsCode, stepsCodeLines: processedStepsCodeLines } = 
-                    processCodeChunkMappingResponse(mappingResponse, updatedCode);
-                
-                stepsCorrespondingCode = processedStepsCode;
-                stepsCodeLines = processedStepsCodeLines;
-                
-                console.log("✅ 第二步映射关系建立成功:", {
-                    stepsCount: stepsCorrespondingCode.length,
-                    codeChunksCount: mappingResponse.code_chunks?.length || 0
-                });
-            } catch (parseError) {
-                console.error("解析第二步LLM响应失败:", parseError, "响应内容:", mappingResult.content);
-                throw new Error("解析LLM映射响应失败");
+                // 不应该到达这里，但为了类型安全
+                return {
+                    stepId: step.id,
+                    stepTitle: step.title,
+                    stepAbstract: step.abstract,
+                    result: null
+                };
+            });
+
+            // 等待所有并行请求完成
+            console.log("⏳ 等待所有步骤的代码行查找完成...");
+            const stepCodeLineResults = await Promise.all(stepCodeLinePromises);
+
+            // 第三步：处理所有结果，创建代码块和映射关系
+            console.log("📦 第三步：处理查找结果并创建代码块...");
+            
+            const stepsCorrespondingCode: Array<{ id: string; code: string; }> = [];
+            const allCreatedCodeChunks: Array<{ 
+                id: string; 
+                content: string; 
+                range: [number, number]; 
+                stepIds: string[];
+            }> = [];
+
+            // 处理每个步骤的结果
+            for (const stepResult of stepCodeLineResults) {
+                if (!stepResult || !stepResult.result || stepResult.result.status !== "success") {
+                    console.warn(`⚠️ 跳过步骤 ${stepResult?.stepId || 'unknown'}，因为没有有效结果`);
+                    continue;
+                }
+
+                try {
+                    // 解析LLM返回的代码行
+                    let jsonContent = stepResult.result.content.trim();
+                    
+                    // 清理JSON内容
+                    if (jsonContent.startsWith('```json')) {
+                        jsonContent = jsonContent.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+                    } else if (jsonContent.startsWith('```')) {
+                        jsonContent = jsonContent.replace(/^```\s*/, '').replace(/\s*```$/, '');
+                    }
+                    
+                    const jsonStart = jsonContent.indexOf('{');
+                    const jsonEnd = jsonContent.lastIndexOf('}') + 1;
+                    
+                    if (jsonStart !== -1 && jsonEnd > jsonStart) {
+                        jsonContent = jsonContent.substring(jsonStart, jsonEnd);
+                    }
+
+                    const parsedResponse = JSON.parse(jsonContent);
+                    const relatedCodeLines = parsedResponse.related_code_lines || [];
+
+                    console.log(`📝 步骤 ${stepResult.stepId} 找到 ${relatedCodeLines.length} 行相关代码`);
+
+                    if (relatedCodeLines.length > 0) {
+                        // 使用 createCodeChunksFromLineArray 创建代码块
+                        const codeChunks = createCodeChunksFromLineArray(
+                            relatedCodeLines,
+                            updatedCode,
+                            `step-${stepResult.stepId}`
+                        );
+
+                        // 为每个代码块添加步骤ID
+                        codeChunks.forEach(chunk => {
+                            allCreatedCodeChunks.push({
+                                ...chunk,
+                                stepIds: [stepResult.stepId]
+                            });
+                        });
+
+                        // 合并所有代码行作为步骤对应的代码
+                        const combinedCode = relatedCodeLines.join('\n');
+                        if (combinedCode.trim()) {
+                            stepsCorrespondingCode.push({
+                                id: stepResult.stepId,
+                                code: combinedCode
+                            });
+                        }
+                    }
+
+                } catch (parseError) {
+                    console.error(`❌ 解析步骤 ${stepResult.stepId} 代码行响应失败:`, parseError);
+                    console.warn(`⚠️ 跳过步骤 ${stepResult.stepId}，因为解析失败`);
+                }
             }
+            
+            console.log("✅ rerunStep 第二步并行查找和第三步处理完成:", {
+                stepsWithCode: stepsCorrespondingCode.length,
+                createdCodeChunks: allCreatedCodeChunks.length
+            });
 
             // 清理现有的代码块和映射关系，但保留要求映射
             console.log("🗑️ 保存要求映射关系并清除现有的代码块和代码映射...");
@@ -2906,54 +2949,6 @@ export const rerunStep = createAsyncThunk<
                 dispatch(createCodeAwareMapping(mapping));
             });
 
-            // 创建新的代码块和映射关系
-            console.log("📦 开始创建代码块和映射关系...");
-            const currentCodeState = getState();
-            const existingCodeChunksCount = currentCodeState.codeAwareSession.codeChunks.length;
-            let codeChunkCounter = existingCodeChunksCount + 1;
-
-            // 用于收集所有创建的代码块，支持步骤的多个代码块
-            const allCreatedCodeChunks: Array<{ 
-                id: string; 
-                content: string; 
-                range: [number, number]; 
-                stepId?: string; 
-            }> = [];
-
-            // 处理步骤对应的代码 - 使用新的逐行处理逻辑
-            stepsCorrespondingCode.forEach((stepInfo: any) => {
-                const stepCodeLines = stepsCodeLines.get(stepInfo.id);
-                
-                if (stepCodeLines && stepCodeLines.length > 0) {
-                    // 使用新的辅助函数创建代码块
-                    const stepCodeChunks = createCodeChunksFromLineArray(
-                        stepCodeLines,
-                        updatedCode,
-                        `c-${codeChunkCounter}-step-${stepInfo.id}`
-                    );
-                    
-                    stepCodeChunks.forEach(chunk => {
-                        allCreatedCodeChunks.push({
-                            ...chunk,
-                            stepId: stepInfo.id
-                        });
-                        codeChunkCounter++;
-                    });
-                } else if (stepInfo.code && stepInfo.code.trim()) {
-                    // 回退到旧方式处理整体代码块，但使用智能创建函数
-                    const smartChunk = createCodeChunkSmart(
-                        stepInfo.code.trim(),
-                        updatedCode,
-                        `c-${codeChunkCounter++}`,
-                        stepInfo.id
-                    );
-                    
-                    if (smartChunk) {
-                        allCreatedCodeChunks.push(smartChunk);
-                    }
-                }
-            });
-
             // 创建所有代码块
             allCreatedCodeChunks.forEach(chunk => {
                 dispatch(createOrGetCodeChunk({
@@ -2974,22 +2969,22 @@ export const rerunStep = createAsyncThunk<
 
             // 为所有创建的代码块创建映射关系
             allCreatedCodeChunks.forEach(chunk => {
-                if (chunk.stepId) {
+                chunk.stepIds.forEach(stepId => {
                     // 找到对应的需求块ID
                     const existingReqMapping = existingRequirementMappings.find(
-                        mapping => mapping.stepId === chunk.stepId
+                        mapping => mapping.stepId === stepId
                     );
                     
                     const stepMapping: CodeAwareMapping = {
                         codeChunkId: chunk.id,
-                        stepId: chunk.stepId,
+                        stepId: stepId,
                         requirementChunkId: existingReqMapping?.requirementChunkId,
                         isHighlighted: false
                     };
                     
                     dispatch(createCodeAwareMapping(stepMapping));
-                    console.log(`🔗 创建步骤映射: ${chunk.id} -> ${chunk.stepId}`);
-                }
+                    console.log(`🔗 创建步骤映射: ${chunk.id} -> ${stepId}`);
+                });
             });
 
             // 应用生成的代码到IDE

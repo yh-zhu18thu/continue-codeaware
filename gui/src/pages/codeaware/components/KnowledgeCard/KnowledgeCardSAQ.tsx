@@ -17,13 +17,16 @@ import { useCodeAwareLogger } from '../../../../util/codeAwareWebViewLogger';
 const SAQContainer = styled.div`
   margin-top: 4px;
   width: 100%;
+  max-width: 600px; /* 限制最大宽度 */
+  margin-left: auto;
+  margin-right: auto;
   text-align: center; /* Center the content */
 `;
 
 const QuestionSection = styled.div`
   width: 100%;
-  padding: 12px;
-  margin-bottom: 12px;
+  padding: 10px; /* 减少padding */
+  margin-bottom: 10px; /* 减少margin */
   border: 1px solid ${lightGray}33;
   border-radius: ${defaultBorderRadius};
   background-color: #1a1a1a; /* 深色背景 */
@@ -44,12 +47,12 @@ const EditorWrapper = styled.div`
   border-radius: ${defaultBorderRadius};
   background-color: #1a1a1a; /* 深色背景 */
   color: ${vscForeground};
-  margin-bottom: 12px;
+  margin-bottom: 10px; /* 减少margin */
   
   .ProseMirror {
-    min-height: 60px;
+    min-height: 50px; /* 减少最小高度 */
     width: 100%;
-    padding: 10px;
+    padding: 8px; /* 减少padding */
     font-size: 12px;
     outline: none;
     text-align: left; /* Keep editor content left-aligned for typing */
@@ -64,7 +67,7 @@ const EditorWrapper = styled.div`
 const SubmitSection = styled.div`
   display: flex;
   justify-content: flex-end; /* Align submit button to the right */
-  padding-right: 12px;
+  padding-right: 10px; /* 减少padding */
 `;
 
 const LoadingSpinner = styled.div`
@@ -85,8 +88,8 @@ const LoadingSpinner = styled.div`
 
 const ResultSection = styled.div<{ isCorrect: boolean }>`
   width: 100%;
-  padding: 12px;
-  margin-top: 12px;
+  padding: 10px; /* 减少padding */
+  margin-top: 10px; /* 减少margin */
   border: 1px solid ${props => props.isCorrect ? '#4caf50' : '#f44336'};
   border-radius: ${defaultBorderRadius};
   background-color: ${props => props.isCorrect ? '#4caf5020' : '#f4433620'};
@@ -96,7 +99,7 @@ const ResultSection = styled.div<{ isCorrect: boolean }>`
 const ResultHeader = styled.div<{ isCorrect: boolean }>`
   display: flex;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: 6px; /* 减少margin */
   font-weight: 600;
   color: ${props => props.isCorrect ? '#4caf50' : '#f44336'};
 `;
@@ -107,19 +110,19 @@ const ResultIcon = styled.span`
 `;
 
 const UserAnswerSection = styled.div`
-  margin-bottom: 8px;
+  margin-bottom: 6px; /* 减少margin */
 `;
 
 const UserAnswerLabel = styled.div`
   font-size: 11px;
   font-weight: 500;
   color: ${lightGray};
-  margin-bottom: 4px;
+  margin-bottom: 3px; /* 减少margin */
 `;
 
 const UserAnswerText = styled.div`
   font-size: 12px;
-  padding: 8px;
+  padding: 6px; /* 减少padding */
   background-color: #1a1a1a; /* 深色背景 */
   border-radius: ${defaultBorderRadius};
   border: 1px solid ${lightGray}33;
@@ -134,17 +137,17 @@ const RemarksSection = styled.div`
 const RetrySection = styled.div`
   display: flex;
   justify-content: center;
-  margin-top: 12px;
+  margin-top: 8px; /* 减少margin */
 `;
 
 const RetryButton = styled.button`
-  padding: 6px 12px;
+  padding: 5px 10px; /* 减少padding */
   background-color: ${vscButtonBackground};
   color: ${vscForeground};
   border: none;
   border-radius: ${defaultBorderRadius};
   cursor: pointer;
-  font-size: 12px;
+  font-size: 11px; /* 减少字体大小 */
   
   &:hover {
     brightness: 1.2;

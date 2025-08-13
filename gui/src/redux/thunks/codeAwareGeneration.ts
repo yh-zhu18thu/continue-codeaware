@@ -1641,9 +1641,6 @@ export const generateKnowledgeCardThemes = createAsyncThunk<
                         });
                     }
 
-                    // 设置生成完成状态
-                    dispatch(setKnowledgeCardGenerationStatus({ stepId, status: "checked" }));
-                    
                     console.log(`✅ 生成 ${themes.length} 个知识卡片主题，步骤: ${stepId}`);
                     
                     // Log: 知识卡片主题生成完成
@@ -1670,6 +1667,9 @@ export const generateKnowledgeCardThemes = createAsyncThunk<
                         // 不抛出错误，让知识卡片生成操作继续完成
                     }
                     
+                    // 设置生成完成状态 - 移到最后确保状态正确设置
+                    dispatch(setKnowledgeCardGenerationStatus({ stepId, status: "checked" }));
+                    
                     // Log knowledge card themes generation completion
                     // We'll add the log in the calling component
                 } else {
@@ -1690,13 +1690,15 @@ export const generateKnowledgeCardThemes = createAsyncThunk<
             // 失败后回到empty状态，这样用户下次展开时可以重新生成
             dispatch(setKnowledgeCardGenerationStatus({ stepId, status: "empty" }));
         } finally {
-            // 确保无论如何都不会卡在generating状态
+            // 确保无论如何都不会卡在generating状态，但不要覆盖已经正确设置的状态
             const finalState = getState();
             const currentStep = finalState.codeAwareSession.steps.find(step => step.id === stepId);
             if (currentStep?.knowledgeCardGenerationStatus === "generating") {
-                console.warn(`⚠️ 检测到步骤 ${stepId} 仍处于generating状态，强制重置为empty`);
+                console.warn(`⚠️ 检测到步骤 ${stepId} 仍处于generating状态，重置为empty以允许重试`);
                 dispatch(setKnowledgeCardGenerationStatus({ stepId, status: "empty" }));
             }
+            // 如果状态是 "checked"，说明已经成功完成，不要修改
+            console.log(`🔍 最终状态检查 - 步骤 ${stepId} 的知识卡片生成状态: ${currentStep?.knowledgeCardGenerationStatus}`);
         }
     }
 );
@@ -1845,6 +1847,9 @@ export const generateKnowledgeCardThemesFromQuery = createAsyncThunk<
                         mapping => mapping.stepId === stepId
                     );
                     
+                    // 收集新创建的知识卡片ID，用于后续高亮
+                    const newlyCreatedCardIds: string[] = [];
+                    
                     // 为每个新主题创建知识卡片并处理代码对应关系
                     const stepIndex = currentState.codeAwareSession.steps.findIndex(step => step.id === stepId);
                     if (stepIndex !== -1) {
@@ -1856,6 +1861,7 @@ export const generateKnowledgeCardThemesFromQuery = createAsyncThunk<
                             const correspondingCodeChunks = themeResponse.corresponding_code_snippets || [];
                             
                             const cardId = `${stepId}-kc-${existingCardCount + index + 1}`;
+                            newlyCreatedCardIds.push(cardId); // 收集新创建的卡片ID
                             
                             // 创建新的知识卡片
                             dispatch(createKnowledgeCard({
@@ -1981,9 +1987,6 @@ export const generateKnowledgeCardThemesFromQuery = createAsyncThunk<
                         }
                     }
 
-                    // 设置生成完成状态
-                    dispatch(setKnowledgeCardGenerationStatus({ stepId, status: "checked" }));
-                    
                     console.log(`✅ 基于查询生成 ${themeResponses.length} 个知识卡片主题，步骤: ${stepId}`);
                     
                     // Log: 问题主题生成完成
@@ -2013,12 +2016,6 @@ export const generateKnowledgeCardThemesFromQuery = createAsyncThunk<
                     const finalState = getState();
                     const targetStep = finalState.codeAwareSession.steps.find(s => s.id === stepId);
                     if (targetStep) {
-                        // 获取当前所有知识卡片，并计算新生成的知识卡片ID
-                        const currentCardCount = targetStep.knowledgeCards.length;
-                        const newCardIds = themeResponses.map((_, index) => 
-                            `${stepId}-kc-${currentCardCount - themeResponses.length + index + 1}`
-                        );
-                        
                         // 构建高亮事件列表：包括步骤本身和所有新生成的知识卡片
                         const highlightEvents = [
                             // 首先高亮步骤以展开它
@@ -2028,7 +2025,7 @@ export const generateKnowledgeCardThemesFromQuery = createAsyncThunk<
                                 additionalInfo: targetStep
                             },
                             // 然后高亮所有新生成的知识卡片
-                            ...newCardIds.map(cardId => {
+                            ...newlyCreatedCardIds.map(cardId => {
                                 const knowledgeCard = targetStep.knowledgeCards.find(kc => kc.id === cardId);
                                 return {
                                     sourceType: "knowledgeCard" as const,
@@ -2039,8 +2036,11 @@ export const generateKnowledgeCardThemesFromQuery = createAsyncThunk<
                         ];
                         
                         dispatch(updateHighlight(highlightEvents));
-                        console.log(`✨ 触发了步骤 ${stepId} 和 ${newCardIds.length} 个新知识卡片的高亮事件`);
+                        console.log(`✨ 触发了步骤 ${stepId} 和 ${newlyCreatedCardIds.length} 个新知识卡片的高亮事件`);
                     }
+                    
+                    // 设置生成完成状态 - 移到最后确保状态正确设置
+                    dispatch(setKnowledgeCardGenerationStatus({ stepId, status: "checked" }));
                 } else {
                     console.warn("No valid themes returned from LLM");
                     dispatch(setKnowledgeCardGenerationStatus({ stepId, status: "checked" }));
@@ -2059,13 +2059,15 @@ export const generateKnowledgeCardThemesFromQuery = createAsyncThunk<
             // 失败后回到empty状态，这样用户可以重试
             dispatch(setKnowledgeCardGenerationStatus({ stepId, status: "empty" }));
         } finally {
-            // 确保无论如何都不会卡在generating状态
+            // 确保无论如何都不会卡在generating状态，但不要覆盖已经正确设置的状态
             const finalState = getState();
             const currentStep = finalState.codeAwareSession.steps.find(step => step.id === stepId);
             if (currentStep?.knowledgeCardGenerationStatus === "generating") {
-                console.warn(`⚠️ 检测到步骤 ${stepId} 仍处于generating状态，强制重置为empty`);
+                console.warn(`⚠️ 检测到步骤 ${stepId} 仍处于generating状态，重置为empty以允许重试`);
                 dispatch(setKnowledgeCardGenerationStatus({ stepId, status: "empty" }));
             }
+            // 如果状态是 "checked"，说明已经成功完成，不要修改
+            console.log(`🔍 最终状态检查 - 步骤 ${stepId} 的知识卡片生成状态: ${currentStep?.knowledgeCardGenerationStatus}`);
         }
     }
 );

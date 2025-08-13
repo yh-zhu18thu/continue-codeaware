@@ -1,24 +1,24 @@
 import { CheckCircle } from "@mui/icons-material";
 import {
-  Paper,
-  Step,
-  StepIcon,
-  StepLabel,
-  Stepper
+    Paper,
+    Step,
+    StepIcon,
+    StepLabel,
+    Stepper
 } from "@mui/material";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 import { HighlightEvent } from "core";
 import { useEffect, useRef, useState } from "react";
 import styled, { css, keyframes } from "styled-components";
 import {
-  defaultBorderRadius,
-  vscForeground
+    defaultBorderRadius,
+    vscForeground
 } from "../../../../components";
 import { useAppSelector } from "../../../../redux/hooks";
 import {
-  selectHighLevelSteps,
-  selectRequirementHighlightChunks,
-  selectRequirementText
+    selectHighLevelSteps,
+    selectRequirementHighlightChunks,
+    selectRequirementText
 } from "../../../../redux/slices/codeAwareSlice";
 import { useCodeAwareLogger } from "../../../../util/codeAwareWebViewLogger";
 // import RequirementDisplayToolBar from "./RequirementDisplayToolbar"; // 移除工具栏导入
@@ -341,7 +341,21 @@ export default function RequirementDisplay({
         };
     }, []);
 
-    const handleChunkClick = (chunkId: string) => {
+    const handleChunkClick = async (chunkId: string) => {
+        // Find the chunk to get its content for logging
+        const chunk = highlightChunks.find(c => c.id === chunkId);
+        const step = highLevelSteps.find(s => s.id === chunkId);
+        
+        // Log high level step viewing start
+        await logger.addLogEntry("user_view_and_highlight_high_level_step", {
+            stepId: chunkId,
+            stepContent: (chunk?.content || step?.content || "").substring(0, 200), // First 200 chars for analysis
+            isFromHighLevelSteps: !!step,
+            isFromHighlightChunks: !!chunk,
+            sourceComponent: "RequirementDisplay",
+            timestamp: new Date().toISOString()
+        });
+        
         if (onChunkFocus) {
             // construct a HighlightEvent
             const highlightEvent: HighlightEvent = {
@@ -352,14 +366,14 @@ export default function RequirementDisplay({
         }
     };
 
-    const handleChunkKeyDown = (event: React.KeyboardEvent, chunkId: string) => {
+    const handleChunkKeyDown = async (event: React.KeyboardEvent, chunkId: string) => {
         if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault();
-            handleChunkClick(chunkId);
+            await handleChunkClick(chunkId);
         }
     };
 
-    const handleChunkBlur = () => {
+    const handleChunkBlur = async () => {
         // Clear any existing timeout
         if (blurTimeoutRef.current) {
             clearTimeout(blurTimeoutRef.current);
@@ -367,7 +381,15 @@ export default function RequirementDisplay({
         
         // Set a delay before clearing highlights to avoid immediate clearing
         // when focus moves between related elements
-        blurTimeoutRef.current = setTimeout(() => {
+        blurTimeoutRef.current = setTimeout(async () => {
+            // Log high level step finished viewing event before clearing highlights
+            await logger.addLogEntry("user_finished_viewing_high_level_step", {
+                sourceComponent: "RequirementDisplay",
+                activeHighlightChunks: highlightChunks.filter(chunk => chunk.isHighlighted).length,
+                activeHighLevelSteps: highLevelSteps.filter(step => step.isHighlighted).length,
+                timestamp: new Date().toISOString()
+            });
+            
             if (onClearHighlight) {
                 onClearHighlight();
             }

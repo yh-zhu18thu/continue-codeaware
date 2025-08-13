@@ -262,21 +262,16 @@ function useSetup() {
       previousSelection: codeChunks.filter(chunk => chunk.isHighlighted && !chunk.disabled)
     });
 
-    // Log code selection cleared event
-    await logger.addLogEntry("user_clear_code_selection", {
-      filePath,
-      previouslyHighlightedChunks: codeChunks.filter(chunk => chunk.isHighlighted && !chunk.disabled).length,
-      timestamp: new Date().toISOString()
-    });
-
-    // Log mapping check for code selection clearing
-    await logger.addLogEntry("user_check_clear_selection_mappings", {
-      filePath,
-      totalCodeChunks: codeChunks.length,
-      activeCodeChunks: codeChunks.filter(chunk => !chunk.disabled).length,
-      highlightedChunks: codeChunks.filter(chunk => chunk.isHighlighted && !chunk.disabled).length,
-      timestamp: new Date().toISOString()
-    });
+    // Log finish viewing events for previously highlighted code chunks
+    const previouslyHighlightedChunks = codeChunks.filter(chunk => chunk.isHighlighted && !chunk.disabled);
+    for (const chunk of previouslyHighlightedChunks) {
+      await logger.addLogEntry("user_finished_viewing_code_chunk", {
+        filePath: chunk.filePath,
+        codeChunkRange: chunk.range,
+        codeChunkContent: chunk.content ? (chunk.content.length > 200 ? chunk.content.substring(0, 200) + "..." : chunk.content) : "",
+        timestamp: new Date().toISOString()
+      });
+    }
 
     // 清除所有高亮
     dispatch(clearAllHighlights());
@@ -291,15 +286,6 @@ function useSetup() {
       selectedLines,
       selectedContent: selectedContent.substring(0, 100) + "...", // 只
       // 显示前100个字符
-    });
-
-    // Log code selection changed event
-    await logger.addLogEntry("user_change_code_selection", {
-      filePath,
-      selectedLines,
-      selectedContentLength: selectedContent.length,
-      selectedContentPreview: selectedContent.substring(0, 200), // Store first 200 chars for analysis
-      timestamp: new Date().toISOString()
     });
 
     // 存储符合条件的代码块
@@ -366,22 +352,23 @@ function useSetup() {
       }
     }
 
-    // Log code chunk matching results
-    await logger.addLogEntry("user_check_code_selection_mappings", {
-      filePath,
-      selectedLines,
-      fullyContainedChunksCount: fullyContainedChunks.length,
-      overlappingChunksCount: overlappingChunks.length,
-      highlightEventsCount: highlightEvents.length,
-      bestOverlapRatio: overlappingChunks.length > 0 ? overlappingChunks[0].overlapRatio : null,
-      fullyContainedChunkIds: fullyContainedChunks.map(chunk => chunk.id),
-      bestOverlappingChunkId: overlappingChunks.length > 0 ? overlappingChunks[0].chunk.id : null,
-      timestamp: new Date().toISOString()
-    });
-
     // 如果有要高亮的代码块，触发高亮更新
     if (highlightEvents.length > 0) {
       dispatch(updateHighlight(highlightEvents));
+      
+      // Log code chunk highlighting events
+      for (const event of highlightEvents) {
+        if (event.sourceType === "code" && event.additionalInfo) {
+          await logger.addLogEntry("user_view_and_highlight_code_chunk", {
+            filePath: event.additionalInfo.filePath,
+            codeChunkRange: event.additionalInfo.range,
+            codeChunkContent: event.additionalInfo.content ? (event.additionalInfo.content.length > 200 ? event.additionalInfo.content.substring(0, 200) + "..." : event.additionalInfo.content) : "",
+            selectedLines,
+            selectedContent: selectedContent ? (selectedContent.length > 200 ? selectedContent.substring(0, 200) + "..." : selectedContent) : "",
+            timestamp: new Date().toISOString()
+          });
+        }
+      }
     }
 
     // 发送调试信息到控制台

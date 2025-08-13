@@ -192,6 +192,7 @@ const KnowledgeCardSAQ: React.FC<KnowledgeCardSAQProps> = ({
   const logger = useCodeAwareLogger();
   const [isRetrying, setIsRetrying] = React.useState(initialIsRetrying);
   const [lastResultHash, setLastResultHash] = React.useState<string>('');
+  const hasStartedEditingRef = React.useRef(false);
   
   const editor = useEditor({
     extensions: [
@@ -206,11 +207,22 @@ const KnowledgeCardSAQ: React.FC<KnowledgeCardSAQProps> = ({
         class: "prose dark:prose-invert prose-sm sm:prose-base",
       },
     },
-    onUpdate: ({ editor }) => {
+    onUpdate: async ({ editor }) => {
+      const content = editor.getText();
+      
       // 当编辑器内容变化时，通知父组件保存状态
       if (onContentChange) {
-        const content = editor.getText();
         onContentChange(content);
+      }
+    },
+    onFocus: async () => {
+      // Log when user first focuses on the SAQ answer editor
+      if (!hasStartedEditingRef.current) {
+        hasStartedEditingRef.current = true;
+        await logger.addLogEntry("user_start_edit_saq_answer", {
+          question: question.length > 200 ? question.substring(0, 200) + "..." : question,
+          timestamp: new Date().toISOString()
+        });
       }
     },
   });
@@ -223,6 +235,8 @@ const KnowledgeCardSAQ: React.FC<KnowledgeCardSAQProps> = ({
       if (editor.getText() !== contentToSet) {
         editor.commands.setContent(contentToSet);
       }
+      // Reset editing state when question changes
+      hasStartedEditingRef.current = false;
     }
   }, [question, editor, initialContent, isRetrying, result]);
 
@@ -251,8 +265,8 @@ const KnowledgeCardSAQ: React.FC<KnowledgeCardSAQProps> = ({
     const answer = editor.getText();
     if (answer.trim() && !isLoading) {
       await logger.addLogEntry("user_submit_saq_answer", {
-        question: question.substring(0, 200),
-        answer: answer.substring(0, 500),
+        question: question.length > 200 ? question.substring(0, 200) + "..." : question,
+        answer: answer.length > 500 ? answer.substring(0, 500) + "..." : answer,
         timestamp: new Date().toISOString()
       });
       
@@ -263,12 +277,6 @@ const KnowledgeCardSAQ: React.FC<KnowledgeCardSAQProps> = ({
 
   const handleRetry = async () => {
     console.log('Retry button clicked', { result: result?.userAnswer });
-    
-    await logger.addLogEntry("user_retry_saq_answer", {
-      question: question.substring(0, 200),
-      previousAnswer: result?.userAnswer || "",
-      timestamp: new Date().toISOString()
-    });
     
     setIsRetrying(true);
     // 通知父组件更新重试状态

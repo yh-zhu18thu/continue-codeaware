@@ -808,6 +808,14 @@ export const generateStepsFromRequirement = createAsyncThunk<
         { dispatch, extra, getState }
     ) => {
         try {
+            // Log: 用户触发步骤生成
+            await extra.ideMessenger.request("addCodeAwareLogEntry", {
+                eventType: "user_order_steps_generation",
+                payload: {
+                    userRequirement,
+                    timestamp: new Date().toISOString()
+                }
+            });
             
             const state = getState();
             const defaultModel = selectDefaultModel(state);
@@ -962,6 +970,28 @@ export const generateStepsFromRequirement = createAsyncThunk<
             dispatch(updateCodeAwareMappings(initialMappings));
             dispatch(setUserRequirementStatus("finalized"));
 
+            // Log: 步骤生成完成
+            await extra.ideMessenger.request("addCodeAwareLogEntry", {
+                eventType: "user_get_steps_generation_result",
+                payload: {
+                    userRequirement,
+                    title,
+                    learningGoal,
+                    stepsCount: parsedSteps.length,
+                    highLevelStepsCount: highLevelSteps.length,
+                    // 记录具体的步骤信息
+                    stepsDetails: parsedSteps.map(step => ({
+                        title: step.title,
+                        abstract: step.abstract ? step.abstract.substring(0, 200) + (step.abstract.length > 200 ? "..." : "") : ""
+                    })),
+                    highLevelStepsDetails: highLevelSteps.map((step, index) => ({
+                        index: index + 1,
+                        content: step
+                    })),
+                    timestamp: new Date().toISOString()
+                }
+            });
+
             // CodeAware: 通过protocol同步requirement和步骤信息到IDE
             try {
                 // 发送用户需求到IDE
@@ -1014,6 +1044,16 @@ export const generateKnowledgeCardDetail = createAsyncThunk<
         let lastError: Error | null = null;
         
         try{
+            // Log: 用户触发知识卡片内容生成
+            await extra.ideMessenger.request("addCodeAwareLogEntry", {
+                eventType: "user_order_knowledge_card_detail_generation",
+                payload: {
+                    knowledgeCardTheme,
+                    learningGoal,
+                    timestamp: new Date().toISOString()
+                }
+            });
+            
             const state = getState();
             const defaultModel = selectDefaultModel(state);
             if (!defaultModel) {
@@ -1080,6 +1120,19 @@ export const generateKnowledgeCardDetail = createAsyncThunk<
                             cardId: knowledgeCardId,
                             content
                         }));
+                        
+                        // Log: 知识卡片内容生成完成
+                        await extra.ideMessenger.request("addCodeAwareLogEntry", {
+                            eventType: "user_get_knowledge_card_detail_generation_result",
+                            payload: {
+                                knowledgeCardTheme,
+                                title,
+                                contentLength: content.length,
+                                // 记录内容摘要（前200字符）
+                                contentSummary: content.substring(0, 200) + (content.length > 200 ? "..." : ""),
+                                timestamp: new Date().toISOString()
+                            }
+                        });
                         
                         console.log("✅ 知识卡片生成成功");
                         
@@ -1157,6 +1210,16 @@ export const generateKnowledgeCardTests = createAsyncThunk<
         let lastError: Error | null = null;
         
         try {
+            // Log: 用户触发知识卡片测试题生成
+            await extra.ideMessenger.request("addCodeAwareLogEntry", {
+                eventType: "user_order_knowledge_card_tests_generation",
+                payload: {
+                    knowledgeCardTitle,
+                    knowledgeCardTheme,
+                    timestamp: new Date().toISOString()
+                }
+            });
+            
             const state = getState();
             const defaultModel = selectDefaultModel(state);
             if (!defaultModel) {
@@ -1232,6 +1295,23 @@ export const generateKnowledgeCardTests = createAsyncThunk<
                             tests
                         }));
                         
+                        // Log: 知识卡片测试题生成完成
+                        await extra.ideMessenger.request("addCodeAwareLogEntry", {
+                            eventType: "user_get_knowledge_card_tests_generation_result",
+                            payload: {
+                                knowledgeCardTitle,
+                                testsCount: tests.length,
+                                // 记录测试题详情
+                                testsDetails: tests.map((test: any) => ({
+                                    questionType: test.question_type,
+                                    questionStem: test.question.stem,
+                                    standardAnswer: test.question.standard_answer,
+                                    options: test.question.options || []
+                                })),
+                                timestamp: new Date().toISOString()
+                            }
+                        });
+                        
                         console.log("✅ 知识卡片测试题生成成功");
                         
                         return; // 成功，退出函数
@@ -1295,6 +1375,17 @@ export const generateKnowledgeCardThemes = createAsyncThunk<
         { dispatch, extra, getState }
     ) => {
         try {
+            // Log: 用户触发知识卡片主题生成
+            await extra.ideMessenger.request("addCodeAwareLogEntry", {
+                eventType: "user_order_knowledge_card_themes_generation",
+                payload: {
+                    stepTitle,
+                    stepAbstract: stepAbstract ? stepAbstract.substring(0, 200) + (stepAbstract.length > 200 ? "..." : "") : "",
+                    learningGoal,
+                    timestamp: new Date().toISOString()
+                }
+            });
+            
             const state = getState();
             const defaultModel = selectDefaultModel(state);
             if (!defaultModel) {
@@ -1556,6 +1647,21 @@ export const generateKnowledgeCardThemes = createAsyncThunk<
                     
                     console.log(`✅ 生成 ${themes.length} 个知识卡片主题，步骤: ${stepId}`);
                     
+                    // Log: 知识卡片主题生成完成
+                    await extra.ideMessenger.request("addCodeAwareLogEntry", {
+                        eventType: "user_get_knowledge_card_themes_generation_result",
+                        payload: {
+                            stepTitle,
+                            themesCount: themes.length,
+                            // 记录生成的知识卡片主题详情
+                            themesDetails: themes.map(theme => ({
+                                title: theme
+                            })),
+                            isNewFormat,
+                            timestamp: new Date().toISOString()
+                        }
+                    });
+                    
                     // 知识卡片主题生成完成后，检查并映射代码
                     try {
                         await dispatch(checkAndMapKnowledgeCardsToCode({ stepId }));
@@ -1622,6 +1728,20 @@ export const generateKnowledgeCardThemesFromQuery = createAsyncThunk<
         { dispatch, extra, getState }
     ) => {
         try {
+            // Log: 用户从问题触发主题生成
+            await extra.ideMessenger.request("addCodeAwareLogEntry", {
+                eventType: "user_order_knowledge_card_themes_from_query_generation",
+                payload: {
+                    query: queryContext.query,
+                    selectedCode: queryContext.selectedCode ? queryContext.selectedCode.substring(0, 200) + (queryContext.selectedCode.length > 200 ? "..." : "") : "",
+                    currentStepTitle: currentStep.title,
+                    existingThemesCount: existingThemes.length,
+                    // 记录现有主题详情
+                    existingThemesDetails: existingThemes.map(theme => ({ title: theme })),
+                    timestamp: new Date().toISOString()
+                }
+            });
+            
             const state = getState();
             const defaultModel = selectDefaultModel(state);
             if (!defaultModel) {
@@ -1867,6 +1987,20 @@ export const generateKnowledgeCardThemesFromQuery = createAsyncThunk<
                     
                     console.log(`✅ 基于查询生成 ${themeResponses.length} 个知识卡片主题，步骤: ${stepId}`);
                     
+                    // Log: 问题主题生成完成
+                    await extra.ideMessenger.request("addCodeAwareLogEntry", {
+                        eventType: "user_get_knowledge_card_themes_from_query_generation_result",
+                        payload: {
+                            query: queryContext.query,
+                            themesCount: themeResponses.length,
+                            // 记录生成的主题详情
+                            themesDetails: themeResponses.map(theme => ({
+                                title: theme
+                            })),
+                            timestamp: new Date().toISOString()
+                        }
+                    });
+                    
                     // 知识卡片主题生成完成后，检查并映射代码
                     try {
                         await dispatch(checkAndMapKnowledgeCardsToCode({ stepId }));
@@ -1970,6 +2104,23 @@ export const generateCodeFromSteps = createAsyncThunk<
         { dispatch, extra, getState }
     ) => {
         try {
+            // Log: 用户触发代码生成
+            await extra.ideMessenger.request("addCodeAwareLogEntry", {
+                eventType: "user_order_code_generation",
+                payload: {
+                    existingCodeLength: existingCode.length,
+                    filepath,
+                    stepsCount: orderedSteps.length,
+                    previouslyGeneratedStepsCount: previouslyGeneratedSteps?.length || 0,
+                    // 记录步骤详情
+                    stepsDetails: orderedSteps.map(step => ({
+                        title: step.title,
+                        abstract: step.abstract ? step.abstract.substring(0, 200) + (step.abstract.length > 200 ? "..." : "") : ""
+                    })),
+                    timestamp: new Date().toISOString()
+                }
+            });
+            
             const state = getState();
             const defaultModel = selectDefaultModel(state);
             if (!defaultModel) {
@@ -2410,6 +2561,24 @@ export const generateCodeFromSteps = createAsyncThunk<
                 createdCodeChunks: allCreatedCodeChunks.length
             });
 
+            // Log: 代码生成完成
+            await extra.ideMessenger.request("addCodeAwareLogEntry", {
+                eventType: "user_get_code_generation_result",
+                payload: {
+                    generatedCodeLength: generatedCode.length,
+                    stepsWithCodeCount: stepsCorrespondingCode.length,
+                    createdCodeChunksCount: allCreatedCodeChunks.length,
+                    filepath,
+                    // 记录步骤与代码的对应关系详情
+                    stepsCodeDetails: stepsCorrespondingCode.map(stepCode => ({
+                        stepTitle: orderedSteps.find(s => s.id === stepCode.id)?.title || "Unknown",
+                        codeLength: stepCode.code.length,
+                        codePreview: stepCode.code.substring(0, 100) + (stepCode.code.length > 100 ? "..." : "")
+                    })),
+                    timestamp: new Date().toISOString()
+                }
+            });
+
             return {
                 changedCode: generatedCode,
                 stepsCorrespondingCode
@@ -2449,6 +2618,17 @@ export const rerunStep = createAsyncThunk<
         { dispatch, extra, getState }
     ) => {
         try {
+            // Log: 用户触发步骤重新运行
+            await extra.ideMessenger.request("addCodeAwareLogEntry", {
+                eventType: "user_order_step_rerun",
+                payload: {
+                    changedStepAbstract: changedStepAbstract ? changedStepAbstract.substring(0, 200) + (changedStepAbstract.length > 200 ? "..." : "") : "",
+                    existingCodeLength: existingCode.length,
+                    filepath,
+                    timestamp: new Date().toISOString()
+                }
+            });
+            
             const state = getState();
             const defaultModel = selectDefaultModel(state);
             if (!defaultModel) {
@@ -2815,6 +2995,17 @@ export const rerunStep = createAsyncThunk<
 
             console.log("✅ 步骤重新运行完成");
             
+            // Log: 步骤重新运行完成
+            await extra.ideMessenger.request("addCodeAwareLogEntry", {
+                eventType: "user_get_step_rerun_result",
+                payload: {
+                    updatedCodeLength: updatedCode.length,
+                    changedStepAbstract: changedStepAbstract ? changedStepAbstract.substring(0, 200) + (changedStepAbstract.length > 200 ? "..." : "") : "",
+                    createdCodeChunksCount: allCreatedCodeChunks.length,
+                    timestamp: new Date().toISOString()
+                }
+            });
+            
             // 标记步骤为已生成
             dispatch(setStepStatus({ stepId: stepId, status: "generated" }));
             console.log(`✅ 步骤 ${stepId} 状态已更新为 'generated'`);
@@ -2860,8 +3051,18 @@ export const processCodeChanges = createAsyncThunk<
     ThunkApiType
 >(
     "codeAware/processCodeChanges",
-    async ({ currentFilePath, currentContent }, { getState, dispatch }) => {
+    async ({ currentFilePath, currentContent }, { getState, dispatch, extra }) => {
         try {
+            // Log: 用户触发代码变化处理
+            await extra.ideMessenger.request("addCodeAwareLogEntry", {
+                eventType: "user_order_code_changes_processing",
+                payload: {
+                    currentFilePath,
+                    currentContentLength: currentContent.length,
+                    timestamp: new Date().toISOString()
+                }
+            });
+            
             const state = getState();
             const snapshot = state.codeAwareSession.codeEditModeSnapshot;
             
@@ -3187,6 +3388,19 @@ export const processCodeChanges = createAsyncThunk<
                 adjustedChunks: subtlyAffectedChunks.length,
                 substantialEdits: substantialEdits.length,
                 formattingEdits: formattingOnlyEdits.length
+            });
+
+            // Log: 代码变化处理完成
+            await extra.ideMessenger.request("addCodeAwareLogEntry", {
+                eventType: "user_get_code_changes_processing_result",
+                payload: {
+                    affectedStepsCount: affectedStepIds.size,
+                    repositionedChunksCount: unaffectedChunks.length,
+                    adjustedChunksCount: subtlyAffectedChunks.length,
+                    substantialEditsCount: substantialEdits.length,
+                    formattingEditsCount: formattingOnlyEdits.length,
+                    timestamp: new Date().toISOString()
+                }
             });
 
         } catch (error) {
@@ -3542,6 +3756,16 @@ export const processSaqSubmission = createAsyncThunk<
         let lastError: Error | null = null;
         
         try {
+            // Log: 用户提交简答题答案
+            await extra.ideMessenger.request("addCodeAwareLogEntry", {
+                eventType: "user_order_saq_submission_processing",
+                payload: {
+                    testId,
+                    userAnswer,
+                    timestamp: new Date().toISOString()
+                }
+            });
+            
             const state = getState();
             const defaultModel = selectDefaultModel(state);
             if (!defaultModel) {
@@ -3613,6 +3837,18 @@ export const processSaqSubmission = createAsyncThunk<
                             isCorrect: evaluationResult.isCorrect,
                             remarks: evaluationResult.remarks
                         }));
+
+                        // Log: 简答题评估完成
+                        await extra.ideMessenger.request("addCodeAwareLogEntry", {
+                            eventType: "user_get_saq_submission_processing_result",
+                            payload: {
+                                testId,
+                                userAnswer,
+                                isCorrect: evaluationResult.isCorrect,
+                                remarks: evaluationResult.remarks,
+                                timestamp: new Date().toISOString()
+                            }
+                        });
 
                         console.log("✅ [CodeAware] SAQ evaluation completed:", {
                             testId,
@@ -3710,6 +3946,16 @@ export const processGlobalQuestion = createAsyncThunk<
         let lastError: Error | null = null;
         
         try {
+            // Log: 用户提交全局问题
+            await extra.ideMessenger.request("addCodeAwareLogEntry", {
+                eventType: "user_order_global_question_processing",
+                payload: {
+                    question,
+                    currentCodeLength: currentCode.length,
+                    timestamp: new Date().toISOString()
+                }
+            });
+            
             console.log("🔍 [CodeAware] Processing global question:", question);
             
             const state = getState();
@@ -3854,6 +4100,18 @@ export const processGlobalQuestion = createAsyncThunk<
             }));
             
             console.log("✅ [CodeAware] Global question processed successfully");
+            
+            // Log: 全局问题处理完成
+            await extra.ideMessenger.request("addCodeAwareLogEntry", {
+                eventType: "user_get_global_question_processing_result",
+                payload: {
+                    question,
+                    selectedStepId: selected_step_id,
+                    themesCount: knowledge_card_themes.length,
+                    knowledgeCardIds: createdCardIds,
+                    timestamp: new Date().toISOString()
+                }
+            });
             
             // 全局提问知识卡片生成完成后，检查并映射代码
             try {

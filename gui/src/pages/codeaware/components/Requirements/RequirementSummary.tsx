@@ -1,16 +1,17 @@
 import {
-  StepIcon,
-  Typography
+    StepIcon,
+    Typography
 } from "@mui/material";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 import { HighlightEvent } from "core";
 import { useCallback, useEffect, useRef } from "react";
 import styled, { css, keyframes } from "styled-components";
 import {
-  defaultBorderRadius
+    defaultBorderRadius
 } from "../../../../components";
 import { useAppSelector } from "../../../../redux/hooks";
 import { selectRequirementHighlightChunks } from "../../../../redux/slices/codeAwareSlice";
+import { useCodeAwareLogger } from "../../../../util/codeAwareWebViewLogger";
 
 // Flickering animation for highlight state changes
 const flicker = keyframes`
@@ -200,8 +201,24 @@ export default function RequirementSummary({
   const highlightChunks = useAppSelector(selectRequirementHighlightChunks);
   const containerRef = useRef<HTMLDivElement>(null);
   const highlightedItemRef = useRef<HTMLDivElement>(null);
+  
+  // CodeAware logger
+  const logger = useCodeAwareLogger();
 
-  const handleChunkClick = useCallback((chunkId: string) => {
+  const handleChunkClick = useCallback(async (chunkId: string) => {
+    // Find the chunk to get its content for logging
+    const chunk = highlightChunks.find(c => c.id === chunkId);
+    
+    // Log high level step viewing start  
+    await logger.addLogEntry("user_view_and_highlight_high_level_step", {
+      stepId: chunkId,
+      stepContent: (chunk?.content || "").substring(0, 200), // First 200 chars for analysis
+      isFromHighLevelSteps: false, // This is from highlight chunks
+      isFromHighlightChunks: true,
+      sourceComponent: "RequirementSummary",
+      timestamp: new Date().toISOString()
+    });
+    
     if (onChunkFocus) {
       const highlightEvent: HighlightEvent = {
         sourceType: "requirement",
@@ -209,7 +226,7 @@ export default function RequirementSummary({
       };
       onChunkFocus(highlightEvent);
     }
-  }, [onChunkFocus]);
+  }, [onChunkFocus, logger, highlightChunks]);
 
   const handleChunkKeyDown = useCallback((event: React.KeyboardEvent, chunkId: string) => {
     if (event.key === 'Enter' || event.key === ' ') {

@@ -161,13 +161,6 @@ const KnowledgeCardMCQ: React.FC<KnowledgeCardMCQProps> = ({
   const handleOptionClick = async (option: string) => {
     if (submitted) return; // 提交后不允许更改
     
-    await logger.addLogEntry("user_select_mcq_option", {
-      question: question.substring(0, 200),
-      selectedOption: option,
-      previousOption: selectedOption,
-      timestamp: new Date().toISOString()
-    });
-    
     setSelectedOption(option);
     // 通知父组件选择变化
     if (onSelectionChange) {
@@ -177,13 +170,6 @@ const KnowledgeCardMCQ: React.FC<KnowledgeCardMCQProps> = ({
 
   const handleSubmit = async () => {
     if (!selectedOption) return;
-
-    await logger.addLogEntry("user_submit_mcq_answer", {
-      question: question.substring(0, 200),
-      selectedOption,
-      correctAnswer,
-      timestamp: new Date().toISOString()
-    });
 
     const correct = selectedOption === correctAnswer;
     setIsCorrect(correct);

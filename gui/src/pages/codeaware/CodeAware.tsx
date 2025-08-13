@@ -2,8 +2,8 @@ import { HighlightEvent, KnowledgeCardItem, StepItem, StepStatus } from "core";
 import { Key, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import styled from "styled-components";
 import {
-    lightGray,
-    vscForeground
+  lightGray,
+  vscForeground
 } from "../../components";
 import { SessionInfoDialog } from "../../components/dialogs/SessionInfoDialog";
 import PageHeader from "../../components/PageHeader";
@@ -11,43 +11,43 @@ import { IdeMessengerContext } from "../../context/IdeMessenger";
 import { useWebviewListener } from "../../hooks/useWebviewListener";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks";
 import {
-    clearAllCodeAndMappings,
-    clearAllHighlights,
-    clearCodeEditModeSnapshot,
-    newCodeAwareSession, // Add this import
-    resetIdeCommFlags,
-    resetSessionExceptRequirement, // Add this import
-    saveCodeEditModeSnapshot, // Add this import
-    selectCurrentSessionId,
-    selectIsCodeEditModeEnabled, // Add this import for code edit mode
-    selectIsRequirementInEditMode, // Import submitRequirementContent
-    selectIsStepsGenerated,
-    selectLearningGoal, // Add this import
-    selectTask,
-    selectTitle, // Add this import for reading title
-    setCodeEditMode, // Add this import for code edit mode action
-    setKnowledgeCardDisabled, // Add this import for knowledge card disable
-    setKnowledgeCardGenerationStatus, // Add this import for knowledge card generation status
-    setStepAbstract, // Add this import for step editing
-    setStepStatus, // Add this import for step status change
-    setUserRequirementStatus,
-    submitRequirementContent, // Add this import
-    updateHighlight
+  clearAllCodeAndMappings,
+  clearAllHighlights,
+  clearCodeEditModeSnapshot,
+  newCodeAwareSession, // Add this import
+  resetIdeCommFlags,
+  resetSessionExceptRequirement, // Add this import
+  saveCodeEditModeSnapshot, // Add this import
+  selectCurrentSessionId,
+  selectIsCodeEditModeEnabled, // Add this import for code edit mode
+  selectIsRequirementInEditMode, // Import submitRequirementContent
+  selectIsStepsGenerated,
+  selectLearningGoal, // Add this import
+  selectTask,
+  selectTitle, // Add this import for reading title
+  setCodeEditMode, // Add this import for code edit mode action
+  setKnowledgeCardDisabled, // Add this import for knowledge card disable
+  setKnowledgeCardGenerationStatus, // Add this import for knowledge card generation status
+  setStepAbstract, // Add this import for step editing
+  setStepStatus, // Add this import for step status change
+  setUserRequirementStatus,
+  submitRequirementContent, // Add this import
+  updateHighlight
 } from "../../redux/slices/codeAwareSlice";
 import {
-    checkAndMapKnowledgeCardsToCode,
-    checkAndUpdateHighLevelStepCompletion,
-    generateCodeFromSteps,
-    generateKnowledgeCardDetail,
-    generateKnowledgeCardTests, // 新增：导入测试题生成thunk
-    generateKnowledgeCardThemes,
-    generateKnowledgeCardThemesFromQuery,
-    generateStepsFromRequirement,
-    getStepCorrespondingCode,
-    processCodeChanges,
-    processGlobalQuestion,
-    processSaqSubmission,
-    rerunStep
+  checkAndMapKnowledgeCardsToCode,
+  checkAndUpdateHighLevelStepCompletion,
+  generateCodeFromSteps,
+  generateKnowledgeCardDetail,
+  generateKnowledgeCardTests, // 新增：导入测试题生成thunk
+  generateKnowledgeCardThemes,
+  generateKnowledgeCardThemesFromQuery,
+  generateStepsFromRequirement,
+  getStepCorrespondingCode,
+  processCodeChanges,
+  processGlobalQuestion,
+  processSaqSubmission,
+  rerunStep
 } from "../../redux/thunks/codeAwareGeneration";
 import { useCodeAwareLogger } from "../../util/codeAwareWebViewLogger";
 import "./CodeAware.css";
@@ -330,16 +330,6 @@ export const CodeAware = () => {
             timestamp: new Date().toISOString()
           });
         }
-        
-        // Log step generation completion
-        if (previousStep.stepStatus === "generating" && 
-            currentStep.stepStatus === "generated") {
-          logger.addLogEntry("system_step_generated", {
-            stepId: currentStep.id,
-            stepTitle: currentStep.title,
-            timestamp: new Date().toISOString()
-          });
-        }
       }
       
       // Log individual knowledge card content generation completion
@@ -351,15 +341,7 @@ export const CodeAware = () => {
             currentCard.content !== "::LOADING::" &&
             currentCard.content && 
             currentCard.content.trim() !== "") {
-          logger.addLogEntry("system_knowledge_card_content_generated", {
-            stepId: currentStep.id,
-            cardId: currentCard.id,
-            cardTitle: currentCard.title,
-            contentLength: currentCard.content.length,
-            hasTests: (currentCard.tests?.length || 0) > 0,
-            testCount: currentCard.tests?.length || 0,
-            timestamp: new Date().toISOString()
-          });
+
         }
       });
     });
@@ -518,6 +500,11 @@ export const CodeAware = () => {
       const currentCodeEditMode = isCodeEditModeEnabled;
       
       if (data.enabled && !currentCodeEditMode) {
+        // Log: 用户进入代码编辑模式
+        await logger.addLogEntry("user_enter_code_edit_mode", {
+          timestamp: new Date().toISOString()
+        });
+        
         // Entering code edit mode - save current code snapshot
         try {
           const currentFileResponse = await ideMessenger?.request("getCurrentFile", undefined);
@@ -541,6 +528,11 @@ export const CodeAware = () => {
           console.error("❌ [CodeAware] Failed to save code snapshot:", error);
         }
       } else if (!data.enabled && currentCodeEditMode) {
+        // Log: 用户退出代码编辑模式
+        await logger.addLogEntry("user_exit_code_edit_mode", {
+          timestamp: new Date().toISOString()
+        });
+        
         // Exiting code edit mode - process code changes
         try {
           const currentFileResponse = await ideMessenger?.request("getCurrentFile", undefined);
@@ -833,8 +825,8 @@ export const CodeAware = () => {
       
       // Log requirement confirmation
       await logger.addLogEntry("user_confirm_requirement", {
-        requirement: requirement.trim(),
-        originalRequirement: userRequirement.requirementDescription,
+        requirement: requirement.trim().length > 300 ? requirement.trim().substring(0, 300) + "..." : requirement.trim(),
+        originalRequirement: userRequirement.requirementDescription.length > 300 ? userRequirement.requirementDescription.substring(0, 300) + "..." : userRequirement.requirementDescription,
         timestamp: new Date().toISOString()
       });
       
@@ -882,7 +874,9 @@ export const CodeAware = () => {
     }
     
     await logger.addLogEntry("user_start_edit_requirement", {
-      currentRequirement: userRequirement?.requirementDescription || ""
+      currentRequirement: userRequirement?.requirementDescription ? 
+        (userRequirement.requirementDescription.length > 300 ? userRequirement.requirementDescription.substring(0, 300) + "..." : userRequirement.requirementDescription) 
+        : ""
     });
     
     dispatch(setUserRequirementStatus("editing"));
@@ -1180,24 +1174,11 @@ export const CodeAware = () => {
   );
 
   const handleHighlightEvent = useCallback(async (e: HighlightEvent) => {
-    // Log user highlight interaction
-    await logger.addLogEntry("user_check_highlight_mappings", {
-      sourceType: e.sourceType,
-      identifier: e.identifier,
-      additionalInfo: e.additionalInfo,
-      timestamp: new Date().toISOString()
-    });
-    
     // Special handling for knowledge card highlight events
     if (e.sourceType === "knowledgeCard") {
       // For knowledge cards, we want to highlight related elements but NOT trigger auto-scroll
       // We'll use the normal highlight logic but with a flag to prevent auto-scroll
       console.log("📝 [CodeAware] Handling knowledge card highlight event:", e.identifier);
-      
-      await logger.addLogEntry("user_check_knowledge_card_mappings", {
-        cardId: e.identifier,
-        additionalInfo: e.additionalInfo
-      });
       
       // Temporarily disable auto-scroll for knowledge card highlights
       setIsAutoScrollDisabled(true);
@@ -1224,24 +1205,6 @@ export const CodeAware = () => {
       }, 3000); // Even longer delay to ensure no auto-scroll occurs
       
       return;
-    }
-    
-    // Log other types of highlight events
-    if (e.sourceType === "step") {
-      await logger.addLogEntry("user_check_step_mappings", {
-        stepId: e.identifier,
-        additionalInfo: e.additionalInfo
-      });
-    } else if (e.sourceType === "code") {
-      await logger.addLogEntry("user_check_code_chunk_mappings", {
-        chunkId: e.identifier,
-        additionalInfo: e.additionalInfo
-      });
-    } else if (e.sourceType === "requirement") {
-      await logger.addLogEntry("user_check_requirement_mappings", {
-        requirementId: e.identifier,
-        additionalInfo: e.additionalInfo
-      });
     }
     
     // Normal highlight logic for other types
@@ -1594,12 +1557,6 @@ export const CodeAware = () => {
 
   const handleStepExpansionChange = useCallback(async (stepId: string, isExpanded: boolean) => {
     console.log(`Step ${stepId} expansion changed to: ${isExpanded}`);
-    
-    await logger.addLogEntry("user_toggle_step_expansion", {
-      stepId,
-      isExpanded,
-      timestamp: new Date().toISOString()
-    });
     
     if (isExpanded) {
       // When a step is expanded, immediately set it as the currently expanded step

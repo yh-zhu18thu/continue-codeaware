@@ -8,17 +8,17 @@ import { FromCoreProtocol, ToCoreProtocol } from "core/protocol";
 import { InProcessMessenger } from "core/protocol/messenger";
 import { codeAwareLogger } from "core/util/codeAwareLogger";
 import {
-    getConfigJsonPath,
-    getConfigTsPath,
-    getConfigYamlPath,
+  getConfigJsonPath,
+  getConfigTsPath,
+  getConfigYamlPath,
 } from "core/util/paths";
 import { v4 as uuidv4 } from "uuid";
 import * as vscode from "vscode";
 
 // import { MetaCompleteProvider } from "../autocomplete/metacomplete";
 import {
-    monitorBatteryChanges,
-    setupStatusBar
+  monitorBatteryChanges,
+  setupStatusBar
 } from "../autocomplete/statusBar";
 import { CodeAwareActionProvider } from "../codeActions/CodeAwareActionProvider";
 import { CodeEditModeManager } from "../CodeEditModeManager";
@@ -31,8 +31,8 @@ import { registerAllPromptFilesCompletionProviders } from "../lang-server/prompt
 import EditDecorationManager from "../quickEdit/EditDecorationManager";
 import { QuickEdit } from "../quickEdit/QuickEditQuickPick";
 import {
-    getControlPlaneSessionInfo,
-    WorkOsAuthProvider,
+  getControlPlaneSessionInfo,
+  WorkOsAuthProvider,
 } from "../stubs/WorkOsAuthProvider";
 import { Battery } from "../util/battery";
 import { FileSearch } from "../util/FileSearch";

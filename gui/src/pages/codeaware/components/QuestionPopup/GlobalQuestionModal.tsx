@@ -1,14 +1,15 @@
 import { PaperAirplaneIcon, XMarkIcon } from "@heroicons/react/24/solid";
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import styled from "styled-components";
 import {
-  defaultBorderRadius,
-  vscBackground,
-  vscForeground,
-  vscInputBackground,
-  vscInputBorder
+    defaultBorderRadius,
+    vscBackground,
+    vscForeground,
+    vscInputBackground,
+    vscInputBorder
 } from "../../../../components";
+import { useCodeAwareLogger } from "../../../../util/codeAwareWebViewLogger";
 
 const PopupOverlay = styled.div`
   position: fixed;
@@ -174,20 +175,38 @@ export default function GlobalQuestionModal({
   isLoading = false
 }: GlobalQuestionModalProps) {
   const [question, setQuestion] = useState('');
+  const hasStartedEditingRef = useRef(false);
+  const logger = useCodeAwareLogger();
 
   if (!isOpen) return null;
+
+  const handleQuestionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setQuestion(e.target.value);
+  };
+
+  const handleQuestionFocus = async () => {
+    // Log when user first focuses on the global question input
+    if (!hasStartedEditingRef.current) {
+      hasStartedEditingRef.current = true;
+      await logger.addLogEntry("user_start_edit_global_question", {
+        timestamp: new Date().toISOString()
+      });
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (question.trim() && !isLoading) {
       onSubmit(question.trim());
       setQuestion('');
+      hasStartedEditingRef.current = false; // Reset editing state
     }
   };
 
   const handleClose = () => {
     if (!isLoading) {
       setQuestion('');
+      hasStartedEditingRef.current = false; // Reset editing state
       onClose();
     }
   };
@@ -216,7 +235,8 @@ export default function GlobalQuestionModal({
       <PopupContainer onKeyDown={handleKeyDown}>
         <QuestionInput
           value={question}
-          onChange={(e) => setQuestion(e.target.value)}
+          onChange={handleQuestionChange}
+          onFocus={handleQuestionFocus}
           placeholder="请输入您的问题，例如：项目的整体架构是什么？"
           disabled={isLoading}
           onKeyDown={handleKeyDown}

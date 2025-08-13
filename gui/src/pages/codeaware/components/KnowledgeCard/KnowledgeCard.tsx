@@ -334,15 +334,28 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
   const handleToggle = async () => {
     const wasExpanded = isExpanded;
     
-    await logger.addLogEntry("user_toggle_knowledge_card", {
-      cardId: cardId || "unknown",
-      stepId: stepId || "unknown", 
-      wasExpanded,
-      willExpand: !wasExpanded,
-      timestamp: new Date().toISOString()
-    });
-    
     setIsExpanded(!isExpanded);
+    
+    // Log knowledge card expansion/collapse events
+    if (cardId) {
+      if (!wasExpanded) {
+        // Log knowledge card viewing start
+        await logger.addLogEntry("user_view_and_highlight_knowledge_card", {
+          cardTitle: title,
+          cardContent: markdownContent ? (markdownContent.length > 200 ? markdownContent.substring(0, 200) + "..." : markdownContent) : "",
+          testItemsCount: testItems.length,
+          timestamp: new Date().toISOString()
+        });
+      } else {
+        // Log knowledge card viewing end
+        await logger.addLogEntry("user_finished_viewing_knowledge_card", {
+          cardTitle: title,
+          cardContent: markdownContent ? (markdownContent.length > 200 ? markdownContent.substring(0, 200) + "..." : markdownContent) : "",
+          testItemsCount: testItems.length,
+          timestamp: new Date().toISOString()
+        });
+      }
+    }
     
     // Notify parent component about expansion change
     if (onExpansionChange && cardId) {
@@ -412,29 +425,13 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
 
   const handlePreviousTest = async () => {
     const newIndex = Math.max(currentTestIndex - 1, 0);
-    await logger.addLogEntry("user_navigate_to_previous_test", {
-      cardId: cardId || "unknown",
-      stepId: stepId || "unknown",
-      currentTestIndex,
-      newTestIndex: newIndex,
-      timestamp: new Date().toISOString()
-    });
     setCurrentTestIndex(newIndex);
   };
 
   const handleNextTest = async () => {
     const newIndex = Math.min(currentTestIndex + 1, testItems.length - 1);
-    await logger.addLogEntry("user_navigate_to_next_test", {
-      cardId: cardId || "unknown", 
-      stepId: stepId || "unknown",
-      currentTestIndex,
-      newTestIndex: newIndex,
-      timestamp: new Date().toISOString()
-    });
     setCurrentTestIndex(newIndex);
-  };
-
-  const currentTest = testItems[currentTestIndex];
+  };  const currentTest = testItems[currentTestIndex];
 
   // Check if user has answered any question correctly
   const hasCorrectAnswer = testItems.some(test => test.result?.isCorrect === true);
@@ -442,8 +439,7 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
   // Handle disable card
   const handleDisableCard = async () => {
     await logger.addLogEntry("user_disable_knowledge_card", {
-      cardId: cardId || "unknown",
-      stepId: stepId || "unknown",
+      cardTitle: title,
       timestamp: new Date().toISOString()
     });
     

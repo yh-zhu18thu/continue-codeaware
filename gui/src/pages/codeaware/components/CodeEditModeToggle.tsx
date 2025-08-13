@@ -3,15 +3,16 @@ import { SparklesIcon } from "@heroicons/react/24/solid";
 import { useCallback, useState } from "react";
 import styled from "styled-components";
 import {
-    lightGray,
-    vscButtonBackground,
-    vscButtonForeground,
-    vscForeground,
-    vscInputBackground,
-    vscListActiveBackground
+  lightGray,
+  vscButtonBackground,
+  vscButtonForeground,
+  vscForeground,
+  vscInputBackground,
+  vscListActiveBackground
 } from "../../../components";
 import { useAppDispatch, useAppSelector } from "../../../redux/hooks";
 import { selectIsCodeEditModeEnabled, toggleCodeEditMode } from "../../../redux/slices/codeAwareSlice";
+import { useCodeAwareLogger } from "../../../util/codeAwareWebViewLogger";
 
 const ToggleButton = styled.button<{ isActive: boolean; variant?: 'primary' | 'secondary' }>`
   display: flex;
@@ -118,16 +119,22 @@ export default function CodeEditModeToggle({
   const isCodeEditModeEnabled = useAppSelector(selectIsCodeEditModeEnabled);
   const [showEditTooltip, setShowEditTooltip] = useState(false);
   const [showRegenerateTooltip, setShowRegenerateTooltip] = useState(false);
+  const logger = useCodeAwareLogger();
   
   const handleToggle = useCallback(() => {
     dispatch(toggleCodeEditMode());
   }, [dispatch]);
 
-  const handleRegenerateCode = useCallback(() => {
+  const handleRegenerateCode = useCallback(async () => {
+    // 记录用户点击重新生成按钮的行为
+    await logger.addLogEntry("user_click_regenerate_code_button", {
+      timestamp: new Date().toISOString()
+    });
+    
     if (onRegenerateCode) {
       onRegenerateCode();
     }
-  }, [onRegenerateCode]);
+  }, [onRegenerateCode, logger]);
 
   return (
     <ButtonContainer className={className}>

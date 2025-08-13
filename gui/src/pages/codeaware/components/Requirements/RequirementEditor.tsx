@@ -110,23 +110,9 @@ export default function RequirementEditor({ onConfirm, onContentChange, disabled
             if (onContentChange) {
                 onContentChange(hasChanges);
             }
-            
-            // If content has changed, log it
-            if (hasChanges) {
-                logger.addLogEntry("user_content_modified", {
-                    originalContent,
-                    currentContent,
-                    timestamp: new Date().toISOString()
-                });
-            }
         },
         onFocus: () => {
-            // Log when user focuses on the editor (if not already editing)
-            if (!hasStartedEditingRef.current) {
-                logger.addLogEntry("user_focus_requirement_editor", {
-                    timestamp: new Date().toISOString()
-                });
-            }
+            // Focus handling for editor
         }
     });
 

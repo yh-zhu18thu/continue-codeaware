@@ -10,6 +10,7 @@ import {
   vscInputBackground,
   vscInputBorder
 } from "../../../../components";
+import { useCodeAwareLogger } from "../../../../util/codeAwareWebViewLogger";
 
 const PopupOverlay = styled.div`
   position: fixed;
@@ -146,6 +147,8 @@ const QuestionPopup: React.FC<QuestionPopupProps> = ({
 }) => {
   const [question, setQuestion] = useState('');
   const questionInputRef = useRef<HTMLTextAreaElement>(null);
+  const hasStartedEditingRef = useRef(false);
+  const logger = useCodeAwareLogger();
 
   useEffect(() => {
     // Focus on the input when the popup opens
@@ -159,11 +162,33 @@ const QuestionPopup: React.FC<QuestionPopupProps> = ({
     console.log('QuestionPopup selectedText:', selectedText);
   }, [selectedText]);
 
-  const handleSubmit = useCallback(() => {
+  const handleQuestionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setQuestion(e.target.value);
+  };
+
+  const handleQuestionFocus = async () => {
+    // Log when user first focuses on the question input
+    if (!hasStartedEditingRef.current) {
+      hasStartedEditingRef.current = true;
+      await logger.addLogEntry("user_start_edit_reference_question", {
+        selectedText: selectedText ? (selectedText.length > 200 ? selectedText.substring(0, 200) + "..." : selectedText) : '',
+        timestamp: new Date().toISOString()
+      });
+    }
+  };
+
+  const handleSubmit = useCallback(async () => {
     if (question.trim()) {
+      // 记录用户提交引用提问的日志
+      await logger.addLogEntry("user_submit_reference_question", {
+        selectedText: selectedText ? (selectedText.length > 200 ? selectedText.substring(0, 200) + "..." : selectedText) : '',
+        question: question.trim().length > 300 ? question.trim().substring(0, 300) + "..." : question.trim(),
+        timestamp: new Date().toISOString()
+      });
+      
       onSubmit(question.trim());
     }
-  }, [question, onSubmit]);
+  }, [question, onSubmit, selectedText, logger]);
 
   const handleCancel = useCallback(() => {
     onCancel();
@@ -197,7 +222,8 @@ const QuestionPopup: React.FC<QuestionPopupProps> = ({
         <QuestionInput
           ref={questionInputRef}
           value={question}
-          onChange={(e) => setQuestion(e.target.value)}
+          onChange={handleQuestionChange}
+          onFocus={handleQuestionFocus}
           placeholder="输入您的问题..."
           onKeyDown={handleKeyDown}
         />

@@ -1,3 +1,4 @@
+import { codeAwareLogger } from "core/util/codeAwareLogger";
 import * as vscode from "vscode";
 
 import { VsCodeWebviewProtocol } from "../webviewProtocol";
@@ -39,11 +40,30 @@ export class CodeSelectionHandler {
     selectedText: string
   ) {
     try {
+      let hasStartedEditing = false;
+
       // 获取用户输入的问题
       const question = await vscode.window.showInputBox({
         prompt: "请输入您的问题",
         placeHolder: "例如：这段代码是如何工作的？",
         validateInput: (value) => {
+          // 记录用户开始编辑针对代码的问题（只在首次输入时记录）
+          if (!hasStartedEditing && value.trim()) {
+            hasStartedEditing = true;
+            try {
+              codeAwareLogger.addLogEntry("user_start_edit_code_question", {
+                selectedText: selectedText,
+                filePath: editor.document.uri.fsPath,
+                selectedLines: [selection.start.line + 1, selection.end.line + 1] as [number, number],
+                fileName: editor.document.fileName,
+                language: editor.document.languageId,
+                timestamp: new Date().toISOString()
+              });
+            } catch (error) {
+              console.error("Failed to log user_start_edit_code_question:", error);
+            }
+          }
+
           if (!value.trim()) {
             return "问题不能为空";
           }
@@ -54,6 +74,17 @@ export class CodeSelectionHandler {
       if (!question) {
         return; // 用户取消了输入
       }
+
+      // 记录用户提交针对代码的问题
+      await codeAwareLogger.addLogEntry("user_submit_code_question", {
+        selectedText: selectedText,
+        question: question.trim(),
+        filePath: editor.document.uri.fsPath,
+        selectedLines: [selection.start.line + 1, selection.end.line + 1] as [number, number],
+        fileName: editor.document.fileName,
+        language: editor.document.languageId,
+        timestamp: new Date().toISOString()
+      });
 
       // 准备发送给CodeAware的数据
       const questionData = {

@@ -276,16 +276,32 @@ const Step: React.FC<StepProps> = ({
     const wasExpanded = isExpanded;
     const willBeExpanded = !isExpanded;
     
-    // Log step expansion change
-    await logger.addLogEntry("user_toggle_step_expansion", {
-      stepId: stepId || "unknown",
-      wasExpanded,
-      willBeExpanded,
-      stepTitle: title || "unknown",
-      timestamp: new Date().toISOString()
-    });
-    
     setIsExpanded(willBeExpanded);
+    
+    // Log step expansion/collapse events
+    if (stepId) {
+      if (willBeExpanded && !wasExpanded) {
+        // Log step viewing start
+        await logger.addLogEntry("user_view_and_highlight_step", {
+          stepTitle: title,
+          stepContent: description ? (description.length > 200 ? description.substring(0, 200) + "..." : description) : "",
+          highLevelStepIndex,
+          stepStatus,
+          knowledgeCardsCount: knowledgeCards.filter(card => !card.disabled).length,
+          timestamp: new Date().toISOString()
+        });
+      } else if (wasExpanded && !willBeExpanded) {
+        // Log step viewing end
+        await logger.addLogEntry("user_finished_viewing_step", {
+          stepTitle: title,
+          stepContent: description ? (description.length > 200 ? description.substring(0, 200) + "..." : description) : "",
+          highLevelStepIndex,
+          stepStatus,
+          knowledgeCardsCount: knowledgeCards.filter(card => !card.disabled).length,
+          timestamp: new Date().toISOString()
+        });
+      }
+    }
     
     // Set protection flag when user is expanding
     if (willBeExpanded && !wasExpanded) {
@@ -375,22 +391,39 @@ const Step: React.FC<StepProps> = ({
     }
   };
 
-  const handleEditStep = () => {
+  const handleEditStep = async () => {
     if (disabled) {
       console.warn("⚠️ Step editing is disabled in code edit mode");
       return;
     }
+    
+    // Log step editing start
+    await logger.addLogEntry("user_start_edit_step_requirement", {
+      stepTitle: title || "",
+      originalContent: description ? description.substring(0, 200) + (description.length > 200 ? "..." : "") : "",
+      timestamp: new Date().toISOString()
+    });
+    
     // Trigger edit mode by changing status to "editing"
     if (stepId && onStepStatusChange) {
       onStepStatusChange(stepId, "editing");
     }
   };
 
-  const handleConfirmEdit = (newContent: string) => {
+  const handleConfirmEdit = async (newContent: string) => {
     if (disabled) {
       console.warn("⚠️ Step editing is disabled in code edit mode");
       return;
     }
+    
+    // Log step editing submission
+    await logger.addLogEntry("user_submit_step_requirement", {
+      stepTitle: title || "",
+      originalContent: description ? description.substring(0, 200) + (description.length > 200 ? "..." : "") : "",
+      newContent: newContent ? newContent.substring(0, 200) + (newContent.length > 200 ? "..." : "") : "",
+      timestamp: new Date().toISOString()
+    });
+    
     if (stepId && onStepEdit) {
       onStepEdit(stepId, newContent);
     }
@@ -400,20 +433,10 @@ const Step: React.FC<StepProps> = ({
   };
 
   const handleAddQuestionClick = async () => {
-    await logger.addLogEntry("user_click_add_question_button", {
-      stepId: stepId || "unknown",
-      timestamp: new Date().toISOString()
-    });
     setShowQuestionPopup(true);
   };
 
   const handleQuestionSubmit = async (question: string) => {
-    await logger.addLogEntry("user_submit_question_from_popup", {
-      stepId: stepId || "unknown",
-      question: question.substring(0, 200),
-      timestamp: new Date().toISOString()
-    });
-    
     if (stepId && onQuestionSubmit) {
       onQuestionSubmit(stepId, '', question); // Empty string for selectedText
     }
@@ -421,22 +444,11 @@ const Step: React.FC<StepProps> = ({
   };
 
   const handleQuestionCancel = async () => {
-    await logger.addLogEntry("user_cancel_question_popup", {
-      stepId: stepId || "unknown",
-      timestamp: new Date().toISOString()
-    });
     setShowQuestionPopup(false);
   };
 
   const handleKnowledgeCardExpansionChange = async (cardId: string, isExpanded: boolean) => {
     console.log(`Knowledge Card ${cardId} expansion changed to: ${isExpanded}`);
-    
-    await logger.addLogEntry("user_toggle_knowledge_card_expansion", {
-      stepId: stepId || "unknown",
-      cardId,
-      isExpanded,
-      timestamp: new Date().toISOString()
-    });
     
     if (isExpanded) {
       // When a knowledge card is expanded, set it as the currently expanded card

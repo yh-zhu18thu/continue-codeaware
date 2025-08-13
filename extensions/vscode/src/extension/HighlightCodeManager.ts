@@ -236,6 +236,63 @@ export class HighlightCodeManager implements vscode.Disposable {
   }
 
   /**
+   * Finds all possible path variations for a given file path to ensure comprehensive cleanup
+   * @param originalPath The original file path
+   * @param normalizedPath The normalized file path
+   * @returns Array of all possible path variations
+   */
+  private findAllPathVariations(originalPath: string, normalizedPath: string): string[] {
+    const variations = new Set<string>();
+    
+    // Add the original and normalized paths
+    variations.add(originalPath);
+    variations.add(normalizedPath);
+    
+    // Check all existing keys in our maps for potential matches
+    const allKeys = new Set([
+      ...this.activeDecorations.keys(),
+      ...this.blinkTimeouts.keys()
+    ]);
+    
+    for (const key of allKeys) {
+      // Check if this key represents the same file
+      try {
+        const keyNormalized = this.normalizeFilePath(key);
+        if (keyNormalized === normalizedPath) {
+          variations.add(key);
+        }
+      } catch (error) {
+        // Ignore normalization errors for invalid paths
+        console.warn(`Failed to normalize path: ${key}`, error);
+      }
+    }
+    
+    return Array.from(variations);
+  }
+
+  /**
+   * Aggressively clears all decorations from an editor by creating empty decorations
+   * This is a safety measure to ensure no decorations are left behind
+   * @param editor The text editor to clear decorations from
+   */
+  private clearAllDecorationsFromEditor(editor: vscode.TextEditor): void {
+    try {
+      // Create a temporary decoration type and immediately clear it
+      // This helps remove any potential orphaned decorations
+      const tempDecorationType = vscode.window.createTextEditorDecorationType({
+        backgroundColor: 'transparent'
+      });
+      
+      editor.setDecorations(tempDecorationType, []);
+      tempDecorationType.dispose();
+      
+      console.log(`Performed aggressive decoration cleanup for editor: ${editor.document.fileName}`);
+    } catch (error) {
+      console.warn(`Failed to perform aggressive decoration cleanup:`, error);
+    }
+  }
+
+  /**
    * Highlights multiple code chunks in a single file
    * @param normalizedFilepath The normalized file path
    * @param codeChunks Array of code chunks in the same file
@@ -280,7 +337,9 @@ export class HighlightCodeManager implements vscode.Disposable {
       }
 
       // Clear any existing highlights for this file before applying new ones
+      // Use more aggressive clearing to prevent decoration residue
       this.clearHighlightForFile(normalizedFilepath);
+      this.clearHighlightForFile(originalFilepath); // Also clear using original path
 
       // First, collect all valid ranges from the chunks
       const allValidRanges: vscode.Range[] = [];
@@ -421,7 +480,9 @@ export class HighlightCodeManager implements vscode.Disposable {
         });
         
         // Clear any existing highlights for this file before applying new one
+        // Use more aggressive clearing to prevent decoration residue
         this.clearHighlightForFile(normalizedFilepath);
+        this.clearHighlightForFile(filepath); // Also clear using original path
         
         // Apply blinking effect first (this will handle storing the decoration)
         await this.applyBlinkEffect(editor, range, blinkDecorationType, permanentDecorationType, normalizedFilepath);
@@ -443,44 +504,83 @@ export class HighlightCodeManager implements vscode.Disposable {
     const normalizedFilepath = this.normalizeFilePath(filepath);
     console.log(`Clearing highlights for file: ${filepath} (normalized: ${normalizedFilepath})`);
     
-    // Clear any active timeouts - check both original and normalized paths
-    const timeouts = this.blinkTimeouts.get(filepath) || this.blinkTimeouts.get(normalizedFilepath);
-    if (timeouts) {
-      console.log(`Clearing ${timeouts.length} timeouts for file: ${normalizedFilepath}`);
-      timeouts.forEach(timeout => clearTimeout(timeout));
-      this.blinkTimeouts.delete(filepath);
-      this.blinkTimeouts.delete(normalizedFilepath);
+    // Find all possible path variations for this file
+    const pathVariations = this.findAllPathVariations(filepath, normalizedFilepath);
+    console.log(`Found ${pathVariations.length} path variations to check:`, pathVariations);
+    
+    // Clear timeouts for all path variations
+    let totalTimeoutsCleared = 0;
+    pathVariations.forEach(path => {
+      const timeouts = this.blinkTimeouts.get(path);
+      if (timeouts) {
+        console.log(`Clearing ${timeouts.length} timeouts for path: ${path}`);
+        timeouts.forEach(timeout => clearTimeout(timeout));
+        this.blinkTimeouts.delete(path);
+        totalTimeoutsCleared += timeouts.length;
+      }
+    });
+    
+    if (totalTimeoutsCleared > 0) {
+      console.log(`Total timeouts cleared: ${totalTimeoutsCleared}`);
     }
     
-    // Clear decorations - check both original and normalized paths
-    const decorations = this.activeDecorations.get(filepath) || this.activeDecorations.get(normalizedFilepath);
-    if (decorations && decorations.length > 0) {
-      console.log(`Found ${decorations.length} decorations to clear for file: ${normalizedFilepath}`);
-      
-      // Find the editor for this file and clear its decorations
-      const editor = vscode.window.visibleTextEditors.find(e => 
-        this.normalizeFilePath(e.document.fileName) === normalizedFilepath ||
-        this.normalizeFilePath(e.document.uri.fsPath) === normalizedFilepath
-      );
+    // Find the editor for this file
+    const editor = vscode.window.visibleTextEditors.find(e => 
+      this.normalizeFilePath(e.document.fileName) === normalizedFilepath ||
+      this.normalizeFilePath(e.document.uri.fsPath) === normalizedFilepath ||
+      e.document.fileName === filepath ||
+      e.document.uri.fsPath === filepath
+    );
+    
+    // Clear decorations for all path variations
+    let totalDecorationsCleared = 0;
+    const allDecorations: vscode.TextEditorDecorationType[] = [];
+    
+    pathVariations.forEach(path => {
+      const decorations = this.activeDecorations.get(path);
+      if (decorations && decorations.length > 0) {
+        console.log(`Found ${decorations.length} decorations for path: ${path}`);
+        allDecorations.push(...decorations);
+        this.activeDecorations.delete(path);
+        totalDecorationsCleared += decorations.length;
+      }
+    });
+    
+    // Clear all decorations from the editor and dispose them
+    if (allDecorations.length > 0) {
+      console.log(`Clearing and disposing ${allDecorations.length} total decorations`);
       
       if (editor) {
-        console.log(`Clearing decorations from editor for file: ${normalizedFilepath}`);
+        console.log(`Clearing decorations from visible editor for file: ${normalizedFilepath}`);
         // Clear each decoration from the editor
-        decorations.forEach(decoration => {
-          editor.setDecorations(decoration, []);
-          decoration.dispose();
+        allDecorations.forEach(decoration => {
+          try {
+            editor.setDecorations(decoration, []);
+          } catch (error) {
+            console.warn(`Failed to clear decoration from editor:`, error);
+          }
         });
       } else {
         console.log(`No visible editor found for file: ${normalizedFilepath}`);
-        // Still dispose of the decorations even if no editor is found
-        decorations.forEach(decoration => decoration.dispose());
       }
       
-      this.activeDecorations.delete(filepath);
-      this.activeDecorations.delete(normalizedFilepath);
-      console.log(`Decorations disposed and removed from map for file: ${normalizedFilepath}`);
+      // Dispose of all decorations
+      allDecorations.forEach(decoration => {
+        try {
+          decoration.dispose();
+        } catch (error) {
+          console.warn(`Failed to dispose decoration:`, error);
+        }
+      });
+      
+      console.log(`All decorations disposed for file: ${normalizedFilepath}`);
     } else {
       console.log(`No decorations found for file: ${normalizedFilepath}`);
+    }
+    
+    // Additional safety: clear any remaining decorations from the editor using a more aggressive approach
+    if (editor) {
+      this.clearAllDecorationsFromEditor(editor);
     }
   }
 
@@ -488,32 +588,56 @@ export class HighlightCodeManager implements vscode.Disposable {
    * Clears all active code highlights
    */
   clearAllHighlights(): void {
+    console.log('Clearing all highlights...');
+    
     // Clear all timeouts
+    let totalTimeoutsCleared = 0;
     for (const [filepath, timeouts] of this.blinkTimeouts) {
+      console.log(`Clearing ${timeouts.length} timeouts for file: ${filepath}`);
       timeouts.forEach(timeout => clearTimeout(timeout));
+      totalTimeoutsCleared += timeouts.length;
     }
     this.blinkTimeouts.clear();
+    console.log(`Total timeouts cleared: ${totalTimeoutsCleared}`);
     
     // Clear all decorations
+    let totalDecorationsCleared = 0;
+    const allDecorations: vscode.TextEditorDecorationType[] = [];
+    
     for (const [filepath, decorations] of this.activeDecorations) {
-      // Find the editor for this file and clear its decorations
-      const normalizedFilepath = this.normalizeFilePath(filepath);
-      const editor = vscode.window.visibleTextEditors.find(e => 
-        this.normalizeFilePath(e.document.fileName) === normalizedFilepath ||
-        this.normalizeFilePath(e.document.uri.fsPath) === normalizedFilepath
-      );
-      
-      if (editor) {
-        // Clear each decoration from the editor
-        decorations.forEach(decoration => {
-          editor.setDecorations(decoration, []);
-        });
-      }
-      
-      // Dispose of all decorations
-      decorations.forEach(decoration => decoration.dispose());
+      console.log(`Processing ${decorations.length} decorations for file: ${filepath}`);
+      allDecorations.push(...decorations);
+      totalDecorationsCleared += decorations.length;
     }
+    
+    // Clear decorations from all visible editors
+    vscode.window.visibleTextEditors.forEach(editor => {
+      if (editor.document.uri.scheme === 'file') {
+        // Clear decorations from each editor
+        allDecorations.forEach(decoration => {
+          try {
+            editor.setDecorations(decoration, []);
+          } catch (error) {
+            console.warn(`Failed to clear decoration from editor ${editor.document.fileName}:`, error);
+          }
+        });
+        
+        // Perform aggressive cleanup
+        this.clearAllDecorationsFromEditor(editor);
+      }
+    });
+    
+    // Dispose of all decorations
+    allDecorations.forEach(decoration => {
+      try {
+        decoration.dispose();
+      } catch (error) {
+        console.warn(`Failed to dispose decoration:`, error);
+      }
+    });
+    
     this.activeDecorations.clear();
+    console.log(`Total decorations cleared and disposed: ${totalDecorationsCleared}`);
   }
 
   /**

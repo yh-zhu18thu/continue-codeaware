@@ -128,3 +128,6 @@
 {"timestamp":"2025-08-13T01:50:51.671Z","codeAwareSessionId":"7edd0f2d-5804-451e-bba5-a9cf9c58f742","eventType":"user_check_highlight_mappings","payload":{"sourceType":"step","identifier":"s-10","timestamp":"2025-08-13T01:50:51.670Z"}}
 {"timestamp":"2025-08-13T01:50:51.677Z","codeAwareSessionId":"7edd0f2d-5804-451e-bba5-a9cf9c58f742","eventType":"user_check_step_mappings","payload":{"stepId":"s-10"}}
 {"timestamp":"2025-08-13T01:50:51.722Z","codeAwareSessionId":"7edd0f2d-5804-451e-bba5-a9cf9c58f742","eventType":"user_toggle_step_expansion","payload":{"stepId":"s-10","isExpanded":true,"timestamp":"2025-08-13T01:50:51.721Z"}}
+{"timestamp":"2025-08-13T01:51:24.683Z","codeAwareSessionId":"7edd0f2d-5804-451e-bba5-a9cf9c58f742","eventType":"user_toggle_step_expansion","payload":{"stepId":"s-10","wasExpanded":true,"willBeExpanded":false,"stepTitle":"实现对齐行为规则","timestamp":"2025-08-13T01:51:24.681Z"}}
+{"timestamp":"2025-08-13T01:51:24.687Z","codeAwareSessionId":"7edd0f2d-5804-451e-bba5-a9cf9c58f742","eventType":"user_clear_all_highlights","payload":{"timestamp":"2025-08-13T01:51:24.686Z"}}
+{"timestamp":"2025-08-13T01:51:24.687Z","codeAwareSessionId":"7edd0f2d-5804-451e-bba5-a9cf9c58f742","eventType":"user_toggle_step_expansion","payload":{"stepId":"s-10","isExpanded":false,"timestamp":"2025-08-13T01:51:24.686Z"}}

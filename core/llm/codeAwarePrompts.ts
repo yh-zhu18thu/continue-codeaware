@@ -545,11 +545,11 @@ export function constructGlobalQuestionPrompt(
             "Analyze the question and determine which step from the provided list is most relevant to answering it",
             "The question might be about concepts, implementation details, or understanding specific parts of the code",
             "Select the step that best matches the topic or area of concern in the question",
-            "Generate 1-3 knowledge card themes that would help answer the user's question",
+            "Generate 1-2 knowledge card themes that would help answer the user's question",
             "The themes should be specific to the question asked and relevant to the selected step",
             "Consider both the learning goals and the current code context when generating themes",
             "Respond in the same language as the question and step descriptions",
-            "You must follow this JSON format in your response: {\\"selected_step_id\\": \\"(the id of the most relevant step)\\", \\"knowledge_card_themes\\": [\\"(theme 1)\\", \\"(theme 2)\\", \\"(theme 3)\\"]}",
+            "You must follow this JSON format in your response: {\\"selected_step_id\\": \\"(the id of the most relevant step)\\", \\"knowledge_card_themes\\": [\\"(theme 1)\\", \\"(theme 2)\\"]}",
             "IMPORTANT: Properly escape all special characters in JSON strings. Ensure the JSON is valid and parseable.",
             "Please do not use invalid code block characters to envelope the JSON response, just return the JSON object directly."
         ],

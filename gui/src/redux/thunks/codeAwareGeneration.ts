@@ -3744,8 +3744,13 @@ export const processGlobalQuestion = createAsyncThunk<
             
             // 为选择的步骤创建知识卡片
             const createdCardIds: string[] = [];
-            for (const theme of knowledge_card_themes) {
-                const cardId = `kc-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+            const currentState = getState();
+            const selectedStepForCards = currentState.codeAwareSession.steps.find(s => s.id === selected_step_id);
+            const existingCardCount = selectedStepForCards?.knowledgeCards?.length || 0;
+            
+            for (let index = 0; index < knowledge_card_themes.length; index++) {
+                const theme = knowledge_card_themes[index];
+                const cardId = `${selected_step_id}-kc-${existingCardCount + index + 1}`;
                 createdCardIds.push(cardId);
                 
                 dispatch(createKnowledgeCard({
@@ -3952,8 +3957,9 @@ export const checkAndMapKnowledgeCardsToCode = createAsyncThunk<
                         codeChunkId = existingCodeChunk.id;
                         console.log(`🔄 使用现有代码块: ${codeChunkId}`);
                     } else {
-                        // 创建新的代码块
-                        const newCodeChunkId = `c-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+                        // 创建新的代码块，使用当前代码块数量+1作为顺序编号
+                        const currentState = getState();
+                        const newCodeChunkId = `c-${currentState.codeAwareSession.codeChunks.length + 1}`;
                         dispatch(createOrGetCodeChunk({
                             content: codeSnippet.trim(),
                             range: codeRange,

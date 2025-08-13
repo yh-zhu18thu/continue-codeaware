@@ -8,6 +8,7 @@ interface CodeChunk {
 export class HighlightCodeManager implements vscode.Disposable {
   private activeDecorations: Map<string, vscode.TextEditorDecorationType[]> = new Map();
   private blinkTimeouts: Map<string, NodeJS.Timeout[]> = new Map();
+  private blinkDecorations: Map<string, vscode.TextEditorDecorationType[]> = new Map(); // 新增：跟踪闪烁装饰器
   private disposables: vscode.Disposable[] = [];
   private onHighlightClearedCallback?: (filePath: string) => void;
 
@@ -532,17 +533,28 @@ export class HighlightCodeManager implements vscode.Disposable {
       e.document.uri.fsPath === filepath
     );
     
-    // Clear decorations for all path variations
+    // Clear active decorations for all path variations
     let totalDecorationsCleared = 0;
     const allDecorations: vscode.TextEditorDecorationType[] = [];
     
     pathVariations.forEach(path => {
       const decorations = this.activeDecorations.get(path);
       if (decorations && decorations.length > 0) {
-        console.log(`Found ${decorations.length} decorations for path: ${path}`);
+        console.log(`Found ${decorations.length} active decorations for path: ${path}`);
         allDecorations.push(...decorations);
         this.activeDecorations.delete(path);
         totalDecorationsCleared += decorations.length;
+      }
+    });
+
+    // Clear blink decorations for all path variations (新增：清除闪烁装饰器)
+    pathVariations.forEach(path => {
+      const blinkDecorations = this.blinkDecorations.get(path);
+      if (blinkDecorations && blinkDecorations.length > 0) {
+        console.log(`Found ${blinkDecorations.length} blink decorations for path: ${path}`);
+        allDecorations.push(...blinkDecorations);
+        this.blinkDecorations.delete(path);
+        totalDecorationsCleared += blinkDecorations.length;
       }
     });
     
@@ -600,14 +612,22 @@ export class HighlightCodeManager implements vscode.Disposable {
     this.blinkTimeouts.clear();
     console.log(`Total timeouts cleared: ${totalTimeoutsCleared}`);
     
-    // Clear all decorations
+    // Clear all decorations (包括活动装饰器和闪烁装饰器)
     let totalDecorationsCleared = 0;
     const allDecorations: vscode.TextEditorDecorationType[] = [];
     
+    // 收集活动装饰器
     for (const [filepath, decorations] of this.activeDecorations) {
-      console.log(`Processing ${decorations.length} decorations for file: ${filepath}`);
+      console.log(`Processing ${decorations.length} active decorations for file: ${filepath}`);
       allDecorations.push(...decorations);
       totalDecorationsCleared += decorations.length;
+    }
+    
+    // 收集闪烁装饰器 (新增)
+    for (const [filepath, blinkDecorations] of this.blinkDecorations) {
+      console.log(`Processing ${blinkDecorations.length} blink decorations for file: ${filepath}`);
+      allDecorations.push(...blinkDecorations);
+      totalDecorationsCleared += blinkDecorations.length;
     }
     
     // Clear decorations from all visible editors
@@ -637,6 +657,7 @@ export class HighlightCodeManager implements vscode.Disposable {
     });
     
     this.activeDecorations.clear();
+    this.blinkDecorations.clear(); // 新增：清除闪烁装饰器映射
     console.log(`Total decorations cleared and disposed: ${totalDecorationsCleared}`);
   }
 
@@ -695,6 +716,11 @@ export class HighlightCodeManager implements vscode.Disposable {
     if (existingTimeouts) {
       existingTimeouts.forEach(timeout => clearTimeout(timeout));
     }
+
+    // 将闪烁装饰器添加到跟踪映射中
+    const existingBlinkDecorations = this.blinkDecorations.get(filepath) || [];
+    existingBlinkDecorations.push(blinkDecorationType);
+    this.blinkDecorations.set(filepath, existingBlinkDecorations);
     
     // Blink 3 times (on-off-on-off-on-off)
     const blinkCount = 3;
@@ -705,11 +731,21 @@ export class HighlightCodeManager implements vscode.Disposable {
       const onTimeout = setTimeout(() => {
         // Check if highlights for this file have been cleared during blinking
         if (!this.blinkTimeouts.has(filepath)) {
+          // 清除编辑器中的装饰器
+          try {
+            editor.setDecorations(blinkDecorationType, []);
+          } catch (error) {
+            console.warn('Failed to clear blink decoration during cleanup:', error);
+          }
           blinkDecorationType.dispose();
           permanentDecorationType.dispose();
           return;
         }
-        editor.setDecorations(blinkDecorationType, [range]);
+        try {
+          editor.setDecorations(blinkDecorationType, [range]);
+        } catch (error) {
+          console.warn('Failed to apply blink decoration:', error);
+        }
       }, i * blinkDuration * 2);
       timeouts.push(onTimeout);
       
@@ -717,11 +753,21 @@ export class HighlightCodeManager implements vscode.Disposable {
       const offTimeout = setTimeout(() => {
         // Check if highlights for this file have been cleared during blinking
         if (!this.blinkTimeouts.has(filepath)) {
+          // 清除编辑器中的装饰器
+          try {
+            editor.setDecorations(blinkDecorationType, []);
+          } catch (error) {
+            console.warn('Failed to clear blink decoration during cleanup:', error);
+          }
           blinkDecorationType.dispose();
           permanentDecorationType.dispose();
           return;
         }
-        editor.setDecorations(blinkDecorationType, []);
+        try {
+          editor.setDecorations(blinkDecorationType, []);
+        } catch (error) {
+          console.warn('Failed to clear blink decoration:', error);
+        }
       }, i * blinkDuration * 2 + blinkDuration);
       timeouts.push(offTimeout);
     }
@@ -730,12 +776,35 @@ export class HighlightCodeManager implements vscode.Disposable {
     const finalTimeout = setTimeout(() => {
       // Check if highlights for this file have been cleared during blinking
       if (!this.blinkTimeouts.has(filepath)) {
+        // 清除编辑器中的装饰器
+        try {
+          editor.setDecorations(blinkDecorationType, []);
+        } catch (error) {
+          console.warn('Failed to clear blink decoration during final cleanup:', error);
+        }
         blinkDecorationType.dispose();
         permanentDecorationType.dispose();
         return;
       }
       
-      editor.setDecorations(permanentDecorationType, [range]);
+      try {
+        editor.setDecorations(permanentDecorationType, [range]);
+        editor.setDecorations(blinkDecorationType, []); // 确保清除闪烁装饰器
+      } catch (error) {
+        console.warn('Failed to apply permanent decoration:', error);
+      }
+      
+      // 从闪烁装饰器映射中移除并处置
+      const blinkDecorations = this.blinkDecorations.get(filepath) || [];
+      const index = blinkDecorations.indexOf(blinkDecorationType);
+      if (index > -1) {
+        blinkDecorations.splice(index, 1);
+        if (blinkDecorations.length === 0) {
+          this.blinkDecorations.delete(filepath);
+        } else {
+          this.blinkDecorations.set(filepath, blinkDecorations);
+        }
+      }
       blinkDecorationType.dispose();
       
       // Store the permanent decoration for management (as array)
@@ -785,6 +854,11 @@ export class HighlightCodeManager implements vscode.Disposable {
       borderRadius: '3px',
       isWholeLine: false,
     });
+
+    // 将闪烁装饰器添加到跟踪映射中
+    const existingBlinkDecorations = this.blinkDecorations.get(filepath) || [];
+    existingBlinkDecorations.push(blinkDecorationType);
+    this.blinkDecorations.set(filepath, existingBlinkDecorations);
     
     // Blink 3 times (on-off-on-off-on-off)
     const blinkCount = 3;
@@ -795,11 +869,21 @@ export class HighlightCodeManager implements vscode.Disposable {
       const onTimeout = setTimeout(() => {
         // Check if highlights for this file have been cleared during blinking
         if (!this.blinkTimeouts.has(filepath)) {
+          // 清除编辑器中的装饰器
+          try {
+            editor.setDecorations(blinkDecorationType, []);
+          } catch (error) {
+            console.warn('Failed to clear blink decoration during cleanup:', error);
+          }
           blinkDecorationType.dispose();
           permanentDecorationTypes.forEach(decoration => decoration.dispose());
           return;
         }
-        editor.setDecorations(blinkDecorationType, ranges);
+        try {
+          editor.setDecorations(blinkDecorationType, ranges);
+        } catch (error) {
+          console.warn('Failed to apply blink decoration to ranges:', error);
+        }
       }, i * blinkDuration * 2);
       timeouts.push(onTimeout);
       
@@ -807,11 +891,21 @@ export class HighlightCodeManager implements vscode.Disposable {
       const offTimeout = setTimeout(() => {
         // Check if highlights for this file have been cleared during blinking
         if (!this.blinkTimeouts.has(filepath)) {
+          // 清除编辑器中的装饰器
+          try {
+            editor.setDecorations(blinkDecorationType, []);
+          } catch (error) {
+            console.warn('Failed to clear blink decoration during cleanup:', error);
+          }
           blinkDecorationType.dispose();
           permanentDecorationTypes.forEach(decoration => decoration.dispose());
           return;
         }
-        editor.setDecorations(blinkDecorationType, []);
+        try {
+          editor.setDecorations(blinkDecorationType, []);
+        } catch (error) {
+          console.warn('Failed to clear blink decoration from ranges:', error);
+        }
       }, i * blinkDuration * 2 + blinkDuration);
       timeouts.push(offTimeout);
     }
@@ -820,16 +914,39 @@ export class HighlightCodeManager implements vscode.Disposable {
     const finalTimeout = setTimeout(() => {
       // Check if highlights for this file have been cleared during blinking
       if (!this.blinkTimeouts.has(filepath)) {
+        // 清除编辑器中的装饰器
+        try {
+          editor.setDecorations(blinkDecorationType, []);
+        } catch (error) {
+          console.warn('Failed to clear blink decoration during final cleanup:', error);
+        }
         blinkDecorationType.dispose();
         permanentDecorationTypes.forEach(decoration => decoration.dispose());
         return;
       }
       
       // Apply each permanent decoration to its corresponding range
-      for (let i = 0; i < ranges.length; i++) {
-        editor.setDecorations(permanentDecorationTypes[i], [ranges[i]]);
+      try {
+        for (let i = 0; i < ranges.length; i++) {
+          editor.setDecorations(permanentDecorationTypes[i], [ranges[i]]);
+        }
+        // 确保清除闪烁装饰器
+        editor.setDecorations(blinkDecorationType, []);
+      } catch (error) {
+        console.warn('Failed to apply permanent decorations:', error);
       }
       
+      // 从闪烁装饰器映射中移除并处置
+      const blinkDecorations = this.blinkDecorations.get(filepath) || [];
+      const index = blinkDecorations.indexOf(blinkDecorationType);
+      if (index > -1) {
+        blinkDecorations.splice(index, 1);
+        if (blinkDecorations.length === 0) {
+          this.blinkDecorations.delete(filepath);
+        } else {
+          this.blinkDecorations.set(filepath, blinkDecorations);
+        }
+      }
       blinkDecorationType.dispose();
       
       // Store all permanent decorations for management

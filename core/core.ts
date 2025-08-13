@@ -10,9 +10,9 @@ import { codeStudyLogger } from "./codeStudy";
 import { ConfigHandler } from "./config/ConfigHandler";
 import { SYSTEM_PROMPT_DOT_FILE } from "./config/getSystemPromptDotFile";
 import {
-    setupBestConfig,
-    setupLocalConfig,
-    setupQuickstartConfig,
+  setupBestConfig,
+  setupLocalConfig,
+  setupQuickstartConfig,
 } from "./config/onboarding";
 import { addContextProvider, addModel, deleteModel } from "./config/util";
 import CodebaseContextProvider from "./context/providers/CodebaseContextProvider";
@@ -36,9 +36,9 @@ import { clipboardCache } from "./util/clipboardCache";
 import { GlobalContext } from "./util/GlobalContext";
 import historyManager from "./util/history";
 import {
-    editConfigJson,
-    getConfigJsonPath,
-    migrateV1DevDataFiles,
+  editConfigJson,
+  getConfigJsonPath,
+  migrateV1DevDataFiles,
 } from "./util/paths";
 import { localPathToUri } from "./util/pathToUri";
 import { Telemetry } from "./util/posthog";
@@ -46,12 +46,12 @@ import { getSymbolsForManyFiles } from "./util/treeSitter";
 import { TTS } from "./util/tts";
 
 import {
-    ChatMessage,
-    DiffLine,
-    PromptLog,
-    type ContextItemId,
-    type IDE,
-    type IndexingProgressUpdate,
+  ChatMessage,
+  DiffLine,
+  PromptLog,
+  type ContextItemId,
+  type IDE,
+  type IndexingProgressUpdate,
 } from ".";
 
 import type { FromCoreProtocol, ToCoreProtocol } from "./protocol";
@@ -184,6 +184,12 @@ export class Core {
 
       // Index on initialization
       void this.ide.getWorkspaceDirs().then(async (dirs) => {
+        // Set up CodeStudy logger workspace
+        if (dirs.length > 0) {
+          console.log("[core] Setting CodeStudy logger workspace to:", dirs[0]);
+          codeStudyLogger.setWorkspaceRoot(dirs[0]);
+        }
+
         // Respect pauseCodebaseIndexOnStart user settings
         if (ideSettings.pauseCodebaseIndexOnStart) {
           this.indexingPauseToken.paused = true;
@@ -346,21 +352,45 @@ export class Core {
 
     // CodeStudy Logger
     on("codeStudy/startLogSession", async (msg) => {
+      console.log("[core] Received codeStudy/startLogSession", msg.data);
       const { username, sessionName, sessionId } = msg.data;
-      codeStudyLogger.startLogSession({
+      console.log("[core] codeStudyLogger.startLogSession called");
+      const pyFilePath = codeStudyLogger.startLogSession({
         username,
         sessionName,
         codeStudySessionId: sessionId,
       });
+      console.log("[core] startLogSession completed, pyFilePath:", pyFilePath);
+      
+      // Open the Python file in the IDE
+      if (pyFilePath) {
+        try {
+          console.log("[core] Opening Python file:", pyFilePath);
+          // Convert local path to URI for VS Code
+          let fileUri = pyFilePath;
+          if (!pyFilePath.startsWith("file://") && !pyFilePath.startsWith("file:/")) {
+            fileUri = `file://${pyFilePath}`;
+          }
+          console.log("[core] Converted file URI:", fileUri);
+          await this.ide.openFile(fileUri);
+          console.log("[core] Python file opened successfully");
+        } catch (error) {
+          console.error("[core] Failed to open Python file:", error);
+        }
+      }
     });
 
     on("codeStudy/addLogEntry", async (msg) => {
+      console.log("[core] Received codeStudy/addLogEntry", msg.data);
       const { eventType, payload } = msg.data;
       codeStudyLogger.addLogEntry(eventType, payload);
+      console.log("[core] addLogEntry completed");
     });
 
     on("codeStudy/endLogSession", async (msg) => {
+      console.log("[core] Received codeStudy/endLogSession", msg.data);
       codeStudyLogger.endLogSession();
+      console.log("[core] endLogSession completed");
     });
 
     // Context providers

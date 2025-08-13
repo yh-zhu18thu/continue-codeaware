@@ -1,6 +1,7 @@
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
+import { fileURLToPath } from "url";
 
 import { CodeStudyLogEntry, CodeStudyLoggerConfig } from "./types";
 
@@ -30,9 +31,30 @@ export class CodeStudyLoggerService {
   public setWorkspaceRoot(workspaceRoot: string | null): void {
     this.workspaceRootPath = workspaceRoot;
     if (workspaceRoot) {
-      this.logDirectory = path.join(workspaceRoot, ".codestudy-logs");
+      // Convert URI to local path if necessary
+      let localPath = workspaceRoot;
+      
+      try {
+        // Try to parse as URI first
+        if (workspaceRoot.startsWith("file://") || workspaceRoot.startsWith("file:/")) {
+          localPath = fileURLToPath(workspaceRoot);
+        }
+      } catch (error) {
+        console.warn("[CodeStudyLogger] Failed to parse URI, using as local path:", error);
+        // If URI parsing fails, treat as local path
+        if (workspaceRoot.startsWith("file://")) {
+          localPath = workspaceRoot.replace("file://", "");
+        } else if (workspaceRoot.startsWith("file:/")) {
+          localPath = workspaceRoot.replace("file:", "");
+        }
+      }
+      
+      console.log("[CodeStudyLogger] Original workspace root:", workspaceRoot);
+      console.log("[CodeStudyLogger] Converted to local path:", localPath);
+      
+      this.logDirectory = path.join(localPath, ".codestudy-logs");
       this.ensureLogDirectoryExists();
-      console.log("[CodeStudyLogger] Workspace root set to:", workspaceRoot);
+      console.log("[CodeStudyLogger] Workspace root set to:", localPath);
       console.log("[CodeStudyLogger] Log directory:", this.logDirectory);
     }
   }
@@ -106,33 +128,82 @@ export class CodeStudyLoggerService {
   /**
    * Start a new logging session
    */
-  public startLogSession(config: CodeStudyLoggerConfig): void {
+  public startLogSession(config: CodeStudyLoggerConfig): string | null {
+    console.log("[CodeStudyLoggerService] startLogSession called with:", config);
+    console.log("[CodeStudyLoggerService] Current log directory:", this.logDirectory);
+    
+    // Ensure the log directory exists before creating files
+    this.ensureLogDirectoryExists();
+    
     this.currentSession = config;
     
     // Create filename: username_sessionName_sessionId.jsonl
-    const filename = `${config.username}_${config.sessionName}_${config.codeStudySessionId}.jsonl`;
+    const baseFilename = `${config.username}_${config.sessionName}_${config.codeStudySessionId}`;
     // Sanitize filename to remove illegal characters
-    const sanitizedFilename = filename.replace(/[<>:"/\\|?*]/g, "_");
+    const sanitizedBase = baseFilename.replace(/[<>:"/\|?*]/g, "_");
+    const jsonlFilename = sanitizedBase + ".jsonl";
     
-    this.currentLogFilePath = path.join(this.logDirectory, sanitizedFilename);
+    // Python file: sessionName.py in project root directory
+    const sanitizedSessionName = config.sessionName.replace(/[<>:"/\|?*]/g, "_");
+    const pyFilename = `${sanitizedSessionName}.py`;
+    
+    this.currentLogFilePath = path.join(this.logDirectory, jsonlFilename);
+    // Python file goes to project root (one level up from .codestudy-logs)
+    const pyFilePath = path.join(path.dirname(this.logDirectory), pyFilename);
+    
+    console.log("[CodeStudyLoggerService] About to create files:", {
+      jsonlPath: this.currentLogFilePath,
+      pyPath: pyFilePath,
+      directoryExists: fs.existsSync(this.logDirectory),
+      projectRoot: path.dirname(this.logDirectory)
+    });
     
     // Create the log file if it doesn't exist
     if (!fs.existsSync(this.currentLogFilePath)) {
-      fs.writeFileSync(this.currentLogFilePath, "", "utf8");
+      try {
+        fs.writeFileSync(this.currentLogFilePath, "", "utf8");
+        console.log("[CodeStudyLoggerService] JSONL file created successfully");
+      } catch (error) {
+        console.error("[CodeStudyLoggerService] Failed to create JSONL file:", error);
+        return null;
+      }
+    }
+    
+    // Create the .py file if it doesn't exist
+    if (!fs.existsSync(pyFilePath)) {
+      try {
+        fs.writeFileSync(pyFilePath, `# CodeStudy session: ${config.sessionName}\n# Session ID: ${config.codeStudySessionId}\n\n`, "utf8");
+        console.log("[CodeStudyLoggerService] Python file created successfully");
+      } catch (error) {
+        console.error("[CodeStudyLoggerService] Failed to create Python file:", error);
+        return null;
+      }
     }
 
+    console.log(`[CodeStudyLoggerService] startLogSession: jsonl=${this.currentLogFilePath}, py=${pyFilePath}`);
+    
     // Log session start event
     this.addLogEntry("session_start", {
       username: config.username,
       sessionName: config.sessionName,
       codeStudySessionId: config.codeStudySessionId
     });
+    
+    // Return the Python file path so it can be opened in the IDE
+    return pyFilePath;
   }
 
   /**
    * Add a new log entry
    */
   public addLogEntry(eventType: string, payload: any): void {
+    console.log("[CodeStudyLoggerService] addLogEntry called", {
+      eventType,
+      payload,
+      hasSession: !!this.currentSession,
+      hasLogFile: !!this.currentLogFilePath,
+    });
+
     if (!this.currentSession || !this.currentLogFilePath) {
       console.warn("[CodeStudyLogger] No active session. Cannot log event:", eventType);
       return;
@@ -149,6 +220,7 @@ export class CodeStudyLoggerService {
       // Append the log entry as a new line in JSONL format
       const logLine = JSON.stringify(logEntry) + "\n";
       fs.appendFileSync(this.currentLogFilePath, logLine, "utf8");
+      console.log("[CodeStudyLoggerService] Log entry written successfully");
     } catch (error) {
       console.error("[CodeStudyLogger] Failed to write log entry:", error);
     }
@@ -193,12 +265,17 @@ export class CodeStudyLoggerService {
    * Ensure the log directory exists
    */
   private ensureLogDirectoryExists(): void {
+    console.log("[CodeStudyLoggerService] Checking directory:", this.logDirectory);
     if (!fs.existsSync(this.logDirectory)) {
       try {
+        console.log("[CodeStudyLoggerService] Creating directory:", this.logDirectory);
         fs.mkdirSync(this.logDirectory, { recursive: true });
+        console.log("[CodeStudyLoggerService] Directory created successfully");
       } catch (error) {
         console.error("[CodeStudyLogger] Failed to create log directory:", error);
       }
+    } else {
+      console.log("[CodeStudyLoggerService] Directory already exists");
     }
   }
 

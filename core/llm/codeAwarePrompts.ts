@@ -519,35 +519,33 @@ export function constructRerunStepCodeUpdatePrompt(
 // 构建全局提问的prompt - 根据问题选择最相关的步骤并生成知识卡片主题
 export function constructGlobalQuestionPrompt(
     question: string,
-    currentCode: string,
     allSteps: Array<{
         id: string;
         title: string;
         abstract: string;
     }>,
-    learningGoal: string,
     taskDescription: string
 ): string {
-    const stepsText = allSteps.map(step =>
+    // 确保 allSteps 是数组，如果不是则返回空数组
+    const stepsArray = Array.isArray(allSteps) ? allSteps : [];
+    const stepsText = stepsArray.map(step =>
         `{"id": "${step.id}", "title": "${step.title}", "abstract": "${step.abstract}"}`
     ).join(",\n        ");
 
     return `{
-        "task": "You are given a question about a coding project, along with the current code and all available steps. Choose the most relevant step that the question relates to, and generate knowledge card themes that would help answer the question.",
+        "task": "You are given a question about a coding project and all available steps. Choose the most relevant step that the question relates to, and generate knowledge card themes that would help answer the question.",
         "question": "${question}",
-        "current_code": "${currentCode}",
         "all_steps": [
         ${stepsText}
         ],
-        "learning_goal": "${learningGoal}",
-        "task_description": "${taskDescription}"
+        "project_description": "${taskDescription}"
         "requirements": [
             "Analyze the question and determine which step from the provided list is most relevant to answering it",
             "The question might be about concepts, implementation details, or understanding specific parts of the code",
             "Select the step that best matches the topic or area of concern in the question",
             "Generate 1-2 knowledge card themes that would help answer the user's question",
             "The themes should be specific to the question asked and relevant to the selected step",
-            "Consider both the learning goals and the current code context when generating themes",
+            "Consider the project context when generating themes",
             "Respond in the same language as the question and step descriptions",
             "You must follow this JSON format in your response: {\\"selected_step_id\\": \\"(the id of the most relevant step)\\", \\"knowledge_card_themes\\": [\\"(theme 1)\\", \\"(theme 2)\\"]}",
             "IMPORTANT: Properly escape all special characters in JSON strings. Ensure the JSON is valid and parseable.",

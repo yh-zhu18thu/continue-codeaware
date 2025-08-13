@@ -3692,9 +3692,7 @@ export const processGlobalQuestion = createAsyncThunk<
             // 构建全局提问的prompt
             const prompt = constructGlobalQuestionPrompt(
                 question,
-                currentCode,
                 allStepsInfo,
-                learningGoal,
                 taskDescription
             );
             

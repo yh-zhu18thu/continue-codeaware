@@ -275,7 +275,7 @@ export function constructGenerateKnowledgeCardThemesPrompt(
             },
             "learning_goal": "${learningGoal}",
             "requirements": [
-                "Generate several (typically 3+) knowledge card themes that are relevant to the current step",
+                "Generate 1-3 most critical knowledge card themes that are relevant to the current step",
                 "The themes should cover concepts, techniques, or common questions and issues that learners might have when working on this step",
                 "The themes should align with the learning goals provided. But you can include more general topics in addition to ones directly relevant to the project at hand. You can also add topics that might interest the user.",
                 "Each theme should be a concise phrase or question (no more than 10-15 words)",

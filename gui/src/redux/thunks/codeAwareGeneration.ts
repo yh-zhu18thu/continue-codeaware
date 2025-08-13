@@ -2009,6 +2009,39 @@ export const generateKnowledgeCardThemesFromQuery = createAsyncThunk<
                         console.warn(`⚠️ 步骤 ${stepId} 基于查询生成知识卡片的代码映射检查失败:`, mappingError);
                         // 不抛出错误，让知识卡片生成操作继续完成
                     }
+                    
+                    // 触发高亮事件：展开对应的步骤并高亮所有新生成的知识卡片
+                    const finalState = getState();
+                    const targetStep = finalState.codeAwareSession.steps.find(s => s.id === stepId);
+                    if (targetStep) {
+                        // 获取当前所有知识卡片，并计算新生成的知识卡片ID
+                        const currentCardCount = targetStep.knowledgeCards.length;
+                        const newCardIds = themeResponses.map((_, index) => 
+                            `${stepId}-kc-${currentCardCount - themeResponses.length + index + 1}`
+                        );
+                        
+                        // 构建高亮事件列表：包括步骤本身和所有新生成的知识卡片
+                        const highlightEvents = [
+                            // 首先高亮步骤以展开它
+                            {
+                                sourceType: "step" as const,
+                                identifier: stepId,
+                                additionalInfo: targetStep
+                            },
+                            // 然后高亮所有新生成的知识卡片
+                            ...newCardIds.map(cardId => {
+                                const knowledgeCard = targetStep.knowledgeCards.find(kc => kc.id === cardId);
+                                return {
+                                    sourceType: "knowledgeCard" as const,
+                                    identifier: cardId,
+                                    additionalInfo: knowledgeCard
+                                };
+                            })
+                        ];
+                        
+                        dispatch(updateHighlight(highlightEvents));
+                        console.log(`✨ 触发了步骤 ${stepId} 和 ${newCardIds.length} 个新知识卡片的高亮事件`);
+                    }
                 } else {
                     console.warn("No valid themes returned from LLM");
                     dispatch(setKnowledgeCardGenerationStatus({ stepId, status: "checked" }));
@@ -4120,6 +4153,33 @@ export const processGlobalQuestion = createAsyncThunk<
             } catch (mappingError) {
                 console.warn(`⚠️ 步骤 ${selected_step_id} 全局提问知识卡片的代码映射检查失败:`, mappingError);
                 // 不抛出错误，让全局提问处理继续完成
+            }
+            
+            // 触发高亮事件：展开对应的步骤并高亮所有新生成的知识卡片
+            const finalState = getState();
+            const targetStep = finalState.codeAwareSession.steps.find(s => s.id === selected_step_id);
+            if (targetStep) {
+                // 构建高亮事件列表：包括步骤本身和所有新生成的知识卡片
+                const highlightEvents = [
+                    // 首先高亮步骤以展开它
+                    {
+                        sourceType: "step" as const,
+                        identifier: selected_step_id,
+                        additionalInfo: targetStep
+                    },
+                    // 然后高亮所有新生成的知识卡片
+                    ...createdCardIds.map(cardId => {
+                        const knowledgeCard = targetStep.knowledgeCards.find(kc => kc.id === cardId);
+                        return {
+                            sourceType: "knowledgeCard" as const,
+                            identifier: cardId,
+                            additionalInfo: knowledgeCard
+                        };
+                    })
+                ];
+                
+                dispatch(updateHighlight(highlightEvents));
+                console.log(`✨ 全局问题处理：触发了步骤 ${selected_step_id} 和 ${createdCardIds.length} 个新知识卡片的高亮事件`);
             }
             
             // 返回选择的步骤ID和创建的知识卡片ID，用于高亮和展开

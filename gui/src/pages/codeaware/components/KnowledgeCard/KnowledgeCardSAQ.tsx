@@ -212,6 +212,17 @@ const KnowledgeCardSAQ: React.FC<KnowledgeCardSAQProps> = ({
     },
   });
 
+  // 新增：监听 question 变化，切换题目时清空编辑器内容
+  React.useEffect(() => {
+    if (editor && !isRetrying && !result) {
+      // 当切换到新题目时（没有结果且不在重试状态），根据保存的状态设置编辑器内容
+      const contentToSet = initialContent || '';
+      if (editor.getText() !== contentToSet) {
+        editor.commands.setContent(contentToSet);
+      }
+    }
+  }, [question, editor, initialContent, isRetrying, result]);
+
   // Reset retry state only when a genuinely new result comes in
   React.useEffect(() => {
     if (result && result.userAnswer) {

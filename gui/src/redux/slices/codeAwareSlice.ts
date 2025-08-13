@@ -718,6 +718,68 @@ export const codeAwareSessionSlice = createSlice({
                 }
             }
         },
+        // 更新知识卡片的测试题
+        updateKnowledgeCardTests: (state, action: PayloadAction<{
+            stepId: string;
+            cardId: string;
+            tests: Array<{
+                question_type: "shortAnswer" | "multipleChoice",
+                question: {
+                    stem: string,
+                    standard_answer: string,
+                    options?: string[]
+                }
+            }>
+        }>) => {
+            const { stepId, cardId, tests } = action.payload;
+            const step = state.steps.find(s => s.id === stepId);
+            if (step) {
+                const card = step.knowledgeCards.find(c => c.id === cardId);
+                if (card && tests && tests.length > 0) {
+                    card.tests = tests.map((test, index) => {
+                        if (test.question_type === "shortAnswer") {
+                            return {
+                                id: `${cardId}-t-${index}`,
+                                questionType: "shortAnswer" as const,
+                                question: {
+                                    type: "shortAnswer" as const,
+                                    stem: test.question.stem,
+                                    standard_answer: test.question.standard_answer,
+                                    answer: "",
+                                    result: "unanswered" as const
+                                }
+                            };
+                        } else {
+                            return {
+                                id: `${cardId}-t-${index}`,
+                                questionType: "multipleChoice" as const,
+                                question: {
+                                    type: "multipleChoice" as const,
+                                    stem: test.question.stem,
+                                    standard_answer: test.question.standard_answer,
+                                    options: test.question.options || [],
+                                    answer: "",
+                                    answerIndex: -1,
+                                    result: "unanswered" as const
+                                }
+                            };
+                        }
+                    });
+                }
+            }
+        },
+        // 设置知识卡片测试题加载状态
+        setKnowledgeCardTestsLoading: (state, action: PayloadAction<{stepId: string, cardId: string, isLoading: boolean}>) => {
+            const { stepId, cardId, isLoading } = action.payload;
+            const step = state.steps.find(s => s.id === stepId);
+            if (step) {
+                const card = step.knowledgeCards.find(c => c.id === cardId);
+                if (card) {
+                    // 为测试题加载状态添加一个特殊属性
+                    (card as any).isTestsLoading = isLoading;
+                }
+            }
+        },
         // 添加新的代码块（从autocomplete生成）
         addCodeChunkFromCompletion: (state, action: PayloadAction<{
             prefixCode: string;
@@ -1072,6 +1134,8 @@ export const {
     resetIdeCommFlags,
     setKnowledgeCardLoading,
     updateKnowledgeCardContent,
+    updateKnowledgeCardTests,
+    setKnowledgeCardTestsLoading,
     updateKnowledgeCardTitle,
     setKnowledgeCardError,
     resetKnowledgeCardContent,

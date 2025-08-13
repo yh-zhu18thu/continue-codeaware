@@ -136,6 +136,11 @@ interface KnowledgeCardMCQProps {
   options: string[]; // 期望有4个选项
   correctAnswer: string; // 正确答案的文本
   onSubmit: (isCorrect: boolean, selectedOption: string) => void;
+  // 新增：用于保持输入状态的属性
+  initialSelectedOption?: string;
+  initialSubmitted?: boolean;
+  onSelectionChange?: (selectedOption: string) => void;
+  onSubmitStateChange?: (submitted: boolean) => void;
 }
 
 const KnowledgeCardMCQ: React.FC<KnowledgeCardMCQProps> = ({
@@ -143,10 +148,14 @@ const KnowledgeCardMCQ: React.FC<KnowledgeCardMCQProps> = ({
   options,
   correctAnswer,
   onSubmit,
+  initialSelectedOption,
+  initialSubmitted = false,
+  onSelectionChange,
+  onSubmitStateChange,
 }) => {
   const logger = useCodeAwareLogger();
-  const [selectedOption, setSelectedOption] = useState<string | null>(null);
-  const [submitted, setSubmitted] = useState(false);
+  const [selectedOption, setSelectedOption] = useState<string | null>(initialSelectedOption || null);
+  const [submitted, setSubmitted] = useState(initialSubmitted);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
 
   const handleOptionClick = async (option: string) => {
@@ -160,6 +169,10 @@ const KnowledgeCardMCQ: React.FC<KnowledgeCardMCQProps> = ({
     });
     
     setSelectedOption(option);
+    // 通知父组件选择变化
+    if (onSelectionChange) {
+      onSelectionChange(option);
+    }
   };
 
   const handleSubmit = async () => {
@@ -175,6 +188,12 @@ const KnowledgeCardMCQ: React.FC<KnowledgeCardMCQProps> = ({
     const correct = selectedOption === correctAnswer;
     setIsCorrect(correct);
     setSubmitted(true);
+    
+    // 通知父组件提交状态变化
+    if (onSubmitStateChange) {
+      onSubmitStateChange(true);
+    }
+    
     onSubmit(correct, selectedOption);
   };
 

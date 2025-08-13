@@ -3,9 +3,9 @@ import { HighlightEvent } from "core";
 import React, { useEffect, useRef, useState } from 'react';
 import styled from "styled-components";
 import {
-    defaultBorderRadius,
-    lightGray,
-    vscForeground
+  defaultBorderRadius,
+  lightGray,
+  vscForeground
 } from "../../../../components";
 import { useCodeAwareLogger } from '../../../../util/codeAwareWebViewLogger';
 import KnowledgeCardContent from './KnowledgeCardContent';
@@ -139,6 +139,7 @@ export interface KnowledgeCardProps {
   // Callback functions for test interactions
   onSaqSubmit?: (testId: string, answer: string) => void;
   onMcqSubmit?: (testId: string, isCorrect: boolean, selectedOption: string) => void;
+  onGenerateTests?: (stepId: string, cardId: string, title: string, content: string, theme: string, learningGoal: string, codeContext: string) => void; // 新增：生成测试题的回调
 
   // Toggle functionality props
   defaultTestMode?: boolean; 
@@ -161,6 +162,9 @@ export interface KnowledgeCardProps {
   // Disable functionality
   disabled?: boolean;
   onDisable?: (stepId: string, cardId: string) => void;
+  
+  // Loading states
+  isTestsLoading?: boolean; // 新增：测试题加载状态
 }
 
 const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
@@ -171,6 +175,7 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
   testItems = [],
   onMcqSubmit,
   onSaqSubmit,
+  onGenerateTests, // 新增：生成测试题的回调
   defaultTestMode = false,
   defaultExpanded = true,
   shouldCollapse = false, // External collapse signal
@@ -185,6 +190,7 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
   onGenerateContent,
   disabled = false,
   onDisable,
+  isTestsLoading = false, // 新增：测试题加载状态
 }) => {
   const logger = useCodeAwareLogger();
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
@@ -193,6 +199,60 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
   const [isFlickering, setIsFlickering] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const flickerTimeoutRef = useRef<(NodeJS.Timeout | null)[]>([]);
+  
+  // 新增：保存每个测试题的用户输入状态（不持久存储，仅在内存中）
+  const [testInputStates, setTestInputStates] = useState<{[testId: string]: {
+    // SAQ 相关状态
+    saqContent?: string;
+    saqIsRetrying?: boolean;
+    // MCQ 相关状态  
+    mcqSelectedOption?: string;
+    mcqSubmitted?: boolean;
+  }}>({});
+
+  // 新增：更新SAQ输入内容的函数
+  const updateSaqContent = (testId: string, content: string) => {
+    setTestInputStates(prev => ({
+      ...prev,
+      [testId]: {
+        ...prev[testId],
+        saqContent: content
+      }
+    }));
+  };
+
+  // 新增：更新SAQ重试状态的函数
+  const updateSaqRetryState = (testId: string, isRetrying: boolean) => {
+    setTestInputStates(prev => ({
+      ...prev,
+      [testId]: {
+        ...prev[testId],
+        saqIsRetrying: isRetrying
+      }
+    }));
+  };
+
+  // 新增：更新MCQ选择状态的函数
+  const updateMcqSelection = (testId: string, selectedOption: string) => {
+    setTestInputStates(prev => ({
+      ...prev,
+      [testId]: {
+        ...prev[testId],
+        mcqSelectedOption: selectedOption
+      }
+    }));
+  };
+
+  // 新增：更新MCQ提交状态的函数
+  const updateMcqSubmitState = (testId: string, submitted: boolean) => {
+    setTestInputStates(prev => ({
+      ...prev,
+      [testId]: {
+        ...prev[testId],
+        mcqSubmitted: submitted
+      }
+    }));
+  };
 
   // Handle mouse enter/leave for hover effects
   const handleMouseEnter = () => {
@@ -320,18 +380,30 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
   };
 
   const onQuestionMarkClick = () => {
-    // 如果没有测试项目，则不允许切换到测试模式
-    if (testItems.length === 0) {
-      console.log('No test items available for this knowledge card');
-      return;
-    }
-    
     const wasInTestMode = isTestMode;
-    setIsTestMode(!isTestMode);
     
-    // If exiting test mode, clear all highlights
-    if (wasInTestMode && onClearHighlight) {
-      onClearHighlight();
+    // 如果当前不在测试模式，切换到测试模式
+    if (!wasInTestMode) {
+      // 如果没有测试项目，尝试生成测试题
+      if (testItems.length === 0) {
+        // 检查是否有知识卡片内容，如果有则生成测试题
+        if (markdownContent && onGenerateTests && stepId && cardId) {
+          console.log('Generating tests for knowledge card:', cardId);
+          onGenerateTests(stepId, cardId, title, markdownContent, title, learningGoal, codeContext);
+        } else {
+          console.log('Cannot generate tests: missing content or callbacks');
+          return;
+        }
+      }
+      setIsTestMode(true);
+    } else {
+      // 如果当前在测试模式，切换回知识卡片模式
+      setIsTestMode(false);
+      
+      // If exiting test mode, clear all highlights
+      if (onClearHighlight) {
+        onClearHighlight();
+      }
     }
     
     //print all the test items in the console
@@ -394,7 +466,7 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
         onToggle={handleToggle}
         onQuestionClick={onQuestionMarkClick} // Pass to the actual prop name in KnowledgeCardToolBar
         onDisableClick={handleDisableCard} // Add disable functionality
-        isQuestionDisabled={testItems.length === 0} // 没有测试项目时禁用问号按钮
+        isQuestionDisabled={!markdownContent || markdownContent === "::LOADING::" || markdownContent.startsWith("加载失败:") || markdownContent.startsWith("生成失败")} // 只有在有知识卡片内容时才能生成测试题
         isHighlighted={isHighlighted}
         isFlickering={isFlickering}
         isTestMode={isTestMode} // 传递测试模式状态
@@ -462,6 +534,22 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
           </div>
         )}
         
+        {isTestMode && testItems.length === 0 && isTestsLoading && (
+          <KnowledgeCardLoader text="正在生成测试题..." />
+        )}
+
+        {isTestMode && testItems.length === 0 && !isTestsLoading && (
+          <div style={{
+            padding: '12px',
+            color: '#888',
+            fontSize: '14px',
+            fontStyle: 'italic',
+            textAlign: 'center'
+          }}>
+            暂无测试题
+          </div>
+        )}
+        
         {isTestMode && testItems.length > 0 && currentTest && (
           <TestContainer>
             {/* Test navigation controls */}
@@ -495,6 +583,12 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
                 options={currentTest.mcqOptions}
                 correctAnswer={currentTest.mcqCorrectAnswer}
                 onSubmit={(isCorrect, selectedOption) => onMcqSubmit(currentTest.id, isCorrect, selectedOption)}
+                // 传递保存的状态
+                initialSelectedOption={testInputStates[currentTest.id]?.mcqSelectedOption}
+                initialSubmitted={testInputStates[currentTest.id]?.mcqSubmitted || false}
+                // 传递状态更新回调
+                onSelectionChange={(selectedOption) => updateMcqSelection(currentTest.id, selectedOption)}
+                onSubmitStateChange={(submitted) => updateMcqSubmitState(currentTest.id, submitted)}
               />
             )}
 
@@ -505,6 +599,12 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
                 onSubmitAnswer={(answer) => onSaqSubmit(currentTest.id, answer)}
                 isLoading={currentTest.isLoading}
                 result={currentTest.result}
+                // 传递保存的状态
+                initialContent={testInputStates[currentTest.id]?.saqContent}
+                initialIsRetrying={testInputStates[currentTest.id]?.saqIsRetrying || false}
+                // 传递状态更新回调
+                onContentChange={(content) => updateSaqContent(currentTest.id, content)}
+                onRetryStateChange={(isRetrying) => updateSaqRetryState(currentTest.id, isRetrying)}
               />
             )}
           </TestContainer>

@@ -167,6 +167,11 @@ interface KnowledgeCardSAQProps {
     isCorrect: boolean;
     remarks: string;
   };
+  // 新增：用于保持输入状态的属性
+  initialContent?: string;
+  initialIsRetrying?: boolean;
+  onContentChange?: (content: string) => void;
+  onRetryStateChange?: (isRetrying: boolean) => void;
 }
 
 const KnowledgeCardSAQ: React.FC<KnowledgeCardSAQProps> = ({
@@ -175,18 +180,29 @@ const KnowledgeCardSAQ: React.FC<KnowledgeCardSAQProps> = ({
   placeholder = "在此输入你的答案...",
   isLoading = false,
   result,
+  initialContent,
+  initialIsRetrying = false,
+  onContentChange,
+  onRetryStateChange,
 }) => {
   const logger = useCodeAwareLogger();
-  const [isRetrying, setIsRetrying] = React.useState(false);
+  const [isRetrying, setIsRetrying] = React.useState(initialIsRetrying);
   const [lastResultHash, setLastResultHash] = React.useState<string>('');
   
   const editor = useEditor({
     extensions: [StarterKit],
-    content: `<p>${placeholder}</p>`,
+    content: initialContent || `<p>${placeholder}</p>`,
     editorProps: {
       attributes: {
         class: "prose dark:prose-invert prose-sm sm:prose-base",
       },
+    },
+    onUpdate: ({ editor }) => {
+      // 当编辑器内容变化时，通知父组件保存状态
+      if (onContentChange) {
+        const content = editor.getText();
+        onContentChange(content);
+      }
     },
   });
 
@@ -198,10 +214,14 @@ const KnowledgeCardSAQ: React.FC<KnowledgeCardSAQProps> = ({
         setLastResultHash(currentResultHash);
         if (isRetrying) {
           setIsRetrying(false);
+          // 通知父组件重试状态变化
+          if (onRetryStateChange) {
+            onRetryStateChange(false);
+          }
         }
       }
     }
-  }, [result, isLoading, isRetrying, lastResultHash]);
+  }, [result, isLoading, isRetrying, lastResultHash, onRetryStateChange]);
 
   if (!editor) {
     return null;
@@ -231,10 +251,19 @@ const KnowledgeCardSAQ: React.FC<KnowledgeCardSAQProps> = ({
     });
     
     setIsRetrying(true);
+    // 通知父组件更新重试状态
+    if (onRetryStateChange) {
+      onRetryStateChange(true);
+    }
+    
     // 将之前的答案同步到编辑器
     if (result?.userAnswer) {
       editor.commands.setContent(result.userAnswer);
       console.log('Content set to editor:', result.userAnswer);
+      // 通知父组件内容变化
+      if (onContentChange) {
+        onContentChange(result.userAnswer);
+      }
     }
   };
 

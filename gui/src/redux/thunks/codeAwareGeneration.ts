@@ -14,6 +14,7 @@ import {
     constructFindStepRelatedCodeLinesPrompt,
     constructGenerateCodePrompt,
     constructGenerateKnowledgeCardDetailPrompt,
+    constructGenerateKnowledgeCardTestsPrompt, // 新增测试题生成prompt
     constructGenerateKnowledgeCardThemesFromQueryPrompt,
     constructGenerateKnowledgeCardThemesPrompt,
     constructGenerateStepsPrompt,
@@ -41,6 +42,7 @@ import {
     setKnowledgeCardError,
     setKnowledgeCardGenerationStatus,
     setKnowledgeCardLoading,
+    setKnowledgeCardTestsLoading, // 新增：导入测试题loading状态action
     setLearningGoal,
     setRequirementChunks,
     setSaqTestLoading,
@@ -55,6 +57,7 @@ import {
     updateHighLevelStepCompletion,
     updateHighlight,
     updateKnowledgeCardContent,
+    updateKnowledgeCardTests,
     updateKnowledgeCardTitle,
     updateSaqTestResult
 } from "../slices/codeAwareSlice";
@@ -1069,27 +1072,16 @@ export const generateKnowledgeCardDetail = createAsyncThunk<
                     try {
                         const jsonResponse = JSON.parse(result.content);
                         const content = jsonResponse.content || "";
-                        const testsFromLLM = jsonResponse.tests || [];
+                        const title = jsonResponse.title || knowledgeCardTheme;
 
-                        // 为tests添加ID，编号方式为知识卡片ID + "-t-" + 递增编号
-                        const tests = testsFromLLM.map((test: any, index: number) => ({
-                            ...test,
-                            id: `${knowledgeCardId}-t-${index + 1}`
-                        }));
-
-                        // 更新知识卡片内容
+                        // 更新知识卡片内容（不包含测试题）
                         dispatch(updateKnowledgeCardContent({
                             stepId,
                             cardId: knowledgeCardId,
-                            content,
-                            tests
+                            content
                         }));
                         
                         console.log("✅ 知识卡片生成成功");
-                        
-                        // Log knowledge card generation completion
-                        // We need to access extra.ideMessenger to log, but createAsyncThunk doesn't pass it through extra in a simple way
-                        // Instead, we'll add the log in the calling component
                         
                         return; // 成功，退出函数
                         
@@ -1138,6 +1130,150 @@ export const generateKnowledgeCardDetail = createAsyncThunk<
                     cardId: knowledgeCardId
                 }));
             }, 2000);
+        }
+    }
+);
+
+// 异步生成知识卡片测试题
+export const generateKnowledgeCardTests = createAsyncThunk<
+    void,
+    {
+        stepId: string;
+        knowledgeCardId: string;
+        knowledgeCardTitle: string;
+        knowledgeCardContent: string;
+        knowledgeCardTheme: string;
+        learningGoal: string;
+        codeContext: string;
+    },
+    ThunkApiType
+>(
+    "codeAware/generateKnowledgeCardTests",
+    async (
+        { stepId, knowledgeCardId, knowledgeCardTitle, knowledgeCardContent, knowledgeCardTheme, learningGoal, codeContext },
+        { dispatch, extra, getState }
+    ) => {
+        const maxRetries = 3;
+        let lastError: Error | null = null;
+        
+        try {
+            const state = getState();
+            const defaultModel = selectDefaultModel(state);
+            if (!defaultModel) {
+                throw new Error("Default model not defined");
+            }
+
+            // 从state中获取任务描述信息
+            const taskDescription = state.codeAwareSession.userRequirement?.requirementDescription || "";
+
+            // 设置测试题加载状态
+            dispatch(setKnowledgeCardTestsLoading({ stepId, cardId: knowledgeCardId, isLoading: true }));
+
+            // 构造提示词
+            const prompt = constructGenerateKnowledgeCardTestsPrompt(
+                knowledgeCardTitle,
+                knowledgeCardContent,
+                knowledgeCardTheme,
+                learningGoal,
+                codeContext,
+                taskDescription
+            );
+
+            console.log("generateKnowledgeCardTests called with:", {
+                stepId,
+                knowledgeCardId,
+                knowledgeCardTitle,
+                knowledgeCardTheme,
+                learningGoal,
+                taskDescription,
+                contentLength: knowledgeCardContent.length,
+                codeContextLength: codeContext.length
+            });
+
+            // 重试机制
+            for (let attempt = 1; attempt <= maxRetries; attempt++) {
+                try {
+                    console.log(`🔄 知识卡片测试题生成尝试 ${attempt}/${maxRetries}`);
+                    
+                    // 添加超时保护
+                    const timeoutPromise = new Promise((_, reject) => 
+                        setTimeout(() => reject(new Error("LLM请求超时")), 30000) // 30秒超时
+                    );
+                    
+                    const llmPromise = extra.ideMessenger.request("llm/complete", {
+                        prompt: prompt,
+                        completionOptions: {},
+                        title: defaultModel.title
+                    });
+                    
+                    const result: any = await Promise.race([llmPromise, timeoutPromise]);
+
+                    if (result.status !== "success" || !result.content) {
+                        throw new Error("LLM request failed or returned empty content");
+                    }
+
+                    console.log("LLM response for knowledge card tests:", result.content);
+
+                    // 解析 LLM 返回的 JSON 内容
+                    try {
+                        const jsonResponse = JSON.parse(result.content);
+                        const testsFromLLM = jsonResponse.tests || [];
+
+                        // 为tests添加ID，编号方式为知识卡片ID + "-t-" + 递增编号
+                        const tests = testsFromLLM.map((test: any, index: number) => ({
+                            ...test,
+                            id: `${knowledgeCardId}-t-${index + 1}`
+                        }));
+
+                        // 更新知识卡片测试题
+                        dispatch(updateKnowledgeCardTests({
+                            stepId,
+                            cardId: knowledgeCardId,
+                            tests
+                        }));
+                        
+                        console.log("✅ 知识卡片测试题生成成功");
+                        
+                        return; // 成功，退出函数
+                        
+                    } catch (parseError) {
+                        throw new Error(`解析LLM响应失败: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
+                    }
+                    
+                } catch (error) {
+                    lastError = error instanceof Error ? error : new Error(String(error));
+                    console.warn(`⚠️ 知识卡片测试题生成第 ${attempt} 次尝试失败:`, lastError.message);
+                    
+                    // 如果不是最后一次尝试，等待一段时间再重试
+                    if (attempt < maxRetries) {
+                        const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000); // 指数退避，最大5秒
+                        console.log(`⏱️ 等待 ${delay}ms 后重试...`);
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                    }
+                }
+            }
+            
+            // 如果所有重试都失败了，抛出最后一个错误
+            throw lastError || new Error("知识卡片测试题生成失败");
+            
+        } catch(error) {
+            console.error("❌ 知识卡片测试题生成最终失败:", error);
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            
+            // 显示错误信息
+            dispatch(setKnowledgeCardError({
+                stepId,
+                cardId: knowledgeCardId,
+                error: `测试题生成失败（已重试${maxRetries}次）: ${errorMessage}`
+            }));
+            
+            // 2秒后清除错误状态
+            setTimeout(() => {
+                dispatch(setKnowledgeCardTestsLoading({ stepId, cardId: knowledgeCardId, isLoading: false }));
+            }, 2000);
+        } finally {
+            // 确保清除加载状态
+            dispatch(setKnowledgeCardTestsLoading({ stepId, cardId: knowledgeCardId, isLoading: false }));
         }
     }
 );

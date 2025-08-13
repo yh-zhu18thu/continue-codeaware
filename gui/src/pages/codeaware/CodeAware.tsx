@@ -2,8 +2,8 @@ import { HighlightEvent, KnowledgeCardItem, StepItem, StepStatus } from "core";
 import { Key, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import styled from "styled-components";
 import {
-  lightGray,
-  vscForeground
+    lightGray,
+    vscForeground
 } from "../../components";
 import { SessionInfoDialog } from "../../components/dialogs/SessionInfoDialog";
 import PageHeader from "../../components/PageHeader";
@@ -11,42 +11,43 @@ import { IdeMessengerContext } from "../../context/IdeMessenger";
 import { useWebviewListener } from "../../hooks/useWebviewListener";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks";
 import {
-  clearAllCodeAndMappings,
-  clearAllHighlights,
-  clearCodeEditModeSnapshot,
-  newCodeAwareSession, // Add this import
-  resetIdeCommFlags,
-  resetSessionExceptRequirement, // Add this import
-  saveCodeEditModeSnapshot, // Add this import
-  selectCurrentSessionId,
-  selectIsCodeEditModeEnabled, // Add this import for code edit mode
-  selectIsRequirementInEditMode, // Import submitRequirementContent
-  selectIsStepsGenerated,
-  selectLearningGoal, // Add this import
-  selectTask,
-  selectTitle, // Add this import for reading title
-  setCodeEditMode, // Add this import for code edit mode action
-  setKnowledgeCardDisabled, // Add this import for knowledge card disable
-  setKnowledgeCardGenerationStatus, // Add this import for knowledge card generation status
-  setStepAbstract, // Add this import for step editing
-  setStepStatus, // Add this import for step status change
-  setUserRequirementStatus,
-  submitRequirementContent, // Add this import
-  updateHighlight
+    clearAllCodeAndMappings,
+    clearAllHighlights,
+    clearCodeEditModeSnapshot,
+    newCodeAwareSession, // Add this import
+    resetIdeCommFlags,
+    resetSessionExceptRequirement, // Add this import
+    saveCodeEditModeSnapshot, // Add this import
+    selectCurrentSessionId,
+    selectIsCodeEditModeEnabled, // Add this import for code edit mode
+    selectIsRequirementInEditMode, // Import submitRequirementContent
+    selectIsStepsGenerated,
+    selectLearningGoal, // Add this import
+    selectTask,
+    selectTitle, // Add this import for reading title
+    setCodeEditMode, // Add this import for code edit mode action
+    setKnowledgeCardDisabled, // Add this import for knowledge card disable
+    setKnowledgeCardGenerationStatus, // Add this import for knowledge card generation status
+    setStepAbstract, // Add this import for step editing
+    setStepStatus, // Add this import for step status change
+    setUserRequirementStatus,
+    submitRequirementContent, // Add this import
+    updateHighlight
 } from "../../redux/slices/codeAwareSlice";
 import {
-  checkAndMapKnowledgeCardsToCode,
-  checkAndUpdateHighLevelStepCompletion,
-  generateCodeFromSteps,
-  generateKnowledgeCardDetail,
-  generateKnowledgeCardThemes,
-  generateKnowledgeCardThemesFromQuery,
-  generateStepsFromRequirement,
-  getStepCorrespondingCode,
-  processCodeChanges,
-  processGlobalQuestion,
-  processSaqSubmission,
-  rerunStep
+    checkAndMapKnowledgeCardsToCode,
+    checkAndUpdateHighLevelStepCompletion,
+    generateCodeFromSteps,
+    generateKnowledgeCardDetail,
+    generateKnowledgeCardTests, // 新增：导入测试题生成thunk
+    generateKnowledgeCardThemes,
+    generateKnowledgeCardThemesFromQuery,
+    generateStepsFromRequirement,
+    getStepCorrespondingCode,
+    processCodeChanges,
+    processGlobalQuestion,
+    processSaqSubmission,
+    rerunStep
 } from "../../redux/thunks/codeAwareGeneration";
 import { useCodeAwareLogger } from "../../util/codeAwareWebViewLogger";
 import "./CodeAware.css";
@@ -1090,6 +1091,67 @@ export const CodeAware = () => {
     [dispatch, allMappings, codeChunks, logger]
   );
 
+  // 处理生成知识卡片测试题
+  const handleGenerateKnowledgeCardTests = useCallback(
+    async (stepId: string, cardId: string, title: string, content: string, theme: string, learningGoal: string, codeContext: string) => {
+      console.log("Generating knowledge card tests for:", { stepId, cardId, title, theme });
+      
+      // Log test generation
+      await logger.addLogEntry("user_start_generate_knowledge_card_tests", {
+        stepId,
+        cardId,
+        title,
+        theme,
+        learningGoal
+      });
+      
+      // 如果没有提供代码上下文，从mapping中获取和cardId绑定的code chunk的内容
+      let contextToUse = codeContext;
+      if (!contextToUse) {
+        // 从mapping中查找与cardId绑定的code chunk
+        const cardMappings = allMappings.filter(mapping => mapping.knowledgeCardId === cardId);
+        console.log(`Found ${cardMappings.length} mappings for card ${cardId}:`, cardMappings);
+        
+        if (cardMappings.length > 0) {
+          // 获取所有相关的code chunk内容
+          const codeChunkContents: string[] = [];
+          
+          cardMappings.forEach(mapping => {
+            if (mapping.codeChunkId) {
+              const codeChunk = codeChunks.find(chunk => chunk.id === mapping.codeChunkId);
+              if (codeChunk && !codeChunk.disabled) {
+                codeChunkContents.push(codeChunk.content);
+              }
+            }
+          });
+          
+          // 合并所有相关的代码块内容作为上下文
+          if (codeChunkContents.length > 0) {
+            contextToUse = codeChunkContents.join('\n\n// --- Related Code Chunk ---\n\n');
+            console.log(`Using code context from ${codeChunkContents.length} code chunks for card ${cardId}`);
+          } else {
+            console.warn(`No valid code chunks found for card ${cardId}, using empty context`);
+            contextToUse = "";
+          }
+        } else {
+          console.warn(`No mappings found for card ${cardId}, using empty context`);
+          contextToUse = "";
+        }
+      }
+
+      dispatch(generateKnowledgeCardTests({
+        stepId,
+        knowledgeCardId: cardId,
+        knowledgeCardTitle: title,
+        knowledgeCardContent: content,
+        knowledgeCardTheme: theme,
+        learningGoal: learningGoal || "提升编程技能和理解相关概念",
+        codeContext: contextToUse
+      }));
+    },
+    [dispatch, allMappings, codeChunks, logger]
+  );
+
   // 处理生成知识卡片主题列表
   const handleGenerateKnowledgeCardThemes = useCallback(
     (stepId: string, stepTitle: string, stepAbstract: string, learningGoalFromProps: string) => {
@@ -2053,6 +2115,9 @@ export const CodeAware = () => {
                   // Disabled state
                   disabled: kc.disabled,
                   
+                  // Loading states
+                  isTestsLoading: (kc as any).isTestsLoading || false, // 获取测试题加载状态
+                  
                   // 事件处理函数
                   onMcqSubmit: (testId: string, isCorrect: boolean, selectedOption: string) => {
                     console.log(`MCQ Result for ${kc.title} (Test ${testId}): ${isCorrect ? 'Correct' : 'Incorrect'}, Selected: ${selectedOption}`);
@@ -2074,6 +2139,7 @@ export const CodeAware = () => {
                   learningGoal: learningGoal,
                   codeContext: kc.codeContext || "",
                   onGenerateContent: handleGenerateKnowledgeCardContent,
+                  onGenerateTests: handleGenerateKnowledgeCardTests, // 新增：测试题生成回调
                 };
               })}
               // isActive can be determined by currentFocusedFlowId if needed

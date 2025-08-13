@@ -28,7 +28,7 @@ export function constructGenerateStepsPrompt(
         "task": "You are given a description of a coding project (will be written in a single file, all sources and data are ready, necessary packages has been installed). First, provide a high-level breakdown of the project into major tasks, then provide detailed steps for each task.",
         "requirements": [
             "First, identify 4-8 major high-level tasks that represent the overall workflow of the project（in reasonable implementation order）. These should be conceptual phases like 'Setup and Configuration', 'Data Processing', 'User Interface Development', etc.",
-            "IMPORTANT: If the project requires importing packages or involves specific frameworks (such as PyGame, Flask, etc.), include a high-level task at the beginning for 'Project Setup and Dependencies' or similar. This task should cover importing necessary packages and setting up any framework-specific boilerplate code (e.g. game loop, main function, template functions) that every project using that framework requires.",
+            "IMPORTANT: If the project requires importing packages or involves specific frameworks (such as PyGame, Flask, etc.), include a high-level task at the beginning for 'Project Setup' or similar. This task should cover importing necessary packages and setting up any framework-specific boilerplate code (e.g. game loop for pygame) that every project using that framework requires.",
             "Then, for each major task, generate fine-grained steps. The steps should be atomic - if the title of a step is 'A and B', divide it into two steps 'A' and 'B'.",
             "IMPORTANT: For core steps which are too hard to be understood by beginners, you can break them down into multiple steps to make them easier to understand and implement.",
             "Keep the title brief and readable. You must not put any code in the title.",
@@ -41,8 +41,7 @@ export function constructGenerateStepsPrompt(
             "IMPORTANT: Properly escape all special characters in JSON strings. Use \\n for newlines, \\\\ for backslashes, \\\" for quotes, \\t for tabs, etc. Ensure the JSON is valid and parseable.",
             "Please do not use invalid \`\`\`json character to envelope the JSON response, just return the JSON object directly.",
         ],
-        "description": "${userRequirement}"
-        
+        "project_description": "${userRequirement}"
     }`;
 }
 
@@ -54,22 +53,54 @@ export function constructGenerateKnowledgeCardDetailPrompt(
     taskDescription?: string
 ): string {
     return `{
-        "task": "You are given a task description and possibly a code snippet, as well as the theme of a related knowledge card. Generate the contents of the knowledge card, including detailed explanation of concepts and 1 to 3 test questions.",
+        "task": "A user is working on a coding project and needs to acquire knowledge about a specific theme to better understand the concepts, implementation and logic. Based on the knowledge theme, project context, related code, and learning objectives, generate a clear but concise educational explanation.",
+        "knowledge_theme": "${knowledgeCardTheme}",
+        "learning_objectives": "${learningGoal}",
+        "related_code": "${codeContext}",
+        "project_context": "${taskDescription || ""}",
         "requirements": [
-            "The knowledge card should contain stuff closely related to the theme, task, and code context. Make sure the content is relevant to the specific programming task being worked on.",
-            "Do not include content beyond the theme and task at hand. Do not include content from downstream tasks from potential next steps. Keep the content brief and concise.",
+            "The knowledge card should contain content closely related to the knowledge_theme. Make sure the content is relevant to the specific project context being worked on.",
+            "IMPORTANT: Do not include content beyond the theme and task at hand. Do not include content from downstream tasks from potential next steps. Keep the content brief and concise.",
             "The knowledge card should start with a very brief, concise and to-the-point sentence describing its theme and main points, TLDR style.",
-            "The questions should be about either high-level concepts introduced in the knowledge card, or details about implementation. You can use actual examples in the questions.",
-            "Consider the task context when generating explanations and examples to make them more relevant and practical.",
-            "Respond in the same language as the task_description. You may use Markdown in the content to make it more readable.",
-            "You must follow this JSON format in your response: {\\"title\\": \\"(title of the knowledge card)\\", \\"content\\": \\"(content of the knowledge card. Markdown can be used here)\\", \\"tests\\":[{\\"question_type\\": \\"shortAnswer\\", \\"question\\": {\\"stem\\": \\"(the question itself)\\", \\"standard_answer\\": \\"(the correct answer)\\"}}]}",
+            "Consider the project_context and related_code when generating explanations and examples to make them more relevant and practical.",
+            "IMPORTANT: Focus on providing clear, educational content that helps users understand the most necessary concepts. Use simple terms and examples where appropriate.",
+            "Respond in the same language as the project_context. You may use Markdown in the content to make it more readable.",
+            "You must follow this JSON format in your response: {\\"title\\": \\"(title of the knowledge card)\\", \\"content\\": \\"(content of the knowledge card. Markdown can be used here)\\"}",
+            "IMPORTANT: Properly escape all special characters in JSON strings. Ensure the JSON is valid and parseable.",
+            "Please do not use invalid \`\`\`json character to envelope the JSON response, just return the JSON object directly."
+        ]
+    }`;
+}
+
+// 构建生成知识卡片测试题的prompt
+export function constructGenerateKnowledgeCardTestsPrompt(
+    knowledgeCardTitle: string,
+    knowledgeCardContent: string,
+    knowledgeCardTheme: string,
+    learningGoal: string,
+    codeContext: string,
+    taskDescription?: string
+): string {
+    return `{
+        "task": "A student has learned about a specific knowledge theme and wants to verify whether they understand the core concepts or logic of this topic. Generate 1 to 3 test questions that can help the student assess their comprehension, incorporating the current task context and code context while aligning with their learning objectives.",
+        "knowledge_card_title": "${knowledgeCardTitle}",
+        "knowledge_card_content": "${knowledgeCardContent}",
+        "knowledge_theme": "${knowledgeCardTheme}",
+        "learning_objectives": "${learningGoal}",
+        "code_context": "${codeContext}",
+        "task_context": "${taskDescription || ""}"
+        "requirements": [
+            "The questions should test understanding of the core concepts or implementation logic covered in the knowledge card content.",
+            "Incorporate actual examples from the code_context and task_context to make the questions more relevant and practical.",
+            "Questions should help students verify their comprehension of the specific concepts presented in the knowledge card.",
+            "Focus on questions that allow learners to demonstrate and apply their understanding of the material.",
+            "Align the questions with the learning_objectives to ensure they support the student's overall learning goals.",
+            "Generate between 1 to 3 questions - prioritize quality and relevance over quantity.",
+            "Respond in the same language as the task_context.",
+            "You must follow this JSON format in your response: {\\"tests\\":[{\\"question_type\\": \\"shortAnswer\\", \\"question\\": {\\"stem\\": \\"(the question itself)\\", \\"standard_answer\\": \\"(the correct answer)\\"}}]}",
             "IMPORTANT: Properly escape all special characters in JSON strings. Ensure the JSON is valid and parseable.",
             "Please do not use invalid \`\`\`json character to envelope the JSON response, just return the JSON object directly."
         ],
-        "knowledge_card_theme": "${knowledgeCardTheme}",
-        "learning_goal": "${learningGoal}",
-        "code_context": "${codeContext}",
-        "task_description": "${taskDescription || ""}"
     }`;
 }
 
@@ -237,6 +268,12 @@ export function constructGenerateKnowledgeCardThemesPrompt(
     if (currentCode) {
         return `{
             "task": "You are given a programming task, information about the current step, and learning goals. Generate a list of potential knowledge card themes that would be helpful for the user to understand this step better.",
+            "task_description": "${taskDescription}",${codeContext}
+            "current_step": {
+                "title": "${currentStep.title}",
+                "abstract": "${currentStep.abstract}"
+            },
+            "learning_goal": "${learningGoal}",
             "requirements": [
                 "Generate several (typically 3+) knowledge card themes that are relevant to the current step",
                 "The themes should cover concepts, techniques, or common questions and issues that learners might have when working on this step",
@@ -247,17 +284,17 @@ export function constructGenerateKnowledgeCardThemesPrompt(
                 "You must follow this JSON format in your response: [{\\"theme\\": \\"(theme title)\\", \\"corresponding_code_snippets\\": [\\"(relevant code snippet 1)\\", \\"(relevant code snippet 2)\\", ...]}]",
                 "IMPORTANT: Properly escape all special characters in JSON strings. Ensure the JSON is valid and parseable.",
                 "Please do not use invalid \`\`\`json character to envelope the JSON response, just return the JSON array directly."
-            ],
-            "task_description": "${taskDescription}",${codeContext}
-            "current_step": {
-                "title": "${currentStep.title}",
-                "abstract": "${currentStep.abstract}"
-            },
-            "learning_goal": "${learningGoal}"
+            ]
         }`;
     } else {
         return `{
             "task": "You are given a programming task, information about the current step, and learning goals. Generate a list of potential knowledge card themes that would be helpful for the user to understand this step better.",
+            "task_description": "${taskDescription}",
+            "current_step": {
+                "title": "${currentStep.title}",
+                "abstract": "${currentStep.abstract}"
+            },
+            "learning_goal": "${learningGoal}",
             "requirements": [
                 "Generate 1-3 knowledge card themes that are relevant to the current step",
                 "The themes should cover concepts, techniques, or common questions and issues that learners might have when working on this step",
@@ -268,13 +305,7 @@ export function constructGenerateKnowledgeCardThemesPrompt(
                 "You must follow this JSON format in your response: [\\"(theme 1)\\", \\"(theme 2)\\", \\"(theme 3)\\", ...]",
                 "IMPORTANT: Properly escape all special characters in JSON strings. Ensure the JSON is valid and parseable.",
                 "Please do not use invalid \`\`\`json character to envelope the JSON response, just return the JSON array directly."
-            ],
-            "task_description": "${taskDescription}",
-            "current_step": {
-                "title": "${currentStep.title}",
-                "abstract": "${currentStep.abstract}"
-            },
-            "learning_goal": "${learningGoal}"
+            ]
         }`;
     }
 }
@@ -293,6 +324,19 @@ export function constructGenerateKnowledgeCardThemesFromQueryPrompt(
 ): string {
     return `{
         "task": "You are given a user query in the context of a programming learning session. Based on the query, current step information, current code, existing knowledge card themes, and learning goals, generate new knowledge card themes that address the user's question and complement existing ones.",
+        "query_context": {
+            "selected_code": "${queryContext.selectedCode}",
+            "selected_text": "${queryContext.selectedText}",
+            "query": "${queryContext.query}"
+        },
+        "current_step": {
+            "title": "${currentStep.title}",
+            "abstract": "${currentStep.abstract}"
+        },
+        "current_code": "${currentCode}",
+        "existing_themes": [${existingThemes.map(theme => `"${theme}"`).join(", ")}],
+        "learning_goal": "${learningGoal}",
+        "task": "${task}",
         "requirements": [
             "Generate 1-2 new knowledge card themes that directly address the user's query",
             "The themes should complement, not duplicate, the existing themes",
@@ -307,19 +351,6 @@ export function constructGenerateKnowledgeCardThemesFromQueryPrompt(
             "IMPORTANT: Properly escape all special characters in JSON strings. Ensure the JSON is valid and parseable.",
             "Please do not use invalid \`\`\`json character to envelope the JSON response, just return the JSON array directly."
         ],
-        "query_context": {
-            "selected_code": "${queryContext.selectedCode}",
-            "selected_text": "${queryContext.selectedText}",
-            "query": "${queryContext.query}"
-        },
-        "current_step": {
-            "title": "${currentStep.title}",
-            "abstract": "${currentStep.abstract}"
-        },
-        "current_code": "${currentCode}",
-        "existing_themes": [${existingThemes.map(theme => `"${theme}"`).join(", ")}],
-        "learning_goal": "${learningGoal}",
-        "task": "${task}"
     }`;
 }
 
@@ -346,6 +377,13 @@ export function constructRerunStepPrompt(
     
     return `{
         "task": "You are given existing code and a step whose abstract has been modified. You also have information about which code parts currently correspond to this step. Analyze the changes and update the code minimally to match the new abstract, then determine the correspondence between the updated code and the step.",
+        "existing_code": "${existingCode}",${currentCodeMappingText}
+        "previous_step": {
+            "id": "${previousStep.id}",
+            "title": "${previousStep.title}",
+            "abstract": "${previousStep.abstract}"
+        },
+        "changed_step_abstract": "${changedStepAbstract}",
         "requirements": [
             "Analyze the differences between the previous abstract and the changed abstract. If the abstract is changed substantially, update the title of the step if necessary.",
             "Update the code minimally to match the changed abstract - make only necessary changes. Keep as much of the code unchanged as possible. At the very least, you must keep the code structure recognizable to the user.",
@@ -356,13 +394,6 @@ export function constructRerunStepPrompt(
             "IMPORTANT: Properly escape all special characters in JSON strings. Ensure the JSON is valid and parseable.",
             "Please do not use invalid \`\`\`json character to envelope the JSON response, just return the JSON object directly."
         ],
-        "existing_code": "${existingCode}",${currentCodeMappingText}
-        "previous_step": {
-            "id": "${previousStep.id}",
-            "title": "${previousStep.title}",
-            "abstract": "${previousStep.abstract}"
-        },
-        "changed_step_abstract": "${changedStepAbstract}"
     }`;
 }
 
@@ -387,6 +418,10 @@ export function constructProcessCodeChangesPrompt(
     
     return `{
         "task": "You are given the previous code, current code after changes, a code diff for reference, and a list of relevant steps that were affected by these code changes. Analyze whether these changes require updates to the step abstracts and determine if any steps have become functionally incomplete and need regeneration.",
+        "previous_code": "${previousCode}",
+        "current_code": "${currentCode}",
+        "code_diff": "${codeDiff}",
+        "relevant_steps": [${stepsText}],
         "requirements": [
             "Compare the previous_code and current_code to understand what changes were made",
             "The code_diff is provided for reference to help you understand the changes, but focus on comparing the previous and current code directly",
@@ -402,10 +437,6 @@ export function constructProcessCodeChangesPrompt(
             "IMPORTANT: Properly escape all special characters in JSON strings. Ensure the JSON is valid and parseable.",
             "Please do not use invalid \`\`\`json character to envelope the JSON response, just return the JSON object directly."
         ],
-        "previous_code": "${previousCode}",
-        "current_code": "${currentCode}",
-        "code_diff": "${codeDiff}",
-        "relevant_steps": [${stepsText}]
     }`;
 }
 
@@ -417,6 +448,9 @@ export function constructEvaluateSaqAnswerPrompt(
 ): string {
     return `{
         "task": "You are evaluating a student's short answer response to a programming-related question. Compare the user's answer with the standard answer and determine if it covers all key points correctly.",
+        "question": "${question.replace(/"/g, "\"")}",
+        "standard_answer": "${standardAnswer.replace(/"/g, "\"")}",
+        "user_answer": "${userAnswer.replace(/"/g, "\"")}"
         "requirements": [
             "Analyze whether the user's answer demonstrates understanding of the core concepts",
             "Check if the user's answer covers all major points mentioned in the standard answer",
@@ -432,9 +466,6 @@ export function constructEvaluateSaqAnswerPrompt(
             "IMPORTANT: Properly escape all special characters in JSON strings. Ensure the JSON is valid and parseable.",
             "Please do not use invalid \`\`\`json character to envelope the JSON response, just return the JSON object directly."
         ],
-        "question": "${question.replace(/"/g, "\"")}",
-        "standard_answer": "${standardAnswer.replace(/"/g, "\"")}",
-        "user_answer": "${userAnswer.replace(/"/g, "\"")}"
     }`;
 }
 
@@ -504,6 +535,13 @@ export function constructGlobalQuestionPrompt(
 
     return `{
         "task": "You are given a question about a coding project, along with the current code and all available steps. Choose the most relevant step that the question relates to, and generate knowledge card themes that would help answer the question.",
+        "question": "${question}",
+        "current_code": "${currentCode}",
+        "all_steps": [
+        ${stepsText}
+        ],
+        "learning_goal": "${learningGoal}",
+        "task_description": "${taskDescription}"
         "requirements": [
             "Analyze the question and determine which step from the provided list is most relevant to answering it",
             "The question might be about concepts, implementation details, or understanding specific parts of the code",
@@ -516,13 +554,6 @@ export function constructGlobalQuestionPrompt(
             "IMPORTANT: Properly escape all special characters in JSON strings. Ensure the JSON is valid and parseable.",
             "Please do not use invalid code block characters to envelope the JSON response, just return the JSON object directly."
         ],
-        "question": "${question}",
-        "current_code": "${currentCode}",
-        "all_steps": [
-        ${stepsText}
-        ],
-        "learning_goal": "${learningGoal}",
-        "task_description": "${taskDescription}"
     }`;
 }
 

@@ -174,6 +174,8 @@ class OpenAI extends BaseLLM {
     } else {
       finalOptions.prediction = undefined;
     }
+    finalOptions.max_completion_tokens = 32766;
+    finalOptions.max_tokens = undefined;
 
     return finalOptions;
   }

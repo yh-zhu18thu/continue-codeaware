@@ -1,33 +1,28 @@
-import pandas as pd
-from sklearn.feature_extraction.text import TfidfVectorizer
+# Import necessary Python libraries and packages
+import pandas as pd  # For data loading and manipulation
+import numpy as np    # For numerical operations
 
-# Step 1: Load the dataset from 'src/spam.csv' with error handling
-try:
-    dataset = pd.read_csv('src/spam.csv')
-    # Display basic structure of the dataset
-    print(f'Dataset Shape: {dataset.shape}')  # Show number of rows and columns
-    print(f'Column Names: {dataset.columns.tolist()}')  # Show column names
-    print(f'Data Types:\n{dataset.dtypes}')  # Show data types of each column
-except FileNotFoundError:
-    print("Error: The file 'src/spam.csv' was not found. Please ensure the file exists in the correct location.")
-except Exception as e:
-    print(f"An unexpected error occurred: {e}")
-    
-# Step 2: Clean the dataset
-# Check for missing values and abnormal entries
-missing_values = dataset.isnull().sum()
-abnormal_entries = (dataset.eq('').sum()) | (dataset.isin(['?', 'N/A']).sum())  # Check for values that may not be valid
+# Step 2: Load the spam message dataset from CSV
+# The CSV file should be in the same directory or provide the correct path
+spam_df = pd.read_csv('spam.csv', encoding='latin-1')  # encoding to handle possible non-UTF8 chars
 
-def handle_missing_and_abnormal_data(df):
-    # Drop rows with excessive missing/abnormal values or fill them
-    df = df.dropna()  # Example treatment: dropping rows with missing values
-    df.replace(['', '?', 'N/A'], pd.NA, inplace=True)  # Replace abnormal entries with NA
-    df.fillna('unknown', inplace=True)  # Fill NA with 'unknown'
-    return df
+# Step 3: Explore and inspect the loaded dataset
+print("Dataset shape:", spam_df.shape)                # Number of rows and columns
+print("Column names:", spam_df.columns.tolist())        # List of column names
+print("Sample rows:")
+print(spam_df.head(5))                                 # Display first 5 rows
 
-# Apply data handling logic to clean the dataset
-dataset = handle_missing_and_abnormal_data(dataset)
+# Step 4: Handle missing data and duplicates
+print("\nChecking for missing values:")
+print(spam_df.isnull().sum())                           # Count missing values per column
+spam_df = spam_df.dropna()                              # Remove rows with missing values if any
+print("\nChecking for duplicate rows:")
+num_duplicates = spam_df.duplicated().sum()
+print(f"Found {num_duplicates} duplicate rows.")
+spam_df = spam_df.drop_duplicates()                     # Remove duplicate rows
 
-# Verify the dataset after cleaning
-print("Dataset after cleaning:")
-print(dataset.head())
+# Step 5: Map text labels to binary numerical values
+# Convert 'v1' column: 'spam' -> 1, 'ham' -> 0
+spam_df['label_num'] = spam_df['v1'].map({'ham': 0, 'spam': 1})
+print("\nValue counts for mapped labels:")
+print(spam_df['label_num'].value_counts())

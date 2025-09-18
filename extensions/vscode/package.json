@@ -84,7 +84,7 @@
       }
     ],
     "configuration": {
-      "title": "Continue",
+      "title": "CodeAware",
       "properties": {
         "continue.telemetryEnabled": {
           "type": "boolean",
@@ -552,7 +552,7 @@
       "activitybar": [
         {
           "id": "continue",
-          "title": "Continue",
+          "title": "CodeAware",
           "icon": "media/sidebar-icon.png"
         }
       ]
@@ -562,7 +562,7 @@
         {
           "type": "webview",
           "id": "continue.continueGUIView",
-          "name": "Continue",
+          "name": "CodeAware",
           "icon": "media/sidebar-icon.png",
           "visibility": "visible"
         }

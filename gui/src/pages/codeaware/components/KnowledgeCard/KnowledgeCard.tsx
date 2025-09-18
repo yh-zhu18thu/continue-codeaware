@@ -543,7 +543,7 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
       <ContentArea isVisible={isExpanded}>
 
         {!isTestMode && markdownContent === "::LOADING::" && (
-          <KnowledgeCardLoader text="正在生成知识卡片内容..." />
+          <KnowledgeCardLoader text="Generating knowledge card contents" />
         )}
 
         {!isTestMode && markdownContent && markdownContent !== "::LOADING::" && !markdownContent.startsWith("加载失败:") && !markdownContent.startsWith("生成失败") && (
@@ -603,7 +603,7 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
         )}
         
         {isTestMode && testItems.length === 0 && isTestsLoading && (
-          <KnowledgeCardLoader text="正在生成测试题..." />
+          <KnowledgeCardLoader text="Generating self-test questions" />
         )}
 
         {isTestMode && testItems.length === 0 && !isTestsLoading && (

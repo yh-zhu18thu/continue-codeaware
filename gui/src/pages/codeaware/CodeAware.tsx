@@ -1875,7 +1875,7 @@ export const CodeAware = () => {
         // 显示成功提示
         ideMessenger?.post("showToast", [
           "info", 
-          `问题已添加到相关步骤中，正在生成知识卡片...`
+          `Questions added. Generating knowledge cards...`
         ]);
         
         await logger.addLogEntry("user_trigger_question_from_code_selection_completed", {

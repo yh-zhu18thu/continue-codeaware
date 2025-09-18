@@ -46,7 +46,7 @@ interface KnowledgeCardLoaderProps {
 }
 
 const KnowledgeCardLoader: React.FC<KnowledgeCardLoaderProps> = ({ 
-  text = "正在生成知识卡片内容..." 
+  text = "Generating Content..." 
 }) => {
   return (
     <LoaderContainer>

@@ -530,7 +530,7 @@ const Step: React.FC<StepProps> = ({
         {/* Show loading animation when generating knowledge card themes */}
         {knowledgeCardGenerationStatus === "generating" && (
           <KnowledgeCardLoaderContainer>
-            <KnowledgeCardLoader text="正在生成知识卡片主题..." />
+            <KnowledgeCardLoader text="Generating knowledge card themes" />
           </KnowledgeCardLoaderContainer>
         )}
         

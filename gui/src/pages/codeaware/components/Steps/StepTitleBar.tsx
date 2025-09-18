@@ -203,11 +203,11 @@ const StepTitleBar: React.FC<StepTitleBarProps> = ({
 
   // Tooltip text based on step status
   const getTooltipText = () => {
-    if (disabled) return "代码编辑模式下不可用";
-    if (stepStatus === "generating") return "代码正在生成中...";
-    if (stepStatus === "generated") return "步骤代码已生成，更改step信息后可重新生成";
-    if (isStepDirty) return "重新生成代码";
-    return "执行到此步骤";
+    if (disabled) return "Disabled in code edit mode";
+    if (stepStatus === "generating") return "Generating Code...";
+    if (stepStatus === "generated") return "Code Generated - Confirm to Proceed";
+    if (isStepDirty) return "Rerun Step";
+    return "Execute Until This Step";
   };
 
   return (

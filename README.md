@@ -8,7 +8,7 @@
 
 <div align="center">
 
-**CodeAware 是一个基于 Continue 的智能代码学习辅助工具，帮助开发者通过结构化的需求分解、步骤生成和知识卡片来理解和编写代码**
+**CodeAware 是一个基于[Continue](https://github.com/continuedev/continue) 的智能代码项目学习辅助工具，帮助开发者通过结构化的项目分解与高亮对应来自主理解和编写项目代码**
 
 </div>
 
@@ -26,7 +26,7 @@
 
 通过智能需求分解功能，将复杂的编程任务拆解为可管理的学习目标
 
-![requirements](docs/static/img/requirements.gif)
+<!--![requirements](docs/static/img/requirements.gif)>-->
 
 **核心组件：**
 - `RequirementEditor.tsx` - 需求编辑器，支持富文本编辑

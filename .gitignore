@@ -169,3 +169,7 @@ extensions/.continue-debug/
 *.vsix
 
 .continuerules
+.codeaware-logs/
+.codestudy-logs/
+.continue/
+.devcontainer/

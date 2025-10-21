@@ -14,7 +14,7 @@ import {
     constructFindStepRelatedCodeLinesPrompt,
     constructGenerateCodePrompt,
     constructGenerateKnowledgeCardDetailPrompt,
-    constructGenerateKnowledgeCardTestsPrompt, // 新增测试题生成prompt
+    constructGenerateKnowledgeCardTestsPrompt,
     constructGenerateKnowledgeCardThemesFromQueryPrompt,
     constructGenerateKnowledgeCardThemesPrompt,
     constructGenerateStepsPrompt,
@@ -41,7 +41,7 @@ import {
     setKnowledgeCardError,
     setKnowledgeCardGenerationStatus,
     setKnowledgeCardLoading,
-    setKnowledgeCardTestsLoading, // 新增：导入测试题loading状态action
+    setKnowledgeCardTestsLoading,
     setLearningGoal,
     setRequirementChunks,
     setSaqTestLoading,
@@ -62,8 +62,21 @@ import {
 } from "../slices/codeAwareSlice";
 import { selectDefaultModel } from "../slices/configSlice";
 import { ThunkApiType } from "../store";
+import {
+    Logger,
+    MAX_RETRIES,
+    parseLLMJsonResponse,
+    retryLLMRequest,
+    validateLLMResponse
+} from "./codeAwareGenerationHelpers";
 
-// 辅助函数：检查并更新高级步骤的完成状态
+// ========================================
+// Helper Functions
+// ========================================
+
+/**
+ * 检查并更新高级步骤的完成状态
+ */
 export const checkAndUpdateHighLevelStepCompletion = createAsyncThunk<
     void,
     void,
@@ -72,11 +85,9 @@ export const checkAndUpdateHighLevelStepCompletion = createAsyncThunk<
     "codeAware/checkAndUpdateHighLevelStepCompletion",
     async (_, { dispatch, getState }) => {
         const state = getState();
-        const steps = state.codeAwareSession.steps;
-        const stepToHighLevelMappings = state.codeAwareSession.stepToHighLevelMappings;
-        const highLevelSteps = state.codeAwareSession.highLevelSteps;
+        const { steps, stepToHighLevelMappings, highLevelSteps } = state.codeAwareSession;
 
-        // 为每个高级步骤检查其对应的所有步骤是否都已生成
+        // 检查每个高级步骤对应的所有步骤是否都已生成
         highLevelSteps.forEach(highLevelStep => {
             const relatedSteps = stepToHighLevelMappings
                 .filter(mapping => mapping.highLevelStepId === highLevelStep.id)
@@ -98,7 +109,9 @@ export const checkAndUpdateHighLevelStepCompletion = createAsyncThunk<
     }
 );
 
-// 辅助函数：处理新的代码块映射格式（只有行号范围）并转换为旧格式
+/**
+ * 处理新的代码块映射格式（只有行号范围）并转换为旧格式
+ */
 function processCodeChunkMappingResponse(
     mappingResponse: any,
     generatedCode: string
@@ -822,46 +835,24 @@ export const generateStepsFromRequirement = createAsyncThunk<
                 throw new Error("Default model not defined");
             }
 
-            // call LLM to generate steps with retry mechanism
+            // Generate steps with retry mechanism
             const prompt = constructGenerateStepsPrompt(userRequirement);
-            const maxRetries = 3;
-            let lastError: Error | null = null;
-            let result: any = null;
-
-            for (let attempt = 1; attempt <= maxRetries; attempt++) {
-                try {
-                    console.log(`🔄 Attempt ${attempt}/${maxRetries} to generate steps...`);
-                    
-                    result = await extra.ideMessenger.request("llm/complete", {
+            
+            const result: any = await retryLLMRequest(
+                async () => {
+                    const res = await extra.ideMessenger.request("llm/complete", {
                         prompt: prompt,
-                        completionOptions: {}, // 根据需要配置
+                        completionOptions: {},
                         title: defaultModel.title
                     });
-
-                    if (result.status === "success" && result.content) {
-                        console.log("✅ Steps generation successful on attempt", attempt);
-                        break;
-                    } else {
-                        throw new Error(`LLM request failed: status=${result.status}, hasContent=${!!result.content}`);
-                    }
-                } catch (error) {
-                    lastError = error instanceof Error ? error : new Error(String(error));
-                    console.warn(`⚠️ Steps generation attempt ${attempt}/${maxRetries} failed:`, lastError.message);
-                    
-                    if (attempt < maxRetries) {
-                        // Wait before retry (exponential backoff)
-                        const waitTime = Math.pow(2, attempt) * 1000; // 2s, 4s, 8s
-                        console.log(`⏱️ Waiting ${waitTime}ms before retry...`);
-                        await new Promise(resolve => setTimeout(resolve, waitTime));
-                    }
+                    validateLLMResponse(res, "Generate Steps");
+                    return res;
+                },
+                { 
+                    operationName: "Generate Steps",
+                    maxRetries: MAX_RETRIES
                 }
-            }
-
-            // 提取信息，更新到Slice中
-            if (!result || result.status !== "success" || !result.content) {
-                dispatch(setUserRequirementStatus("editing"));
-                throw new Error(`LLM request to generate steps failed after ${maxRetries} attempts: ${lastError?.message || "Unknown error"}`);
-            }
+            );
 
             //要初始化设置的一些值，同时要更新的是userRequirement, 并且需要设置learning goal;
             let parsedSteps: StepItem[] = [];
@@ -875,8 +866,26 @@ export const generateStepsFromRequirement = createAsyncThunk<
             
             // 解析 LLM 返回的 JSON 内容
             try {
-                const jsonResponse = JSON.parse(result.content);
-                console.log("LLM response JSON:", jsonResponse);
+                interface StepsResponse {
+                    title?: string;
+                    learning_goal?: string;
+                    high_level_steps?: string[];
+                    steps?: any[];
+                    requirement_chunks?: any[];
+                    step_to_high_level_mappings?: any[];
+                }
+                
+                const jsonResponse = parseLLMJsonResponse<StepsResponse>(
+                    result.content,
+                    "Generate Steps"
+                );
+                
+                Logger.debug("LLM response parsed", { 
+                    hasTitle: !!jsonResponse.title,
+                    hasSteps: !!jsonResponse.steps,
+                    stepsCount: jsonResponse.steps?.length || 0
+                });
+                
                 title = jsonResponse.title || "";
                 learningGoal = jsonResponse.learning_goal || "";
                 highLevelSteps = jsonResponse.high_level_steps || [];
@@ -1074,23 +1083,21 @@ export const generateKnowledgeCardDetail = createAsyncThunk<
                 taskDescription
             );
 
-            console.log("generateKnowledgeCardDetail called with:", {
+            Logger.debug("generateKnowledgeCardDetail called", {
                 stepId,
                 knowledgeCardId,
                 knowledgeCardTheme,
                 learningGoal,
                 taskDescription,
-                codeContext: codeContext.substring(0, 100) + "..." // 只打印前100个字符
+                codeContextLength: codeContext.length
             });
 
-            // 重试机制
-            for (let attempt = 1; attempt <= maxRetries; attempt++) {
-                try {
-                    console.log(`🔄 知识卡片生成尝试 ${attempt}/${maxRetries}`);
-                    
+            // 使用retryLLMRequest处理重试逻辑
+            const result = await retryLLMRequest(
+                async () => {
                     // 添加超时保护
-                    const timeoutPromise = new Promise((_, reject) => 
-                        setTimeout(() => reject(new Error("LLM请求超时")), 30000) // 30秒超时
+                    const timeoutPromise = new Promise<never>((_, reject) => 
+                        setTimeout(() => reject(new Error("LLM request timeout (30s)")), 30000)
                     );
                     
                     const llmPromise = extra.ideMessenger.request("llm/complete", {
@@ -1099,63 +1106,46 @@ export const generateKnowledgeCardDetail = createAsyncThunk<
                         title: defaultModel.title
                     });
                     
-                    const result: any = await Promise.race([llmPromise, timeoutPromise]);
-
-                    if (result.status !== "success" || !result.content) {
-                        throw new Error("LLM request failed or returned empty content");
-                    }
-
-                    console.log("LLM response for knowledge card:", result.content);
-
-                    // 解析 LLM 返回的 JSON 内容
-                    try {
-                        const jsonResponse = JSON.parse(result.content);
-                        const content = jsonResponse.content || "";
-                        const title = jsonResponse.title || knowledgeCardTheme;
-
-                        // 更新知识卡片内容（不包含测试题）
-                        dispatch(updateKnowledgeCardContent({
-                            stepId,
-                            cardId: knowledgeCardId,
-                            content
-                        }));
-                        
-                        // Log: 知识卡片内容生成完成
-                        await extra.ideMessenger.request("addCodeAwareLogEntry", {
-                            eventType: "user_get_knowledge_card_detail_generation_result",
-                            payload: {
-                                knowledgeCardTheme,
-                                title,
-                                contentLength: content.length,
-                                // 记录内容摘要（前200字符）
-                                contentSummary: content.substring(0, 200) + (content.length > 200 ? "..." : ""),
-                                timestamp: new Date().toISOString()
-                            }
-                        });
-                        
-                        console.log("✅ 知识卡片生成成功");
-                        
-                        return; // 成功，退出函数
-                        
-                    } catch (parseError) {
-                        throw new Error(`解析LLM响应失败: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
-                    }
-                    
-                } catch (error) {
-                    lastError = error instanceof Error ? error : new Error(String(error));
-                    console.warn(`⚠️ 知识卡片生成第 ${attempt} 次尝试失败:`, lastError.message);
-                    
-                    // 如果不是最后一次尝试，等待一段时间再重试
-                    if (attempt < maxRetries) {
-                        const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000); // 指数退避，最大5秒
-                        console.log(`⏱️ 等待 ${delay}ms 后重试...`);
-                        await new Promise(resolve => setTimeout(resolve, delay));
-                    }
+                    const res: any = await Promise.race([llmPromise, timeoutPromise]);
+                    validateLLMResponse(res, "Generate Knowledge Card Detail");
+                    return res;
+                },
+                {
+                    operationName: "Generate Knowledge Card Detail",
+                    maxRetries: MAX_RETRIES
                 }
-            }
+            );
+
+            Logger.success("LLM response received for knowledge card");
+
+            // 解析 LLM 返回的 JSON 内容
+            const jsonResponse = parseLLMJsonResponse<{content: string; title: string}>(
+                result.content,
+                "Generate Knowledge Card Detail"
+            );
+            const content = jsonResponse.content || "";
+            const title = jsonResponse.title || knowledgeCardTheme;
+
+            // 更新知识卡片内容（不包含测试题）
+            dispatch(updateKnowledgeCardContent({
+                stepId,
+                cardId: knowledgeCardId,
+                content
+            }));
             
-            // 如果所有重试都失败了，抛出最后一个错误
-            throw lastError || new Error("知识卡片生成失败");
+            // Log: 知识卡片内容生成完成
+            await extra.ideMessenger.request("addCodeAwareLogEntry", {
+                eventType: "user_get_knowledge_card_detail_generation_result",
+                payload: {
+                    knowledgeCardTheme,
+                    title,
+                    contentLength: content.length,
+                    contentSummary: content.substring(0, 200) + (content.length > 200 ? "..." : ""),
+                    timestamp: new Date().toISOString()
+                }
+            });
+            
+            Logger.success("Knowledge card generated successfully");
             
         } catch(error) {
             console.error("❌ 知识卡片生成最终失败:", error);
@@ -1252,14 +1242,11 @@ export const generateKnowledgeCardTests = createAsyncThunk<
                 codeContextLength: codeContext.length
             });
 
-            // 重试机制
-            for (let attempt = 1; attempt <= maxRetries; attempt++) {
-                try {
-                    console.log(`🔄 知识卡片测试题生成尝试 ${attempt}/${maxRetries}`);
-                    
-                    // 添加超时保护
-                    const timeoutPromise = new Promise((_, reject) => 
-                        setTimeout(() => reject(new Error("LLM请求超时")), 30000) // 30秒超时
+            // 使用retryLLMRequest处理重试逻辑
+            const result = await retryLLMRequest(
+                async () => {
+                    const timeoutPromise = new Promise<never>((_, reject) => 
+                        setTimeout(() => reject(new Error("LLM request timeout (30s)")), 30000)
                     );
                     
                     const llmPromise = extra.ideMessenger.request("llm/complete", {
@@ -1268,72 +1255,55 @@ export const generateKnowledgeCardTests = createAsyncThunk<
                         title: defaultModel.title
                     });
                     
-                    const result: any = await Promise.race([llmPromise, timeoutPromise]);
-
-                    if (result.status !== "success" || !result.content) {
-                        throw new Error("LLM request failed or returned empty content");
-                    }
-
-                    console.log("LLM response for knowledge card tests:", result.content);
-
-                    // 解析 LLM 返回的 JSON 内容
-                    try {
-                        const jsonResponse = JSON.parse(result.content);
-                        const testsFromLLM = jsonResponse.tests || [];
-
-                        // 为tests添加ID，编号方式为知识卡片ID + "-t-" + 递增编号
-                        const tests = testsFromLLM.map((test: any, index: number) => ({
-                            ...test,
-                            id: `${knowledgeCardId}-t-${index + 1}`
-                        }));
-
-                        // 更新知识卡片测试题
-                        dispatch(updateKnowledgeCardTests({
-                            stepId,
-                            cardId: knowledgeCardId,
-                            tests
-                        }));
-                        
-                        // Log: 知识卡片测试题生成完成
-                        await extra.ideMessenger.request("addCodeAwareLogEntry", {
-                            eventType: "user_get_knowledge_card_tests_generation_result",
-                            payload: {
-                                knowledgeCardTitle,
-                                testsCount: tests.length,
-                                // 记录测试题详情
-                                testsDetails: tests.map((test: any) => ({
-                                    questionType: test.question_type,
-                                    questionStem: test.question.stem,
-                                    standardAnswer: test.question.standard_answer,
-                                    options: test.question.options || []
-                                })),
-                                timestamp: new Date().toISOString()
-                            }
-                        });
-                        
-                        console.log("✅ 知识卡片测试题生成成功");
-                        
-                        return; // 成功，退出函数
-                        
-                    } catch (parseError) {
-                        throw new Error(`解析LLM响应失败: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
-                    }
-                    
-                } catch (error) {
-                    lastError = error instanceof Error ? error : new Error(String(error));
-                    console.warn(`⚠️ 知识卡片测试题生成第 ${attempt} 次尝试失败:`, lastError.message);
-                    
-                    // 如果不是最后一次尝试，等待一段时间再重试
-                    if (attempt < maxRetries) {
-                        const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000); // 指数退避，最大5秒
-                        console.log(`⏱️ 等待 ${delay}ms 后重试...`);
-                        await new Promise(resolve => setTimeout(resolve, delay));
-                    }
+                    const res: any = await Promise.race([llmPromise, timeoutPromise]);
+                    validateLLMResponse(res, "Generate Knowledge Card Tests");
+                    return res;
+                },
+                {
+                    operationName: "Generate Knowledge Card Tests",
+                    maxRetries: MAX_RETRIES
                 }
-            }
+            );
+
+            Logger.success("LLM response received for knowledge card tests");
+
+            // 解析 LLM 返回的 JSON 内容
+            const jsonResponse = parseLLMJsonResponse<{tests: any[]}>(
+                result.content,
+                "Generate Knowledge Card Tests"
+            );
+            const testsFromLLM = jsonResponse.tests || [];
+
+            // 为tests添加ID
+            const tests = testsFromLLM.map((test: any, index: number) => ({
+                ...test,
+                id: `${knowledgeCardId}-t-${index + 1}`
+            }));
+
+            // 更新知识卡片测试题
+            dispatch(updateKnowledgeCardTests({
+                stepId,
+                cardId: knowledgeCardId,
+                tests
+            }));
             
-            // 如果所有重试都失败了，抛出最后一个错误
-            throw lastError || new Error("知识卡片测试题生成失败");
+            // Log: 知识卡片测试题生成完成
+            await extra.ideMessenger.request("addCodeAwareLogEntry", {
+                eventType: "user_get_knowledge_card_tests_generation_result",
+                payload: {
+                    knowledgeCardTitle,
+                    testsCount: tests.length,
+                    testsDetails: tests.map((test: any) => ({
+                        questionType: test.question_type,
+                        questionStem: test.question.stem,
+                        standardAnswer: test.question.standard_answer,
+                        options: test.question.options || []
+                    })),
+                    timestamp: new Date().toISOString()
+                }
+            });
+            
+            Logger.success("Knowledge card tests generated successfully");
             
         } catch(error) {
             console.error("❌ 知识卡片测试题生成最终失败:", error);
@@ -1438,18 +1408,11 @@ export const generateKnowledgeCardThemes = createAsyncThunk<
                 currentStatus: state.codeAwareSession.steps.find(s => s.id === stepId)?.knowledgeCardGenerationStatus
             });
 
-            // 重试机制
-            const maxRetries = 3;
-            let lastError: Error | null = null;
-            let result: any = null;
-
-            for (let attempt = 1; attempt <= maxRetries; attempt++) {
-                try {
-                    console.log(`🔄 知识卡片主题生成尝试 ${attempt}/${maxRetries}`);
-                    
-                    // 添加超时保护
-                    const timeoutPromise = new Promise((_, reject) => 
-                        setTimeout(() => reject(new Error("LLM请求超时")), 30000) // 30秒超时
+            // 使用retryLLMRequest处理重试逻辑
+            const result: any = await retryLLMRequest(
+                async () => {
+                    const timeoutPromise = new Promise<never>((_, reject) => 
+                        setTimeout(() => reject(new Error("LLM request timeout (30s)")), 30000)
                     );
                     
                     const llmPromise = extra.ideMessenger.request("llm/complete", {
@@ -1458,32 +1421,17 @@ export const generateKnowledgeCardThemes = createAsyncThunk<
                         title: defaultModel.title
                     });
                     
-                    result = await Promise.race([llmPromise, timeoutPromise]);
-
-                    if (result.status !== "success" || !result.content) {
-                        throw new Error("LLM request failed or returned empty content");
-                    }
-
-                    break; // 成功，跳出重试循环
-                } catch (error) {
-                    lastError = error instanceof Error ? error : new Error(String(error));
-                    console.warn(`⚠️ 知识卡片主题生成第 ${attempt} 次尝试失败:`, lastError.message);
-                    
-                    // 如果不是最后一次尝试，等待一段时间再重试
-                    if (attempt < maxRetries) {
-                        const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000); // 指数退避
-                        console.log(`⏱️ 等待 ${delay}ms 后重试...`);
-                        await new Promise(resolve => setTimeout(resolve, delay));
-                    }
+                    const res: any = await Promise.race([llmPromise, timeoutPromise]);
+                    validateLLMResponse(res, "Generate Knowledge Card Themes");
+                    return res;
+                },
+                {
+                    operationName: "Generate Knowledge Card Themes",
+                    maxRetries: MAX_RETRIES
                 }
-            }
+            );
 
-            // 如果所有重试都失败，抛出错误
-            if (!result || result.status !== "success" || !result.content) {
-                throw lastError || new Error("知识卡片主题生成失败");
-            }
-
-            console.log("LLM response for knowledge card themes:", result.content);
+            Logger.success("LLM response received for knowledge card themes");
 
             // 解析 LLM 返回的 JSON 内容
             try {
@@ -1853,18 +1801,11 @@ export const generateKnowledgeCardThemesFromQuery = createAsyncThunk<
                 currentStatus: state.codeAwareSession.steps.find(s => s.id === stepId)?.knowledgeCardGenerationStatus
             });
 
-            // 重试机制
-            const maxRetries = 3;
-            let lastError: Error | null = null;
-            let result: any = null;
-
-            for (let attempt = 1; attempt <= maxRetries; attempt++) {
-                try {
-                    console.log(`🔄 基于查询的知识卡片主题生成尝试 ${attempt}/${maxRetries}`);
-                    
-                    // 添加超时保护
-                    const timeoutPromise = new Promise((_, reject) => 
-                        setTimeout(() => reject(new Error("LLM请求超时")), 30000) // 30秒超时
+            // 使用retryLLMRequest处理重试逻辑
+            const result: any = await retryLLMRequest(
+                async () => {
+                    const timeoutPromise = new Promise<never>((_, reject) => 
+                        setTimeout(() => reject(new Error("LLM request timeout (30s)")), 30000)
                     );
                     
                     const llmPromise = extra.ideMessenger.request("llm/complete", {
@@ -1873,32 +1814,17 @@ export const generateKnowledgeCardThemesFromQuery = createAsyncThunk<
                         title: defaultModel.title
                     });
                     
-                    result = await Promise.race([llmPromise, timeoutPromise]);
-
-                    if (result.status !== "success" || !result.content) {
-                        throw new Error("LLM request failed or returned empty content");
-                    }
-
-                    break; // 成功，跳出重试循环
-                } catch (error) {
-                    lastError = error instanceof Error ? error : new Error(String(error));
-                    console.warn(`⚠️ 基于查询的知识卡片主题生成第 ${attempt} 次尝试失败:`, lastError.message);
-                    
-                    // 如果不是最后一次尝试，等待一段时间再重试
-                    if (attempt < maxRetries) {
-                        const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000); // 指数退避
-                        console.log(`⏱️ 等待 ${delay}ms 后重试...`);
-                        await new Promise(resolve => setTimeout(resolve, delay));
-                    }
+                    const res: any = await Promise.race([llmPromise, timeoutPromise]);
+                    validateLLMResponse(res, "Generate Knowledge Card Themes From Query");
+                    return res;
+                },
+                {
+                    operationName: "Generate Knowledge Card Themes From Query",
+                    maxRetries: MAX_RETRIES
                 }
-            }
+            );
 
-            // 如果所有重试都失败，抛出错误
-            if (!result || result.status !== "success" || !result.content) {
-                throw lastError || new Error("基于查询的知识卡片主题生成失败");
-            }
-
-            console.log("LLM response for knowledge card themes from query:", result.content);
+            Logger.success("LLM response received for knowledge card themes from query");
 
             // 解析 LLM 返回的 JSON 内容
             try {
@@ -2321,45 +2247,24 @@ export const generateCodeFromSteps = createAsyncThunk<
                 isLastStep
             );
 
-            // 第一步：调用LLM生成代码，带重试机制
-            const maxRetries = 3;
-            let lastError: Error | null = null;
-            let codeResult: any = null;
-
-            for (let attempt = 1; attempt <= maxRetries; attempt++) {
-                try {
-                    console.log(`🔄 第一步代码生成尝试 ${attempt}/${maxRetries}...`);
-                    
-                    codeResult = await extra.ideMessenger.request("llm/complete", {
+            // 第一步：调用LLM生成代码，使用retryLLMRequest处理重试逻辑
+            const codeResult: any = await retryLLMRequest(
+                async () => {
+                    const res = await extra.ideMessenger.request("llm/complete", {
                         prompt: codePrompt,
                         completionOptions: {},
                         title: defaultModel.title
                     });
-
-                    if (codeResult.status === "success" && codeResult.content) {
-                        console.log("✅ 第一步代码生成成功");
-                        break;
-                    } else {
-                        throw new Error(`LLM request failed: status=${codeResult.status}, hasContent=${!!codeResult.content}`);
-                    }
-                } catch (error) {
-                    lastError = error instanceof Error ? error : new Error(String(error));
-                    console.warn(`⚠️ 第一步代码生成尝试 ${attempt}/${maxRetries} 失败:`, lastError.message);
-                    
-                    if (attempt < maxRetries) {
-                        const waitTime = Math.pow(2, attempt) * 1000;
-                        console.log(`⏱️ 等待 ${waitTime}ms 后重试...`);
-                        await new Promise(resolve => setTimeout(resolve, waitTime));
-                    }
+                    validateLLMResponse(res, "Generate Code From Steps");
+                    return res;
+                },
+                {
+                    operationName: "Generate Code From Steps",
+                    maxRetries: MAX_RETRIES
                 }
-            }
+            );
 
-            if (!codeResult || codeResult.status !== "success" || !codeResult.content) {
-                orderedSteps.forEach(step => {
-                    dispatch(setStepStatus({ stepId: step.id, status: "confirmed" }));
-                });
-                throw new Error(`第一步代码生成失败，重试 ${maxRetries} 次后仍然失败: ${lastError?.message || "Unknown error"}`);
-            }
+            Logger.success("Code generation completed successfully");
 
             // 解析第一步的响应
             try {
@@ -2436,53 +2341,42 @@ export const generateCodeFromSteps = createAsyncThunk<
                     step.abstract
                 );
 
-                console.log(`🔍 为步骤 ${step.id} 创建查找代码行请求...`);
+                Logger.info(`Finding code lines for step ${step.id}`);
 
-                // 为每个步骤的请求添加重试机制
-                for (let attempt = 1; attempt <= maxRetries; attempt++) {
-                    try {
-                        const result = await extra.ideMessenger.request("llm/complete", {
-                            prompt: prompt,
-                            completionOptions: {},
-                            title: defaultModel.title
-                        });
+                // 使用retryLLMRequest处理重试逻辑
+                try {
+                    const result = await retryLLMRequest(
+                        async () => {
+                            const res = await extra.ideMessenger.request("llm/complete", {
+                                prompt: prompt,
+                                completionOptions: {},
+                                title: defaultModel.title
+                            });
+                            validateLLMResponse(res, `Find Code Lines for Step ${step.title}`);
+                            return res;
+                        },
+                        {
+                            operationName: `Find Code Lines for Step ${step.title}`,
+                            maxRetries: MAX_RETRIES
+                        }
+                    );
 
-                        if (result.status === "success" && result.content) {
-                            console.log(`✅ 步骤 ${step.id} 代码行查找成功`);
-                            return {
-                                stepId: step.id,
-                                stepTitle: step.title,
-                                stepAbstract: step.abstract,
-                                result: result
-                            };
-                        } else {
-                            throw new Error(`LLM request failed for step ${step.id}: status=${result.status}`);
-                        }
-                    } catch (error) {
-                        console.warn(`⚠️ 步骤 ${step.id} 代码行查找尝试 ${attempt}/${maxRetries} 失败:`, error);
-                        
-                        if (attempt < maxRetries) {
-                            const waitTime = Math.pow(2, attempt) * 1000;
-                            await new Promise(resolve => setTimeout(resolve, waitTime));
-                        } else {
-                            console.error(`❌ 步骤 ${step.id} 代码行查找最终失败`);
-                            return {
-                                stepId: step.id,
-                                stepTitle: step.title,
-                                stepAbstract: step.abstract,
-                                result: null
-                            };
-                        }
-                    }
+                    Logger.success(`Code lines found for step ${step.id}`);
+                    return {
+                        stepId: step.id,
+                        stepTitle: step.title,
+                        stepAbstract: step.abstract,
+                        result: result
+                    };
+                } catch (error) {
+                    Logger.error(`Failed to find code lines for step ${step.id}: ${error}`);
+                    return {
+                        stepId: step.id,
+                        stepTitle: step.title,
+                        stepAbstract: step.abstract,
+                        result: null
+                    };
                 }
-                
-                // 不应该到达这里，但为了类型安全
-                return {
-                    stepId: step.id,
-                    stepTitle: step.title,
-                    stepAbstract: step.abstract,
-                    result: null
-                };
             });
 
             // 等待所有并行请求完成
@@ -2833,18 +2727,11 @@ export const rerunStep = createAsyncThunk<
                 taskDescription
             );
 
-            // 第一步：调用LLM生成代码，带重试机制
-            const maxRetries = 3;
-            let lastError: Error | null = null;
-            let codeResult: any = null;
-
-            for (let attempt = 1; attempt <= maxRetries; attempt++) {
-                try {
-                    console.log(`🔄 代码生成尝试 ${attempt}/${maxRetries}`);
-                    
-                    // 添加超时保护
-                    const timeoutPromise = new Promise((_, reject) => 
-                        setTimeout(() => reject(new Error("LLM请求超时")), 60000) // 60秒超时
+            // 第一步：调用LLM生成代码，使用retryLLMRequest处理重试逻辑
+            const codeResult: any = await retryLLMRequest(
+                async () => {
+                    const timeoutPromise = new Promise<never>((_, reject) => 
+                        setTimeout(() => reject(new Error("LLM request timeout (60s)")), 60000)
                     );
                     
                     const llmPromise = extra.ideMessenger.request("llm/complete", {
@@ -2853,29 +2740,17 @@ export const rerunStep = createAsyncThunk<
                         title: defaultModel.title
                     });
                     
-                    codeResult = await Promise.race([llmPromise, timeoutPromise]);
-
-                    if (codeResult.status !== "success" || !codeResult.content) {
-                        throw new Error("LLM request failed or returned empty content");
-                    }
-
-                    break; // 成功，跳出重试循环
-                } catch (error) {
-                    lastError = error instanceof Error ? error : new Error(String(error));
-                    console.warn(`⚠️ 代码生成第 ${attempt} 次尝试失败:`, lastError.message);
-                    
-                    // 如果不是最后一次尝试，等待一段时间再重试
-                    if (attempt < maxRetries) {
-                        const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000); // 指数退避
-                        console.log(`⏱️ 等待 ${delay}ms 后重试...`);
-                        await new Promise(resolve => setTimeout(resolve, delay));
-                    }
+                    const res: any = await Promise.race([llmPromise, timeoutPromise]);
+                    validateLLMResponse(res, "Rerun Step Code Update");
+                    return res;
+                },
+                {
+                    operationName: "Rerun Step Code Update",
+                    maxRetries: MAX_RETRIES
                 }
-            }
+            );
 
-            if (!codeResult || codeResult.status !== "success" || !codeResult.content) {
-                throw lastError || new Error("代码生成失败");
-            }
+            Logger.success("Code update completed successfully");
 
             // 解析第一步的响应
             try {
@@ -2917,53 +2792,42 @@ export const rerunStep = createAsyncThunk<
                     step.abstract
                 );
 
-                console.log(`🔍 为步骤 ${step.id} 创建查找代码行请求...`);
+                Logger.info(`Finding code lines for step ${step.id} (rerun)`);
 
-                // 为每个步骤的请求添加重试机制
-                for (let attempt = 1; attempt <= maxRetries; attempt++) {
-                    try {
-                        const result = await extra.ideMessenger.request("llm/complete", {
-                            prompt: prompt,
-                            completionOptions: {},
-                            title: defaultModel.title
-                        });
+                // 使用retryLLMRequest处理重试逻辑
+                try {
+                    const result = await retryLLMRequest(
+                        async () => {
+                            const res = await extra.ideMessenger.request("llm/complete", {
+                                prompt: prompt,
+                                completionOptions: {},
+                                title: defaultModel.title
+                            });
+                            validateLLMResponse(res, `Find Code Lines for Step ${step.title} (Rerun)`);
+                            return res;
+                        },
+                        {
+                            operationName: `Find Code Lines for Step ${step.title} (Rerun)`,
+                            maxRetries: MAX_RETRIES
+                        }
+                    );
 
-                        if (result.status === "success" && result.content) {
-                            console.log(`✅ 步骤 ${step.id} 代码行查找成功`);
-                            return {
-                                stepId: step.id,
-                                stepTitle: step.title,
-                                stepAbstract: step.abstract,
-                                result: result
-                            };
-                        } else {
-                            throw new Error(`LLM request failed for step ${step.id}: status=${result.status}`);
-                        }
-                    } catch (error) {
-                        console.warn(`⚠️ 步骤 ${step.id} 代码行查找尝试 ${attempt}/${maxRetries} 失败:`, error);
-                        
-                        if (attempt < maxRetries) {
-                            const waitTime = Math.pow(2, attempt) * 1000;
-                            await new Promise(resolve => setTimeout(resolve, waitTime));
-                        } else {
-                            console.error(`❌ 步骤 ${step.id} 代码行查找最终失败`);
-                            return {
-                                stepId: step.id,
-                                stepTitle: step.title,
-                                stepAbstract: step.abstract,
-                                result: null
-                            };
-                        }
-                    }
+                    Logger.success(`Code lines found for step ${step.id} (rerun)`);
+                    return {
+                        stepId: step.id,
+                        stepTitle: step.title,
+                        stepAbstract: step.abstract,
+                        result: result
+                    };
+                } catch (error) {
+                    Logger.error(`Failed to find code lines for step ${step.id} (rerun): ${error}`);
+                    return {
+                        stepId: step.id,
+                        stepTitle: step.title,
+                        stepAbstract: step.abstract,
+                        result: null
+                    };
                 }
-                
-                // 不应该到达这里，但为了类型安全
-                return {
-                    stepId: step.id,
-                    stepTitle: step.title,
-                    stepAbstract: step.abstract,
-                    result: null
-                };
             });
 
             // 等待所有并行请求完成
@@ -3640,53 +3504,28 @@ export const processCodeUpdates = createAsyncThunk<
                 throw new Error("Default model not defined");
             }
 
-            // Call LLM to analyze code changes and update steps with retry mechanism
+            // Call LLM to analyze code changes and update steps using retryLLMRequest
             const prompt = constructProcessCodeChangesPrompt(previousContent, currentContent, codeDiff, relevantSteps);
-            const maxRetries = 3;
-            let lastError: Error | null = null;
-            let result: any = null;
 
-            console.log("🤖 Calling LLM to process code changes...", prompt);
+            Logger.info("Calling LLM to process code changes");
             
-            for (let attempt = 1; attempt <= maxRetries; attempt++) {
-                try {
-                    console.log(`🔄 Attempt ${attempt}/${maxRetries} to call LLM...`);
-                    
-                    result = await extra.ideMessenger.request("llm/complete", {
+            const result: any = await retryLLMRequest(
+                async () => {
+                    const res = await extra.ideMessenger.request("llm/complete", {
                         prompt: prompt,
                         completionOptions: {},
                         title: defaultModel.title
                     });
-
-                    if (result.status === "success" && result.content) {
-                        console.log("✅ LLM request successful on attempt", attempt);
-                        break;
-                    } else {
-                        throw new Error(`LLM request failed: status=${result.status}, hasContent=${!!result.content}`);
-                    }
-                } catch (error) {
-                    lastError = error instanceof Error ? error : new Error(String(error));
-                    console.warn(`⚠️ Attempt ${attempt}/${maxRetries} failed:`, lastError.message);
-                    
-                    if (attempt < maxRetries) {
-                        // Wait before retry (exponential backoff)
-                        const waitTime = Math.pow(2, attempt) * 1000; // 2s, 4s, 8s
-                        console.log(`⏱️ Waiting ${waitTime}ms before retry...`);
-                        await new Promise(resolve => setTimeout(resolve, waitTime));
-                    }
+                    validateLLMResponse(res, "Process Code Updates");
+                    return res;
+                },
+                {
+                    operationName: "Process Code Updates",
+                    maxRetries: MAX_RETRIES
                 }
-            }
+            );
 
-            if (!result || result.status !== "success" || !result.content) {
-                // If all retries failed, restore step status and throw error
-                console.error("❌ All LLM retry attempts failed, restoring step status...");
-                for (const step of codeDirtySteps) {
-                    dispatch(setStepStatus({ stepId: step.id, status: "generated" }));
-                }
-                throw new Error(`LLM request failed after ${maxRetries} attempts: ${lastError?.message || "Unknown error"}`);
-            }
-
-            console.log("LLM response for code update analysis:", result.content);
+            Logger.success("Code update analysis completed");
 
             // Parse LLM response with error handling
             try {
@@ -3913,9 +3752,6 @@ export const processSaqSubmission = createAsyncThunk<
 >(
     "codeAware/processSaqSubmission",
     async ({ testId, userAnswer }, { getState, dispatch, extra }) => {
-        const maxRetries = 3; // 最大重试次数
-        let lastError: Error | null = null;
-        
         try {
             // Log: 用户提交简答题答案
             await extra.ideMessenger.request("addCodeAwareLogEntry", {
@@ -3964,104 +3800,67 @@ export const processSaqSubmission = createAsyncThunk<
                 userAnswer
             );
 
-            // 重试机制
-            for (let attempt = 1; attempt <= maxRetries; attempt++) {
-                try {
-                    console.log(`🔄 [CodeAware] SAQ评估尝试 ${attempt}/${maxRetries} for test: ${testId}`);
-
-                    // Get LLM response
-                    const result = await extra.ideMessenger.request("llm/complete", {
-                        prompt,
-                        completionOptions: {},
-                        title: defaultModel.title
-                    });
-
-                    if (result.status !== "success" || !result.content) {
-                        throw new Error("LLM request failed");
-                    }
-
-                    console.log("📝 [CodeAware] LLM evaluation response:", result.content);
-
-                    // Parse the response
-                    try {
-                        const evaluationResult = JSON.parse(result.content.trim()) as {
-                            isCorrect: boolean;
-                            remarks: string;
-                        };
-
-                        // Update the test result in Redux store
-                        dispatch(updateSaqTestResult({
-                            stepId,
-                            knowledgeCardId,
-                            testId,
-                            userAnswer,
-                            isCorrect: evaluationResult.isCorrect,
-                            remarks: evaluationResult.remarks
-                        }));
-
-                        // Log: 简答题评估完成
-                        await extra.ideMessenger.request("addCodeAwareLogEntry", {
-                            eventType: "user_get_saq_submission_processing_result",
-                            payload: {
-                                testId,
-                                userAnswer,
-                                isCorrect: evaluationResult.isCorrect,
-                                remarks: evaluationResult.remarks,
-                                timestamp: new Date().toISOString()
-                            }
+            // 使用retryLLMRequest处理重试逻辑
+            try {
+                const result: any = await retryLLMRequest(
+                    async () => {
+                        const res = await extra.ideMessenger.request("llm/complete", {
+                            prompt,
+                            completionOptions: {},
+                            title: defaultModel.title
                         });
-
-                        console.log("✅ [CodeAware] SAQ evaluation completed:", {
-                            testId,
-                            isCorrect: evaluationResult.isCorrect,
-                            remarks: evaluationResult.remarks
-                        });
-
-                        // 成功，跳出重试循环
-                        break;
-
-                    } catch (parseError) {
-                        console.error(`❌ [CodeAware] SAQ评估尝试 ${attempt} 解析失败:`, parseError);
-                        
-                        if (attempt === maxRetries) {
-                            // 最后一次尝试仍然失败，使用fallback
-                            console.log("🔄 [CodeAware] 所有重试失败，使用fallback保存用户答案");
-                            dispatch(updateSaqTestResult({
-                                stepId,
-                                knowledgeCardId,
-                                testId,
-                                userAnswer,
-                                isCorrect: false,
-                                remarks: `无法评估答案（已重试${maxRetries}次），请稍后重试。`
-                            }));
-                            break;
-                        } else {
-                            // 继续重试
-                            throw parseError;
-                        }
+                        validateLLMResponse(res, "Process SAQ Submission");
+                        return res;
+                    },
+                    {
+                        operationName: "Process SAQ Submission",
+                        maxRetries: MAX_RETRIES
                     }
+                );
 
-                } catch (attemptError) {
-                    lastError = attemptError instanceof Error ? attemptError : new Error(String(attemptError));
-                    console.warn(`⚠️ [CodeAware] SAQ评估尝试 ${attempt} 失败:`, lastError.message);
-                    
-                    if (attempt === maxRetries) {
-                        console.error(`❌ [CodeAware] SAQ评估最终失败，已重试 ${maxRetries} 次`);
-                        // 最后一次尝试仍然失败，使用fallback
-                        dispatch(updateSaqTestResult({
-                            stepId,
-                            knowledgeCardId,
-                            testId,
-                            userAnswer,
-                            isCorrect: false,
-                            remarks: `评估失败（已重试${maxRetries}次）: ${lastError.message}`
-                        }));
-                        break;
+                Logger.success("SAQ evaluation completed");
+
+                // Parse the response
+                const evaluationResult = parseLLMJsonResponse<{
+                    isCorrect: boolean;
+                    remarks: string;
+                }>(result.content, "Process SAQ Submission");
+
+                // Update the test result in Redux store
+                dispatch(updateSaqTestResult({
+                    stepId,
+                    knowledgeCardId,
+                    testId,
+                    userAnswer,
+                    isCorrect: evaluationResult.isCorrect,
+                    remarks: evaluationResult.remarks
+                }));
+
+                // Log: 简答题评估完成
+                await extra.ideMessenger.request("addCodeAwareLogEntry", {
+                    eventType: "user_get_saq_submission_processing_result",
+                    payload: {
+                        testId,
+                        userAnswer,
+                        isCorrect: evaluationResult.isCorrect,
+                        remarks: evaluationResult.remarks,
+                        timestamp: new Date().toISOString()
                     }
-                    
-                    // 等待一段时间再重试
-                    await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
-                }
+                });
+
+                Logger.success(`SAQ evaluation completed: ${testId}, isCorrect=${evaluationResult.isCorrect}`);
+
+            } catch (error) {
+                // 如果所有重试都失败，使用fallback保存用户答案
+                Logger.error(`SAQ evaluation failed after all retries: ${error}`);
+                dispatch(updateSaqTestResult({
+                    stepId,
+                    knowledgeCardId,
+                    testId,
+                    userAnswer,
+                    isCorrect: false,
+                    remarks: `评估失败（已重试${MAX_RETRIES}次）: ${error instanceof Error ? error.message : String(error)}`
+                }));
             }
 
             // Clear loading state
@@ -4103,9 +3902,6 @@ export const processGlobalQuestion = createAsyncThunk<
 >(
     "codeAware/processGlobalQuestion",
     async ({ question, currentCode }, { getState, dispatch, extra }) => {
-        const maxRetries = 3; // 最大重试次数
-        let lastError: Error | null = null;
-        
         try {
             // Log: 用户提交全局问题
             await extra.ideMessenger.request("addCodeAwareLogEntry", {
@@ -4146,74 +3942,35 @@ export const processGlobalQuestion = createAsyncThunk<
                 allStepsInfo,
                 taskDescription
             );
+
+            Logger.info("Sending global question request to LLM");
             
-            console.log("📤 [CodeAware] Sending global question request to LLM");
-            
-            // 重试机制
-            let result: any = null;
-            for (let attempt = 1; attempt <= maxRetries; attempt++) {
-                try {
-                    console.log(`🔄 [CodeAware] 全局提问尝试 ${attempt}/${maxRetries}`);
-                    
-                    // 发送请求到LLM
-                    result = await extra.ideMessenger.request("llm/complete", {
+            // 使用retryLLMRequest处理重试逻辑
+            const result: any = await retryLLMRequest(
+                async () => {
+                    const res = await extra.ideMessenger.request("llm/complete", {
                         prompt: prompt,
                         completionOptions: {},
                         title: defaultModel.title
                     });
-                    
-                    console.log("📥 [CodeAware] Received global question response:", result);
-                    
-                    if (result.status !== "success" || !result.content || !result.content.trim()) {
-                        throw new Error("LLM 返回了空响应或失败状态");
-                    }
-                    
-                    // 如果到达这里，说明请求成功，跳出重试循环
-                    break;
-                    
-                } catch (attemptError) {
-                    lastError = attemptError instanceof Error ? attemptError : new Error(String(attemptError));
-                    console.warn(`⚠️ [CodeAware] 全局提问尝试 ${attempt} 失败:`, lastError.message);
-                    
-                    if (attempt === maxRetries) {
-                        console.error(`❌ [CodeAware] 全局提问最终失败，已重试 ${maxRetries} 次`);
-                        throw lastError;
-                    }
-                    
-                    // 等待一段时间再重试
-                    await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+                    validateLLMResponse(res, "Process Global Question");
+                    return res;
+                },
+                {
+                    operationName: "Process Global Question",
+                    maxRetries: MAX_RETRIES
                 }
-            }
-            
-            // 如果所有重试都失败了，抛出最后一个错误
-            if (!result || result.status !== "success" || !result.content) {
-                throw lastError || new Error("全局提问处理失败");
-            }
+            );
+
+            Logger.success("Global question response received");
             
             const fullResponse = result.content;
             
-            // 解析响应（带重试机制）
-            let parsedResponse: {
+            // 解析响应使用parseLLMJsonResponse
+            const parsedResponse = parseLLMJsonResponse<{
                 selected_step_id: string;
                 knowledge_card_themes: string[];
-            };
-            
-            for (let parseAttempt = 1; parseAttempt <= maxRetries; parseAttempt++) {
-                try {
-                    parsedResponse = JSON.parse(fullResponse);
-                    break; // 解析成功，跳出循环
-                } catch (parseError) {
-                    console.error(`❌ [CodeAware] 全局提问响应解析尝试 ${parseAttempt} 失败:`, parseError);
-                    
-                    if (parseAttempt === maxRetries) {
-                        throw new Error(`无法解析 LLM 响应（已重试${maxRetries}次），请重试`);
-                    }
-                    
-                    // 对于解析错误，我们不能重新发送请求，因为响应内容是固定的
-                    // 但我们可以稍等一下再试，以防是临时的处理问题
-                    await new Promise(resolve => setTimeout(resolve, 500));
-                }
-            }
+            }>(fullResponse, "Process Global Question");
             
             const { selected_step_id, knowledge_card_themes } = parsedResponse!;
             

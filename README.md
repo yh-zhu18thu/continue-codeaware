@@ -100,7 +100,6 @@ StepToHighLevelMapping {
 - `setHighLevelSteps` - 设置高级步骤
 - `setGeneratedSteps` - 设置详细步骤
 - `setStepToHighLevelMappings` - 设置步骤映射关系
-- `setRequirementChunks` - 设置需求分块
 - `setStepStatus` - 设置步骤状态
 - `setStepAbstract` - 更新步骤摘要
 - `updateHighLevelStepCompletion` - 更新高级步骤完成状态
@@ -116,9 +115,8 @@ StepToHighLevelMapping {
 输出: {
   title: string;                        // 会话标题
   learningGoal: string;                 // 学习目标
-  highLevelSteps: string[];             // 高级步骤列表
+  highLevelSteps: HighLevelStepItem[];  // 高级步骤列表
   steps: StepItem[];                    // 详细步骤列表
-  requirementChunks: RequirementChunk[]; // 需求分块
   stepToHighLevelMappings: StepToHighLevelMapping[]; // 映射关系
 }
 ```
@@ -309,7 +307,7 @@ codeEditModeSnapshot: {
 // 多元素映射关系
 CodeAwareMapping {
   codeChunkId?: string;
-  requirementChunkId?: string;
+  highLevelStepId?: string;  // 重命名：从 requirementChunkId 改为 highLevelStepId
   stepId?: string;
   knowledgeCardId?: string;
   isHighlighted: boolean;
@@ -323,10 +321,7 @@ CodeAwareMapping {
 HighlightEvent {
   sourceType: "code" | "requirement" | "step" | "knowledgeCard";
   identifier: string;  // 元素ID
-  additionalInfo?: {   // 额外信息用于模糊匹配
-    codeSnippet?: string;
-    semanticDescription?: string;
-  };
+  additionalInfo?: any; // 允许传递任何额外信息（StepItem, KnowledgeCardItem, CodeChunk等）
 }
 
 // IDE 通信标志
@@ -341,7 +336,6 @@ codeChunksToHighlightInIde: CodeChunk[];
 - `updateCodeAwareMappings` - 添加映射关系（自动去重）
 - `removeCodeAwareMappings` - 删除指定映射
 - `clearKnowledgeCardCodeMappings` - 清除知识卡片代码映射
-- `toggleRequirementChunkHighlight` - 切换需求块高亮
 - `resetIdeCommFlags` - 重置 IDE 通信标志
 
 **高亮逻辑** (`updateHighlight` Reducer)：
@@ -351,7 +345,7 @@ codeChunksToHighlightInIde: CodeChunk[];
    - 首先通过 identifier 精确匹配
    - 如果是代码类型且有 additionalInfo，使用元信息模糊匹配
 3. **收集关联元素 ID**：
-   - 从所有匹配的映射中提取 codeChunkId、requirementChunkId、stepId、knowledgeCardId
+   - 从所有匹配的映射中提取 codeChunkId、highLevelStepId、stepId、knowledgeCardId
    - 使用 Set 去重
 4. **清除旧高亮**：调用 `clearAllHighlights`
 5. **设置新高亮**：

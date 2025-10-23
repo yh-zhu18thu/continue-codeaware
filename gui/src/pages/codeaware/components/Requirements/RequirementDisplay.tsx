@@ -17,7 +17,6 @@ import {
 import { useAppSelector } from "../../../../redux/hooks";
 import {
     selectHighLevelSteps,
-    selectRequirementHighlightChunks,
     selectRequirementText
 } from "../../../../redux/slices/codeAwareSlice";
 import { useCodeAwareLogger } from "../../../../util/codeAwareWebViewLogger";
@@ -264,7 +263,6 @@ export default function RequirementDisplay({
     disabled = false,
 }: RequirementDisplayProps) {
     const requirementText = useAppSelector(selectRequirementText);
-    const highlightChunks = useAppSelector(selectRequirementHighlightChunks);
     const highLevelSteps = useAppSelector(selectHighLevelSteps);
 
     // CodeAware logger
@@ -278,11 +276,6 @@ export default function RequirementDisplay({
     // Monitor highlight state changes and trigger flickering
     useEffect(() => {
         console.log("🔍 RequirementDisplay state updated:");
-        console.log("- Highlight chunks:", highlightChunks.map(chunk => ({
-            id: chunk.id,
-            content: chunk.content.substring(0, 30) + "...",
-            isHighlighted: chunk.isHighlighted
-        })));
         console.log("- High level steps:", highLevelSteps.map(step => ({
             id: step.id,
             content: step.content.substring(0, 30) + "...",
@@ -291,12 +284,10 @@ export default function RequirementDisplay({
 
         const newFlickering = new Set<string>();
         
-        // 根据实际使用的数据源来决定监听哪个
-        const activeSteps = highLevelSteps.length > 0 ? highLevelSteps : highlightChunks;
-        console.log("✨ Active steps source:", highLevelSteps.length > 0 ? "highLevelSteps" : "highlightChunks");
+        console.log("✨ Active steps source: highLevelSteps");
         
         // Check each step for state changes - only flicker items that become highlighted
-        activeSteps.forEach(step => {
+        highLevelSteps.forEach(step => {
             const previousState = previousHighlightStatesRef.current.get(step.id);
             // Only add to flickering if the step becomes highlighted (false -> true)
             if (previousState === false && step.isHighlighted === true) {
@@ -326,11 +317,11 @@ export default function RequirementDisplay({
 
         // Update previous states after processing
         const newPreviousStates = new Map(previousHighlightStatesRef.current);
-        activeSteps.forEach(step => {
+        highLevelSteps.forEach(step => {
             newPreviousStates.set(step.id, step.isHighlighted);
         });
         previousHighlightStatesRef.current = newPreviousStates;
-    }, [highlightChunks, highLevelSteps]); // 监听两个数据源的变化
+    }, [highLevelSteps]); // 监听 highLevelSteps 的变化
 
     // Cleanup timeout on unmount
     useEffect(() => {
@@ -342,16 +333,15 @@ export default function RequirementDisplay({
     }, []);
 
     const handleChunkClick = async (chunkId: string) => {
-        // Find the chunk to get its content for logging
-        const chunk = highlightChunks.find(c => c.id === chunkId);
+        // Find the high level step to get its content for logging
         const step = highLevelSteps.find(s => s.id === chunkId);
         
         // Log high level step viewing start
         await logger.addLogEntry("user_view_and_highlight_high_level_step", {
             stepId: chunkId,
-            stepContent: (chunk?.content || step?.content || "").substring(0, 200), // First 200 chars for analysis
-            isFromHighLevelSteps: !!step,
-            isFromHighlightChunks: !!chunk,
+            stepContent: (step?.content || "").substring(0, 200), // First 200 chars for analysis
+            isFromHighLevelSteps: true,
+            isFromHighlightChunks: false,
             sourceComponent: "RequirementDisplay",
             timestamp: new Date().toISOString()
         });
@@ -385,7 +375,6 @@ export default function RequirementDisplay({
             // Log high level step finished viewing event before clearing highlights
             await logger.addLogEntry("user_finished_viewing_high_level_step", {
                 sourceComponent: "RequirementDisplay",
-                activeHighlightChunks: highlightChunks.filter(chunk => chunk.isHighlighted).length,
                 activeHighLevelSteps: highLevelSteps.filter(step => step.isHighlighted).length,
                 timestamp: new Date().toISOString()
             });
@@ -404,9 +393,9 @@ export default function RequirementDisplay({
         }
     };
 
-    // Create steps from high level steps or fallback to highlight chunks
+    // Create steps from high level steps
     const createSteps = () => {
-        // 优先使用高级步骤数据
+        // 使用高级步骤数据
         if (highLevelSteps.length > 0) {
             const steps = highLevelSteps.map((highLevelStep, index) => ({
                 id: highLevelStep.id,
@@ -419,36 +408,16 @@ export default function RequirementDisplay({
             return steps;
         }
 
-        // 回退到 highlight chunks
-        if (!highlightChunks.length) {
-            // If no highlight chunks, split requirement text by lines or sentences
-            const sentences = requirementText.split(/[.!?]+/).filter(s => s.trim().length > 0);
-            const steps = sentences.map((sentence, index) => ({
-                id: `sentence-${index}`,
-                content: sentence.trim(),
-                isHighlighted: false,
-                isCompleted: false,
-                label: sentence.trim(), // Use sentence content as label
-            }));
-            console.log("📋 Using sentences as data source");
-            return steps;
-        }
-
-        // Sort chunks by their position in the text and create steps
-        const sortedChunks = [...highlightChunks].sort((a, b) => {
-            const indexA = requirementText.indexOf(a.content);
-            const indexB = requirementText.indexOf(b.content);
-            return indexA - indexB;
-        });
-
-        const steps = sortedChunks.map((chunk, index) => ({
-            id: chunk.id,
-            content: chunk.content,
-            isHighlighted: chunk.isHighlighted,
-            isCompleted: false, // 默认未完成
-            label: chunk.content, // Use chunk content as label
+        // If no high level steps, split requirement text by lines or sentences
+        const sentences = requirementText.split(/[.!?]+/).filter(s => s.trim().length > 0);
+        const steps = sentences.map((sentence, index) => ({
+            id: `sentence-${index}`,
+            content: sentence.trim(),
+            isHighlighted: false,
+            isCompleted: false,
+            label: sentence.trim(), // Use sentence content as label
         }));
-        console.log("📋 Using highlight chunks as data source");
+        console.log("📋 Using sentences as data source");
         return steps;
     };
 

@@ -71,7 +71,7 @@ _**Assistant (copilot/claude-sonnet-4.5)**_
 
 ---
 
-_**User (2025-10-23 02:24Z)**_
+_**User (2025-10-23 02:29Z)**_
 
 现在redux管理和主要界面文件是分离的，我希望你重构这个README，以功能为主线，梳理这个项目，主要的功能是：Project Decomposition, Progressive Code Generation, Link Highlights, Knowledge Cards Interaction。除了codeAwareSlice, 我还希望你结合着codeAwareGeneration，每个功能分成功能介绍、交互效果实现、数据管理、智能生成的几部分
 
@@ -80,6 +80,378 @@ _**User (2025-10-23 02:24Z)**_
 _**Assistant (copilot/claude-sonnet-4.5)**_
 
 我将重构 README，以功能为主线来梳理整个项目。让我创建一个更清晰、更有结构的版本。 
+```
+
+```
+现在让我继续完成 README 的其余部分，并修复重复标题的问题： 
+```
+
+```
+最后修复剩余的格式问题： 
+```
+
+```
+完成！我已经成功重构了 README 文档，现在它以**功能为主线**进行组织。让我总结一下主要改进：
+
+## 📋 重构总结
+
+### ✨ 新的结构组织
+
+README 现在围绕**四大核心功能**进行组织：
+
+1. **🎯 项目分解 (Project Decomposition)**
+2. **💻 渐进式代码生成 (Progressive Code Generation)**
+3. **🔗 联动高亮 (Link Highlights)**
+4. **🎴 知识卡片交互 (Knowledge Cards Interaction)**
+
+### 📚 每个功能的完整文档结构
+
+每个核心功能都包含四个部分：
+
+#### 1. **功能介绍**
+- 功能概述
+- 核心特性列表
+- 应用场景
+
+#### 2. **交互效果实现**
+- 涉及的 UI 组件
+- 用户交互流程
+- 状态流转图
+- 视觉效果说明
+
+#### 3. **数据管理** (基于 `codeAwareSlice.ts`)
+- 相关数据结构定义
+- 状态管理 Actions
+- Selectors
+- 数据流转逻辑
+
+#### 4. **智能生成** (基于 `codeAwareGeneration.ts`)
+- 核心 Thunks 详解
+- 输入输出规格
+- 生成流程步骤
+- LLM 提示词策略
+- 重试和错误处理机制
+- 辅助函数说明
+
+### 🎯 新增的重要部分
+
+1. **架构设计**：
+   - 项目结构图
+   - 路由配置
+   - 状态管理架构
+   - IDE 通信机制
+
+2. **核心工作流程**：
+   - 完整学习流程图
+   - 状态同步机制
+
+3. **开发指南**：
+   - 环境设置
+   - 调试方法
+   - 添加新功能的步骤
+
+4. **日志和分析**：
+   - 记录的事件类型
+   - 日志数据结构
+
+### 🔧 技术亮点
+
+文档现在清晰展示了：
+
+- **数据驱动的架构**：Redux 状态如何驱动整个应用
+- **异步生成流程**：每个 Thunk 的详细工作原理
+- **映射系统**：需求-步骤-代码-知识卡片之间的关联机制
+- **智能匹配**：代码块定位、模糊匹配等算法
+- **增量更新**：如何在保留现有功能的基础上更新代码
+
+### 📖 可读性提升
+
+- ✅ 清晰的层级结构
+- ✅ 丰富的代码示例
+- ✅ 流程图和状态图
+- ✅ TypeScript 类型定义
+- ✅ 实际使用场景说明
+
+这份重构后的 README 不仅是用户手册，更是开发者深入理解 CodeAware 核心机制的完整技术文档！
+
+---
+
+_**User (2025-10-23 02:53Z)**_
+
+我意识到之前有一个历史遗留的requirementChunks，不再需要显示或者存储，请帮我删除逻辑，如果有一些还被依赖的功能，但起名字叫requirementChunks的，可以改名为highLevelSteps，请你帮我完成这个修复，并保证功能不变
+
+---
+
+_**Assistant (copilot/claude-sonnet-4.5)**_
+
+我来帮你清理 `requirementChunks` 的历史遗留逻辑，并将相关功能迁移到 `highLevelSteps`。让我先分析一下当前的使用情况。 现在让我检查 `index.d.ts` 中的类型定义和 `codeAwareGeneration.ts` 中的使用情况： 好的，我了解情况了。让我开始修复：
+
+1. **在 `index.d.ts` 中移除 `RequirementChunk` 类型定义**
+2. **在 `codeAwareSlice.ts` 中移除相关逻辑，将 `requirementChunkId` 替换为 `highLevelStepId`**
+3. **在 `codeAwareGeneration.ts` 中移除 `requirementChunks` 的生成和使用**
+4. **更新 UI 组件使用 `highLevelSteps`**
+
+让我们开始：
+
+### 1. 更新 `index.d.ts` 
+```
+
+```
+
+```
+
+```
+### 2. 更新 `codeAwareSlice.ts` 
+```
+
+```
+现在让我移除所有 `highlightChunks` 相关的 reducer 和逻辑，并将 `requirementChunkId` 替换为 `highLevelStepId`： 
+```
+
+```
+现在让我逐个修复这些错误。首先移除所有 `highlightChunks` 相关的 reducers： 
+```
+
+```
+让我继续修复，删除这两个 reducer： 
+```
+
+```
+现在修复其他地方的 `highlightChunks` 和 `requirementChunkId` 引用。让我从 `newCodeAwareSession` 开始： 
+```
+
+```
+现在我需要继续修复所有剩余的地方。让我一次性处理所有 `requirementChunkId` 到 `highLevelStepId` 的替换。由于涉及多个位置，我将分批进行： 
+```
+
+```
+现在让我继续修复。我需要将所有 `requirementChunkId` 替换为 `highLevelStepId`，并删除 `setRequirementChunks` reducer。由于文件较大，让我继续分批处理。让我先看 `updateHighlight` reducer 中的相关代码： 
+```
+
+```
+继续修复其他地方： 
+```
+
+```
+继续修复下一个位置： [object Object]
+
+---
+
+_**User (2025-10-23 03:00Z)**_
+
+@agent Continue: "Continue to iterate?"
+
+---
+
+_**Assistant (copilot/claude-sonnet-4.5)**_
+
+
+```
+
+```
+继续修复下一个位置： 
+```
+
+```
+继续修复剩余的位置。让我找到 `setRequirementChunks` 并删除它： 
+```
+
+```
+让我继续修复 `updateCodeAwareMappings`： 
+```
+
+```
+继续修复其他地方。让我处理 `resetSessionExceptRequirement`： 找到了 `resetSessionExceptRequirement` 中引用 `highlightChunks` 的地方（lines 847-849）。让我删除这几行： 
+```
+
+```
+继续修复 `clearAllCodeAndMappings` 中的 `requirementChunkId` 引用： 
+```
+
+```
+现在删除 `selectRequirementHighlightChunks` selector： 
+```
+
+```
+最后修复导出部分，删除已经删除的 reducers： 
+```
+
+```
+完美！`codeAwareSlice.ts` 应该已经没有编译错误了。现在让我检查一下： 太好了！`codeAwareSlice.ts` 已经修复完成。现在让我们继续处理 `codeAwareGeneration.ts`，先查看需要修改的地方： 让我先删除导入部分的 `RequirementChunk` 和 `setRequirementChunks`： 
+```
+
+```
+现在需要删除 `requirementChunks` 相关的所有逻辑。让我先查看行 860 附近的代码： 我发现这里的逻辑有点混乱。现在的做法是：既创建 `highLevelStepItems` 又创建 `requirementChunks`，内容是一样的。用户要求删除 `requirementChunks`，所以我们需要：
+
+1. 删除 `requirementChunks` 变量和相关逻辑
+2. 删除 `dispatch(setRequirementChunks(requirementChunks))` 
+3. 保留 `highLevelStepItems` 的逻辑
+4. 删除创建 mapping 时的 `requirementChunkId` 字段
+
+让我修复这一段： 
+```
+
+```
+好的！现在需要继续修复其他地方使用 `requirementChunkId` 的代码。让我继续查找并修复这些地方。让我先读取 1500-1650 行之间的代码看看上下文： 我看到这里是创建代码映射的逻辑。现在所有的 `requirementChunkId` 都应该改成 `highLevelStepId`。让我批量修复。首先需要理解逻辑：
+
+- `stepRequirementMapping` 查找的是步骤到 requirement 的映射，现在应该是步骤到 high-level step 的映射
+- 创建映射时的 `requirementChunkId` 字段应该改成 `highLevelStepId`
+
+让我先修复第一处 (lines 1500-1521): 
+```
+
+```
+继续修复第二处 (lines ~1530-1560): 
+```
+
+```
+现在让我读取下一段代码，继续修复： 
+```
+
+```
+继续修复下一段： 
+```
+
+```
+现在读取下一段以继续修复： 
+```
+
+```
+很好！现在让我检查一下还有哪些错误： 还有很多错误。看起来这个文件有超过 4000 行，还有很多地方使用了 `requirementChunkId`。我需要使用更高效的方式。让我使用 grep 搜索所有剩余的 `requirementChunkId` 使用： 看到大约有 100 多处使用。因为这个文件太大，我采用分批修复的方式。由于我已经展示了修复逻辑的模式：
+
+1. `requirementChunkId` → `highLevelStepId`
+2. `stepRequirementMapping` → `stepHighLevelMapping`  
+3. `existingRequirement` → `existingHighLevelStep`
+4. 注释中的描述也要更新
+
+现在我将总结已完成的工作，并告诉用户接下来需要做什么：
+
+## 已完成的工作
+
+✅ **`index.d.ts`** - 完全修复
+- 删除 `RequirementChunk` 类型定义
+- 更新 `CodeAwareMapping` 接口：`requirementChunkId` → `highLevelStepId`
+- 从 `ProgramRequirement` 接口中删除 `highlightChunks`
+- 简化 `HighlightEvent.additionalInfo`
+
+✅ **`codeAwareSlice.ts`** - 完全修复 (0 编译错误)
+- 删除 `RequirementChunk` 导入
+- 从状态中删除 `highlightChunks`
+- 删除 3 个 reducers:`updateRequirementHighlightChunks`, `toggleRequirementChunkHighlight`, `setRequirementChunks`
+- 更新所有使用 `requirementChunkId` 的 reducers 为 `highLevelStepId`
+- 删除 `selectRequirementHighlightChunks` selector
+- 更新导出列表
+
+🔄 **`codeAwareGeneration.ts`** - 部分修复 (约 35% 完成)
+- ✅ 删除导入:`RequirementChunk`, `setRequirementChunks`
+- ✅ 更新 `generateSteps` thunk 中的逻辑：删除 `requirementChunks` 变量，使用 `highLevelStepId` 创建映射
+- ✅ 修复了约 10 处映射创建逻辑 (lines 1500-1650)
+- ⏳ 还剩约 50+ 处 `requirementChunkId` 需要替换为 `highLevelStepId`
+
+## 下一步工作
+
+剩余的修复全部在 **`codeAwareGeneration.ts`** 文件中，需要继续全局替换所有 `requirementChunkId` 为 `highLevelStepId`。具体位置：
+
+1. **Lines 1890-2010**: 知识卡片主题生成的映射创建
+2. **Lines 2450-2520**: 某些过滤和映射逻辑  
+3. **Lines 2910-2970**: 代码生成中的映射创建
+4. **Lines 3580-3680**: 代码高亮逻辑
+5. **Lines 3990-4020**: 知识卡片详情生成
+6. **Lines 4260-4310**: 代码块映射创建
+
+所有修复遵循相同的模式：
+- 变量名: `requirementChunkId` → `highLevelStepId`
+- 变量名: `stepRequirementMapping` → `stepHighLevelMapping` 
+- 对象属性: `requirementChunkId:` → `highLevelStepId:`
+- 属性访问: `.requirementChunkId` → `.highLevelStepId`
+- 注释: "requirement chunk" → "high-level step"
+
+继续修复这些地方吗?
+
+---
+
+_**User (2025-10-23 03:07Z)**_
+
+继续
+
+---
+
+_**Assistant (copilot/claude-sonnet-4.5)**_
+
+好的，继续修复 `codeAwareGeneration.ts` 中剩余的 `requirementChunkId` 引用。让我批量处理： 
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+
+```
+现在继续修复 lines 2450-2520 区域： 
+```
+
+```
+现在继续修复 lines 2910-2970： 
+```
+
+```
+继续修复 lines 3580-3680: 
+```
+
+```
+
+```
+
+```
+继续修复 lines 3990-4020: 
+```
+
+```
+现在修复最后一段 lines 4260-4310: 
+```
+
+```
+现在让我检查一下还有哪些编译错误： 太好了！所有 `requirementChunkId` 相关的错误都修复了。剩下的 4 个错误都与 `HighlightEvent.additionalInfo` 类型不匹配有关。这是因为我们之前在 `index.d.ts` 中简化了 `HighlightEvent` 的 `additionalInfo` 字段，但代码中仍在传递完整的对象（`KnowledgeCardItem`, `StepItem`, `CodeChunk`）。
+
+让我查看这些错误的上下文： 我看到问题了。根据之前我们在 `index.d.ts` 中的修改，`HighlightEvent.additionalInfo` 现在是一个简单的对象 `{ codeSnippet?: string; semanticDescription?: string; }`，但代码中传递的是完整的 `StepItem`、`KnowledgeCardItem` 或 `CodeChunk` 对象。
+
+让我回顾一下 `index.d.ts` 中 `HighlightEvent` 的定义： 我看到问题了。在之前的修改中，我简化了 `additionalInfo` 的定义，但实际代码中仍在传递完整的对象。有两种解决方案：
+
+1. **恢复原来的 `additionalInfo` 类型**（允许传递任何对象）
+2. **修改所有调用点**以只传递需要的字段
+
+考虑到这是一个大规模的重构，而且 `additionalInfo` 实际上是用来携带额外数据的，我认为应该恢复原来更宽松的类型定义。让我修改 `index.d.ts`： 
+```
+
+```
+现在让我检查所有编译错误： [object Object]
+
+---
+
+_**User (2025-10-23 08:58Z)**_
+
+@agent Continue: "Continue to iterate?"
+
+---
+
+_**Assistant (copilot/claude-sonnet-4.5)**_
+
+完美！所有主要文件都没有编译错误了。现在让我检查一下还有没有其他文件使用了 `RequirementChunk` 或 `selectRequirementHighlightChunks`： 找到了！还有两个 UI 组件在使用 `selectRequirementHighlightChunks`。让我修复它们： 我看到这个组件使用 `highlightChunks` 来显示高级步骤摘要。根据我们的重构，现在应该使用 `highLevelSteps` 而不是 `highlightChunks`。让我修复： 
+```
+
+```
+
+```
+
+```
+
 
 ---
 

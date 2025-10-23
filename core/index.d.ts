@@ -469,13 +469,6 @@ export type CodeChunk = {
   filePath: string;
 }
 
-// CODEAWARE: Requirements中高亮的单位
-export type RequirementChunk = {
-  id: string;
-  content: string;
-  isHighlighted: boolean;
-}
-
 // CODEAWARE: 高级步骤项目
 export interface HighLevelStepItem {
   id: string;
@@ -496,7 +489,6 @@ export interface ProgramRequirement {
   // 程序需求部分
   requirementDescription: string;
   requirementStatus: CollaborationStatus;
-  highlightChunks?: RequirementChunk[];
 }
 
 
@@ -563,16 +555,20 @@ export interface SelfTestItem {
 //CODEAWARE: 一个用于表征并存储所有的对应关系的数据结构，它有着相当大的冗余，主要是为了生成的时候方便，几乎所有元素都是可以
 export interface CodeAwareMapping {
   codeChunkId?: string;
-  requirementChunkId?: string;
+  highLevelStepId?: string; // 重命名：从 requirementChunkId 改为 highLevelStepId
   stepId?: string;
   knowledgeCardId?: string;
   isHighlighted: boolean;
+  metaInfo?: {
+    codeSnippet?: string;
+    semanticDescription?: string;
+  };
 }
 
 export interface HighlightEvent {
   sourceType: "code" | "requirement" | "step" | "knowledgeCard";
   identifier: string;
-  additionalInfo?: CodeChunk | RequirementChunk | StepItem | KnowledgeCardItem;
+  additionalInfo?: any; // 允许传递任何额外信息（StepItem, KnowledgeCardItem, CodeChunk等）
 }
 
 //CODEAWARE: 一个codeaware session (以一次需求沟通作为起点并围绕其展开) 的描述符

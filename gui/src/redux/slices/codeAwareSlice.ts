@@ -13,7 +13,6 @@ import {
     KnowledgeCardGenerationStatus,
     KnowledgeCardItem,
     ProgramRequirement,
-    RequirementChunk,
     StepItem,
     StepStatus,
     StepToHighLevelMapping
@@ -74,11 +73,10 @@ type CodeAwareSessionState = {
 const initialCodeAwareState: CodeAwareSessionState = {
     currentSessionId: uuidv4(),
     title: "New CodeAware Session",
-    workspaceDirectory: "", //CATODO: see how to get current workspace name
+    workspaceDirectory: "",
     userRequirement: {
         requirementDescription: "",
         requirementStatus: "empty",
-        highlightChunks: []
     },
     learningGoal: "",
     highLevelSteps: [],
@@ -88,8 +86,8 @@ const initialCodeAwareState: CodeAwareSessionState = {
     codeAwareMappings: [],
     shouldClearIdeHighlights: false,
     codeChunksToHighlightInIde: [],
-    isCodeEditModeEnabled: false, // Default to CodeAware mode
-    codeEditModeSnapshot: null, // No snapshot initially
+    isCodeEditModeEnabled: false,
+    codeEditModeSnapshot: null,
 }
 
 export const codeAwareSessionSlice = createSlice({
@@ -108,10 +106,6 @@ export const codeAwareSessionSlice = createSlice({
         submitRequirementContent: (state, action: PayloadAction<string>) => {
             if (state.userRequirement) {
                 state.userRequirement.requirementDescription = action.payload;
-                // Initialize highlightChunks if it doesn't exist
-                if (!state.userRequirement.highlightChunks) {
-                    state.userRequirement.highlightChunks = [];
-                }
             }
         },
         setGeneratedSteps: (state, action: PayloadAction<StepItem[]>) => {
@@ -209,27 +203,6 @@ export const codeAwareSessionSlice = createSlice({
                 state.steps[stepIndex].knowledgeCardGenerationStatus = status;
             }
         },
-        updateRequirementHighlightChunks: (state, action: PayloadAction<RequirementChunk[]>) => {
-            if (state.userRequirement) {
-                // Initialize highlightChunks if it doesn't exist
-                if (!state.userRequirement.highlightChunks) {
-                    state.userRequirement.highlightChunks = [];
-                }
-                state.userRequirement.highlightChunks = action.payload;
-            }
-        },
-        toggleRequirementChunkHighlight: (state, action: PayloadAction<string>) => {
-            if (state.userRequirement?.highlightChunks) {
-                // Initialize highlightChunks if it doesn't exist
-                if (!state.userRequirement.highlightChunks) {
-                    state.userRequirement.highlightChunks = [];
-                }
-                const chunk = state.userRequirement.highlightChunks.find(c => c.id === action.payload);
-                if (chunk) {
-                    chunk.isHighlighted = !chunk.isHighlighted;
-                }
-            }
-        },
         newCodeAwareSession: (state) => {
             // Clear all highlights first
             codeAwareSessionSlice.caseReducers.clearAllHighlights(state);
@@ -237,11 +210,10 @@ export const codeAwareSessionSlice = createSlice({
             // Reset the state for a new CodeAware session
             state.currentSessionId = uuidv4();
             state.title = "New CodeAware Session";
-            state.workspaceDirectory = ""; // Reset workspace directory
+            state.workspaceDirectory = "";
             state.userRequirement = {
                 requirementDescription: "",
                 requirementStatus: "empty",
-                highlightChunks: []
             };
             state.learningGoal = "";
             state.highLevelSteps = [];
@@ -261,12 +233,6 @@ export const codeAwareSessionSlice = createSlice({
             state.codeChunks.forEach(chunk => {
                 chunk.isHighlighted = false;
             });
-            // Reset highlight status for all requirement chunks
-            if (state.userRequirement?.highlightChunks) {
-                state.userRequirement.highlightChunks.forEach(chunk => {
-                    chunk.isHighlighted = false;
-                });
-            }
             // Reset highlight status for all high level steps
             state.highLevelSteps = state.highLevelSteps.map(step => ({
                 ...step,
@@ -317,7 +283,7 @@ export const codeAwareSessionSlice = createSlice({
                             isMatch = mapping.codeChunkId === identifier;
                             break;
                         case "requirement":
-                            isMatch = mapping.requirementChunkId === identifier;
+                            isMatch = mapping.highLevelStepId === identifier;
                             break;
                         case "step":
                             isMatch = mapping.stepId === identifier;
@@ -362,7 +328,7 @@ export const codeAwareSessionSlice = createSlice({
                 matchedMappings.forEach(mapping => {
                     if (!allMatchedMappings.some(m => 
                         m.codeChunkId === mapping.codeChunkId &&
-                        m.requirementChunkId === mapping.requirementChunkId &&
+                        m.highLevelStepId === mapping.highLevelStepId &&
                         m.stepId === mapping.stepId &&
                         m.knowledgeCardId === mapping.knowledgeCardId
                     )) {
@@ -401,20 +367,20 @@ export const codeAwareSessionSlice = createSlice({
 
                 // Collect unique IDs from all matched mappings to avoid duplicate highlighting
                 const codeChunkIds = new Set<string>();
-                const requirementChunkIds = new Set<string>();
+                const highLevelStepIds = new Set<string>();
                 const stepIds = new Set<string>();
                 const knowledgeCardIds = new Set<string>();
 
                 allMatchedMappings.forEach(mapping => {
                     if (mapping.codeChunkId) codeChunkIds.add(mapping.codeChunkId);
-                    if (mapping.requirementChunkId) requirementChunkIds.add(mapping.requirementChunkId);
+                    if (mapping.highLevelStepId) highLevelStepIds.add(mapping.highLevelStepId);
                     if (mapping.stepId) stepIds.add(mapping.stepId);
                     if (mapping.knowledgeCardId) knowledgeCardIds.add(mapping.knowledgeCardId);
                 });
 
                 console.log("🎯 IDs to highlight:", {
                     codeChunkIds: Array.from(codeChunkIds),
-                    requirementChunkIds: Array.from(requirementChunkIds),
+                    highLevelStepIds: Array.from(highLevelStepIds),
                     stepIds: Array.from(stepIds),
                     knowledgeCardIds: Array.from(knowledgeCardIds)
                 });
@@ -445,23 +411,11 @@ export const codeAwareSessionSlice = createSlice({
                 state.codeChunksToHighlightInIde = codeChunksForIde;
                 state.shouldClearIdeHighlights = false;
                 
-                // Update requirement chunk highlights
-                if (state.userRequirement?.highlightChunks) {
-                    requirementChunkIds.forEach(requirementChunkId => {
-                        const reqChunk = state.userRequirement?.highlightChunks?.find(
-                            chunk => chunk.id === requirementChunkId
-                        );
-                        if (reqChunk) {
-                            reqChunk.isHighlighted = true;
-                        }
-                    });
-                }
-
-                // Update high level steps highlights (同步更新高级步骤的高亮状态)
-                requirementChunkIds.forEach(requirementChunkId => {
-                    const highLevelStepIndex = state.highLevelSteps.findIndex(step => step.id === requirementChunkId);
+                // Update high level steps highlights
+                highLevelStepIds.forEach(highLevelStepId => {
+                    const highLevelStepIndex = state.highLevelSteps.findIndex(step => step.id === highLevelStepId);
                     if (highLevelStepIndex !== -1) {
-                        console.log(`🎯 Highlighting high level step ${requirementChunkId} at index:`, highLevelStepIndex);
+                        console.log(`🎯 Highlighting high level step ${highLevelStepId} at index:`, highLevelStepIndex);
                         state.highLevelSteps[highLevelStepIndex] = {
                             ...state.highLevelSteps[highLevelStepIndex],
                             isHighlighted: true
@@ -535,12 +489,6 @@ export const codeAwareSessionSlice = createSlice({
                 }
             }
         },
-        setRequirementChunks: (state, action: PayloadAction<RequirementChunk[]>) => {
-            if (state.userRequirement) { 
-                state.userRequirement.highlightChunks = [];
-                state.userRequirement.highlightChunks.push(...action.payload);
-            }
-        },
         // 设置高级步骤
         setHighLevelSteps: (state, action: PayloadAction<HighLevelStepItem[]>) => {
             state.highLevelSteps = action.payload;
@@ -580,13 +528,13 @@ export const codeAwareSessionSlice = createSlice({
             // 使用 Set 来高效检查重复的 mapping
             const existingMappingsSet = new Set(
                 state.codeAwareMappings.map(mapping => 
-                    `${mapping.codeChunkId || ''}-${mapping.requirementChunkId || ''}-${mapping.stepId || ''}-${mapping.knowledgeCardId || ''}`
+                    `${mapping.codeChunkId || ''}-${mapping.highLevelStepId || ''}-${mapping.stepId || ''}-${mapping.knowledgeCardId || ''}`
                 )
             );
             
             // 过滤出不重复的 mapping
             const newMappings = action.payload.filter(newMapping => {
-                const mappingKey = `${newMapping.codeChunkId || ''}-${newMapping.requirementChunkId || ''}-${newMapping.stepId || ''}-${newMapping.knowledgeCardId || ''}`;
+                const mappingKey = `${newMapping.codeChunkId || ''}-${newMapping.highLevelStepId || ''}-${newMapping.stepId || ''}-${newMapping.knowledgeCardId || ''}`;
                 return !existingMappingsSet.has(mappingKey);
             });
             
@@ -894,11 +842,6 @@ export const codeAwareSessionSlice = createSlice({
             state.codeAwareMappings = [];
             state.shouldClearIdeHighlights = false;
             state.codeChunksToHighlightInIde = [];
-            
-            // Keep userRequirement but ensure highlightChunks is initialized
-            if (state.userRequirement && !state.userRequirement.highlightChunks) {
-                state.userRequirement.highlightChunks = [];
-            }
         },
         // Toggle code edit mode - controls whether user can edit code manually or use CodeAware features
         toggleCodeEditMode: (state) => {
@@ -994,10 +937,10 @@ export const codeAwareSessionSlice = createSlice({
             // Clear all code chunks
             state.codeChunks = [];
             
-            // Clear all code-related mappings (keep step-to-requirement mappings)
+            // Clear all code-related mappings (keep step-to-highLevelStep mappings)
             state.codeAwareMappings = state.codeAwareMappings.filter(mapping => 
-                // 保留只包含stepId和requirementChunkId的映射（步骤到需求的映射）
-                mapping.stepId && mapping.requirementChunkId && !mapping.codeChunkId && !mapping.knowledgeCardId
+                // 保留只包含stepId和highLevelStepId的映射（步骤到需求的映射）
+                mapping.stepId && mapping.highLevelStepId && !mapping.codeChunkId && !mapping.knowledgeCardId
             );
             
             // Clear code chunks to highlight in IDE
@@ -1073,11 +1016,6 @@ export const codeAwareSessionSlice = createSlice({
 });
 
 // Create memoized selectors outside of the slice to prevent re-renders
-export const selectRequirementHighlightChunks = createSelector(
-    (state: RootState) => state.codeAwareSession.userRequirement?.highlightChunks,
-    (highlightChunks): RequirementChunk[] => highlightChunks || []
-);
-
 export const selectRequirementText = createSelector(
     (state: RootState) => state.codeAwareSession.userRequirement?.requirementDescription,
     (requirementDescription): string => requirementDescription || ""
@@ -1111,15 +1049,12 @@ export const {
     setUserRequirementStatus,
     submitRequirementContent,
     setGeneratedSteps,
-    updateRequirementHighlightChunks,
-    toggleRequirementChunkHighlight,
     newCodeAwareSession,
     resetSessionExceptRequirement,
     clearAllHighlights,
     clearAllCodeChunks,
     clearAllCodeAwareMappings,
     updateHighlight,
-    setRequirementChunks,
     setHighLevelSteps,
     setStepToHighLevelMappings,
     updateHighLevelStepCompletion,

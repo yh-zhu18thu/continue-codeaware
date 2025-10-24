@@ -169,3 +169,7 @@ extensions/.continue-debug/
 *.vsix
 
 .continuerules
+.specstory
+.vscode
+.continue
+.changes

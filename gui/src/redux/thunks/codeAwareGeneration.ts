@@ -5,7 +5,6 @@ import {
     HighLevelStepItem,
     HighlightEvent,
     ProgramRequirement,
-    RequirementChunk,
     StepItem,
     StepToHighLevelMapping
 } from "core";
@@ -43,7 +42,6 @@ import {
     setKnowledgeCardLoading,
     setKnowledgeCardTestsLoading, // 新增：导入测试题loading状态action
     setLearningGoal,
-    setRequirementChunks,
     setSaqTestLoading,
     setStepAbstract,
     setStepStatus,
@@ -866,7 +864,6 @@ export const generateStepsFromRequirement = createAsyncThunk<
             //要初始化设置的一些值，同时要更新的是userRequirement, 并且需要设置learning goal;
             let parsedSteps: StepItem[] = [];
             let initialMappings: CodeAwareMapping[] = [];
-            let requirementChunks: RequirementChunk[] = [];
             let highLevelStepItems: HighLevelStepItem[] = [];
             let stepToHighLevelMappings: StepToHighLevelMapping[] = [];
             let learningGoal = "";
@@ -884,19 +881,12 @@ export const generateStepsFromRequirement = createAsyncThunk<
                 
                 // 创建高级步骤项目
                 highLevelSteps.forEach((highLevelStep, index) => {
-                    const requirementChunkId = `r-${index + 1}`;
+                    const highLevelStepId = `r-${index + 1}`;
                     highLevelStepItems.push({
-                        id: requirementChunkId,
+                        id: highLevelStepId,
                         content: highLevelStep,
                         isHighlighted: false,
                         isCompleted: false // 初始状态为未完成
-                    });
-                    
-                    // 同时创建 requirement chunks (用于 RequirementDisplay)
-                    requirementChunks.push({
-                        id: requirementChunkId,
-                        content: highLevelStep,
-                        isHighlighted: false
                     });
                 });
                 
@@ -926,18 +916,18 @@ export const generateStepsFromRequirement = createAsyncThunk<
                             );
                             
                             if (correspondingIndex !== -1) {
-                                const requirementChunkId = `r-${correspondingIndex + 1}`;
+                                const highLevelStepId = `r-${correspondingIndex + 1}`;
                                 
                                 // 创建步骤到高级步骤的映射
                                 stepToHighLevelMappings.push({
                                     stepId: stepId,
-                                    highLevelStepId: requirementChunkId,
+                                    highLevelStepId: highLevelStepId,
                                     highLevelStepIndex: correspondingIndex + 1 // 序号从1开始
                                 });
                                 
                                 // 创建传统的 CodeAware 映射 (用于高亮功能)
                                 initialMappings.push({
-                                    requirementChunkId: requirementChunkId,
+                                    highLevelStepId: highLevelStepId,
                                     stepId: stepId,
                                     isHighlighted: false
                                 });
@@ -956,7 +946,6 @@ export const generateStepsFromRequirement = createAsyncThunk<
                 // CATODO: UI提示，告知用户请求失败
             }
             console.log("Generated high_level_steps array:", highLevelSteps);
-            console.log("Generated requirement chunks:", requirementChunks);
             console.log("Generated step to high level mappings:", stepToHighLevelMappings);
 
             // 更新 Redux 状态
@@ -965,7 +954,6 @@ export const generateStepsFromRequirement = createAsyncThunk<
             dispatch(setHighLevelSteps(highLevelStepItems));
             dispatch(setStepToHighLevelMappings(stepToHighLevelMappings));
             dispatch(setGeneratedSteps(parsedSteps));
-            dispatch(setRequirementChunks(requirementChunks));
             dispatch(updateCodeAwareMappings(initialMappings));
             dispatch(setUserRequirementStatus("finalized"));
 
@@ -1565,7 +1553,7 @@ export const generateKnowledgeCardThemes = createAsyncThunk<
                                             const updatedMappings = updatedState.codeAwareSession.codeAwareMappings;
                                             const stepRequirementMapping = updatedMappings.find(mapping => 
                                                 mapping.stepId === stepId && 
-                                                mapping.requirementChunkId && 
+                                                mapping.highLevelStepId && 
                                                 !mapping.codeChunkId && 
                                                 !mapping.knowledgeCardId
                                             );
@@ -1575,7 +1563,7 @@ export const generateKnowledgeCardThemes = createAsyncThunk<
                                                 codeChunkId: newCodeChunk.id,
                                                 stepId,
                                                 knowledgeCardId: cardId,
-                                                requirementChunkId: stepRequirementMapping?.requirementChunkId,
+                                                highLevelStepId: stepRequirementMapping?.highLevelStepId,
                                                 isHighlighted: false
                                             }));
                                             
@@ -1583,7 +1571,7 @@ export const generateKnowledgeCardThemes = createAsyncThunk<
                                                 stepId,
                                                 knowledgeCardId: cardId,
                                                 codeChunkId: newCodeChunk.id,
-                                                requirementChunkId: stepRequirementMapping?.requirementChunkId
+                                                highLevelStepId: stepRequirementMapping?.highLevelStepId
                                             });
                                         } else {
                                             console.warn("⚠️ 无法找到新创建的代码块，为该代码片段创建基础映射");
@@ -1600,7 +1588,7 @@ export const generateKnowledgeCardThemes = createAsyncThunk<
                                     // 查找该步骤对应的requirement chunk ID
                                     const stepRequirementMapping = updatedState.codeAwareSession.codeAwareMappings.find(mapping => 
                                         mapping.stepId === stepId && 
-                                        mapping.requirementChunkId && 
+                                        mapping.highLevelStepId && 
                                         !mapping.codeChunkId && 
                                         !mapping.knowledgeCardId
                                     );
@@ -1608,14 +1596,14 @@ export const generateKnowledgeCardThemes = createAsyncThunk<
                                     dispatch(createCodeAwareMapping({
                                         stepId,
                                         knowledgeCardId: cardId,
-                                        requirementChunkId: stepRequirementMapping?.requirementChunkId,
+                                        highLevelStepId: stepRequirementMapping?.highLevelStepId,
                                         isHighlighted: false
                                     }));
                                     
                                     console.log(`🔗 创建基础知识卡片映射: ${cardId}`, {
                                         stepId,
                                         knowledgeCardId: cardId,
-                                        requirementChunkId: stepRequirementMapping?.requirementChunkId
+                                        highLevelStepId: stepRequirementMapping?.highLevelStepId
                                     });
                                 }
                             } else {
@@ -1624,7 +1612,7 @@ export const generateKnowledgeCardThemes = createAsyncThunk<
                                     existingMappings.forEach(existingMapping => {
                                         dispatch(createCodeAwareMapping({
                                             codeChunkId: existingMapping.codeChunkId,
-                                            requirementChunkId: existingMapping.requirementChunkId,
+                                            highLevelStepId: existingMapping.highLevelStepId,
                                             stepId,
                                             knowledgeCardId: cardId,
                                             isHighlighted: false
@@ -1635,7 +1623,7 @@ export const generateKnowledgeCardThemes = createAsyncThunk<
                                     const currentState = getState();
                                     const stepRequirementMapping = currentState.codeAwareSession.codeAwareMappings.find(mapping => 
                                         mapping.stepId === stepId && 
-                                        mapping.requirementChunkId && 
+                                        mapping.highLevelStepId && 
                                         !mapping.codeChunkId && 
                                         !mapping.knowledgeCardId
                                     );
@@ -1643,14 +1631,14 @@ export const generateKnowledgeCardThemes = createAsyncThunk<
                                     dispatch(createCodeAwareMapping({
                                         stepId,
                                         knowledgeCardId: cardId,
-                                        requirementChunkId: stepRequirementMapping?.requirementChunkId,
+                                        highLevelStepId: stepRequirementMapping?.highLevelStepId,
                                         isHighlighted: false
                                     }));
                                     
                                     console.log(`🔗 创建知识卡片基础映射: ${cardId}`, {
                                         stepId,
                                         knowledgeCardId: cardId,
-                                        requirementChunkId: stepRequirementMapping?.requirementChunkId
+                                        highLevelStepId: stepRequirementMapping?.highLevelStepId
                                     });
                                 }
                             }
@@ -1672,7 +1660,7 @@ export const generateKnowledgeCardThemes = createAsyncThunk<
                                 existingMappings.forEach(existingMapping => {
                                     dispatch(createCodeAwareMapping({
                                         codeChunkId: existingMapping.codeChunkId,
-                                        requirementChunkId: existingMapping.requirementChunkId,
+                                        highLevelStepId: existingMapping.highLevelStepId,
                                         stepId,
                                         knowledgeCardId: cardId,
                                         isHighlighted: false
@@ -1684,7 +1672,7 @@ export const generateKnowledgeCardThemes = createAsyncThunk<
                                 const currentState = getState();
                                 const stepRequirementMapping = currentState.codeAwareSession.codeAwareMappings.find(mapping => 
                                     mapping.stepId === stepId && 
-                                    mapping.requirementChunkId && 
+                                    mapping.highLevelStepId && 
                                     !mapping.codeChunkId && 
                                     !mapping.knowledgeCardId
                                 );
@@ -1692,14 +1680,14 @@ export const generateKnowledgeCardThemes = createAsyncThunk<
                                 dispatch(createCodeAwareMapping({
                                     stepId,
                                     knowledgeCardId: cardId,
-                                    requirementChunkId: stepRequirementMapping?.requirementChunkId,
+                                    highLevelStepId: stepRequirementMapping?.highLevelStepId,
                                     isHighlighted: false
                                 }));
                                 
                                 console.log(`🔗 创建旧格式知识卡片基础映射: ${cardId}`, {
                                     stepId,
                                     knowledgeCardId: cardId,
-                                    requirementChunkId: stepRequirementMapping?.requirementChunkId
+                                    highLevelStepId: stepRequirementMapping?.highLevelStepId
                                 });
                             }
                         });
@@ -1981,7 +1969,7 @@ export const generateKnowledgeCardThemesFromQuery = createAsyncThunk<
                                                 // 基于现有映射创建新的映射
                                                 dispatch(createCodeAwareMapping({
                                                     codeChunkId: existingMapping.codeChunkId,
-                                                    requirementChunkId: existingMapping.requirementChunkId,
+                                                    highLevelStepId: existingMapping.highLevelStepId,
                                                     stepId,
                                                     knowledgeCardId: cardId,
                                                     isHighlighted: false
@@ -1990,7 +1978,7 @@ export const generateKnowledgeCardThemesFromQuery = createAsyncThunk<
                                                 // 创建基础映射，查找该步骤对应的requirement chunk ID
                                                 const stepRequirementMapping = existingMappings.find(mapping => 
                                                     mapping.stepId === stepId && 
-                                                    mapping.requirementChunkId && 
+                                                    mapping.highLevelStepId && 
                                                     !mapping.codeChunkId && 
                                                     !mapping.knowledgeCardId
                                                 );
@@ -1999,7 +1987,7 @@ export const generateKnowledgeCardThemesFromQuery = createAsyncThunk<
                                                     codeChunkId: matchingChunk.id,
                                                     stepId,
                                                     knowledgeCardId: cardId,
-                                                    requirementChunkId: stepRequirementMapping?.requirementChunkId,
+                                                    highLevelStepId: stepRequirementMapping?.highLevelStepId,
                                                     isHighlighted: false
                                                 }));
                                                 
@@ -2007,7 +1995,7 @@ export const generateKnowledgeCardThemesFromQuery = createAsyncThunk<
                                                     stepId,
                                                     knowledgeCardId: cardId,
                                                     codeChunkId: matchingChunk.id,
-                                                    requirementChunkId: stepRequirementMapping?.requirementChunkId
+                                                    highLevelStepId: stepRequirementMapping?.highLevelStepId
                                                 });
                                             }
                                         } else {
@@ -2032,7 +2020,7 @@ export const generateKnowledgeCardThemesFromQuery = createAsyncThunk<
                                                 // 查找该步骤对应的requirement chunk ID
                                                 const stepRequirementMapping = updatedState.codeAwareSession.codeAwareMappings.find(mapping => 
                                                     mapping.stepId === stepId && 
-                                                    mapping.requirementChunkId && 
+                                                    mapping.highLevelStepId && 
                                                     !mapping.codeChunkId && 
                                                     !mapping.knowledgeCardId
                                                 );
@@ -2042,7 +2030,7 @@ export const generateKnowledgeCardThemesFromQuery = createAsyncThunk<
                                                     codeChunkId: newCodeChunk.id,
                                                     stepId,
                                                     knowledgeCardId: cardId,
-                                                    requirementChunkId: stepRequirementMapping?.requirementChunkId,
+                                                    highLevelStepId: stepRequirementMapping?.highLevelStepId,
                                                     isHighlighted: false
                                                 }));
                                                 
@@ -2050,7 +2038,7 @@ export const generateKnowledgeCardThemesFromQuery = createAsyncThunk<
                                                     stepId,
                                                     knowledgeCardId: cardId,
                                                     codeChunkId: newCodeChunk.id,
-                                                    requirementChunkId: stepRequirementMapping?.requirementChunkId
+                                                    highLevelStepId: stepRequirementMapping?.highLevelStepId
                                                 });
                                             }
                                         }
@@ -2062,7 +2050,7 @@ export const generateKnowledgeCardThemesFromQuery = createAsyncThunk<
                                     existingMappings.forEach(existingMapping => {
                                         dispatch(createCodeAwareMapping({
                                             codeChunkId: existingMapping.codeChunkId,
-                                            requirementChunkId: existingMapping.requirementChunkId,
+                                            highLevelStepId: existingMapping.highLevelStepId,
                                             stepId,
                                             knowledgeCardId: cardId,
                                             isHighlighted: false
@@ -2072,7 +2060,7 @@ export const generateKnowledgeCardThemesFromQuery = createAsyncThunk<
                                     // 创建基础映射关系，查找该步骤对应的requirement chunk ID
                                     const stepRequirementMapping = existingMappings.find(mapping => 
                                         mapping.stepId === stepId && 
-                                        mapping.requirementChunkId && 
+                                        mapping.highLevelStepId && 
                                         !mapping.codeChunkId && 
                                         !mapping.knowledgeCardId
                                     );
@@ -2080,14 +2068,14 @@ export const generateKnowledgeCardThemesFromQuery = createAsyncThunk<
                                     dispatch(createCodeAwareMapping({
                                         stepId,
                                         knowledgeCardId: cardId,
-                                        requirementChunkId: stepRequirementMapping?.requirementChunkId,
+                                        highLevelStepId: stepRequirementMapping?.highLevelStepId,
                                         isHighlighted: false
                                     }));
                                     
                                     console.log(`🔗 创建基础知识卡片映射 (无代码): ${cardId}`, {
                                         stepId,
                                         knowledgeCardId: cardId,
-                                        requirementChunkId: stepRequirementMapping?.requirementChunkId
+                                        highLevelStepId: stepRequirementMapping?.highLevelStepId
                                     });
                                 }
                             }
@@ -2572,11 +2560,11 @@ export const generateCodeFromSteps = createAsyncThunk<
             const currentState = getState();
             // 保留 requirement-step 映射关系
             const requirementStepMappings = currentState.codeAwareSession.codeAwareMappings.filter(
-                (mapping: any) => mapping.requirementChunkId && mapping.stepId && !mapping.codeChunkId && !mapping.knowledgeCardId
+                (mapping: any) => mapping.highLevelStepId && mapping.stepId && !mapping.codeChunkId && !mapping.knowledgeCardId
             );
             // 保留 requirement-step-knowledgeCard 映射关系（没有代码块的）
             const requirementKnowledgeCardMappings = currentState.codeAwareSession.codeAwareMappings.filter(
-                (mapping: any) => mapping.requirementChunkId && mapping.stepId && mapping.knowledgeCardId && !mapping.codeChunkId
+                (mapping: any) => mapping.highLevelStepId && mapping.stepId && mapping.knowledgeCardId && !mapping.codeChunkId
             );
             
             console.log("💾 保存的要求映射关系:", {
@@ -2626,7 +2614,7 @@ export const generateCodeFromSteps = createAsyncThunk<
                         mapping = {
                             codeChunkId: chunk.id,
                             stepId: stepId,
-                            requirementChunkId: existingStepMapping.requirementChunkId,
+                            highLevelStepId: existingStepMapping.highLevelStepId,
                             isHighlighted: false
                         };
                     } else {
@@ -3058,11 +3046,11 @@ export const rerunStep = createAsyncThunk<
             const currentState = getState();
             // 保留 requirement-step 映射关系
             const requirementStepMappings = currentState.codeAwareSession.codeAwareMappings.filter(
-                (mapping: any) => mapping.requirementChunkId && mapping.stepId && !mapping.codeChunkId && !mapping.knowledgeCardId
+                (mapping: any) => mapping.highLevelStepId && mapping.stepId && !mapping.codeChunkId && !mapping.knowledgeCardId
             );
             // 保留 requirement-step-knowledgeCard 映射关系（没有代码块的）
             const requirementKnowledgeCardMappings = currentState.codeAwareSession.codeAwareMappings.filter(
-                (mapping: any) => mapping.requirementChunkId && mapping.stepId && mapping.knowledgeCardId && !mapping.codeChunkId
+                (mapping: any) => mapping.highLevelStepId && mapping.stepId && mapping.knowledgeCardId && !mapping.codeChunkId
             );
             
             console.log("💾 保存的要求映射关系:", {
@@ -3097,7 +3085,7 @@ export const rerunStep = createAsyncThunk<
             console.log("🔗 开始创建映射关系...");
             const updatedState = getState();
             const existingRequirementMappings = updatedState.codeAwareSession.codeAwareMappings.filter(
-                (mapping: any) => mapping.requirementChunkId && mapping.stepId && !mapping.codeChunkId
+                (mapping: any) => mapping.highLevelStepId && mapping.stepId && !mapping.codeChunkId
             );
 
             // 为所有创建的代码块创建映射关系
@@ -3111,7 +3099,7 @@ export const rerunStep = createAsyncThunk<
                     const stepMapping: CodeAwareMapping = {
                         codeChunkId: chunk.id,
                         stepId: stepId,
-                        requirementChunkId: existingReqMapping?.requirementChunkId,
+                        highLevelStepId: existingReqMapping?.highLevelStepId,
                         isHighlighted: false
                     };
                     
@@ -3757,14 +3745,14 @@ export const processCodeUpdates = createAsyncThunk<
                             newCodeChunks.push(newChunk);
 
                             // Find requirement chunk for mapping
-                            const existingStepMapping = mappings.find(mapping => mapping.stepId === stepId && mapping.requirementChunkId);
-                            const requirementChunkId = existingStepMapping?.requirementChunkId;
+                            const existingStepMapping = mappings.find(mapping => mapping.stepId === stepId && mapping.highLevelStepId);
+                            const highLevelStepId = existingStepMapping?.highLevelStepId;
 
                             // Create step mapping
                             const stepMapping: CodeAwareMapping = {
                                 codeChunkId: stepCodeChunkId,
                                 stepId: stepId,
-                                requirementChunkId: requirementChunkId,
+                                highLevelStepId: highLevelStepId,
                                 isHighlighted: false
                             };
                             
@@ -3837,14 +3825,14 @@ export const processCodeUpdates = createAsyncThunk<
 
                             // Find requirement chunk for mapping
                             const existingCardMapping = mappings.find(mapping => mapping.knowledgeCardId === cardId);
-                            const requirementChunkId = existingCardMapping?.requirementChunkId;
+                            const highLevelStepId = existingCardMapping?.highLevelStepId;
 
                             // Create knowledge card mapping
                             const cardMapping: CodeAwareMapping = {
                                 codeChunkId: cardCodeChunkId,
                                 stepId,
                                 knowledgeCardId: cardId,
-                                requirementChunkId: requirementChunkId,
+                                highLevelStepId: highLevelStepId,
                                 isHighlighted: false
                             };
                             
@@ -4249,7 +4237,7 @@ export const processGlobalQuestion = createAsyncThunk<
                 // 查找该步骤对应的requirement chunk ID
                 const stepRequirementMapping = currentState.codeAwareSession.codeAwareMappings.find(mapping => 
                     mapping.stepId === selected_step_id && 
-                    mapping.requirementChunkId && 
+                    mapping.highLevelStepId && 
                     !mapping.codeChunkId && 
                     !mapping.knowledgeCardId
                 );
@@ -4258,14 +4246,14 @@ export const processGlobalQuestion = createAsyncThunk<
                 dispatch(createCodeAwareMapping({
                     stepId: selected_step_id,
                     knowledgeCardId: cardId,
-                    requirementChunkId: stepRequirementMapping?.requirementChunkId,
+                    highLevelStepId: stepRequirementMapping?.highLevelStepId,
                     isHighlighted: false
                 }));
                 
                 console.log(`🔗 创建全局问题知识卡片映射: ${cardId}`, {
                     stepId: selected_step_id,
                     knowledgeCardId: cardId,
-                    requirementChunkId: stepRequirementMapping?.requirementChunkId
+                    highLevelStepId: stepRequirementMapping?.highLevelStepId
                 });
             }
             
@@ -4516,25 +4504,25 @@ export const checkAndMapKnowledgeCardsToCode = createAsyncThunk<
                     const existingKnowledgeCardMapping = allMappings.find(mapping => 
                         mapping.stepId === stepId && 
                         mapping.knowledgeCardId === knowledgeCard.id && 
-                        mapping.requirementChunkId && 
+                        mapping.highLevelStepId && 
                         !mapping.codeChunkId
                     );
                     
-                    let requirementChunkId: string | undefined;
+                    let highLevelStepId: string | undefined;
                     if (existingKnowledgeCardMapping) {
-                        requirementChunkId = existingKnowledgeCardMapping.requirementChunkId;
-                        console.log(`📋 从现有知识卡片映射中找到 requirementChunkId: ${requirementChunkId}`);
+                        highLevelStepId = existingKnowledgeCardMapping.highLevelStepId;
+                        console.log(`📋 从现有知识卡片映射中找到 highLevelStepId: ${highLevelStepId}`);
                     } else {
                         // 如果没有找到知识卡片映射，尝试从步骤映射中查找
                         const existingStepMapping = allMappings.find(mapping => 
                             mapping.stepId === stepId && 
-                            mapping.requirementChunkId && 
+                            mapping.highLevelStepId && 
                             !mapping.codeChunkId && 
                             !mapping.knowledgeCardId
                         );
                         if (existingStepMapping) {
-                            requirementChunkId = existingStepMapping.requirementChunkId;
-                            console.log(`📋 从步骤映射中找到 requirementChunkId: ${requirementChunkId}`);
+                            highLevelStepId = existingStepMapping.highLevelStepId;
+                            console.log(`📋 从步骤映射中找到 highLevelStepId: ${highLevelStepId}`);
                         }
                     }
                     
@@ -4543,7 +4531,7 @@ export const checkAndMapKnowledgeCardsToCode = createAsyncThunk<
                         codeChunkId: codeChunkId,
                         stepId: stepId,
                         knowledgeCardId: knowledgeCard.id,
-                        requirementChunkId: requirementChunkId,
+                        highLevelStepId: highLevelStepId,
                         isHighlighted: false
                     };
                     
@@ -4553,7 +4541,7 @@ export const checkAndMapKnowledgeCardsToCode = createAsyncThunk<
                         stepId,
                         knowledgeCardId: knowledgeCard.id,
                         codeChunkId,
-                        requirementChunkId
+                        highLevelStepId
                     });
                 }
             }

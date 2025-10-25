@@ -8,7 +8,7 @@ import {
 } from "@mui/material";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 import { HighlightEvent } from "core";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import styled, { css, keyframes } from "styled-components";
 import {
     defaultBorderRadius,
@@ -17,7 +17,6 @@ import {
 import { useAppSelector } from "../../../../redux/hooks";
 import {
     selectHighLevelSteps,
-    selectRequirementHighlightChunks,
     selectRequirementText
 } from "../../../../redux/slices/codeAwareSlice";
 import { useCodeAwareLogger } from "../../../../util/codeAwareWebViewLogger";
@@ -256,6 +255,15 @@ interface RequirementDisplayProps {
     disabled?: boolean; // Optional disabled state
 }
 
+type RenderableStep = {
+  id: string;
+  content: string;
+  isHighlighted: boolean;
+  isCompleted: boolean;
+  label: string;
+  source: "highLevelStep" | "fallback";
+};
+
 export default function RequirementDisplay({
     onEdit,
     // onRegenerate, // 移除重新生成功能
@@ -263,40 +271,67 @@ export default function RequirementDisplay({
     onClearHighlight,
     disabled = false,
 }: RequirementDisplayProps) {
-    const requirementText = useAppSelector(selectRequirementText);
-    const highlightChunks = useAppSelector(selectRequirementHighlightChunks);
-    const highLevelSteps = useAppSelector(selectHighLevelSteps);
+  const requirementText = useAppSelector(selectRequirementText);
+  const highLevelSteps = useAppSelector(selectHighLevelSteps);
 
     // CodeAware logger
     const logger = useCodeAwareLogger();
 
     // Track previous highlight states for flickering animation using useRef to avoid circular dependency
-    const previousHighlightStatesRef = useRef<Map<string, boolean>>(new Map());
-    const [flickeringChunks, setFlickeringChunks] = useState<Set<string>>(new Set());
+  const previousHighlightStatesRef = useRef<Map<string, boolean>>(new Map());
+  const [flickeringSteps, setFlickeringSteps] = useState<Set<string>>(new Set());
     const blurTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const steps = useMemo<RenderableStep[]>(() => {
+    if (highLevelSteps.length > 0) {
+      console.log("📋 Using high level steps as data source");
+      return highLevelSteps.map(step => ({
+        id: step.id,
+        content: step.content,
+        isHighlighted: step.isHighlighted,
+        isCompleted: !!step.isCompleted,
+        label: step.content,
+        source: "highLevelStep" as const
+      }));
+    }
+
+    const sentences = requirementText
+      .split(/[.!?\\n]+/)
+      .map(sentence => sentence.trim())
+      .filter(sentence => sentence.length > 0);
+
+    console.log("📋 Using requirement text sentences as fallback data source");
+
+    return sentences.map((sentence, index) => ({
+      id: `requirement-sentence-${index}`,
+      content: sentence,
+      isHighlighted: false,
+      isCompleted: false,
+      label: sentence,
+      source: "fallback" as const
+    }));
+  }, [highLevelSteps, requirementText]);
 
     // Monitor highlight state changes and trigger flickering
     useEffect(() => {
         console.log("🔍 RequirementDisplay state updated:");
-        console.log("- Highlight chunks:", highlightChunks.map(chunk => ({
-            id: chunk.id,
-            content: chunk.content.substring(0, 30) + "...",
-            isHighlighted: chunk.isHighlighted
-        })));
         console.log("- High level steps:", highLevelSteps.map(step => ({
             id: step.id,
             content: step.content.substring(0, 30) + "...",
             isHighlighted: step.isHighlighted
         })));
+    console.log("- Rendered steps:", steps.map(step => ({
+      id: step.id,
+      source: step.source,
+      isHighlighted: step.isHighlighted
+    })));
 
-        const newFlickering = new Set<string>();
-        
-        // 根据实际使用的数据源来决定监听哪个
-        const activeSteps = highLevelSteps.length > 0 ? highLevelSteps : highlightChunks;
-        console.log("✨ Active steps source:", highLevelSteps.length > 0 ? "highLevelSteps" : "highlightChunks");
+    const newFlickering = new Set<string>();
+  const highlightedSteps = steps.filter(step => step.isHighlighted);
+  console.log("✨ Highlighted steps:", highlightedSteps.map(step => step.id));
         
         // Check each step for state changes - only flicker items that become highlighted
-        activeSteps.forEach(step => {
+    steps.forEach(step => {
             const previousState = previousHighlightStatesRef.current.get(step.id);
             // Only add to flickering if the step becomes highlighted (false -> true)
             if (previousState === false && step.isHighlighted === true) {
@@ -307,8 +342,8 @@ export default function RequirementDisplay({
 
         // Only update flickering state if there are actually new flickering chunks
         if (newFlickering.size > 0) {
-            console.log("🎬 Starting flicker animation for:", Array.from(newFlickering));
-            setFlickeringChunks(prev => {
+      console.log("🎬 Starting flicker animation for:", Array.from(newFlickering));
+      setFlickeringSteps(prev => {
                 // Merge with existing flickering chunks to avoid conflicts
                 const merged = new Set([...prev, ...newFlickering]);
                 return merged;
@@ -316,7 +351,7 @@ export default function RequirementDisplay({
             
             // Clear flickering after animation completes
             setTimeout(() => {
-                setFlickeringChunks(prev => {
+        setFlickeringSteps(prev => {
                     const updated = new Set(prev);
                     newFlickering.forEach(id => updated.delete(id));
                     return updated;
@@ -325,12 +360,12 @@ export default function RequirementDisplay({
         }
 
         // Update previous states after processing
-        const newPreviousStates = new Map(previousHighlightStatesRef.current);
-        activeSteps.forEach(step => {
-            newPreviousStates.set(step.id, step.isHighlighted);
-        });
-        previousHighlightStatesRef.current = newPreviousStates;
-    }, [highlightChunks, highLevelSteps]); // 监听两个数据源的变化
+    const newPreviousStates = new Map(previousHighlightStatesRef.current);
+    steps.forEach(step => {
+      newPreviousStates.set(step.id, step.isHighlighted);
+    });
+    previousHighlightStatesRef.current = newPreviousStates;
+  }, [highLevelSteps, steps]);
 
     // Cleanup timeout on unmount
     useEffect(() => {
@@ -343,23 +378,23 @@ export default function RequirementDisplay({
 
     const handleChunkClick = async (chunkId: string) => {
         // Find the chunk to get its content for logging
-        const chunk = highlightChunks.find(c => c.id === chunkId);
         const step = highLevelSteps.find(s => s.id === chunkId);
+  const renderedStep = steps.find((s) => s.id === chunkId);
         
         // Log high level step viewing start
         await logger.addLogEntry("user_view_and_highlight_high_level_step", {
             stepId: chunkId,
-            stepContent: (chunk?.content || step?.content || "").substring(0, 200), // First 200 chars for analysis
-            isFromHighLevelSteps: !!step,
-            isFromHighlightChunks: !!chunk,
+      stepContent: (step?.content || renderedStep?.content || "").substring(0, 200), // First 200 chars for analysis
+      isFromHighLevelSteps: !!step,
+      isFromHighlightChunks: false,
             sourceComponent: "RequirementDisplay",
             timestamp: new Date().toISOString()
         });
         
-        if (onChunkFocus) {
+    if (onChunkFocus && step) {
             // construct a HighlightEvent
             const highlightEvent: HighlightEvent = {
-                sourceType: "requirement",
+        sourceType: "highLevelStep",
                 identifier: chunkId,
             }
             onChunkFocus(highlightEvent);
@@ -385,7 +420,6 @@ export default function RequirementDisplay({
             // Log high level step finished viewing event before clearing highlights
             await logger.addLogEntry("user_finished_viewing_high_level_step", {
                 sourceComponent: "RequirementDisplay",
-                activeHighlightChunks: highlightChunks.filter(chunk => chunk.isHighlighted).length,
                 activeHighLevelSteps: highLevelSteps.filter(step => step.isHighlighted).length,
                 timestamp: new Date().toISOString()
             });
@@ -403,56 +437,6 @@ export default function RequirementDisplay({
             blurTimeoutRef.current = null;
         }
     };
-
-    // Create steps from high level steps or fallback to highlight chunks
-    const createSteps = () => {
-        // 优先使用高级步骤数据
-        if (highLevelSteps.length > 0) {
-            const steps = highLevelSteps.map((highLevelStep, index) => ({
-                id: highLevelStep.id,
-                content: highLevelStep.content,
-                isHighlighted: highLevelStep.isHighlighted,
-                isCompleted: highLevelStep.isCompleted,
-                label: highLevelStep.content,
-            }));
-            console.log("📋 Using high level steps as data source");
-            return steps;
-        }
-
-        // 回退到 highlight chunks
-        if (!highlightChunks.length) {
-            // If no highlight chunks, split requirement text by lines or sentences
-            const sentences = requirementText.split(/[.!?]+/).filter(s => s.trim().length > 0);
-            const steps = sentences.map((sentence, index) => ({
-                id: `sentence-${index}`,
-                content: sentence.trim(),
-                isHighlighted: false,
-                isCompleted: false,
-                label: sentence.trim(), // Use sentence content as label
-            }));
-            console.log("📋 Using sentences as data source");
-            return steps;
-        }
-
-        // Sort chunks by their position in the text and create steps
-        const sortedChunks = [...highlightChunks].sort((a, b) => {
-            const indexA = requirementText.indexOf(a.content);
-            const indexB = requirementText.indexOf(b.content);
-            return indexA - indexB;
-        });
-
-        const steps = sortedChunks.map((chunk, index) => ({
-            id: chunk.id,
-            content: chunk.content,
-            isHighlighted: chunk.isHighlighted,
-            isCompleted: false, // 默认未完成
-            label: chunk.content, // Use chunk content as label
-        }));
-        console.log("📋 Using highlight chunks as data source");
-        return steps;
-    };
-
-    const steps = createSteps();
 
     const handleStepClick = (stepId: string) => {
         handleChunkFocus();
@@ -476,8 +460,8 @@ export default function RequirementDisplay({
                             }}
                         >
                             <Stepper orientation="vertical" sx={{ width: '100%' }}>
-                                {steps.map((step, index) => {
-                                    const isFlickering = flickeringChunks.has(step.id);
+                {steps.map((step, index) => {
+                  const isFlickering = flickeringSteps.has(step.id);
                                     const isHighlighted = step.isHighlighted;
                                     
                                     return (

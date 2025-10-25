@@ -1,16 +1,16 @@
 import {
-    StepIcon,
-    Typography
+  StepIcon,
+  Typography
 } from "@mui/material";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 import { HighlightEvent } from "core";
 import { useCallback, useEffect, useRef } from "react";
 import styled, { css, keyframes } from "styled-components";
 import {
-    defaultBorderRadius
+  defaultBorderRadius
 } from "../../../../components";
 import { useAppSelector } from "../../../../redux/hooks";
-import { selectRequirementHighlightChunks } from "../../../../redux/slices/codeAwareSlice";
+import { selectHighLevelSteps } from "../../../../redux/slices/codeAwareSlice";
 import { useCodeAwareLogger } from "../../../../util/codeAwareWebViewLogger";
 
 // Flickering animation for highlight state changes
@@ -198,7 +198,7 @@ export default function RequirementSummary({
   onChunkFocus,
   onClearHighlight,
 }: RequirementSummaryProps) {
-  const highlightChunks = useAppSelector(selectRequirementHighlightChunks);
+  const highLevelSteps = useAppSelector(selectHighLevelSteps);
   const containerRef = useRef<HTMLDivElement>(null);
   const highlightedItemRef = useRef<HTMLDivElement>(null);
   
@@ -207,26 +207,26 @@ export default function RequirementSummary({
 
   const handleChunkClick = useCallback(async (chunkId: string) => {
     // Find the chunk to get its content for logging
-    const chunk = highlightChunks.find(c => c.id === chunkId);
+  const highLevelStep = highLevelSteps.find(step => step.id === chunkId);
     
     // Log high level step viewing start  
     await logger.addLogEntry("user_view_and_highlight_high_level_step", {
       stepId: chunkId,
-      stepContent: (chunk?.content || "").substring(0, 200), // First 200 chars for analysis
-      isFromHighLevelSteps: false, // This is from highlight chunks
-      isFromHighlightChunks: true,
+      stepContent: (highLevelStep?.content || "").substring(0, 200), // First 200 chars for analysis
+      isFromHighLevelSteps: true,
+      isFromHighlightChunks: false,
       sourceComponent: "RequirementSummary",
       timestamp: new Date().toISOString()
     });
     
     if (onChunkFocus) {
       const highlightEvent: HighlightEvent = {
-        sourceType: "requirement",
+        sourceType: "highLevelStep",
         identifier: chunkId,
       };
       onChunkFocus(highlightEvent);
     }
-  }, [onChunkFocus, logger, highlightChunks]);
+  }, [onChunkFocus, logger, highLevelSteps]);
 
   const handleChunkKeyDown = useCallback((event: React.KeyboardEvent, chunkId: string) => {
     if (event.key === 'Enter' || event.key === ' ') {
@@ -237,12 +237,12 @@ export default function RequirementSummary({
 
   // Create steps from highlight chunks
   const createSteps = useCallback(() => {
-    if (!highlightChunks.length) {
+    if (!highLevelSteps.length) {
       return [];
     }
 
     // Sort chunks by their position in the text and create steps
-    const sortedChunks = [...highlightChunks].sort((a, b) => {
+    const sortedChunks = [...highLevelSteps].sort((a, b) => {
       // 简单按 ID 排序，或者可以根据内容位置排序
       return a.id.localeCompare(b.id);
     });
@@ -253,7 +253,7 @@ export default function RequirementSummary({
       isHighlighted: chunk.isHighlighted,
       index: index + 1,
     }));
-  }, [highlightChunks]);
+  }, [highLevelSteps]);
 
   const steps = createSteps();
 

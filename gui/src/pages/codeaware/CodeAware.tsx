@@ -54,8 +54,8 @@ import "./CodeAware.css";
 import CodeEditModeToggle from "./components/CodeEditModeToggle"; // Import the toggle component
 import GlobalQuestionModal from "./components/QuestionPopup/GlobalQuestionModal";
 import RequirementDisplay from "./components/Requirements/RequirementDisplay"; // Import RequirementDisplay
+import RequirementDisplayHorizontal from "./components/Requirements/RequirementDisplayHorizontal"; // Import RequirementDisplayHorizontal
 import RequirementEditor from "./components/Requirements/RequirementEditor"; // Import RequirementEditor
-import RequirementSummary from "./components/Requirements/RequirementSummary"; // Import RequirementSummary
 import Step from "./components/Steps/Step"; // Import Step
 
 // Helper function to find the most relevant step for a given code selection
@@ -1976,7 +1976,7 @@ export const CodeAware = () => {
 
       {/* RequirementSummary - 只在 RequirementDisplay 不可见且不在编辑模式且需求已确认时显示 */}
       {!isRequirementDisplayVisible && !isEditMode && userRequirementStatus === "finalized" && (
-        <RequirementSummary
+        <RequirementDisplayHorizontal
           onChunkFocus={handleHighlightEvent}
           onClearHighlight={removeHighlightEvent}
         />

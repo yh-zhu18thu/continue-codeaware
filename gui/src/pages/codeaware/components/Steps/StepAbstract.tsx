@@ -82,7 +82,7 @@ interface StepDescriptionProps {
   onQuestionSubmit?: (selectedText: string, question: string) => void; // Callback for question submission
 }
 
-const StepDescription: React.FC<StepDescriptionProps> = ({
+const StepAbstract: React.FC<StepDescriptionProps> = ({
   markdownContent,
   isVisible = true,
   onEdit,
@@ -258,4 +258,4 @@ const StepDescription: React.FC<StepDescriptionProps> = ({
   );
 };
 
-export default StepDescription;
+export default StepAbstract;

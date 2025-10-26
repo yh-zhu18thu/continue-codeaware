@@ -26,32 +26,32 @@ CodeAware 提供四大核心功能，帮助开发者系统化学习和理解代�
 
 ### 🎯 1. 项目分解 (Project Decomposition)
 
-将复杂的编程任务智能分解为结构化的学习步骤，提供清晰的认知路径。
+将复杂的编程任务智能分解为层级化的认知与实现步骤，提供清晰的认知路径。
 
 #### 功能介绍
 
 - **智能需求理解**：AI 分析用户输入的学习目标或编程任务
-- **层级式分解**：生成高级步骤（High-Level Steps）和详细步骤（Detailed Steps）
-- **需求映射**：建立高级步骤与详细步骤的对应关系
-- **学习目标提取**：自动提取和明确学习目标
+- - **学习目标提取**：AI提取和推断学习目标
+- **层级式分解**：生成高级步骤（High-Level Steps）和详细执行步骤（Execution Steps）
+- **层级映射**：自然产生高级步骤与详细步骤的对应关系
 
 #### 交互效果实现
 
 **核心组件：**
 
 - `RequirementEditor.tsx` - 需求编辑器，支持富文本输入
-- `RequirementDisplay.tsx` - 需求展示器，可视化显示需求分块
-- `RequirementSummary.tsx` - 需求摘要，提供快速概览
-- `Step.tsx` - 步骤容器，管理单个步骤的完整生命周期
-- `StepTitleBar.tsx` - 步骤标题栏，显示状态和操作按钮
-- `StepDescription.tsx` - 步骤描述展示
-- `StepEditor.tsx` - 步骤编辑器，支持步骤内容修改
+- `RequirementDisplay.tsx` - 需求展示器，可视化高级步骤
+- `RequirementDisplayHorizontal.tsx` - 需求摘要，当下滑页面空间不足的时候采用横向视图展示高级步骤
+- `Step.tsx` - 步骤容器，管理步骤下的内容（包括知识卡片）
+- `StepTitleBar.tsx` - 步骤标题栏，显示状态和操作按钮，默认折叠，点击时展开，同时自动折叠其它步骤展开的内容（防止内容过多）。
+- `StepDescription.tsx` - 步骤描述，相当于用自然语言写了一遍这个步骤的代码。
+- `StepEditor.tsx` - 步骤编辑器，支持步骤描述的编辑，更新后可以应用于步骤对应的代码生成。
 
 **状态流转：**
 
 ```text
-需求状态: empty → editing → confirmed → finalized
-步骤状态: editing → generated → confirmed → step_dirty → code_dirty
+需求状态: empty (初始)→ editing (用户正在输入或编辑需求时) → confirmed (当用户提交了需求给AI的时候) → finalized （当AI完成了步骤生成），在后续开发中加入project coach的时候, 可以扩展这个状态以容纳更多的交互设计
+步骤状态: generated (生成完成)→ editing (正在手动编辑) → confirmed (编辑完成并确认) → step_dirty (手动对步骤进行过编辑) → code_dirty (手动对代码进行了编辑， 切换回CodeAware模式时会对于这个步骤的描述进行更新)
 ```
 
 #### 数据管理
@@ -81,7 +81,7 @@ StepItem {
   stepStatus: "editing" | "generated" | "confirmed" | "step_dirty" | "code_dirty";
   knowledgeCards: KnowledgeCard[];
   knowledgeCardGenerationStatus: KnowledgeCardGenerationStatus;
-  originalAbstract?: string;  // 用于恢复编辑
+  originalAbstract?: string;  // 用于突出编辑前后需求的变化
   isHighlighted: boolean;
 }
 
@@ -114,7 +114,7 @@ StepToHighLevelMapping {
 输入: { userRequirement: string }
 输出: {
   title: string;                        // 会话标题
-  learningGoal: string;                 // 学习目标
+  learningGoal: string;                 // 学习目标，不会显示，但会用于其它生成的上下文中
   highLevelSteps: HighLevelStepItem[];  // 高级步骤列表
   steps: StepItem[];                    // 详细步骤列表
   stepToHighLevelMappings: StepToHighLevelMapping[]; // 映射关系
@@ -125,14 +125,14 @@ StepToHighLevelMapping {
 
 ### 💻 2. 渐进式代码生成 (Progressive Code Generation)
 
-逐步生成代码，每次生成对应一个或多个步骤，支持代码增量更新和智能映射。
+逐步生成代码，每次生成对应一个或多个步骤，支持代码增量更新和智能映射。围绕着代码，也支持手动在自然语义或者代码本身层面进行修改。
 
 #### 功能介绍
 
-- **步骤驱动生成**：根据确认的步骤逐步生成代码
-- **代码块管理**：将生成的代码分块，每块对应特定步骤
-- **增量更新**：支持在现有代码基础上添加新功能
-- **智能重运行**：步骤修改后智能更新对应代码
+- **步骤驱动生成**：根据步骤描述逐步生成代码
+- **代码对应关系**：维护代码语义块与步骤、知识卡片的对应关系
+- **增量更新**：基于目前的代码进行更新
+- **自然语言代码修改**：手动步骤描述修改后可以更新代码
 - **代码编辑模式**：支持手动编辑代码并自动同步映射
 
 #### 交互效果实现
@@ -150,6 +150,7 @@ StepToHighLevelMapping {
 3. 退出编辑模式 → 触发 `processCodeChanges`
 4. 分析代码变更，更新代码块范围和映射关系
 5. 标记受影响的步骤为 `code_dirty` 状态
+6. 调用AI更新步骤的描述（其实也应该更新知识卡片，但目前还没实现）
 
 #### 数据管理
 

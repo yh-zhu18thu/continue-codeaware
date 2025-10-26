@@ -194,7 +194,7 @@ interface RequirementSummaryProps {
   onClearHighlight?: () => void;
 }
 
-export default function RequirementSummary({
+export default function RequirementDisplayHorizontal({
   onChunkFocus,
   onClearHighlight,
 }: RequirementSummaryProps) {

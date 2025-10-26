@@ -7,7 +7,7 @@ import { useCodeAwareLogger } from '../../../../util/codeAwareWebViewLogger';
 import KnowledgeCard, { KnowledgeCardProps } from '../KnowledgeCard/KnowledgeCard';
 import KnowledgeCardLoader from '../KnowledgeCard/KnowledgeCardLoader';
 import QuestionPopup from '../QuestionPopup/QuestionPopup';
-import StepDescription from './StepDescription';
+import StepAbstract from './StepAbstract';
 import StepEditor from './StepEditor';
 import StepTitleBar from './StepTitleBar';
 
@@ -493,7 +493,7 @@ const Step: React.FC<StepProps> = ({
             onConfirm={handleConfirmEdit}
           />
         ) : (
-          <StepDescription 
+          <StepAbstract 
             markdownContent={description} 
             isVisible={isExpanded}
             onEdit={stepStatus === "confirmed" || stepStatus === "generated" || stepStatus === "step_dirty" ? handleEditStep : undefined}

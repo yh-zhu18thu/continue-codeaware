@@ -150,7 +150,7 @@ StepToHighLevelMapping {
 3. 退出编辑模式 → 触发 `processCodeChanges`
 4. 分析代码变更，更新代码块范围和映射关系
 5. 标记受影响的步骤为 `code_dirty` 状态
-6. 调用AI更新步骤的描述（其实也应该更新知识卡片，但目前还没实现）
+6. 触发 `processCodeUpdates` → 将 diff、上下文和步骤映射传递给 LLM，最小化更新受影响步骤的代码并同步步骤摘要（知识卡片自动更新仍在计划中）
 
 #### 数据管理
 
@@ -211,9 +211,8 @@ codeEditModeSnapshot: {
 **生成流程：**
 
 1. **代码生成阶段**：
-   - 构造包含现有代码和步骤信息的提示词
-   - LLM 生成完整代码和代码块映射 JSON
-   - 验证代码块覆盖率和连续性
+   - 构造包含现有代码和步骤信息的提示词。*目前是将所有的已有代码都作为上下文，但对于大项目，我们需要context engineering来适应窗口大小。*
+   - 每个步骤“派出”一个LLM Agent去找到和该步骤相关的代码块。*目前这个对应出现了重叠、缺漏的情况，一种方式是我们不采用大模型找对应的办法（agentic search或者RAG），另一种方式是通过AST等静态方法去后处理修复，包括现在是每次生成代码都更新全部代码，一些无关的步骤的对应关系应该是不用更新的，这里更新只是处于rerun一下没准能修复问题的心理。*
 
 2. **代码块处理阶段**：
    - 解析代码块信息（起始行、结束行、语义描述）
@@ -226,8 +225,7 @@ codeEditModeSnapshot: {
    - 更新 Redux 状态
 
 4. **验证和日志**：
-   - 验证映射完整性
-   - 记录生成详情
+   - 验证映射完整性 (检验是不是每行代码都有步骤对应了)
    - 同步到 IDE
 
 **`rerunStep`** - 重新运行步骤（步骤修改后更新代码）
@@ -265,6 +263,23 @@ codeEditModeSnapshot: {
 5. 标记受影响步骤为 `code_dirty`
 6. 清除快照
 
+**`processCodeUpdates`** - 当步骤被标记为 `code_dirty` 时根据本地改动智能更新代码
+
+```typescript
+输入: {
+  currentFilePath: string;
+  previousContent: string;
+  currentContent: string;
+  codeDiff: string;
+}
+```
+
+**处理流程：**
+
+1. 组合 diff、步骤上下文与现有映射，构造最小化修改的提示词
+2. 调用 LLM 生成仅包含必要变更的新版代码片段
+3. 同步更新 Redux 中的代码块范围、映射关系与步骤摘要，将受影响步骤从 `code_dirty` 恢复为 `generated`
+
 **辅助函数：**
 
 - `processCodeChunkMappingResponse` - 处理代码块映射响应
@@ -275,24 +290,23 @@ codeEditModeSnapshot: {
 
 ---
 
-### 🔗 3. 联动高亮 (Link Highlights)
+### 🔗 3. 关联高亮 (Link Highlights)
 
 实现需求、步骤、知识卡片、代码块之间的智能高亮联动，帮助理解元素间的对应关系。
 
 #### 功能介绍
 
-- **多元素联动**：点击任一元素，高亮所有相关联的元素
-- **IDE 同步高亮**：在 VS Code 编辑器中同步高亮代码块
-- **智能查找**：支持通过标识符和元信息模糊匹配
+- **多元素联动**：点击/选中任一元素，高亮所有相关联的元素（高级步骤、步骤、知识卡片、代码）
 - **批量高亮**：支持同时处理多个高亮事件
 
 #### 交互效果实现
 
 **高亮触发方式：**
 
-1. **鼠标悬停/点击** - 在任意元素上触发
+1. **鼠标点选** - 当用户点击高级步骤、步骤或者知识卡片
 2. **代码选择** - 在 IDE 中选择代码触发
-3. **步骤展开** - 展开步骤时自动高亮相关内容
+
+由于原先选中代码和点击展开步骤就包含了用户的语义，所以部分用户反映直接的高亮对应展示在一些时候是不必要的。我们可以考虑在这个版本中增加类似于overleaf中的↔对应键的设计，使得不希望自动触发的用户可以手动触发高亮对应。
 
 **视觉效果：**
 
@@ -308,13 +322,13 @@ codeEditModeSnapshot: {
 // 多元素映射关系
 CodeAwareMapping {
   codeChunkId?: string;
-  highLevelStepId?: string;  // 重命名：从 requirementChunkId 改为 highLevelStepId
+  highLevelStepId?: string; 
   stepId?: string;
   knowledgeCardId?: string;
   isHighlighted: boolean;
   metaInfo?: {
     codeSnippet?: string;      // 代码片段（用于模糊匹配）
-    semanticDescription?: string; // 语义描述
+    semanticDescription?: string; // 语义描述（暂时没用，使用agentic search的话可以用）
   };
 }
 
@@ -322,7 +336,7 @@ CodeAwareMapping {
 HighlightEvent {
   sourceType: "code" | "requirement" | "step" | "knowledgeCard";
   identifier: string;  // 元素ID
-  additionalInfo?: any; // 允许传递任何额外信息（StepItem, KnowledgeCardItem, CodeChunk等）
+  additionalInfo?: any; // 根据触发源而定的额外信息（StepItem, KnowledgeCardItem, CodeChunk等）
 }
 
 // IDE 通信标志
@@ -354,31 +368,6 @@ codeChunksToHighlightInIde: CodeChunk[];
    - 收集需要在 IDE 中高亮的代码块
 6. **触发 IDE 高亮**：设置 `codeChunksToHighlightInIde`
 
-#### 智能生成
-
-映射关系在以下场景自动创建：
-
-1. **步骤生成时** - 创建需求块到步骤的映射
-2. **代码生成时** - 创建步骤到代码块的映射
-3. **知识卡片生成时** - 创建知识卡片到代码块的映射
-
-**相关 Thunk**：
-
-**`checkAndMapKnowledgeCardsToCode`** - 检查并映射知识卡片到代码
-
-```typescript
-输入: { stepId: string }
-```
-
-**映射流程：**
-
-1. 获取步骤的所有知识卡片
-2. 筛选未禁用且有内容的卡片
-3. 查找步骤对应的代码块
-4. 使用 LLM 分析知识卡片与代码块的相关性
-5. 创建映射关系
-6. 记录详细日志
-
 ---
 
 ### 🎴 4. 知识卡片交互 (Knowledge Cards Interaction)
@@ -388,9 +377,9 @@ codeChunksToHighlightInIde: CodeChunk[];
 #### 功能介绍
 
 - **自动主题生成**：根据步骤内容生成相关知识点主题
-- **详细内容生成**：为每个主题生成结构化的知识讲解
-- **测试题生成**：自动生成多选题（MCQ）和简答题（SAQ）
-- **智能评分**：使用 LLM 评估简答题答案
+- **详细内容生成**：为每个主题生成知识讲解，结合内容上下文
+- **测试题生成**：生成多选题（MCQ）和简答题（SAQ）
+- **智能评分**：使用 LLM 评估简答题作答
 - **问答驱动生成**：根据用户提问生成相关知识卡片
 - **代码关联**：知识卡片与对应代码块建立映射关系
 
@@ -404,13 +393,14 @@ codeChunksToHighlightInIde: CodeChunk[];
 - `KnowledgeCardSAQ.tsx` - 简答题测试组件
 - `KnowledgeCardLoader.tsx` - 加载状态组件
 - `KnowledgeCardToolBar.tsx` - 卡片工具栏（编辑、删除、重新生成）
-- `QuestionPopup.tsx` - 问题弹窗，支持选中代码提问
-- `GlobalQuestionModal.tsx` - 全局问题模态框
+- `QuestionPopup.tsx` - 问题弹窗，用于在步骤内的提问
+- `GlobalQuestionModal.tsx` - 全局问题模态框 (将要与前者统一)
+- 选中代码提问目前采用的是vscode内联的提问框
 
 **交互流程：**
 
-1. **主题生成** → 点击"生成知识卡片"按钮
-2. **内容生成** → 点击卡片主题展开详细内容
+1. **主题生成** → 第一次展开步骤时、或者用户主动提问时
+2. **内容生成** → 点击卡片主题展开详细内容时懒惰生成
 3. **测试生成** → 内容加载完成后自动生成测试题
 4. **答题互动** → 用户选择/输入答案
 5. **评分反馈** → 显示正确性和详细解释
@@ -419,7 +409,7 @@ codeChunksToHighlightInIde: CodeChunk[];
 
 ```text
 知识卡片生成状态:
-not_generated → generating_themes → themes_generated → 
+not_generated (初始状态，连主题都没有) → generating_themes (正在生成主题或者)→ themes_generated → 
 generating_content → content_generated → generating_tests → completed
 ```
 

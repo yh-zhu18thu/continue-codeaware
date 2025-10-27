@@ -1720,13 +1720,13 @@ export const generateKnowledgeCardThemes = createAsyncThunk<
                     }
                     
                     // 设置生成完成状态 - 移到最后确保状态正确设置
-                    dispatch(setKnowledgeCardGenerationStatus({ stepId, status: "checked" }));
+                    dispatch(setKnowledgeCardGenerationStatus({ stepId, status: "ready" }));
                     
                     // Log knowledge card themes generation completion
                     // We'll add the log in the calling component
                 } else {
                     console.warn("No valid themes returned from LLM");
-                    dispatch(setKnowledgeCardGenerationStatus({ stepId, status: "checked" }));
+                    dispatch(setKnowledgeCardGenerationStatus({ stepId, status: "ready" }));
                 }
                 
             } catch (parseError) {
@@ -2135,10 +2135,10 @@ export const generateKnowledgeCardThemesFromQuery = createAsyncThunk<
                     }
                     
                     // 设置生成完成状态 - 移到最后确保状态正确设置
-                    dispatch(setKnowledgeCardGenerationStatus({ stepId, status: "checked" }));
+                    dispatch(setKnowledgeCardGenerationStatus({ stepId, status: "ready" }));
                 } else {
                     console.warn("No valid themes returned from LLM");
-                    dispatch(setKnowledgeCardGenerationStatus({ stepId, status: "checked" }));
+                    dispatch(setKnowledgeCardGenerationStatus({ stepId, status: "ready" }));
                 }
                 
             } catch (parseError) {
@@ -4260,7 +4260,7 @@ export const processGlobalQuestion = createAsyncThunk<
             // 设置知识卡片生成状态为checked
             dispatch(setKnowledgeCardGenerationStatus({
                 stepId: selected_step_id,
-                status: "checked"
+                status: "ready"
             }));
             
             console.log("✅ [CodeAware] Global question processed successfully");

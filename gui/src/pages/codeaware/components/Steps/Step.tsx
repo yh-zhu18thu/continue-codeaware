@@ -535,7 +535,7 @@ const Step: React.FC<StepProps> = ({
         )}
         
         {/* Add Question Button - only show when not editing and knowledgeCardGenerationStatus is "checked" */}
-        {knowledgeCardGenerationStatus === "checked" && (
+        {knowledgeCardGenerationStatus === "ready" && (
           <AddQuestionButtonContainer>
             <AddQuestionButton onClick={handleAddQuestionClick}>
               <PlusIcon width={16} height={16} />

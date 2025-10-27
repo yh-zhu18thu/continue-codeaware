@@ -494,7 +494,7 @@ export interface ProgramRequirement {
 
 export type StepStatus = "editing" | "confirmed" | "generating" | "generated" | "step_dirty" | "code_dirty";
 
-export type KnowledgeCardGenerationStatus = "empty" | "generating" | "checked";
+export type KnowledgeCardGenerationStatus = "empty" | "generating" | "ready";
 
 
 // CODEAWARE: flow步骤

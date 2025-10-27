@@ -121,6 +121,8 @@ StepToHighLevelMapping {
 }
 ```
 
+*目前的步骤分解生成时，有时后面的步骤会重复前面步骤的工作，需要进一步优化prompt*
+
 ---
 
 ### 💻 2. 渐进式代码生成 (Progressive Code Generation)
@@ -151,6 +153,9 @@ StepToHighLevelMapping {
 4. 分析代码变更，更新代码块范围和映射关系
 5. 标记受影响的步骤为 `code_dirty` 状态
 6. 触发 `processCodeUpdates` → 将 diff、上下文和步骤映射传递给 LLM，最小化更新受影响步骤的代码并同步步骤摘要（知识卡片自动更新仍在计划中）
+
+*目前代码生成后是直接更新到editor,需要增加diff展示和用户确认，以及对应的重新生成功能*
+
 
 #### 数据管理
 
@@ -409,8 +414,7 @@ codeChunksToHighlightInIde: CodeChunk[];
 
 ```text
 知识卡片生成状态:
-not_generated (初始状态，连主题都没有) → generating_themes (正在生成主题或者)→ themes_generated → 
-generating_content → content_generated → generating_tests → completed
+empty (初始状态，连主题都没有) → "generating" (正在生成知识卡片主题) → "ready" (生成了知识卡片主题，可供查看);
 ```
 
 #### 数据管理
@@ -486,6 +490,7 @@ KnowledgeCardGenerationStatus =
   stepTitle: string;
   stepAbstract: string;
   learningGoal: string;
+  currentCode: string;
 }
 输出: string[]  // 主题列表
 ```
@@ -502,7 +507,6 @@ KnowledgeCardGenerationStatus =
 8. 设置状态为 `themes_generated`
 9. 记录交互日志
 
-**重试机制**：最多 3 次重试
 
 **`generateKnowledgeCardDetail`** - 生成知识卡片详细内容
 
@@ -560,7 +564,7 @@ KnowledgeCardGenerationStatus =
 **题目要求**：
 
 - 3-5 道题目
-- 包含多选题和简答题
+- 简答题
 - 难度适中，覆盖核心知识点
 
 **`generateKnowledgeCardThemesFromQuery`** - 根据用户提问生成知识卡片
@@ -605,13 +609,13 @@ KnowledgeCardGenerationStatus =
 4. LLM 评估答案正确性
 5. 解析评分结果（正确性 + 详细评语）
 6. 更新测试结果
-7. 记录评分日志
 
 **评分标准**：
 
 - 内容准确性
 - 概念理解深度
 - 表达清晰度
+*目前用户体验后反馈题目较难，需要调整prompt以放宽判定标准，并且设置交互以允许用户自主查看答案*
 
 **`processGlobalQuestion`** - 处理全局提问
 
@@ -634,13 +638,235 @@ KnowledgeCardGenerationStatus =
 3. 自动创建并展开知识卡片
 4. 返回选中步骤和生成的卡片信息
 
+### 5. 日志记录 (User Activity Logging)
+
+CodeAware 实现了全面的用户活动日志记录系统，用于跟踪用户行为、系统生成过程和交互事件，为学习分析和系统优化提供数据支撑。
+
+#### 日志架构
+
+**核心组件：**
+
+- `useCodeAwareLogger` - React Hook，提供统一的日志记录接口
+- `CodeAwareWebViewLogger` - 日志记录器类，管理日志会话和事件记录
+- `addCodeAwareLogEntry` - IDE 通信接口，将日志保存到文件系统
+
+**日志会话管理：**
+
+```typescript
+// 启动日志会话
+await logger.startLogSession(username, sessionName, codeAwareSessionId);
+
+// 记录事件
+await logger.addLogEntry(eventType, payload);
+
+// 结束会话
+await logger.endLogSession();
+```
+
+#### 生成与生成完成事件
+
+记录 AI 系统的各种生成过程，包括触发、进行中状态和完成结果：
+
+**步骤生成 (Steps Generation)：**
+
+- `user_order_steps_generation` - 用户触发步骤生成
+- `user_get_steps_generation_result` - 步骤生成完成
+
+**代码生成 (Code Generation)：**
+
+- `user_order_code_generation` - 用户触发代码生成
+- `user_get_code_generation_result` - 代码生成完成
+
+**知识卡片生成 (Knowledge Cards Generation)：**
+
+- `user_order_knowledge_card_themes_generation` - 触发主题生成
+- `user_get_knowledge_card_themes_generation_result` - 主题生成完成
+- `user_order_knowledge_card_detail_generation` - 触发内容生成
+- `user_get_knowledge_card_detail_generation_result` - 内容生成完成
+- `user_order_knowledge_card_tests_generation` - 触发测试题生成
+- `user_get_knowledge_card_tests_generation_result` - 测试题生成完成
+- `user_order_knowledge_card_themes_from_query_generation` - 基于问题生成主题
+- `user_get_knowledge_card_themes_from_query_generation_result` - 问题驱动主题生成完成
+
+**其他生成事件：**
+
+- `user_order_step_rerun` - 触发步骤重新运行
+- `user_get_step_rerun_result` - 步骤重新运行完成
+- `user_order_code_changes_processing` - 触发代码变更处理
+- `user_get_code_changes_processing_result` - 代码变更处理完成
+- `user_order_saq_submission_processing` - 触发简答题评分
+- `user_get_saq_submission_processing_result` - 简答题评分完成
+- `user_order_global_question_processing` - 触发全局问题处理
+- `user_get_global_question_processing_result` - 全局问题处理完成
+
+#### 链接高亮事件
+
+记录用户与界面元素的高亮交互，用于分析学习路径和关注点：
+
+**步骤相关高亮：**
+
+- `user_view_and_highlight_step` - 用户展开并高亮步骤
+- `user_finished_viewing_step` - 用户关闭步骤视图
+
+**高级步骤高亮：**
+
+- `user_view_and_highlight_high_level_step` - 用户点击高级步骤
+- `user_finished_viewing_high_level_step` - 用户停止查看高级步骤
+
+**知识卡片高亮：**
+
+- `user_view_and_highlight_knowledge_card` - 用户展开知识卡片
+- `user_finished_viewing_knowledge_card` - 用户关闭知识卡片
+
+**代码映射检查：**
+
+- `user_check_code_step_mappings` - 检查代码与步骤的映射关系
+
+**高亮清除：**
+
+- `user_clear_all_highlights` - 用户清除所有高亮
+
+#### 用户交互事件
+
+记录用户的主要操作行为，包括编辑、提交、模式切换等：
+
+**会话管理：**
+
+- `user_create_new_session` - 创建新学习会话
+- `user_request_new_session` - 请求新会话
+- `system_create_session_file` - 系统创建会话文件
+- `system_create_session_file_error` - 会话文件创建错误
+
+**需求管理：**
+
+- `user_start_editing_requirement` - 开始编辑需求
+- `user_start_edit_requirement` - 开始编辑需求内容
+- `user_confirm_requirement` - 确认需求
+- `user_modify_requirement` - 修改需求
+- `user_no_change_requirement` - 需求无变更
+- `user_regenerate_steps_completed` - 重新生成步骤完成
+
+**代码编辑模式：**
+
+- `user_enter_code_edit_mode` - 进入代码编辑模式
+- `user_exit_code_edit_mode` - 退出代码编辑模式
+- `user_click_regenerate_code_button` - 点击重新生成代码按钮
+
+**代码操作：**
+
+- `user_request_regenerate_code` - 请求重新生成代码
+- `user_regenerate_code_completed` - 代码重新生成完成
+- `user_regenerate_code_error` - 代码生成错误
+- `user_regenerate_code_no_steps` - 无步骤时尝试生成代码
+- `user_clear_code_and_mappings` - 清除代码和映射
+- `user_clear_file_content` - 清除文件内容
+
+**步骤操作：**
+
+- `user_start_execute_steps` - 开始执行步骤
+- `user_execute_steps_completed` - 步骤执行完成
+- `user_execute_steps_batch_started` - 批量执行步骤开始
+- `user_execute_steps_error` - 步骤执行错误
+- `user_start_rerun_step` - 开始重新运行步骤
+- `user_rerun_step_completed` - 步骤重新运行完成
+- `user_rerun_step_error` - 步骤重新运行错误
+- `user_edit_step_content` - 编辑步骤内容
+- `user_change_step_status` - 改变步骤状态
+- `user_start_edit_step_requirement` - 开始编辑步骤需求
+- `user_submit_step_requirement` - 提交步骤需求
+
+**知识卡片交互：**
+
+- `user_start_view_knowledge_card` - 开始查看知识卡片
+- `user_start_generate_knowledge_card_tests` - 开始生成知识卡片测试
+- `user_switch_to_knowledge_card_test_mode` - 切换到测试模式
+- `user_switch_to_knowledge_card_content_mode` - 切换到内容模式
+- `user_navigate_knowledge_card_test` - 导航知识卡片测试
+- `user_disable_knowledge_card` - 禁用知识卡片
+
+**问答互动：**
+
+- `user_submit_question` - 提交问题
+- `user_submit_question_completed` - 问题提交完成
+- `user_submit_question_error` - 问题提交错误
+- `user_submit_global_question` - 提交全局问题
+- `user_submit_global_question_completed` - 全局问题提交完成
+- `user_submit_global_question_error` - 全局问题提交错误
+- `user_open_global_question_modal` - 打开全局问题模态框
+- `user_close_global_question_modal` - 关闭全局问题模态框
+- `user_start_edit_global_question` - 开始编辑全局问题
+- `user_start_edit_reference_question` - 开始编辑参考问题
+- `user_submit_reference_question` - 提交参考问题
+
+**代码选择问答：**
+
+- `user_trigger_question_from_code_selection` - 从代码选择触发问题
+- `user_trigger_question_from_code_selection_completed` - 代码选择问题完成
+- `user_trigger_question_from_code_selection_error` - 代码选择问题错误
+
+**测试答题：**
+
+- `user_start_edit_saq_answer` - 开始编辑简答题答案
+- `user_submit_saq_answer` - 提交简答题答案
+
+**系统事件：**
+
+- `system_knowledge_card_themes_generated` - 系统生成知识卡片主题
+
+#### 日志数据结构
+
+每个日志条目包含以下信息：
+
+```typescript
+{
+  eventType: string;           // 事件类型
+  payload: {
+    timestamp: string;         // ISO 时间戳
+    // ... 事件特定的上下文数据
+  }
+}
+```
+
+**常见 payload 字段：**
+
+- `timestamp` - 事件发生时间
+- `stepId` / `stepTitle` - 相关步骤信息
+- `knowledgeCardId` / `knowledgeCardTheme` - 知识卡片信息
+- `question` / `answer` - 问答内容
+- `filePath` / `content` - 文件相关信息
+- `errorMessage` - 错误信息
+- `userRequirement` - 用户需求内容
+- `selectedCode` / `selectedText` - 选中的代码/文本
+
+#### 使用示例
+
+```typescript
+// 在组件中使用
+const logger = useCodeAwareLogger();
+
+// 记录用户操作
+await logger.addLogEntry("user_view_knowledge_card", {
+  stepId: "step-1",
+  cardTheme: "JavaScript 闭包",
+  timestamp: new Date().toISOString()
+});
+
+// 在 thunk 中记录系统事件
+await extra.ideMessenger.request("addCodeAwareLogEntry", {
+  eventType: "user_get_code_generation_result",
+  payload: {
+    generatedLinesCount: 50,
+    executionTime: 2.5,
+    timestamp: new Date().toISOString()
+  }
+});
+```
+*目前还缺少历史记录的功能，以及目前存储的log中，涉及到具体内容的部分全部以文字形式存储，导致内容阶段或者冗余记录的问题，需要进一步整理格式，保证内容能够完整存储同时避免冗余*
 ---
-
-
 
 ## 架构设计
 
-### 项目结构
+### 主要文件结构
 
 ```text
 gui/src/
@@ -662,18 +888,6 @@ gui/src/
 └── App.tsx                         # 路由配置
 ```
 
-### 路由结构
-
-```typescript
-{
-  path: ROUTES.HOME,
-  element: <CodeAware/>,  // 主界面
-},
-{
-  path: "/chat",
-  element: <Chat />,      // AI 聊天界面
-}
-```
 
 ### 状态管理架构
 
@@ -748,28 +962,6 @@ gui/src/
    - 标记受影响步骤
 ```
 
-### 状态同步机制
-
-#### Redux State 与 IDE Editor 同步
-
-1. **代码生成** → 更新 IDE 编辑器内容
-2. **手动编辑** → 保存快照 → 退出编辑模式 → 同步映射
-3. **高亮联动** → GUI 高亮 ↔ IDE 高亮实时同步
-4. **步骤更新** → 通过 protocol 同步到 IDE
-
----
-
-## 技术栈
-
-- **前端框架**: React 18 + TypeScript
-- **状态管理**: Redux Toolkit (RTK)
-- **样式**: Styled Components + Tailwind CSS
-- **路由**: React Router v6
-- **UI 组件**: Headless UI + Heroicons
-- **Markdown 渲染**: React Markdown
-- **代码高亮**: Prism.js
-- **AI 集成**: LLM API (支持多种模型)
-
 ---
 
 ## 开始使用
@@ -803,96 +995,104 @@ cd continue-codeaware
 ### 配置 LLM
 
 在 VS Code 设置中配置 LLM：
-
-```json
-{
-  "continue.defaultModel": {
-    "title": "GPT-4",
-    "provider": "openai",
-    "model": "gpt-4",
-    "apiKey": "your-api-key"
-  }
-}
-```
+请参考飞书文档中的 [配置指南和配置文件](https://swg1i19m8hf.feishu.cn/docx/N2tmdAjFZomNk7xAqyvckWSZn2d?from=from_copylink)：
 
 ---
 
-## 开发
-
-### 开发环境设置
-
-```bash
-# 启动开发服务器
-npm run dev
-
-# 启动 TypeScript 监听
-npm run tsc:watch
-
-# 启动 GUI 开发服务器
-cd gui && npm run dev
-```
+## 开发任务(第一阶段)
 
 ### 主要开发任务
 
-项目包含多个 VS Code 任务（`.vscode/tasks.json`）：
+#### 1. 上下文工程与大项目支持
 
-- `vscode-extension:build` - 完整构建扩展
-- `gui:dev` - 启动 GUI 开发服务器
-- `tsc:watch` - TypeScript 增量编译
-- `vscode-extension:esbuild` - 打包扩展代码
+- **优先级**：🔥 高
+- **问题**：目前将所有代码作为上下文，无法处理大项目
+- **任务内容**：
+  - 实现智能上下文裁剪算法
+  - 基于语义相关性选择相关代码片段
+  - 实现上下文窗口大小的动态调整
+  - 建立上下文优先级评估机制
 
-### 调试
+#### 2. 代码映射关系优化与修复
 
-1. 在 VS Code 中按 F5 启动调试
-2. 在新窗口中打开测试项目
-3. 打开 CodeAware 面板开始测试
+- **优先级**：🔥 高  
+- **问题**：步骤与代码块对应关系存在重叠、缺漏问题
+- **任务内容**：
+  - 重构代码块映射算法，减少重叠和缺漏
+  - 实现基于AST的静态分析来后处理修复映射关系
+  - 优化增量更新机制，避免每次都更新全部代码映射
+  - 建立映射质量验证和自动修复机制
 
-### 添加新功能
+#### 3. 代码生成用户确认与差异展示系统
 
-1. **定义数据结构** - 在 `codeAwareSlice.ts` 中添加类型
-2. **创建 Reducers** - 添加状态更新逻辑
-3. **实现 UI 组件** - 在 `components/` 下创建组件
-4. **添加智能生成** - 在 `codeAwareGeneration.ts` 中实现 thunk
-5. **测试集成** - 端到端测试功能
+- **优先级**：🔶 中高
+- **问题**：目前代码生成后直接更新到editor，缺乏用户确认机制
+- **任务内容**：
+  - 实现代码生成前后的diff展示界面
+  - 增加用户确认/拒绝机制
+  - 添加重新生成功能
+  - 支持部分代码接受/拒绝的细粒度控制
 
----
+#### 4. 高亮触发机制重设计
 
-## 日志和分析
+- **优先级**：🔶 中高
+- **问题**：自动高亮触发在某些情况下对用户造成干扰
+- **任务内容**：
+  - 设计类似Overleaf的手动触发高亮对应键(↔)
+  - 保留自动触发选项，但允许用户关闭
+  - 实现高亮强度和范围的可配置性
+  - 优化高亮的视觉效果和交互体验
 
-CodeAware 记录详细的用户交互日志，用于研究和改进：
+#### 5. 问答界面统一重构
 
-**记录的事件：**
+- **优先级**：🔶 中高
+- **问题**：目前存在多套问答界面(QuestionPopup、GlobalQuestionModal、VSCode内联)
+- **任务内容**：
+  - 统一QuestionPopup和GlobalQuestionModal的设计和交互
+  - 整合VSCode内联提问功能
+  - 建立一致的问答界面设计语言
+  - 优化问答工作流和用户体验
 
-- `user_order_steps_generation` - 用户触发步骤生成
-- `user_get_steps_generation_result` - 步骤生成完成
-- `user_order_knowledge_card_themes_generation` - 请求知识卡片主题
-- `user_order_knowledge_card_detail_generation` - 请求知识卡片内容
-- `user_order_knowledge_card_tests_generation` - 请求测试题生成
-- `user_submit_saq_answer` - 提交简答题答案
-- `user_receive_saq_feedback` - 收到评分反馈
+#### 6. 历史记录与会话管理系统
 
-**日志数据包含：**
+- **优先级**：🔶 中
+- **问题**：缺少历史记录功能和会话管理
+- **任务内容**：
+  - 实现学习会话的保存和恢复功能
+  - 建立历史记录查看和管理界面
+  - 支持会话间的切换和比较
+  - 实现会话状态的完整序列化
 
-- 时间戳
-- 用户操作
-- 生成内容摘要
-- LLM 调用详情
+### 小型开发任务
 
----
+#### 1. Prompt优化系列
 
-## 贡献
+- 优化步骤分解生成prompt，减少后续步骤重复前面工作的问题
+- 调整知识卡片测试题难度，放宽评分标准
+- 改进代码生成prompt的准确性和一致性
 
-欢迎贡献代码、报告问题或提出建议！
+#### 2. 知识卡片交互改进
 
-### 贡献流程
+- 增加简答题查看标准答案的功能
+- 添加知识卡片重新生成按钮
+- 支持知识卡片内容的导出功能
 
-1. Fork 本仓库
-2. 创建功能分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 开启 Pull Request
+#### 3. 日志系统优化
 
-请查看 [贡献指南](./CONTRIBUTING.md) 了解更多详情。
+- 重新设计日志存储格式，避免内容冗余
+- 实现日志内容的结构化存储
+
+#### 4. 界面细节优化
+
+- 完善RequirementDisplayHorizontal的响应式设计
+- 改进代码编辑模式切换的用户体验
+- 增强知识卡片加载状态的视觉反馈
+
+#### 5. 错误处理与用户反馈
+
+- 统一网络错误和LLM调用失败的提示
+- 增加操作撤销/重做功能
+- 优化长时间操作的进度提示
 
 ---
 

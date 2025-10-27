@@ -322,7 +322,7 @@ export const CodeAware = () => {
       if (previousStep) {
         // Log knowledge card generation completion
         if (previousStep.knowledgeCardGenerationStatus === "generating" && 
-            currentStep.knowledgeCardGenerationStatus === "checked") {
+            currentStep.knowledgeCardGenerationStatus === "ready") {
           logger.addLogEntry("system_knowledge_card_themes_generated", {
             stepId: currentStep.id,
             stepTitle: currentStep.title,
@@ -648,7 +648,7 @@ export const CodeAware = () => {
   useEffect(() => {
     steps.forEach(step => {
       if (forceExpandedSteps.has(step.id) && 
-          step.knowledgeCardGenerationStatus === "checked" &&
+          step.knowledgeCardGenerationStatus === "ready" &&
           !globalQuestionExpandedSteps.has(step.id)) { // Don't remove global question expanded steps
         setForceExpandedSteps(prev => {
           const newSet = new Set(prev);
@@ -1638,7 +1638,7 @@ export const CodeAware = () => {
       if (generateKnowledgeCardThemesFromQuery.fulfilled.match(result)) {
         dispatch(setKnowledgeCardGenerationStatus({ 
           stepId, 
-          status: "checked" 
+          status: "ready" 
         }));
         console.log("✅ Knowledge card themes generated successfully, status set to checked");
         

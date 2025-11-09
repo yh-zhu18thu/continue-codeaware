@@ -50,7 +50,7 @@ export class CompletionProvider {
     this.contextRetrievalService = new ContextRetrievalService(this.ide);
   }
 
-  private async _prepareLlm(): Promise<ILLM | undefined> {
+private async _prepareLlm(): Promise<ILLM | undefined> {
     const llm = await this._injectedGetLlm();
 
     if (!llm) {

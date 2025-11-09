@@ -1,9 +1,7 @@
 import Handlebars from "handlebars";
 
 import { CompletionOptions } from "../..";
-import { getUriPathBasename } from "../../util/uri";
 import { AutocompleteLanguageInfo } from "../constants/AutocompleteLanguageInfo";
-<<<<<<< HEAD
 import { HelperVars } from "../util/HelperVars";
 
 import { ILLM } from "../../index.js";
@@ -17,10 +15,6 @@ import {
 import { getUriPathBasename } from "../../util/uri";
 import { SnippetPayload } from "../snippets";
 import { AutocompleteSnippet } from "../snippets/types";
-=======
-import { SnippetPayload } from "../snippets";
-import { HelperVars } from "../util/HelperVars";
->>>>>>> 290dbce58 (subtle changes)
 import {
   AutocompleteTemplate,
   getTemplateForModel,

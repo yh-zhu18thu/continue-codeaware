@@ -796,7 +796,7 @@ cd continue-codeaware
 ./scripts/install-dependencies.sh
 
 # 构建项目
-npm run build
+在extensions/vscode/src/extension.ts上按F5键即可
 ```
 
 ### 使用方法

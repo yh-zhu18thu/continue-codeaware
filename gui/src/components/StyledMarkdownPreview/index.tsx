@@ -60,14 +60,22 @@ const StyledMarkdown = styled.div<{
   h6 {
     font-size: 0.9em;
   }
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 
   pre {
     white-space: ${(props) => props.whiteSpace};
     background-color: ${vscEditorBackground};
     border-radius: ${defaultBorderRadius};
 
-    max-width: calc(100vw - 24px);
-    overflow-x: scroll;
+    max-width: 100%;
+    width: 100%;
+    box-sizing: border-box;
+    overflow-x: auto;
     overflow-y: hidden;
 
     padding: 8px;
@@ -78,10 +86,13 @@ const StyledMarkdown = styled.div<{
       display: none;
     }
     word-wrap: break-word;
-    border-radius: 0.3125rem;
+    overflow-wrap: break-word;
+    border-radius: ${defaultBorderRadius};
     background-color: ${vscEditorBackground};
     font-size: ${getFontSize() - 2}px;
     font-family: var(--vscode-editor-font-family);
+    max-width: 100%;
+    box-sizing: border-box;
   }
 
   ul ul,
@@ -123,7 +134,7 @@ const StyledMarkdown = styled.div<{
     "Helvetica Neue",
     sans-serif;
   font-size: ${(props) => props.fontSize || getFontSize()}px;
-  padding-left: 8px;
+  padding-left: 2px;
   padding-right: 8px;
   color: ${vscForeground};
 
@@ -134,8 +145,24 @@ const StyledMarkdown = styled.div<{
     line-height: 1.5;
   }
 
-  * {
-    word-break: break-word;
+  /* 调整列表与上方内容的间距，使布局更紧凑 */
+  ul,
+  ol {
+    margin-top: 0.5em;
+    margin-bottom: 0.5em;
+  }
+
+  /* 嵌套列表的间距进一步缩小 */
+  ul ul,
+  ol ol,
+  ul ol,
+  ol ul {
+    margin-top: 0.25em;
+    margin-bottom: 0.25em;
+  }
+
+  > *:first-child {
+    margin-top: 4px;
   }
 
   > *:last-child {

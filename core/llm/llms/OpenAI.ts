@@ -312,6 +312,8 @@ class OpenAI extends BaseLLM {
     } else {
       finalOptions.prediction = undefined;
     }
+    finalOptions.max_completion_tokens = 32766;
+    finalOptions.max_tokens = undefined;
 
     return finalOptions;
   }
@@ -494,6 +496,8 @@ class OpenAI extends BaseLLM {
     args.prompt = prompt;
     args.messages = undefined;
 
+    console.log("Using legacy completions endpoint for OpenAI:", args);
+
     const response = await this.fetch(this._getEndpoint("completions"), {
       method: "POST",
       headers: this._getHeaders(),
@@ -538,6 +542,8 @@ class OpenAI extends BaseLLM {
     }
 
     const body = this._convertArgs(options, messages);
+
+    console.log("Using chat completions endpoint for OpenAI:", body);
 
     const response = await this.fetch(this._getEndpoint("chat/completions"), {
       method: "POST",

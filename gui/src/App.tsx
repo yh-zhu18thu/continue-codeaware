@@ -10,6 +10,8 @@ import Chat from "./pages/gui";
 import History from "./pages/history";
 import Stats from "./pages/stats";
 import ThemePage from "./styles/ThemePage";
+//CodeAware: import the pages needed in CodeAware
+import { CodeAware } from "./pages/codeaware/CodeAware";
 import { ROUTES } from "./util/navigation";
 
 const router = createMemoryRouter([
@@ -18,12 +20,17 @@ const router = createMemoryRouter([
     element: <Layout />,
     errorElement: <ErrorPage />,
     children: [
+      //CA:changed the home page to CodeAware
       {
         path: "/index.html",
-        element: <Chat />,
+        element: <CodeAware />,
       },
       {
         path: ROUTES.HOME,
+        element: <CodeAware />,
+      },
+      {
+        path: "/chat",
         element: <Chat />,
       },
       {

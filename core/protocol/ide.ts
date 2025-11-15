@@ -94,6 +94,38 @@ export type ToIdeFromWebviewOrCoreProtocol = {
   logoutOfControlPlane: [undefined, void];
   reportError: [any, void];
   closeSidebar: [undefined, void];
+
+  // CodeAware: Apply diff changes using WorkspaceEdit
+  applyDiffChanges: [
+    {
+      filepath: string;
+      oldCode: string;
+      newCode: string;
+    },
+    void,
+  ];
+
+  // CodeAware: Create and open a new file
+  createAndOpenFile: [
+    {
+      filename: string;
+      content?: string;
+    },
+    void,
+  ];
+
+  // CodeAware: Highlight multiple code chunks
+  highlightCodeChunks: [
+    Array<{
+      id: string;
+      content: string;
+      range: [number, number];
+      isHighlighted: boolean;
+      disabled: boolean;
+      filePath: string;
+    }>,
+    void,
+  ];
 };
 
 export type ToWebviewOrCoreFromIdeProtocol = {

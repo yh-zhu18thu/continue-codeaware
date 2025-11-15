@@ -163,6 +163,7 @@ export function Chat() {
   );
 
   const sendInput = useCallback(
+    //CAREF-CHAT: 在CodeAware中实现聊天时参考这个函数，关注streamResponseThunk/streamNormalInput的实现, 需要实现一个不stream的版本，可以直接发command。
     (
       editorState: JSONContent,
       modifiers: InputModifiers,

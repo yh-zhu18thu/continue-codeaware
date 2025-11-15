@@ -84,7 +84,7 @@
       }
     ],
     "configuration": {
-      "title": "Continue",
+      "title": "CodeAware",
       "properties": {
         "continue.telemetryEnabled": {
           "type": "boolean",
@@ -330,7 +330,13 @@
         "group": "Continue"
       },
       {
-        "command": "continue.focusContinueInput",
+        "command": "continue.askCodeAware",
+        "category": "Continue",
+        "title": "向 CodeAware 提问",
+        "group": "Continue"
+      },
+      {
+        "command": "continue.focusContinueSessionId",
         "category": "Continue",
         "title": "Focus Continue Chat",
         "group": "Continue"
@@ -550,7 +556,12 @@
           "group": "Continue"
         },
         {
-          "command": "continue.focusEdit",
+          "command": "continue.askCodeAware",
+          "group": "Continue",
+          "when": "editorHasSelection"
+        },
+        {
+          "command": "continue.writeCommentsForCode",
           "group": "Continue",
           "when": "!editorReadonly"
         }
@@ -606,7 +617,7 @@
       "activitybar": [
         {
           "id": "continue",
-          "title": "Continue",
+          "title": "CodeAware",
           "icon": "media/sidebar-icon.png"
         }
       ],
@@ -623,7 +634,7 @@
         {
           "type": "webview",
           "id": "continue.continueGUIView",
-          "name": "Continue",
+          "name": "CodeAware",
           "icon": "media/sidebar-icon.png",
           "visibility": "visible"
         }
@@ -703,6 +714,7 @@
     "@openapitools/openapi-generator-cli": "^2.23.1",
     "@types/chai": "^5.0.1",
     "@types/cors": "^2.8.17",
+    "@types/diff": "^8.0.0",
     "@types/express": "^4.17.21",
     "@types/follow-redirects": "^1.14.4",
     "@types/mocha": "^10.0.10",

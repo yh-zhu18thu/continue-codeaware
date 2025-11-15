@@ -296,6 +296,7 @@ export {
   anthropicTemplateMessages,
   chatmlTemplateMessages,
   codeLlama70bTemplateMessages,
+  codestralTemplateMessages,
   deepseekTemplateMessages,
   gemmaTemplateMessage,
   graniteTemplateMessages,
@@ -309,5 +310,6 @@ export {
   templateAlpacaMessages,
   xWinCoderTemplateMessages,
   zephyrTemplateMessages,
-  codestralTemplateMessages,
 };
+
+//CATODO: 改prompt在这儿就行

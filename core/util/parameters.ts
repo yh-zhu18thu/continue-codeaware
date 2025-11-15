@@ -2,12 +2,12 @@ import { TabAutocompleteOptions } from "../index.js";
 
 export const DEFAULT_AUTOCOMPLETE_OPTS: TabAutocompleteOptions = {
   disable: false,
-  maxPromptTokens: 1024,
+  maxPromptTokens: 4096,
   prefixPercentage: 0.3,
   maxSuffixPercentage: 0.2,
   debounceDelay: 350,
   modelTimeout: 150,
-  multilineCompletions: "auto",
+  multilineCompletions: "always",
   // @deprecated TO BE REMOVED
   slidingWindowPrefixPercentage: 0.75,
   // @deprecated TO BE REMOVED
@@ -22,10 +22,10 @@ export const DEFAULT_AUTOCOMPLETE_OPTS: TabAutocompleteOptions = {
   showWhateverWeHaveAtXMs: 300,
   // Experimental options: true = enabled, false = disabled, number = enabled w priority
   experimental_includeClipboard: false,
-  experimental_includeRecentlyVisitedRanges: true,
-  experimental_includeRecentlyEditedRanges: true,
-  experimental_includeDiff: true,
   experimental_enableStaticContextualization: false,
+  experimental_includeRecentlyVisitedRanges: false,
+  experimental_includeRecentlyEditedRanges: false,
+  experimental_includeDiff: false,
 };
 
 export const COUNT_COMPLETION_REJECTED_AFTER = 10_000;

@@ -14,6 +14,7 @@ import {
   CORE_TO_WEBVIEW_PASS_THROUGH,
   WEBVIEW_TO_CORE_PASS_THROUGH,
 } from "core/protocol/passThrough";
+import { codeAwareLogger } from "core/util/codeAwareLogger";
 import { stripImages } from "core/util/messageContent";
 import { normalizeRepoUrl } from "core/util/repoUrl";
 import {
@@ -22,7 +23,9 @@ import {
 } from "core/util/sanitization";
 import * as vscode from "vscode";
 
+import { encodeFullSlug } from "../../../../packages/config-yaml/dist";
 import { ApplyManager } from "../apply";
+import { CodeEditModeManager } from "../CodeEditModeManager";
 import { VerticalDiffManager } from "../diff/vertical/manager";
 import { addCurrentSelectionToEdit } from "../quickEdit/AddCurrentSelection";
 import EditDecorationManager from "../quickEdit/EditDecorationManager";
@@ -36,7 +39,7 @@ import { getExtensionUri } from "../util/vscode";
 import { VsCodeIde } from "../VsCodeIde";
 import { VsCodeWebviewProtocol } from "../webviewProtocol";
 
-import { encodeFullSlug } from "../../../../packages/config-yaml/dist";
+import { HighlightCodeManager } from "./HighlightCodeManager";
 import { VsCodeExtension } from "./VsCodeExtension";
 
 type ToIdeOrWebviewFromCoreProtocol = ToIdeFromCoreProtocol &
@@ -92,14 +95,16 @@ export class VsCodeMessenger {
     private readonly editDecorationManager: EditDecorationManager,
     private readonly context: vscode.ExtensionContext,
     private readonly vsCodeExtension: VsCodeExtension,
+    private readonly highlightCodeManager: HighlightCodeManager,
+    private readonly codeEditModeManager: CodeEditModeManager,
   ) {
     /** WEBVIEW ONLY LISTENERS **/
-    this.onWebview("showFile", (msg) => {
-      this.ide.openFile(msg.data.filepath);
+    this.onWebview("showFile", async (msg) => {
+      await this.ide.openFile(msg.data.filepath);
     });
 
     this.onWebview("vscode/openMoveRightMarkdown", (msg) => {
-      vscode.commands.executeCommand(
+      void vscode.commands.executeCommand(
         "markdown.showPreview",
         vscode.Uri.joinPath(
           getExtensionUri(),
@@ -109,18 +114,20 @@ export class VsCodeMessenger {
       );
     });
 
-    this.onWebview("toggleDevTools", (msg) => {
-      vscode.commands.executeCommand("continue.viewLogs");
+    this.onWebview("toggleDevTools", async (msg) => {
+      await vscode.commands.executeCommand("continue.viewLogs");
     });
 
-    this.onWebview("reloadWindow", (msg) => {
-      vscode.commands.executeCommand("workbench.action.reloadWindow");
+    this.onWebview("reloadWindow", async (msg) => {
+      await vscode.commands.executeCommand("workbench.action.reloadWindow");
     });
-    this.onWebview("focusEditor", (msg) => {
-      vscode.commands.executeCommand("workbench.action.focusActiveEditorGroup");
+    this.onWebview("focusEditor", async (msg) => {
+      await vscode.commands.executeCommand(
+        "workbench.action.focusActiveEditorGroup",
+      );
     });
-    this.onWebview("toggleFullScreen", (msg) => {
-      vscode.commands.executeCommand("continue.openInNewWindow");
+    this.onWebview("toggleFullScreen", async (msg) => {
+      await vscode.commands.executeCommand("continue.openInNewWindow");
     });
 
     this.onWebview("acceptDiff", async ({ data: { filepath, streamId } }) => {
@@ -173,11 +180,13 @@ export class VsCodeMessenger {
         const editor = vscode.window.activeTextEditor;
 
         if (!editor) {
-          vscode.window.showErrorMessage("No active editor to apply edits to");
+          await vscode.window.showErrorMessage(
+            "No active editor to apply edits to",
+          );
           return;
         }
 
-        editor.edit((builder) =>
+        await editor.edit((builder) =>
           builder.replace(
             new vscode.Range(
               editor.document.positionAt(0),
@@ -195,7 +204,7 @@ export class VsCodeMessenger {
         return;
       }
 
-      editor.edit((editBuilder) => {
+      await editor.edit((editBuilder) => {
         editBuilder.replace(
           new vscode.Range(editor.selection.start, editor.selection.end),
           msg.data.text,
@@ -277,7 +286,7 @@ export class VsCodeMessenger {
       const prompt = stripImages(content);
 
       if (!prompt || prompt.trim().length === 0) {
-        vscode.window.showErrorMessage(
+        await vscode.window.showErrorMessage(
           "Please enter a prompt to create a background agent",
         );
         return;
@@ -286,7 +295,7 @@ export class VsCodeMessenger {
       // Get workspace information
       const workspaceDirs = await this.ide.getWorkspaceDirs();
       if (workspaceDirs.length === 0) {
-        vscode.window.showErrorMessage(
+        await vscode.window.showErrorMessage(
           "No workspace folder found. Please open a workspace to create a background agent.",
         );
         return;
@@ -306,7 +315,7 @@ export class VsCodeMessenger {
           // Validate the normalized URL to prevent injection attacks
           // This ensures we validate what we'll actually use, not just the input
           if (!validateGitHubRepoUrl(normalized)) {
-            vscode.window.showErrorMessage(
+            await vscode.window.showErrorMessage(
               "Invalid repository format. Please ensure you're using a valid GitHub repository.",
             );
             return;
@@ -325,7 +334,7 @@ export class VsCodeMessenger {
       }
 
       if (!repoUrl) {
-        vscode.window.showErrorMessage(
+        await vscode.window.showErrorMessage(
           "Unable to determine repository URL. Make sure you're in a git repository.",
         );
         return;
@@ -382,7 +391,7 @@ export class VsCodeMessenger {
             agent,
           );
 
-        vscode.window.showInformationMessage(
+        await vscode.window.showInformationMessage(
           `Background agent created successfully! Agent ID: ${result.id}`,
         );
       } catch (e) {
@@ -411,7 +420,7 @@ export class VsCodeMessenger {
             );
           }
         } else {
-          vscode.window.showErrorMessage(
+          await vscode.window.showErrorMessage(
             `Failed to create background agent: ${errorMessage}`,
           );
         }
@@ -446,7 +455,7 @@ export class VsCodeMessenger {
             agentSessionId,
           );
         if (!agentSession) {
-          vscode.window.showErrorMessage(
+          await vscode.window.showErrorMessage(
             "Failed to load agent session details.",
           );
           return;
@@ -456,7 +465,7 @@ export class VsCodeMessenger {
         const branch = agentSession.branch;
 
         if (!repoUrl || !branch) {
-          vscode.window.showErrorMessage(
+          await vscode.window.showErrorMessage(
             "Agent session is missing repository or branch information.",
           );
           return;
@@ -464,7 +473,7 @@ export class VsCodeMessenger {
 
         // Validate the repo URL from API response to prevent injection attacks
         if (!validateGitHubRepoUrl(repoUrl)) {
-          vscode.window.showErrorMessage(
+          await vscode.window.showErrorMessage(
             "Invalid repository URL from agent session. Please contact support.",
           );
           return;
@@ -473,14 +482,14 @@ export class VsCodeMessenger {
         // Get workspace directories
         const workspaceDirs = await this.ide.getWorkspaceDirs();
         if (workspaceDirs.length === 0) {
-          vscode.window.showErrorMessage("No workspace folder is open.");
+          await vscode.window.showErrorMessage("No workspace folder is open.");
           return;
         }
 
         // Normalize and validate again to ensure the normalized form is safe
         const normalizedAgentRepo = normalizeRepoUrl(repoUrl);
         if (!validateGitHubRepoUrl(normalizedAgentRepo)) {
-          vscode.window.showErrorMessage(
+          await vscode.window.showErrorMessage(
             "Invalid repository URL after normalization. Please contact support.",
           );
           return;
@@ -501,7 +510,7 @@ export class VsCodeMessenger {
         }
 
         if (!matchingWorkspace) {
-          vscode.window.showErrorMessage(
+          await vscode.window.showErrorMessage(
             `This agent is for repository ${repoUrl}. Please open that workspace to take over the workflow.`,
           );
           return;
@@ -510,7 +519,9 @@ export class VsCodeMessenger {
         // Get the git repository
         const repo = await this.ide.getRepo(matchingWorkspace);
         if (!repo) {
-          vscode.window.showErrorMessage("Could not access git repository.");
+          await vscode.window.showErrorMessage(
+            "Could not access git repository.",
+          );
           return;
         }
 
@@ -553,13 +564,13 @@ export class VsCodeMessenger {
                   );
                 },
               );
-              vscode.window.showInformationMessage(
+              await vscode.window.showInformationMessage(
                 "Local changes have been stashed.",
               );
             } catch (e) {
               console.error("Failed to stash changes:", e);
               const errorMsg = e instanceof Error ? e.message : String(e);
-              vscode.window.showErrorMessage(
+              await vscode.window.showErrorMessage(
                 `Failed to stash changes: ${errorMsg}`,
               );
               return; // Stop on stash failure
@@ -575,7 +586,9 @@ export class VsCodeMessenger {
             `Current branch: ${currentBranch}, Target branch: ${branch}`,
           );
 
-          if (currentBranch !== branch) {
+          if (currentBranch === branch) {
+            console.log("Already on target branch, skipping checkout");
+          } else {
             // Try to switch to the branch using VS Code Git API
             await vscode.window.withProgress(
               {
@@ -598,15 +611,13 @@ export class VsCodeMessenger {
                 }
               },
             );
-            vscode.window.showInformationMessage(
+            await vscode.window.showInformationMessage(
               `Switched to branch ${branch}`,
             );
-          } else {
-            console.log("Already on target branch, skipping checkout");
           }
         } catch (e: any) {
           console.error("Failed to switch branch:", e);
-          vscode.window.showErrorMessage(
+          await vscode.window.showErrorMessage(
             `Failed to switch to branch ${branch}: ${e.message || String(e)}`,
           );
           return;
@@ -617,7 +628,7 @@ export class VsCodeMessenger {
           await configHandler.controlPlaneClient.getAgentState(agentSessionId);
 
         if (!agentState) {
-          vscode.window.showErrorMessage(
+          await vscode.window.showErrorMessage(
             "Failed to fetch agent state from API. The agent may not exist or you may not have permission.",
           );
           return;
@@ -628,7 +639,7 @@ export class VsCodeMessenger {
             "Agent state is missing session field. Full response:",
             agentState,
           );
-          vscode.window.showErrorMessage(
+          await vscode.window.showErrorMessage(
             "Agent state returned but missing session data. This may be a backend issue.",
           );
           return;
@@ -640,15 +651,56 @@ export class VsCodeMessenger {
           session: agentState.session,
         });
 
-        vscode.window.showInformationMessage(
+        await vscode.window.showInformationMessage(
           `Successfully loaded agent workflow: ${agentState.session.title || "Untitled"}`,
         );
       } catch (e) {
         console.error("Failed to open agent locally:", e);
-        vscode.window.showErrorMessage(
+        await vscode.window.showErrorMessage(
           `Failed to open agent locally: ${e instanceof Error ? e.message : "Unknown error"}`,
         );
       }
+    });
+
+    this.onWebview("highlightCodeChunk", async (msg) => {
+      console.log("highlightCodeChunk", msg.data);
+      await this.highlightCodeManager.highlightCodeChunk(msg.data);
+    });
+
+    this.onWebview("highlightCodeChunks", async (msg) => {
+      console.log("highlightCodeChunks", msg.data);
+      await this.highlightCodeManager.highlightCodeChunks(msg.data);
+    });
+
+    this.onWebview("clearCodeHighlight", async (msg) => {
+      this.highlightCodeManager.clearAllHighlights();
+    });
+
+    // CodeAware: 设置代码编辑模式
+    this.onWebview("setCodeEditMode", async (msg) => {
+      console.log("💡 设置代码编辑模式:", msg.data);
+      await this.codeEditModeManager.setCodeEditMode(msg.data.enabled);
+
+      // 向webview发送状态变化通知
+      await this.webviewProtocol.request("didChangeCodeEditMode", {
+        enabled: msg.data.enabled,
+      });
+    });
+
+    // CodeAware: 日志记录相关
+    this.onWebview("startCodeAwareLogSession", async (msg) => {
+      console.log("📊 [CodeAware] Starting log session:", msg.data);
+      codeAwareLogger.startLogSession(msg.data);
+    });
+
+    this.onWebview("addCodeAwareLogEntry", async (msg) => {
+      console.log("📝 [CodeAware] Adding log entry:", msg.data.eventType);
+      codeAwareLogger.addLogEntry(msg.data.eventType, msg.data.payload);
+    });
+
+    this.onWebview("endCodeAwareLogSession", async (msg) => {
+      console.log("📊 [CodeAware] Ending log session");
+      codeAwareLogger.endLogSession();
     });
 
     /** PASS THROUGH FROM WEBVIEW TO CORE AND BACK **/
@@ -719,6 +771,12 @@ export class VsCodeMessenger {
     this.onWebviewOrCore("openFile", async (msg) => {
       return ide.openFile(msg.data.path);
     });
+
+    // CodeAware: Handle createAndOpenFile requests
+    this.onWebviewOrCore("createAndOpenFile", async (msg) => {
+      return ide.createAndOpenFile(msg.data.filename, msg.data.content);
+    });
+
     this.onWebviewOrCore("runCommand", async (msg) => {
       await ide.runCommand(msg.data.command);
     });
@@ -751,8 +809,8 @@ export class VsCodeMessenger {
       const { filepath, startLine, endLine } = msg.data;
       return ide.showLines(filepath, startLine, endLine);
     });
-    this.onWebviewOrCore("showToast", (msg) => {
-      this.ide.showToast(...msg.data);
+    this.onWebviewOrCore("showToast", async (msg) => {
+      await this.ide.showToast(...msg.data);
     });
     this.onWebviewOrCore("getControlPlaneSessionInfo", async (msg) => {
       return getControlPlaneSessionInfo(
@@ -765,7 +823,7 @@ export class VsCodeMessenger {
       await Promise.all(
         sessions.map((session) => workOsAuthProvider.removeSession(session.id)),
       );
-      vscode.commands.executeCommand(
+      await vscode.commands.executeCommand(
         "setContext",
         "continue.isSignedInToControlPlane",
         false,
@@ -777,8 +835,8 @@ export class VsCodeMessenger {
     this.onWebviewOrCore("readFile", async (msg) => {
       return await ide.readFile(msg.data.filepath);
     });
-    this.onWebviewOrCore("openUrl", (msg) => {
-      vscode.env.openExternal(vscode.Uri.parse(msg.data));
+    this.onWebviewOrCore("openUrl", async (msg) => {
+      await vscode.env.openExternal(vscode.Uri.parse(msg.data));
     });
 
     this.onWebviewOrCore("fileExists", async (msg) => {
@@ -795,6 +853,10 @@ export class VsCodeMessenger {
 
     this.onWebviewOrCore("getDocumentSymbols", async (msg) => {
       return await ide.getDocumentSymbols(msg.data.textDocumentIdentifier);
+    });
+    // CodeAware: Apply diff changes using WorkspaceEdit
+    this.onWebviewOrCore("applyDiffChanges", async (msg) => {
+      return await ide.applyDiffChanges(msg.data);
     });
 
     this.onWebviewOrCore("getFileStats", async (msg) => {

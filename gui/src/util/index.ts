@@ -1,5 +1,5 @@
 import { ProfileDescription } from "core/config/ProfileLifecycleManager";
-import { KeyboardEvent as ReactKeyboardEvent } from "react";
+import { KeyboardEvent, KeyboardEvent as ReactKeyboardEvent } from "react";
 import { getLocalStorage } from "./localStorage";
 
 export type Platform = "mac" | "linux" | "windows" | "unknown";
@@ -48,7 +48,7 @@ export function getAltKeyLabel(): string {
 }
 
 export function getFontSize(): number {
-  return getLocalStorage("fontSize") ?? (isJetBrains() ? 15 : 14);
+  return getLocalStorage("fontSize") ?? (isJetBrains() ? 13 : 12);
 }
 
 export function fontSize(n: number): string {

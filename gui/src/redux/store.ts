@@ -22,6 +22,13 @@ import { profilesReducer } from "./slices/profilesSlice";
 import sessionReducer from "./slices/sessionSlice";
 import tabsReducer from "./slices/tabsSlice";
 import uiReducer from "./slices/uiSlice";
+//CODEAWARE: add the reducer of codeaware
+import codeAwareSessionReducer from "./slices/codeAwareSlice";
+
+export interface ChatMessage {
+  role: "system" | "user" | "assistant";
+  content: string;
+}
 
 const rootReducer = combineReducers({
   session: sessionReducer,
@@ -31,6 +38,7 @@ const rootReducer = combineReducers({
   indexing: indexingReducer,
   tabs: tabsReducer,
   profiles: profilesReducer,
+  codeAwareSession: codeAwareSessionReducer,
 });
 
 const saveSubsetFilters = [
@@ -60,6 +68,18 @@ const saveSubsetFilters = [
     "selectedProfileId",
     "selectedOrganizationId",
     "organizations",
+  ]),
+  createFilter("codeAwareSession", [
+    "currentSessionId",
+    "title",
+    "workspaceDirectory",
+    "userRequirement",
+    "learningGoal",
+    "steps",
+    "codeChunks",
+    "codeAwareMappings",
+    // Note: shouldClearIdeHighlights and codeChunksToHighlightInIde are intentionally not persisted
+    // as they are temporary IDE communication flags that should reset on reload
   ]),
 ];
 
@@ -120,6 +140,7 @@ export function setupStore(options: { ideMessenger?: IIdeMessenger }) {
     middleware: (getDefaultMiddleware) =>
       getDefaultMiddleware({
         serializableCheck: false,
+        immutableCheck: false, // 禁用 ImmutableStateInvariantMiddleware 以提高性能
         thunk: {
           extraArgument: {
             ideMessenger,

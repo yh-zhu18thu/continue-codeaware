@@ -7,6 +7,7 @@ import type {
   ContextProviderName,
   IndexingProgressUpdate,
   IndexingStatus,
+  PackageDocsResult,
 } from "../index.js";
 
 export type ToWebviewFromIdeOrCoreProtocol = {
@@ -44,4 +45,30 @@ export type ToWebviewFromIdeOrCoreProtocol = {
   sessionUpdate: [{ sessionInfo: ControlPlaneSessionInfo | undefined }, void];
   toolCallPartialOutput: [{ toolCallId: string; contextItems: any[] }, void];
   freeTrialExceeded: [undefined, void];
+  "docs/suggestions": [PackageDocsResult[], void];
+  //CodeAware: 获取完整的CodeAware上下文
+  getCodeAwareContext: [
+    undefined,
+    {
+      userRequirement: string;
+      currentStep: string;
+      nextStep: string;
+      stepFinished: boolean;
+    },
+  ];
+  // CodeAware: 处理从代码选择发起的提问
+  codeAwareQuestionFromSelection: [
+    {
+      selectedCode: string;
+      selectedText: string;
+      question: string;
+      filePath: string;
+      selectedLines: [number, number];
+      contextInfo: {
+        fileName: string;
+        language: string;
+      };
+    },
+    void,
+  ];
 };

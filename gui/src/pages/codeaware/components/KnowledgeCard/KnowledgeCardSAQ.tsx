@@ -1,0 +1,383 @@
+import { PaperAirplaneIcon } from "@heroicons/react/24/outline";
+import Placeholder from "@tiptap/extension-placeholder";
+import { EditorContent, useEditor } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
+import React from "react";
+import styled from "styled-components";
+import {
+  defaultBorderRadius,
+  lightGray,
+  vscButtonBackground,
+  vscForeground,
+} from "../../../../components";
+import { ToolTip } from "../../../../components/gui/Tooltip";
+import HoverItem from "../../../../components/mainInput/InputToolbar/HoverItem";
+import { useCodeAwareLogger } from "../../../../util/codeAwareWebViewLogger";
+
+const SAQContainer = styled.div`
+  margin-top: 4px;
+  width: 100%;
+  max-width: 600px; /* 限制最大宽度 */
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center; /* Center the content */
+`;
+
+const QuestionSection = styled.div`
+  width: 100%;
+  padding: 10px; /* 减少padding */
+  margin-bottom: 10px; /* 减少margin */
+  border: 1px solid ${lightGray}33;
+  border-radius: ${defaultBorderRadius};
+  background-color: #1a1a1a; /* 深色背景 */
+  color: ${vscForeground};
+`;
+
+const QuestionText = styled.p`
+  margin: 0;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+  text-align: left;
+`;
+
+const EditorWrapper = styled.div`
+  width: 100%;
+  border: 1px solid ${lightGray}66;
+  border-radius: ${defaultBorderRadius};
+  background-color: #1a1a1a; /* 深色背景 */
+  color: ${vscForeground};
+  margin-bottom: 10px; /* 减少margin */
+
+  .ProseMirror {
+    min-height: 50px; /* 减少最小高度 */
+    width: 100%;
+    padding: 8px; /* 减少padding */
+    font-size: 12px;
+    outline: none;
+    text-align: left; /* Keep editor content left-aligned for typing */
+    background-color: transparent; /* 确保编辑器背景透明 */
+
+    &:focus {
+      border-color: ${vscButtonBackground};
+    }
+  }
+`;
+
+const SubmitSection = styled.div`
+  display: flex;
+  justify-content: flex-end; /* Align submit button to the right */
+  padding-right: 10px; /* 减少padding */
+`;
+
+const LoadingSpinner = styled.div`
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid ${lightGray}33;
+  border-top: 2px solid ${vscButtonBackground};
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-right: 8px;
+
+  @keyframes spin {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
+  }
+`;
+
+const ResultSection = styled.div<{ isCorrect: boolean }>`
+  width: 100%;
+  padding: 10px; /* 减少padding */
+  margin-top: 10px; /* 减少margin */
+  border: 1px solid ${(props) => (props.isCorrect ? "#4caf50" : "#f44336")};
+  border-radius: ${defaultBorderRadius};
+  background-color: ${(props) => (props.isCorrect ? "#4caf5020" : "#f4433620")};
+  color: ${vscForeground};
+`;
+
+const ResultHeader = styled.div<{ isCorrect: boolean }>`
+  display: flex;
+  align-items: center;
+  margin-bottom: 6px; /* 减少margin */
+  font-weight: 600;
+  color: ${(props) => (props.isCorrect ? "#4caf50" : "#f44336")};
+`;
+
+const ResultIcon = styled.span`
+  margin-right: 6px;
+  font-size: 16px;
+`;
+
+const UserAnswerSection = styled.div`
+  margin-bottom: 6px; /* 减少margin */
+`;
+
+const UserAnswerLabel = styled.div`
+  font-size: 11px;
+  font-weight: 500;
+  color: ${lightGray};
+  margin-bottom: 3px; /* 减少margin */
+`;
+
+const UserAnswerText = styled.div`
+  font-size: 12px;
+  padding: 6px; /* 减少padding */
+  background-color: #1a1a1a; /* 深色背景 */
+  border-radius: ${defaultBorderRadius};
+  border: 1px solid ${lightGray}33;
+`;
+
+const RemarksSection = styled.div`
+  font-size: 12px;
+  line-height: 1.4;
+  color: ${vscForeground};
+`;
+
+const RetrySection = styled.div`
+  display: flex;
+  justify-content: center;
+  margin-top: 8px; /* 减少margin */
+`;
+
+const RetryButton = styled.button`
+  padding: 5px 10px; /* 减少padding */
+  background-color: ${vscButtonBackground};
+  color: ${vscForeground};
+  border: none;
+  border-radius: ${defaultBorderRadius};
+  cursor: pointer;
+  font-size: 11px; /* 减少字体大小 */
+
+  &:hover {
+    brightness: 1.2;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
+
+// Remove the custom SubmitButton and use the same pattern as RequirementDisplayToolbar
+
+interface KnowledgeCardSAQProps {
+  question: string; // The question stem
+  onSubmitAnswer: (answer: string) => void;
+  placeholder?: string;
+  isLoading?: boolean;
+  result?: {
+    userAnswer: string;
+    isCorrect: boolean;
+    remarks: string;
+  };
+  // 新增：用于保持输入状态的属性
+  initialContent?: string;
+  initialIsRetrying?: boolean;
+  onContentChange?: (content: string) => void;
+  onRetryStateChange?: (isRetrying: boolean) => void;
+}
+
+const KnowledgeCardSAQ: React.FC<KnowledgeCardSAQProps> = ({
+  question,
+  onSubmitAnswer,
+  placeholder = "在此输入你的答案...",
+  isLoading = false,
+  result,
+  initialContent,
+  initialIsRetrying = false,
+  onContentChange,
+  onRetryStateChange,
+}) => {
+  const logger = useCodeAwareLogger();
+  const [isRetrying, setIsRetrying] = React.useState(initialIsRetrying);
+  const [lastResultHash, setLastResultHash] = React.useState<string>("");
+  const hasStartedEditingRef = React.useRef(false);
+
+  const editor = useEditor({
+    extensions: [
+      StarterKit,
+      Placeholder.configure({
+        placeholder: placeholder,
+      }),
+    ],
+    content: initialContent || "", // 使用空字符串而不是包含placeholder的HTML
+    editorProps: {
+      attributes: {
+        class: "prose dark:prose-invert prose-sm sm:prose-base",
+      },
+    },
+    onUpdate: async ({ editor }) => {
+      const content = editor.getText();
+
+      // 当编辑器内容变化时，通知父组件保存状态
+      if (onContentChange) {
+        onContentChange(content);
+      }
+    },
+    onFocus: async () => {
+      // Log when user first focuses on the SAQ answer editor
+      if (!hasStartedEditingRef.current) {
+        hasStartedEditingRef.current = true;
+        await logger.addLogEntry("user_start_edit_saq_answer", {
+          question:
+            question.length > 200
+              ? question.substring(0, 200) + "..."
+              : question,
+          timestamp: new Date().toISOString(),
+        });
+      }
+    },
+  });
+
+  // 新增：监听 question 变化，切换题目时清空编辑器内容
+  React.useEffect(() => {
+    if (editor && !isRetrying && !result) {
+      // 当切换到新题目时（没有结果且不在重试状态），根据保存的状态设置编辑器内容
+      const contentToSet = initialContent || "";
+      if (editor.getText() !== contentToSet) {
+        editor.commands.setContent(contentToSet);
+      }
+      // Reset editing state when question changes
+      hasStartedEditingRef.current = false;
+    }
+  }, [question, editor, initialContent, isRetrying, result]);
+
+  // Reset retry state only when a genuinely new result comes in
+  React.useEffect(() => {
+    if (result && result.userAnswer) {
+      const currentResultHash = `${result.userAnswer}-${result.isCorrect}-${result.remarks}`;
+      if (currentResultHash !== lastResultHash && !isLoading) {
+        setLastResultHash(currentResultHash);
+        if (isRetrying) {
+          setIsRetrying(false);
+          // 通知父组件重试状态变化
+          if (onRetryStateChange) {
+            onRetryStateChange(false);
+          }
+        }
+      }
+    }
+  }, [result, isLoading, isRetrying, lastResultHash, onRetryStateChange]);
+
+  if (!editor) {
+    return null;
+  }
+
+  const handleSubmit = async () => {
+    const answer = editor.getText();
+    if (answer.trim() && !isLoading) {
+      await logger.addLogEntry("user_submit_saq_answer", {
+        question:
+          question.length > 200 ? question.substring(0, 200) + "..." : question,
+        answer: answer.length > 500 ? answer.substring(0, 500) + "..." : answer,
+        timestamp: new Date().toISOString(),
+      });
+
+      onSubmitAnswer(answer);
+      // Note: Don't reset isRetrying here, let the parent component handle result updates
+    }
+  };
+
+  const handleRetry = async () => {
+    console.log("Retry button clicked", { result: result?.userAnswer });
+
+    setIsRetrying(true);
+    // 通知父组件更新重试状态
+    if (onRetryStateChange) {
+      onRetryStateChange(true);
+    }
+
+    // 将之前的答案同步到编辑器
+    if (result?.userAnswer) {
+      editor.commands.setContent(result.userAnswer);
+      console.log("Content set to editor:", result.userAnswer);
+      // 通知父组件内容变化
+      if (onContentChange) {
+        onContentChange(result.userAnswer);
+      }
+    }
+  };
+
+  // Check if editor is effectively empty (only contains placeholder or whitespace)
+  const isEditorEmpty = !editor.getText().trim(); // 简化判断逻辑，不需要检查placeholder
+
+  // If there's a result and user is not retrying, show result
+  // Also show result if loading (to maintain the result view during submission)
+  const showResult = result && result.userAnswer && !isRetrying && !isLoading;
+  const showEditor = !showResult; // Show editor when no result or when retrying or when loading
+
+  return (
+    <SAQContainer>
+      <QuestionSection>
+        <QuestionText>{question}</QuestionText>
+      </QuestionSection>
+
+      {showEditor && (
+        <>
+          <EditorWrapper>
+            <EditorContent editor={editor} />
+          </EditorWrapper>
+          <SubmitSection>
+            <HoverItem>
+              {isLoading ? (
+                <div style={{ display: "flex", alignItems: "center" }}>
+                  <LoadingSpinner />
+                  <span style={{ fontSize: "12px", color: lightGray }}>
+                    评估中...
+                  </span>
+                </div>
+              ) : (
+                <PaperAirplaneIcon
+                  className={`h-5 w-5 ${isEditorEmpty || isLoading ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:brightness-125"}`}
+                  onClick={
+                    !isEditorEmpty && !isLoading ? handleSubmit : undefined
+                  }
+                  aria-label="提交答案"
+                >
+                  <ToolTip text="提交答案" position="top">
+                    提交答案
+                  </ToolTip>
+                </PaperAirplaneIcon>
+              )}
+            </HoverItem>
+          </SubmitSection>
+        </>
+      )}
+
+      {showResult && (
+        <ResultSection isCorrect={result.isCorrect}>
+          <ResultHeader isCorrect={result.isCorrect}>
+            <ResultIcon>{result.isCorrect ? "✅" : "❌"}</ResultIcon>
+            {result.isCorrect ? "回答正确" : "回答需要改进"}
+          </ResultHeader>
+
+          <UserAnswerSection>
+            <UserAnswerLabel>你的回答：</UserAnswerLabel>
+            <UserAnswerText>{result.userAnswer}</UserAnswerText>
+          </UserAnswerSection>
+
+          <RemarksSection>
+            <strong>评语：</strong>
+            {result.remarks}
+          </RemarksSection>
+
+          {/* 只有在答错的情况下才显示重试按钮 */}
+          {!result.isCorrect && (
+            <RetrySection>
+              <RetryButton onClick={handleRetry} disabled={isLoading}>
+                重新作答
+              </RetryButton>
+            </RetrySection>
+          )}
+        </ResultSection>
+      )}
+    </SAQContainer>
+  );
+};
+
+export default KnowledgeCardSAQ;

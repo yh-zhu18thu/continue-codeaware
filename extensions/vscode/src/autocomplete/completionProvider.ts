@@ -31,6 +31,15 @@ import {
   stopStatusBarLoading,
 } from "./statusBar";
 
+const Diff = require("diff");
+
+interface DiffType {
+  count: number;
+  added: boolean;
+  removed: boolean;
+  value: string;
+}
+
 interface VsCodeCompletionInput {
   document: vscode.TextDocument;
   position: vscode.Position;
@@ -102,6 +111,21 @@ export class ContinueCompletionProvider
       getAutocompleteModel,
       this.onError.bind(this),
       getDefinitionsFromLsp,
+      async (eventType: string, data: any) => {
+        try {
+          // 使用正确的事件类型
+          if (eventType === "codeCompletionRejected") {
+            await this.webviewProtocol.request(
+              "codeCompletionRejected",
+              undefined,
+            );
+          } else if (eventType === "codeCompletionAccepted") {
+            await this.webviewProtocol.request("codeCompletionAccepted", data);
+          }
+        } catch (error) {
+          console.warn(`CodeAware: Failed to send ${eventType} event:`, error);
+        }
+      },
     );
 
     // Logging service must be created first.
@@ -206,6 +230,8 @@ export class ContinueCompletionProvider
     let injectDetails: string | undefined = undefined;
 
     const currCursorPos = editor.selection.active;
+
+    console.log("ContinueCompletionProvider: begin completion");
 
     try {
       const abortController = new AbortController();

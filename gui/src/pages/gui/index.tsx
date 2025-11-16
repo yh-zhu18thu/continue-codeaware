@@ -1,5 +1,5 @@
 import { History } from "../../components/History";
-import { Chat } from "./Chat";
+import { Chat } from "../codeaware/Chat";
 
 export default function GUI() {
   return (

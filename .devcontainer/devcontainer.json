@@ -1,0 +1,28 @@
+// .devcontainer/devcontainer.json
+{
+  "name": "CodeAware Manual Testing Sandbox",
+
+  // 使用带有 Python 3.11 和常用工具的官方基础镜像
+  "image": "mcr.microsoft.com/vscode/devcontainers/python:3.11",
+
+  // 容器中打开的工作目录，映射到用户本地的 manual-testing-sandbox
+  "workspaceFolder": "/workspace/manual-testing-sandbox",
+  "workspaceMount": "source=${localWorkspaceFolder}/manual-testing-sandbox,target=/workspace/manual-testing-sandbox,type=bind,consistency=cached",
+
+  // 一键安装插件 + Python 依赖
+  "postCreateCommand": "pip install -r requirements.txt; curl -L https://github.com/yh-zhu18thu/continue-codeaware/releases/download/Experimental/codeaware-extension.vsix -o /tmp/code-aware.vsix; code --install-extension /tmp/code-aware.vsix",
+
+  // 容器启动后自动安装有助于 Python 开发的 VS Code 插件
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance"
+      ]
+    }
+  },
+
+  // 可选：把端口映射、环境变量等根据实验需要加在下面
+  "forwardPorts": [],
+  "remoteUser": "vscode"
+}

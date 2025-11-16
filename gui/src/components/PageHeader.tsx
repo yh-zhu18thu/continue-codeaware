@@ -1,26 +1,46 @@
-import { ArrowLeftIcon } from "@heroicons/react/24/outline";
+import { QuestionMarkCircleIcon } from "@heroicons/react/24/outline";
 
 export interface PageHeaderProps {
   onTitleClick?: () => void;
   title?: string;
   showBorder?: boolean;
+  rightContent?: React.ReactNode;
+  onGlobalQuestion?: () => void;
+  showGlobalQuestionButton?: boolean;
 }
 
 export function PageHeader({
   onTitleClick,
   title,
-  showBorder = true,
+  rightContent,
+  onGlobalQuestion,
+  showGlobalQuestionButton = false,
 }: PageHeaderProps) {
   return (
-    <div
-      className={`border-command-border sticky top-0 z-20 m-0 flex items-center justify-between border border-x-0 ${showBorder ? "border-b" : "border-b-0"} border-t-0 border-solid bg-inherit py-3.5`}
-    >
-      <div
-        className="flex cursor-pointer items-center transition-colors duration-200 hover:brightness-125"
-        onClick={onTitleClick}
-      >
-        <ArrowLeftIcon className="ml-3 inline-block h-3 w-3" />
-        {title && <span className="mx-2 inline-block font-bold">{title}</span>}
+    <div className="bg-vsc-background sticky top-0 z-[100] flex items-center justify-between border-b-2 border-vsc-border px-4 py-3 shadow-md backdrop-blur-sm flex-shrink-0">
+      <div className="flex items-center">
+        {title && (
+          <div
+            className="cursor-pointer select-none transition-colors duration-200 hover:text-vsc-foreground-light"
+            onClick={onTitleClick}
+          >
+            <span className="text-base font-bold text-vsc-foreground tracking-wide">
+              {title}
+            </span>
+          </div>
+        )}
+      </div>
+      <div className="flex items-center gap-1">
+        {showGlobalQuestionButton && onGlobalQuestion && (
+          <button
+            onClick={onGlobalQuestion}
+            className="flex items-center justify-center w-7 h-7 rounded border-none bg-transparent text-vsc-foreground cursor-pointer transition-all duration-150 ease-in-out hover:bg-vsc-input-background focus:outline focus:outline-1 focus:outline-vsc-foreground focus:outline-offset-1"
+            title="全局提问"
+          >
+            <QuestionMarkCircleIcon className="w-3.5 h-3.5" />
+          </button>
+        )}
+        {rightContent}
       </div>
     </div>
   );

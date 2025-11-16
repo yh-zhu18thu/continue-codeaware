@@ -77,6 +77,7 @@ export const deleteSession = createAsyncThunk<void, string, ThunkApiType>(
   },
 );
 
+
 export const updateSession = createAsyncThunk<void, Session, ThunkApiType>(
   "session/update",
   async (session, { extra, dispatch }) => {
@@ -185,6 +186,7 @@ function getChatTitleFromMessage(message: ChatMessage) {
   return text;
 }
 
+//CATODO: 阅读了解如何本地存储所有的session中的变量
 export const saveCurrentSession = createAsyncThunk<
   void,
   { openNewSession: boolean; generateTitle: boolean },

@@ -1,6 +1,7 @@
 import Handlebars from "handlebars";
 
-import { CompletionOptions } from "../..";
+import { CompletionOptions, GenerationContext } from "../..";
+import { getUriPathBasename } from "../../util/uri";
 import { AutocompleteLanguageInfo } from "../constants/AutocompleteLanguageInfo";
 import { HelperVars } from "../util/HelperVars";
 
@@ -12,7 +13,6 @@ import {
   pruneLinesFromBottom,
   pruneLinesFromTop,
 } from "../../llm/countTokens";
-import { getUriPathBasename } from "../../util/uri";
 import { SnippetPayload } from "../snippets";
 import { AutocompleteSnippet } from "../snippets/types";
 import {
@@ -41,6 +41,7 @@ function renderStringTemplate(
   lang: AutocompleteLanguageInfo,
   filepath: string,
   reponame: string,
+  codeAwareContext?: GenerationContext,
 ) {
   const filename = getUriPathBasename(filepath);
   const compiledTemplate = Handlebars.compile(template);
@@ -51,6 +52,7 @@ function renderStringTemplate(
     filename,
     reponame,
     language: lang.name,
+    userRequirement: codeAwareContext?.userRequirement || "",
   });
 }
 
@@ -187,6 +189,7 @@ function buildPrompt(
           helper.lang,
           helper.filepath,
           reponame,
+          helper.input.codeAwareContext, // CodeAware: 传递上下文
         )
       : template(
           prefix,

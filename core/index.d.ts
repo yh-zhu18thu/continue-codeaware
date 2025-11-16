@@ -517,6 +517,147 @@ export interface ChatHistoryItem {
   conversationSummary?: string;
 }
 
+//CODEAWARE: 以下是codeaware中所用到的数据结构定义：
+
+export type CollaborationStatus = "empty" | "editing" | "confirmed" | "finalized";
+
+// CODEAWARE: 代码高亮的单位
+export type CodeChunk = {
+  id: string;
+  content: string;
+  range: [number, number];
+  isHighlighted: boolean;
+  disabled: boolean;
+  filePath: string;
+}
+
+// CODEAWARE: 高级步骤项目
+export interface HighLevelStepItem {
+  id: string;
+  content: string;
+  isHighlighted: boolean;
+  isCompleted: boolean; // 标记该高级步骤是否已完成
+}
+
+// CODEAWARE: 步骤与高级步骤的对应关系
+export interface StepToHighLevelMapping {
+  stepId: string;
+  highLevelStepId: string;
+  highLevelStepIndex: number; // 序号，从1开始
+}
+
+// CODEAWARE: 用户输入+LLM paraphrase的程序需求
+export interface ProgramRequirement {
+  // 程序需求部分
+  requirementDescription: string;
+  requirementStatus: CollaborationStatus;
+}
+
+
+export type StepStatus = "editing" | "confirmed" | "generating" | "generated" | "step_dirty" | "code_dirty";
+
+export type KnowledgeCardGenerationStatus = "empty" | "generating" | "ready";
+
+
+// CODEAWARE: flow步骤
+export interface StepItem {
+  id: string;
+  title: string;
+  abstract: string;
+  previousStepAbstract?: string; // 存储之前的abstract，用于检测变化和重新生成
+  knowledgeCards: KnowledgeCardItem[]; //维护该步骤下的知识卡片
+  stepStatus: StepStatus;
+  knowledgeCardGenerationStatus: KnowledgeCardGenerationStatus;
+  isHighlighted: boolean;
+}
+
+
+// CODEAWARE: 知识卡片
+export interface KnowledgeCardItem {
+  id: string;
+  title: string;
+  content?: string;
+  tests?: SelfTestItem[]; //维护该知识卡片下的自测题目
+  isHighlighted: boolean;
+  disabled: boolean;
+  codeContext?: string; // 代码上下文，在触发knowledge card item生成时一并存储。
+}
+
+export type SelfTestResult = "correct" | "wrong" | "unanswered";
+
+// CODEAWARE：自测题目与回答
+export type SelfTestShortAnswer = {
+  type: "shortAnswer";
+  stem: string;
+  standard_answer: string; //LLM给出的标准答案
+  answer: string;
+  remarks?: string; //LLM给出的解析
+  result: SelfTestResult;
+}
+
+export type SelfTestMultipleChoice = {
+  type: "multipleChoice";
+  stem: string;
+  standard_answer: string; //LLM给出的标准答案
+  options: string[];
+  answer: string;
+  answerIndex: number;
+  remarks?: string; //LLM给出的解析
+  result: SelfTestResult;
+}
+
+export type SelfTestInteraction = SelfTestShortAnswer | SelfTestMultipleChoice;
+
+export interface SelfTestItem {
+  id: string;
+  question: SelfTestInteraction;
+  questionType: "shortAnswer" | "multipleChoice";
+}
+
+//CODEAWARE: 一个用于表征并存储所有的对应关系的数据结构，它有着相当大的冗余，主要是为了生成的时候方便，几乎所有元素都是可以
+export interface CodeAwareMapping {
+  codeChunkId?: string;
+  highLevelStepId?: string;
+  stepId?: string;
+  knowledgeCardId?: string;
+  isHighlighted: boolean;
+}
+
+export interface HighlightEvent {
+  sourceType: "code" | "highLevelStep" | "step" | "knowledgeCard";
+  identifier: string;
+  additionalInfo?: CodeChunk | HighLevelStepItem | StepItem | KnowledgeCardItem;
+}
+
+//CODEAWARE: 一个codeaware session (以一次需求沟通作为起点并围绕其展开) 的描述符
+export interface CodeAwareMetadata{
+  codeAwareSessionId: string;
+  title: string;
+  dateCreated: string;
+  workspaceDirectory: string;
+}
+
+//CodeAware 用于补全的context
+export interface GenerationContext{
+    userRequirement?: string;
+    orderedSteps?: string[];
+    stopStep?: string;
+}
+
+// CodeAware Logger types
+export interface CodeAwareLogEntry {
+  timestamp: string; // ISO string format
+  codeAwareSessionId: string;
+  eventType: string;
+  payload: any; // Custom type for payload
+}
+
+export interface CodeAwareLoggerConfig {
+  username: string;
+  sessionName: string;
+  codeAwareSessionId: string;
+}
+
 export interface LLMFullCompletionOptions extends BaseCompletionOptions {
   log?: boolean;
   model?: string;
@@ -618,7 +759,6 @@ export interface ILLMLogger {
 
 export interface LLMOptions {
   model: string;
-
   title?: string;
   uniqueId?: string;
   baseAgentSystemMessage?: string;

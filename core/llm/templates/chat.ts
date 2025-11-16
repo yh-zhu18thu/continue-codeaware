@@ -295,8 +295,7 @@ const graniteTemplateMessages = templateFactory(
 export {
   anthropicTemplateMessages,
   chatmlTemplateMessages,
-  codeLlama70bTemplateMessages,
-  deepseekTemplateMessages,
+  codeLlama70bTemplateMessages, codestralTemplateMessages, deepseekTemplateMessages,
   gemmaTemplateMessage,
   graniteTemplateMessages,
   llama2TemplateMessages,
@@ -308,6 +307,7 @@ export {
   phindTemplateMessages,
   templateAlpacaMessages,
   xWinCoderTemplateMessages,
-  zephyrTemplateMessages,
-  codestralTemplateMessages,
+  zephyrTemplateMessages
 };
+
+//CATODO: 改prompt在这儿就行

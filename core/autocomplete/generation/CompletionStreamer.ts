@@ -27,6 +27,7 @@ export class CompletionStreamer {
     const fullStop = () =>
       this.generatorReuseManager.currentGenerator?.cancel();
 
+    console.log("Streaming completion with filters MULTILINE:", multiline);
     // Try to reuse pending requests if what the user typed matches start of completion
     const generator = this.generatorReuseManager.getGenerator(
       prefix,

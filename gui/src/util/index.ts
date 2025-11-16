@@ -48,7 +48,7 @@ export function getAltKeyLabel(): string {
 }
 
 export function getFontSize(): number {
-  return getLocalStorage("fontSize") ?? (isJetBrains() ? 15 : 14);
+  return getLocalStorage("fontSize") ?? (isJetBrains() ? 13 : 12);
 }
 
 export function fontSize(n: number): string {

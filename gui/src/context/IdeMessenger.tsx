@@ -11,7 +11,7 @@ import {
   GeneratorYieldType,
   WebviewProtocolGeneratorMessage,
   WebviewSingleMessage,
-  WebviewSingleProtocolMessage,
+  WebviewSingleProtocolMessage
 } from "core/protocol/util";
 import { createContext } from "react";
 import { v4 as uuidv4 } from "uuid";

@@ -6,13 +6,14 @@ import {
   AddToChatPayload,
   ApplyState,
   ApplyToFilePayload,
+  CodeChunk,
   ContextItemWithId,
   HighlightedCodePayload,
   MessageContent,
   RangeInFile,
   RangeInFileWithContents,
   SetCodeToEditPayload,
-  ShowFilePayload,
+  ShowFilePayload
 } from "../";
 
 export type ToIdeFromWebviewProtocol = ToIdeFromWebviewOrCoreProtocol & {
@@ -84,6 +85,21 @@ export type ToIdeFromWebviewProtocol = ToIdeFromWebviewOrCoreProtocol & {
     },
     void,
   ];
+  "edit/exit": [{ shouldFocusEditor: boolean }, void];
+  //CodeAware: 代码高亮相关
+  highlightCodeChunk: [CodeChunk, void];
+  clearCodeHighlight: [undefined, void];
+  //CodeAware: 向ide同步当前的任务描述和当前/下一步骤等
+  syncCodeAwareRequirement: [{ userRequirement: string }, void];
+  syncCodeAwareSteps: [{ currentStep: string; nextStep: string; stepFinished?: boolean }, void];
+  //CodeAware: 获取完整的CodeAware上下文
+  getCodeAwareContext: [undefined, { userRequirement: string; currentStep: string; nextStep: string; stepFinished: boolean }];
+  //CodeAware: 设置代码编辑模式
+  setCodeEditMode: [{ enabled: boolean }, void];
+  //CodeAware: 日志记录相关
+  startCodeAwareLogSession: [{ username: string; sessionName: string; codeAwareSessionId: string }, void];
+  addCodeAwareLogEntry: [{ eventType: string; payload: any }, void];
+  endCodeAwareLogSession: [undefined, void];
 };
 
 export type ToWebviewFromIdeProtocol = ToWebviewFromIdeOrCoreProtocol & {
@@ -115,4 +131,33 @@ export type ToWebviewFromIdeProtocol = ToWebviewFromIdeOrCoreProtocol & {
   focusEdit: [undefined, void];
   generateRule: [undefined, void];
   addToChat: [AddToChatPayload, void];
+  focusEditWithoutClear: [undefined, void];
+  // CodeAware: 代码选择事件
+  codeSelectionChanged: [{
+    filePath: string;
+    selectedLines: [number, number];
+    selectedContent: string;
+  }, void];
+  // CodeAware: 代码选择取消事件
+  codeSelectionCleared: [{
+    filePath: string;
+  }, void];
+  // CodeAware: 代码补全事件
+  codeCompletionGenerated: [{
+    prefixCode: string;
+    completionText: string;
+    range: [number, number];
+    filePath: string;
+  }, void];
+  // CodeAware: 代码补全取消事件
+  codeCompletionRejected: [undefined, void];
+  // CodeAware: 代码补全确认事件
+  codeCompletionAccepted: [{
+    completionId?: string;
+    outcome?: any;
+  }, void];
+  // CodeAware: 代码编辑模式状态变化事件
+  didChangeCodeEditMode: [{
+    enabled: boolean;
+  }, void];
 };

@@ -1,0 +1,4 @@
+{"timestamp":"2025-08-09T04:40:28.443Z","codeAwareSessionId":"ca321813-be06-4211-9b8a-0f57faf7a471","eventType":"session_start","payload":{"username":"zyh","sessionName":"tetris","codeAwareSessionId":"ca321813-be06-4211-9b8a-0f57faf7a471"}}
+{"timestamp":"2025-08-09T04:40:28.446Z","codeAwareSessionId":"ca321813-be06-4211-9b8a-0f57faf7a471","eventType":"user_create_new_session","payload":{"username":"zyh","sessionName":"tetris","timestamp":"2025-08-09T04:40:28.445Z"}}
+{"timestamp":"2025-08-09T04:40:28.552Z","codeAwareSessionId":"ca321813-be06-4211-9b8a-0f57faf7a471","eventType":"system_create_session_file","payload":{"filename":"tetris.py","username":"zyh","sessionName":"tetris","timestamp":"2025-08-09T04:40:28.548Z"}}
+{"timestamp":"2025-08-09T04:41:05.756Z","codeAwareSessionId":"ca321813-be06-4211-9b8a-0f57faf7a471","eventType":"user_request_new_session","payload":{"timestamp":"2025-08-09T04:41:05.753Z"}}

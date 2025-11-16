@@ -14,6 +14,7 @@ import { persistor, store } from "./redux/store";
 
   root.render(
     <React.StrictMode>
+      {/* CATODO: 观察这个store是如何维护所有的数据的 */}
       <Provider store={store}>
         <PersistGate loading={null} persistor={persistor}>
           <App />

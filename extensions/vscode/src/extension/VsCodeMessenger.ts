@@ -14,6 +14,7 @@ import {
   CORE_TO_WEBVIEW_PASS_THROUGH,
   WEBVIEW_TO_CORE_PASS_THROUGH,
 } from "core/protocol/passThrough";
+import { codeAwareLogger } from "core/util/codeAwareLogger";
 import { stripImages } from "core/util/messageContent";
 import { normalizeRepoUrl } from "core/util/repoUrl";
 import {
@@ -23,6 +24,7 @@ import {
 import * as vscode from "vscode";
 
 import { ApplyManager } from "../apply";
+import { CodeEditModeManager } from "../CodeEditModeManager";
 import { VerticalDiffManager } from "../diff/vertical/manager";
 import { addCurrentSelectionToEdit } from "../quickEdit/AddCurrentSelection";
 import EditDecorationManager from "../quickEdit/EditDecorationManager";
@@ -37,10 +39,12 @@ import { VsCodeIde } from "../VsCodeIde";
 import { VsCodeWebviewProtocol } from "../webviewProtocol";
 
 import { encodeFullSlug } from "../../../../packages/config-yaml/dist";
+import { HighlightCodeManager } from "./HighlightCodeManager";
 import { VsCodeExtension } from "./VsCodeExtension";
 
 type ToIdeOrWebviewFromCoreProtocol = ToIdeFromCoreProtocol &
   ToWebviewFromCoreProtocol;
+
 
 /**
  * A shared messenger class between Core and Webview
@@ -92,6 +96,8 @@ export class VsCodeMessenger {
     private readonly editDecorationManager: EditDecorationManager,
     private readonly context: vscode.ExtensionContext,
     private readonly vsCodeExtension: VsCodeExtension,
+    private readonly highlightCodeManager: HighlightCodeManager,
+    private readonly codeEditModeManager: CodeEditModeManager
   ) {
     /** WEBVIEW ONLY LISTENERS **/
     this.onWebview("showFile", (msg) => {
@@ -651,6 +657,47 @@ export class VsCodeMessenger {
       }
     });
 
+    this.onWebview("highlightCodeChunk", async (msg) => {
+      console.log("highlightCodeChunk", msg.data);
+      await this.highlightCodeManager.highlightCodeChunk(msg.data);
+    });
+
+    this.onWebview("highlightCodeChunks", async (msg) => {
+      console.log("highlightCodeChunks", msg.data);
+      await this.highlightCodeManager.highlightCodeChunks(msg.data);
+    });
+
+    this.onWebview("clearCodeHighlight", async (msg) => {
+      this.highlightCodeManager.clearAllHighlights();
+    });
+
+    // CodeAware: 设置代码编辑模式
+    this.onWebview("setCodeEditMode", async (msg) => {
+      console.log("💡 设置代码编辑模式:", msg.data);
+      await this.codeEditModeManager.setCodeEditMode(msg.data.enabled);
+      
+      // 向webview发送状态变化通知
+      await this.webviewProtocol.request("didChangeCodeEditMode", {
+        enabled: msg.data.enabled
+      });
+    });
+
+    // CodeAware: 日志记录相关
+    this.onWebview("startCodeAwareLogSession", async (msg) => {
+      console.log("📊 [CodeAware] Starting log session:", msg.data);
+      codeAwareLogger.startLogSession(msg.data);
+    });
+
+    this.onWebview("addCodeAwareLogEntry", async (msg) => {
+      console.log("📝 [CodeAware] Adding log entry:", msg.data.eventType);
+      codeAwareLogger.addLogEntry(msg.data.eventType, msg.data.payload);
+    });
+
+    this.onWebview("endCodeAwareLogSession", async (msg) => {
+      console.log("📊 [CodeAware] Ending log session");
+      codeAwareLogger.endLogSession();
+    });
+
     /** PASS THROUGH FROM WEBVIEW TO CORE AND BACK **/
     WEBVIEW_TO_CORE_PASS_THROUGH.forEach((messageType) => {
       this.onWebview(messageType, async (msg) => {
@@ -719,6 +766,12 @@ export class VsCodeMessenger {
     this.onWebviewOrCore("openFile", async (msg) => {
       return ide.openFile(msg.data.path);
     });
+    
+    // CodeAware: Handle createAndOpenFile requests
+    this.onWebviewOrCore("createAndOpenFile", async (msg) => {
+      return ide.createAndOpenFile(msg.data.filename, msg.data.content);
+    });
+    
     this.onWebviewOrCore("runCommand", async (msg) => {
       await ide.runCommand(msg.data.command);
     });
@@ -795,6 +848,11 @@ export class VsCodeMessenger {
 
     this.onWebviewOrCore("getDocumentSymbols", async (msg) => {
       return await ide.getDocumentSymbols(msg.data.textDocumentIdentifier);
+    });
+    
+    // CodeAware: Apply diff changes using WorkspaceEdit
+    this.onWebviewOrCore("applyDiffChanges", async (msg) => {
+      return await ide.applyDiffChanges(msg.data);
     });
 
     this.onWebviewOrCore("getFileStats", async (msg) => {

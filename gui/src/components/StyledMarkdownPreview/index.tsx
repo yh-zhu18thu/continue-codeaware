@@ -66,8 +66,10 @@ const StyledMarkdown = styled.div<{
     background-color: ${vscEditorBackground};
     border-radius: ${defaultBorderRadius};
 
-    max-width: calc(100vw - 24px);
-    overflow-x: scroll;
+    max-width: 100%;
+    width: 100%;
+    box-sizing: border-box;
+    overflow-x: auto;
     overflow-y: hidden;
 
     padding: 8px;
@@ -82,6 +84,8 @@ const StyledMarkdown = styled.div<{
     background-color: ${vscEditorBackground};
     font-size: ${getFontSize() - 2}px;
     font-family: var(--vscode-editor-font-family);
+    max-width: 100%;
+    box-sizing: border-box;
   }
 
   ul ul,
@@ -123,7 +127,7 @@ const StyledMarkdown = styled.div<{
     "Helvetica Neue",
     sans-serif;
   font-size: ${(props) => props.fontSize || getFontSize()}px;
-  padding-left: 8px;
+  padding-left: 2px;
   padding-right: 8px;
   color: ${vscForeground};
 

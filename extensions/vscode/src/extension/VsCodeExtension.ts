@@ -7,6 +7,7 @@ import { EXTENSION_NAME, getControlPlaneEnv } from "core/control-plane/env";
 import { Core } from "core/core";
 import { FromCoreProtocol, ToCoreProtocol } from "core/protocol";
 import { InProcessMessenger } from "core/protocol/messenger";
+import { codeAwareLogger } from "core/util/codeAwareLogger";
 import {
   getConfigJsonPath,
   getConfigTsPath,
@@ -16,12 +17,14 @@ import {
 import { v4 as uuidv4 } from "uuid";
 import * as vscode from "vscode";
 
-import { ContinueCompletionProvider } from "../autocomplete/completionProvider";
+// import { MetaCompleteProvider } from "../autocomplete/metacomplete";
 import {
   monitorBatteryChanges,
-  setupStatusBar,
-  StatusBarStatus,
+  setupStatusBar
 } from "../autocomplete/statusBar";
+import { CodeAwareActionProvider } from "../codeActions/CodeAwareActionProvider";
+import { CodeEditModeManager } from "../CodeEditModeManager";
+import { CodeSelectionHandler } from "../codeSelection/CodeSelectionHandler";
 import { registerAllCommands } from "../commands";
 import { ContinueConsoleWebviewViewProvider } from "../ContinueConsoleWebviewViewProvider";
 import { ContinueGUIWebviewViewProvider } from "../ContinueGUIWebviewViewProvider";
@@ -30,7 +33,6 @@ import { registerAllCodeLensProviders } from "../lang-server/codeLens";
 import { registerAllPromptFilesCompletionProviders } from "../lang-server/promptFileCompletions";
 import EditDecorationManager from "../quickEdit/EditDecorationManager";
 import { QuickEdit } from "../quickEdit/QuickEditQuickPick";
-import { setupRemoteConfigSync } from "../stubs/activation";
 import { UriEventHandler } from "../stubs/uriHandler";
 import {
   getControlPlaneSessionInfo,
@@ -42,6 +44,7 @@ import { VsCodeIdeUtils } from "../util/ideUtils";
 import { VsCodeIde } from "../VsCodeIde";
 
 import { ConfigYamlDocumentLinkProvider } from "./ConfigYamlDocumentLinkProvider";
+import { HighlightCodeManager } from "./HighlightCodeManager";
 import { VsCodeMessenger } from "./VsCodeMessenger";
 
 import { modelSupportsNextEdit } from "core/llm/autodetect";
@@ -57,8 +60,6 @@ import {
   SelectionChangeManager,
 } from "../activation/SelectionChangeManager";
 import { GhostTextAcceptanceTracker } from "../autocomplete/GhostTextAcceptanceTracker";
-import { getDefinitionsFromLsp } from "../autocomplete/lsp";
-import { handleTextDocumentChange } from "../util/editLoggingUtils";
 import type { VsCodeWebviewProtocol } from "../webviewProtocol";
 
 export class VsCodeExtension {
@@ -72,6 +73,8 @@ export class VsCodeExtension {
   private sidebar: ContinueGUIWebviewViewProvider;
   private windowId: string;
   private editDecorationManager: EditDecorationManager;
+  private highlightCodeManager: HighlightCodeManager;
+  private codeEditModeManager: CodeEditModeManager;
   private verticalDiffManager: VerticalDiffManager;
   webviewProtocolPromise: Promise<VsCodeWebviewProtocol>;
   private core: Core;
@@ -79,7 +82,6 @@ export class VsCodeExtension {
   private workOsAuthProvider: WorkOsAuthProvider;
   private fileSearch: FileSearch;
   private uriHandler = new UriEventHandler();
-  private completionProvider: ContinueCompletionProvider;
 
   private ARBITRARY_TYPING_DELAY = 2000;
 
@@ -170,8 +172,30 @@ export class VsCodeExtension {
       GhostTextAcceptanceTracker.clearInstance();
     }
   }
+  private codeSelectionHandler: CodeSelectionHandler;
+
+  // private metacompleteProvider: MetaCompleteProvider;
+  
+  // CodeAware: 代码选择监听相关属性
+  private lastSelectionData: {
+    filePath: string;
+    selectedLines: [number, number];
+    selectedContent: string;
+  } | null = null;
+  private selectionDebounceTimer: NodeJS.Timeout | null = null;
 
   constructor(context: vscode.ExtensionContext) {
+    console.log("VsCodeExtension: Initializing...");
+    
+    // CodeAware: 设置工作区根路径给 logger
+    const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+    if (workspaceRoot) {
+      codeAwareLogger.setWorkspaceRoot(workspaceRoot);
+      console.log("[VsCodeExtension] Set workspace root for CodeAware logger:", workspaceRoot);
+    } else {
+      console.warn("[VsCodeExtension] No workspace folder found, CodeAware logger will use fallback directory");
+    }
+    
     // Register auth provider
     this.workOsAuthProvider = new WorkOsAuthProvider(context, this.uriHandler);
 
@@ -179,6 +203,12 @@ export class VsCodeExtension {
     context.subscriptions.push(this.workOsAuthProvider);
 
     this.editDecorationManager = new EditDecorationManager(context);
+    this.highlightCodeManager = new HighlightCodeManager();
+    this.codeEditModeManager = new CodeEditModeManager();
+
+    // Register managers for automatic disposal
+    context.subscriptions.push(this.highlightCodeManager);
+    context.subscriptions.push(this.codeEditModeManager);
 
     let resolveWebviewProtocol: any = undefined;
     this.webviewProtocolPromise = new Promise<VsCodeWebviewProtocol>(
@@ -186,8 +216,9 @@ export class VsCodeExtension {
         resolveWebviewProtocol = resolve;
       },
     );
-    this.ide = new VsCodeIde(this.webviewProtocolPromise, context);
     this.ideUtils = new VsCodeIdeUtils();
+    this.ide = new VsCodeIde(this.webviewProtocolPromise, context, this.codeEditModeManager);
+
     this.extensionContext = context;
     this.windowId = uuidv4();
 
@@ -270,6 +301,97 @@ export class VsCodeExtension {
     );
     resolveWebviewProtocol(this.sidebar.webviewProtocol);
 
+    // Initialize CodeSelectionHandler after webviewProtocol is ready
+    this.codeSelectionHandler = new CodeSelectionHandler(
+      this.sidebar.webviewProtocol,
+      context
+    );
+
+    // Register CodeAware Code Action Provider
+    const codeAwareActionProvider = new CodeAwareActionProvider(this.sidebar.webviewProtocol);
+    context.subscriptions.push(
+      vscode.languages.registerCodeActionsProvider(
+        "*", // 支持所有语言
+        codeAwareActionProvider
+      )
+    );
+
+    // CodeAware: 监听代码选择变化
+    vscode.window.onDidChangeTextEditorSelection(async (event) => {
+      const editor = event.textEditor;
+      const document = editor.document;
+      
+      // 确保这是一个有效的文本文档
+      if (document.uri.scheme !== 'file') {
+        return;
+      }
+
+      const selection = event.selections[0]; // 取第一个选择区域
+
+      // 只处理有选中内容的情况
+      if (!selection.isEmpty) {
+        const startLine = selection.start.line + 1;
+        const endLine = selection.end.line + 1;
+        const selectedContent = document.getText(selection);
+
+        const currentSelectionData = {
+          filePath: document.uri.fsPath,
+          selectedLines: [startLine, endLine] as [number, number],
+          selectedContent,
+        };
+
+        // 检查是否与上次选择相同
+        if (this.isSameSelection(currentSelectionData, this.lastSelectionData)) {
+          return;
+        }
+
+        // 清除之前的定时器
+        if (this.selectionDebounceTimer) {
+          clearTimeout(this.selectionDebounceTimer);
+        }
+
+        // 设置新的防抖定时器
+        this.selectionDebounceTimer = setTimeout(async () => {
+          this.lastSelectionData = currentSelectionData;
+          const webviewProtocol = await this.webviewProtocolPromise;
+          void webviewProtocol.request("codeSelectionChanged", currentSelectionData);
+        }, 300); // 300ms 防抖延迟，适合多行选择场景
+      } else {
+        // 如果没有选中内容且之前有选择，发送取消选择事件
+        if (this.lastSelectionData) {
+          // 清除防抖定时器
+          if (this.selectionDebounceTimer) {
+            clearTimeout(this.selectionDebounceTimer);
+            this.selectionDebounceTimer = null;
+          }
+          
+          // 发送取消选择事件
+          const webviewProtocol = await this.webviewProtocolPromise;
+          void webviewProtocol.request("codeSelectionCleared", {
+            filePath: document.uri.fsPath
+          });
+          
+          // 清除上次选择数据
+          this.lastSelectionData = null;
+        }
+      }
+    });
+
+    // CodeAware: 监听工作区文件夹变化，更新日志目录
+    context.subscriptions.push(
+      vscode.workspace.onDidChangeWorkspaceFolders((event) => {
+        const newWorkspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+        if (newWorkspaceRoot) {
+          codeAwareLogger.setWorkspaceRoot(newWorkspaceRoot);
+          console.log("[VsCodeExtension] Workspace folder changed, updated CodeAware logger root:", newWorkspaceRoot);
+        }
+      })
+    );
+
+    // Config Handler with output channel
+    const outputChannel = vscode.window.createOutputChannel(
+      "Continue - LLM Prompt/Completion",
+    );
     const inProcessMessenger = new InProcessMessenger<
       ToCoreProtocol,
       FromCoreProtocol
@@ -300,15 +422,13 @@ export class VsCodeExtension {
     );
     resolveVerticalDiffManager?.(this.verticalDiffManager);
 
-    void setupRemoteConfigSync(() =>
-      this.configHandler.reloadConfig.bind(this.configHandler)(
-        "Remote config sync",
-      ),
-    );
+    // CodeAware: 禁用远程配置同步以避免网络请求
+    // setupRemoteConfigSync(
+    //   this.configHandler.reloadConfig.bind(this.configHandler),
+    // );
 
     void this.configHandler.loadConfig().then(async ({ config }) => {
       const shouldUseFullFileDiff = await getUsingFullFileDiff();
-      this.completionProvider.updateUsingFullFileDiff(shouldUseFullFileDiff);
       selectionManager.updateUsingFullFileDiff(shouldUseFullFileDiff);
 
       const { verticalDiffCodeLens } = registerAllCodeLensProviders(
@@ -324,7 +444,7 @@ export class VsCodeExtension {
     this.configHandler.onConfigUpdate(
       async ({ config: newConfig, configLoadInterrupted }) => {
         const shouldUseFullFileDiff = await getUsingFullFileDiff();
-        this.completionProvider.updateUsingFullFileDiff(shouldUseFullFileDiff);
+        //this.completionProvider.updateUsingFullFileDiff(shouldUseFullFileDiff);
         selectionManager.updateUsingFullFileDiff(shouldUseFullFileDiff);
 
         await this.updateNextEditState(context);
@@ -348,7 +468,7 @@ export class VsCodeExtension {
     const config = vscode.workspace.getConfiguration(EXTENSION_NAME);
     const enabled = config.get<boolean>("enableTabAutocomplete");
 
-    // Register inline completion provider
+    /* Register inline completion provider
     setupStatusBar(
       enabled ? StatusBarStatus.Enabled : StatusBarStatus.Disabled,
     );
@@ -362,8 +482,13 @@ export class VsCodeExtension {
       vscode.languages.registerInlineCompletionItemProvider(
         [{ pattern: "**" }],
         this.completionProvider,
+        new ContinueCompletionProvider(
+          this.configHandler,
+          this.ide,
+          this.sidebar.webviewProtocol
+        ),
       ),
-    );
+    );*/
 
     // Handle uri events
     this.uriHandler.event((uri) => {
@@ -481,6 +606,7 @@ export class VsCodeExtension {
         selectionManager.documentChanged();
       }
 
+      /*
       const editInfo = await handleTextDocumentChange(
         event,
         this.configHandler,
@@ -489,7 +615,7 @@ export class VsCodeExtension {
         getDefinitionsFromLsp,
       );
 
-      if (editInfo) this.core.invoke("files/smallEdit", editInfo);
+      if (editInfo) this.core.invoke("files/smallEdit", editInfo);*/
     });
 
     vscode.workspace.onDidSaveTextDocument(async (event) => {
@@ -654,6 +780,8 @@ export class VsCodeExtension {
         }
       }
     });
+
+    // this.metacompleteProvider = new MetaCompleteProvider(context, this.ide, this.configHandler);
   }
 
   static continueVirtualDocumentScheme = EXTENSION_NAME;
@@ -661,15 +789,45 @@ export class VsCodeExtension {
   // eslint-disable-next-line @typescript-eslint/naming-convention
   private PREVIOUS_BRANCH_FOR_WORKSPACE_DIR: { [dir: string]: string } = {};
 
+  // CodeAware: 检查选择是否相同的辅助方法
+  private isSameSelection(
+    current: { filePath: string; selectedLines: [number, number]; selectedContent: string } | null,
+    previous: { filePath: string; selectedLines: [number, number]; selectedContent: string } | null
+  ): boolean {
+    if (!current || !previous) {
+      return false;
+    }
+    return (
+      current.filePath === previous.filePath &&
+      current.selectedLines[0] === previous.selectedLines[0] &&
+      current.selectedLines[1] === previous.selectedLines[1] &&
+      current.selectedContent === previous.selectedContent
+    );
+  }
+
   registerCustomContextProvider(contextProvider: IContextProvider) {
     this.configHandler.registerCustomContextProvider(contextProvider);
   }
 
   public activateNextEdit() {
-    this.completionProvider.activateNextEdit();
+    //this.completionProvider.activateNextEdit();
   }
 
   public deactivateNextEdit() {
-    this.completionProvider.deactivateNextEdit();
+    //this.completionProvider.deactivateNextEdit();
+  }
+
+  public dispose(): void {
+    // 清理CodeEditModeManager资源
+    this.codeEditModeManager?.dispose();
+    // 清理CodeSelectionHandler资源
+    this.codeSelectionHandler?.dispose();
+    // 清理HighlightCodeManager资源
+    this.highlightCodeManager?.dispose();
+    // 清理代码选择防抖定时器
+    if (this.selectionDebounceTimer) {
+      clearTimeout(this.selectionDebounceTimer);
+      this.selectionDebounceTimer = null;
+    }
   }
 }

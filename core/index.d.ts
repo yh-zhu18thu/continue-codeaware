@@ -519,7 +519,11 @@ export interface ChatHistoryItem {
 
 //CODEAWARE: 以下是codeaware中所用到的数据结构定义：
 
-export type CollaborationStatus = "empty" | "editing" | "confirmed" | "finalized";
+export type CollaborationStatus =
+  | "empty"
+  | "editing"
+  | "confirmed"
+  | "finalized";
 
 // CODEAWARE: 代码高亮的单位
 export type CodeChunk = {
@@ -529,7 +533,7 @@ export type CodeChunk = {
   isHighlighted: boolean;
   disabled: boolean;
   filePath: string;
-}
+};
 
 // CODEAWARE: 高级步骤项目
 export interface HighLevelStepItem {
@@ -553,11 +557,19 @@ export interface ProgramRequirement {
   requirementStatus: CollaborationStatus;
 }
 
+export type StepStatus =
+  | "editing"
+  | "confirmed"
+  | "generating"
+  | "generated"
+  | "step_dirty"
+  | "code_dirty";
 
-export type StepStatus = "editing" | "confirmed" | "generating" | "generated" | "step_dirty" | "code_dirty";
-
-export type KnowledgeCardGenerationStatus = "empty" | "generating" | "ready";
-
+export type KnowledgeCardGenerationStatus =
+  | "empty"
+  | "generating"
+  | "ready"
+  | "checked";
 
 // CODEAWARE: flow步骤
 export interface StepItem {
@@ -570,7 +582,6 @@ export interface StepItem {
   knowledgeCardGenerationStatus: KnowledgeCardGenerationStatus;
   isHighlighted: boolean;
 }
-
 
 // CODEAWARE: 知识卡片
 export interface KnowledgeCardItem {
@@ -593,7 +604,7 @@ export type SelfTestShortAnswer = {
   answer: string;
   remarks?: string; //LLM给出的解析
   result: SelfTestResult;
-}
+};
 
 export type SelfTestMultipleChoice = {
   type: "multipleChoice";
@@ -604,7 +615,7 @@ export type SelfTestMultipleChoice = {
   answerIndex: number;
   remarks?: string; //LLM给出的解析
   result: SelfTestResult;
-}
+};
 
 export type SelfTestInteraction = SelfTestShortAnswer | SelfTestMultipleChoice;
 
@@ -630,7 +641,7 @@ export interface HighlightEvent {
 }
 
 //CODEAWARE: 一个codeaware session (以一次需求沟通作为起点并围绕其展开) 的描述符
-export interface CodeAwareMetadata{
+export interface CodeAwareMetadata {
   codeAwareSessionId: string;
   title: string;
   dateCreated: string;
@@ -638,10 +649,10 @@ export interface CodeAwareMetadata{
 }
 
 //CodeAware 用于补全的context
-export interface GenerationContext{
-    userRequirement?: string;
-    orderedSteps?: string[];
-    stopStep?: string;
+export interface GenerationContext {
+  userRequirement?: string;
+  orderedSteps?: string[];
+  stopStep?: string;
 }
 
 // CodeAware Logger types

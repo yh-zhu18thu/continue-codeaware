@@ -2,17 +2,17 @@ import { PaperAirplaneIcon } from "@heroicons/react/24/outline";
 import Placeholder from "@tiptap/extension-placeholder";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import React from 'react';
+import React from "react";
 import styled from "styled-components";
 import {
   defaultBorderRadius,
   lightGray,
   vscButtonBackground,
-  vscForeground
+  vscForeground,
 } from "../../../../components";
 import { ToolTip } from "../../../../components/gui/Tooltip";
 import HoverItem from "../../../../components/mainInput/InputToolbar/HoverItem";
-import { useCodeAwareLogger } from '../../../../util/codeAwareWebViewLogger';
+import { useCodeAwareLogger } from "../../../../util/codeAwareWebViewLogger";
 
 const SAQContainer = styled.div`
   margin-top: 4px;
@@ -48,7 +48,7 @@ const EditorWrapper = styled.div`
   background-color: #1a1a1a; /* 深色背景 */
   color: ${vscForeground};
   margin-bottom: 10px; /* 减少margin */
-  
+
   .ProseMirror {
     min-height: 50px; /* 减少最小高度 */
     width: 100%;
@@ -57,7 +57,7 @@ const EditorWrapper = styled.div`
     outline: none;
     text-align: left; /* Keep editor content left-aligned for typing */
     background-color: transparent; /* 确保编辑器背景透明 */
-    
+
     &:focus {
       border-color: ${vscButtonBackground};
     }
@@ -81,8 +81,12 @@ const LoadingSpinner = styled.div`
   margin-right: 8px;
 
   @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
   }
 `;
 
@@ -90,9 +94,9 @@ const ResultSection = styled.div<{ isCorrect: boolean }>`
   width: 100%;
   padding: 10px; /* 减少padding */
   margin-top: 10px; /* 减少margin */
-  border: 1px solid ${props => props.isCorrect ? '#4caf50' : '#f44336'};
+  border: 1px solid ${(props) => (props.isCorrect ? "#4caf50" : "#f44336")};
   border-radius: ${defaultBorderRadius};
-  background-color: ${props => props.isCorrect ? '#4caf5020' : '#f4433620'};
+  background-color: ${(props) => (props.isCorrect ? "#4caf5020" : "#f4433620")};
   color: ${vscForeground};
 `;
 
@@ -101,7 +105,7 @@ const ResultHeader = styled.div<{ isCorrect: boolean }>`
   align-items: center;
   margin-bottom: 6px; /* 减少margin */
   font-weight: 600;
-  color: ${props => props.isCorrect ? '#4caf50' : '#f44336'};
+  color: ${(props) => (props.isCorrect ? "#4caf50" : "#f44336")};
 `;
 
 const ResultIcon = styled.span`
@@ -148,11 +152,11 @@ const RetryButton = styled.button`
   border-radius: ${defaultBorderRadius};
   cursor: pointer;
   font-size: 11px; /* 减少字体大小 */
-  
+
   &:hover {
     brightness: 1.2;
   }
-  
+
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
@@ -191,9 +195,9 @@ const KnowledgeCardSAQ: React.FC<KnowledgeCardSAQProps> = ({
 }) => {
   const logger = useCodeAwareLogger();
   const [isRetrying, setIsRetrying] = React.useState(initialIsRetrying);
-  const [lastResultHash, setLastResultHash] = React.useState<string>('');
+  const [lastResultHash, setLastResultHash] = React.useState<string>("");
   const hasStartedEditingRef = React.useRef(false);
-  
+
   const editor = useEditor({
     extensions: [
       StarterKit,
@@ -201,7 +205,7 @@ const KnowledgeCardSAQ: React.FC<KnowledgeCardSAQProps> = ({
         placeholder: placeholder,
       }),
     ],
-    content: initialContent || '', // 使用空字符串而不是包含placeholder的HTML
+    content: initialContent || "", // 使用空字符串而不是包含placeholder的HTML
     editorProps: {
       attributes: {
         class: "prose dark:prose-invert prose-sm sm:prose-base",
@@ -209,7 +213,7 @@ const KnowledgeCardSAQ: React.FC<KnowledgeCardSAQProps> = ({
     },
     onUpdate: async ({ editor }) => {
       const content = editor.getText();
-      
+
       // 当编辑器内容变化时，通知父组件保存状态
       if (onContentChange) {
         onContentChange(content);
@@ -220,8 +224,11 @@ const KnowledgeCardSAQ: React.FC<KnowledgeCardSAQProps> = ({
       if (!hasStartedEditingRef.current) {
         hasStartedEditingRef.current = true;
         await logger.addLogEntry("user_start_edit_saq_answer", {
-          question: question.length > 200 ? question.substring(0, 200) + "..." : question,
-          timestamp: new Date().toISOString()
+          question:
+            question.length > 200
+              ? question.substring(0, 200) + "..."
+              : question,
+          timestamp: new Date().toISOString(),
         });
       }
     },
@@ -231,7 +238,7 @@ const KnowledgeCardSAQ: React.FC<KnowledgeCardSAQProps> = ({
   React.useEffect(() => {
     if (editor && !isRetrying && !result) {
       // 当切换到新题目时（没有结果且不在重试状态），根据保存的状态设置编辑器内容
-      const contentToSet = initialContent || '';
+      const contentToSet = initialContent || "";
       if (editor.getText() !== contentToSet) {
         editor.commands.setContent(contentToSet);
       }
@@ -265,29 +272,30 @@ const KnowledgeCardSAQ: React.FC<KnowledgeCardSAQProps> = ({
     const answer = editor.getText();
     if (answer.trim() && !isLoading) {
       await logger.addLogEntry("user_submit_saq_answer", {
-        question: question.length > 200 ? question.substring(0, 200) + "..." : question,
+        question:
+          question.length > 200 ? question.substring(0, 200) + "..." : question,
         answer: answer.length > 500 ? answer.substring(0, 500) + "..." : answer,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
-      
+
       onSubmitAnswer(answer);
       // Note: Don't reset isRetrying here, let the parent component handle result updates
     }
   };
 
   const handleRetry = async () => {
-    console.log('Retry button clicked', { result: result?.userAnswer });
-    
+    console.log("Retry button clicked", { result: result?.userAnswer });
+
     setIsRetrying(true);
     // 通知父组件更新重试状态
     if (onRetryStateChange) {
       onRetryStateChange(true);
     }
-    
+
     // 将之前的答案同步到编辑器
     if (result?.userAnswer) {
       editor.commands.setContent(result.userAnswer);
-      console.log('Content set to editor:', result.userAnswer);
+      console.log("Content set to editor:", result.userAnswer);
       // 通知父组件内容变化
       if (onContentChange) {
         onContentChange(result.userAnswer);
@@ -308,7 +316,7 @@ const KnowledgeCardSAQ: React.FC<KnowledgeCardSAQProps> = ({
       <QuestionSection>
         <QuestionText>{question}</QuestionText>
       </QuestionSection>
-      
+
       {showEditor && (
         <>
           <EditorWrapper>
@@ -317,20 +325,22 @@ const KnowledgeCardSAQ: React.FC<KnowledgeCardSAQProps> = ({
           <SubmitSection>
             <HoverItem>
               {isLoading ? (
-                <div style={{ display: 'flex', alignItems: 'center' }}>
+                <div style={{ display: "flex", alignItems: "center" }}>
                   <LoadingSpinner />
-                  <span style={{ fontSize: '12px', color: lightGray }}>评估中...</span>
+                  <span style={{ fontSize: "12px", color: lightGray }}>
+                    评估中...
+                  </span>
                 </div>
               ) : (
-                <PaperAirplaneIcon
-                  className={`w-5 h-5 ${(isEditorEmpty || isLoading) ? 'opacity-50 cursor-not-allowed' : 'hover:brightness-125 cursor-pointer'}`}
-                  onClick={(!isEditorEmpty && !isLoading) ? handleSubmit : undefined}
-                  aria-label="提交答案"
-                >
-                  <ToolTip text="提交答案" position="top">
-                    提交答案
-                  </ToolTip>
-                </PaperAirplaneIcon>
+                <ToolTip content="提交答案" place="top">
+                  <PaperAirplaneIcon
+                    className={`h-5 w-5 ${isEditorEmpty || isLoading ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:brightness-125"}`}
+                    onClick={
+                      !isEditorEmpty && !isLoading ? handleSubmit : undefined
+                    }
+                    aria-label="提交答案"
+                  />
+                </ToolTip>
               )}
             </HoverItem>
           </SubmitSection>
@@ -340,10 +350,10 @@ const KnowledgeCardSAQ: React.FC<KnowledgeCardSAQProps> = ({
       {showResult && (
         <ResultSection isCorrect={result.isCorrect}>
           <ResultHeader isCorrect={result.isCorrect}>
-            <ResultIcon>{result.isCorrect ? '✅' : '❌'}</ResultIcon>
-            {result.isCorrect ? '回答正确' : '回答需要改进'}
+            <ResultIcon>{result.isCorrect ? "✅" : "❌"}</ResultIcon>
+            {result.isCorrect ? "回答正确" : "回答需要改进"}
           </ResultHeader>
-          
+
           <UserAnswerSection>
             <UserAnswerLabel>你的回答：</UserAnswerLabel>
             <UserAnswerText>{result.userAnswer}</UserAnswerText>

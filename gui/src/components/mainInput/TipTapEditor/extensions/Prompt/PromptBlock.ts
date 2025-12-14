@@ -2,7 +2,7 @@ import { mergeAttributes, Node } from "@tiptap/core";
 import { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { ReactNodeViewRenderer } from "@tiptap/react";
 import { ContextItemWithId } from "core";
-import { MAIN_EDITOR_INPUT_ID } from "../../../../../pages/gui/Chat";
+import { MAIN_EDITOR_INPUT_ID } from "../../../../../pages/codeaware/Chat";
 import { ComboBoxItem } from "../../../types";
 import { PromptBlockPreview } from "./PromptBlockPreview";
 

@@ -1,16 +1,23 @@
-import { AcademicCapIcon, BookOpenIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
-import { XMarkIcon } from '@heroicons/react/24/solid';
-import React from 'react';
+import {
+  AcademicCapIcon,
+  BookOpenIcon,
+  ChevronDownIcon,
+} from "@heroicons/react/24/outline";
+import { XMarkIcon } from "@heroicons/react/24/solid";
+import React from "react";
 import styled from "styled-components";
 import {
   lightGray,
   vscButtonBackground,
-  vscForeground
+  vscForeground,
 } from "../../../../components";
-import { ToolTip } from '../../../../components/gui/Tooltip';
-import HoverItem from '../../../../components/mainInput/InputToolbar/HoverItem';
+import { ToolTip } from "../../../../components/gui/Tooltip";
+import HoverItem from "../../../../components/mainInput/InputToolbar/HoverItem";
 
-const ToolBarContainer = styled.div<{ isHighlighted?: boolean; isFlickering?: boolean }>`
+const ToolBarContainer = styled.div<{
+  isHighlighted?: boolean;
+  isFlickering?: boolean;
+}>`
   width: 95%;
   padding: 4px 10px;
   display: flex;
@@ -18,10 +25,9 @@ const ToolBarContainer = styled.div<{ isHighlighted?: boolean; isFlickering?: bo
   align-items: center;
   background-color: ${vscButtonBackground}22; /* Slightly lighter than Step */
   color: ${vscForeground};
-  border-bottom: 1px solid ${({ isHighlighted, isFlickering }) => 
-    isFlickering ? '#ff6b6b' : 
-    isHighlighted ? '#4ade80' : 
-    `${lightGray}33`};
+  border-bottom: 1px solid
+    ${({ isHighlighted, isFlickering }) =>
+      isFlickering ? "#ff6b6b" : isHighlighted ? "#4ade80" : `${lightGray}33`};
   transition: border-color 0.15s ease-in-out;
   position: relative;
 `;
@@ -69,7 +75,8 @@ const ChevronContainer = styled.div<{ isExpanded: boolean }>`
   align-items: center;
   flex-shrink: 0;
   transition: transform 0.15s ease-in-out;
-  transform: ${({ isExpanded }) => isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)'};
+  transform: ${({ isExpanded }) =>
+    isExpanded ? "rotate(0deg)" : "rotate(-90deg)"};
 `;
 
 interface KnowledgeCardToolBarProps {
@@ -102,44 +109,37 @@ const KnowledgeCardToolBar: React.FC<KnowledgeCardToolBarProps> = ({
       {/* Small disable button in top-left corner */}
       <DisableButtonContainer>
         <HoverItem>
-          <XMarkIcon
-            className="w-3 h-3 cursor-pointer text-white hover:text-gray-300 transition-colors"
-            onClick={onDisableClick}
-          />
-          <ToolTip text="删除不需要的知识卡片" position="top">
-            删除不需要的知识卡片
+          <ToolTip content="删除不需要的知识卡片" place="top">
+            <XMarkIcon
+              className="h-3 w-3 cursor-pointer text-white transition-colors hover:text-gray-300"
+              onClick={onDisableClick}
+            />
           </ToolTip>
         </HoverItem>
       </DisableButtonContainer>
 
       {/* Title section in the middle */}
       <TitleSection onClick={onToggle}>
-        <Title title={title}>
-          {title}
-        </Title>
+        <Title title={title}>{title}</Title>
       </TitleSection>
 
       {/* Test/Knowledge toggle button */}
       <QuestionButtonContainer>
         <HoverItem>
           {isTestMode ? (
-            <BookOpenIcon
-              className={`w-5 h-5 hover:brightness-125 cursor-pointer`}
-              onClick={onQuestionClick}
-            >
-              <ToolTip text="返回知识卡片" position="top">
-                返回知识卡片
-              </ToolTip>
-            </BookOpenIcon>
+            <ToolTip content="返回知识卡片" place="top">
+              <BookOpenIcon
+                className={`h-5 w-5 cursor-pointer hover:brightness-125`}
+                onClick={onQuestionClick}
+              />
+            </ToolTip>
           ) : (
-            <AcademicCapIcon
-              className={`w-5 h-5 ${isQuestionDisabled ? 'opacity-50 cursor-not-allowed' : 'hover:brightness-125 cursor-pointer'} ${hasCorrectAnswer ? 'text-green-500' : ''}`}
-              onClick={!isQuestionDisabled ? onQuestionClick : undefined}
-            >
-              <ToolTip text="查看测试题" position="top">
-                查看测试题
-              </ToolTip>
-            </AcademicCapIcon>
+            <ToolTip content="查看测试题" place="top">
+              <AcademicCapIcon
+                className={`h-5 w-5 ${isQuestionDisabled ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:brightness-125"} ${hasCorrectAnswer ? "text-green-500" : ""}`}
+                onClick={!isQuestionDisabled ? onQuestionClick : undefined}
+              />
+            </ToolTip>
           )}
         </HoverItem>
       </QuestionButtonContainer>

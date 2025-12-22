@@ -3,10 +3,10 @@ import {
   EditorView,
   InputBox,
   TextEditor,
-  VSBrowser,
   Workbench,
 } from "vscode-extension-tester";
 
+import { VSBrowser } from "vscode-extension-tester";
 import { DEFAULT_TIMEOUT } from "../constants";
 import { TestUtils } from "../TestUtils";
 

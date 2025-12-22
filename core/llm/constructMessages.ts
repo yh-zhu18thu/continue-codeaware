@@ -6,7 +6,7 @@ import {
 } from "../";
 import { normalizeToMessageParts } from "../util/messageContent";
 
-import { modelSupportsTools } from "./autodetect";
+import { modelSupportsTools } from "./modelCapabilities";
 
 const TOOL_USE_RULES = `When using tools, follow the following guidelines:
 - Avoid calling tools unless they are absolutely necessary. For example, if you are asked a simple programming question you do not need web search. As another example, if the user asks you to explain something about code, do not create a new file.`;
@@ -77,4 +77,3 @@ export function constructMessages(
     return rest;
   });
 }
-

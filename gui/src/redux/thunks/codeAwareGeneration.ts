@@ -3,7 +3,6 @@ import {
   CodeAwareMapping,
   CodeChunk,
   HighLevelStepItem,
-  HighlightEvent,
   ProgramRequirement,
   StepItem,
   StepToHighLevelMapping,
@@ -11,7 +10,6 @@ import {
 import {
   constructEvaluateSaqAnswerPrompt,
   constructFindStepRelatedCodeLinesPrompt,
-  constructGenerateCodePrompt,
   constructGenerateKnowledgeCardDetailPrompt,
   constructGenerateKnowledgeCardTestsPrompt, // 新增测试题生成prompt
   constructGenerateKnowledgeCardThemesFromQueryPrompt,
@@ -2570,7 +2568,7 @@ export const checkAndClearStuckGeneratingStatus = createAsyncThunk<
   },
 );
 
-// 异步根据现有代码和步骤生成新代码（重构版本：先生成代码，再并行找到步骤相关代码行）
+// 异步根据现有代码和步骤生成新代码（重构版本：使用流式生成和tool calls）
 export const generateCodeFromSteps = createAsyncThunk<
   {
     changedCode: string;
@@ -2610,7 +2608,6 @@ export const generateCodeFromSteps = createAsyncThunk<
           filepath,
           stepsCount: orderedSteps.length,
           previouslyGeneratedStepsCount: previouslyGeneratedSteps?.length || 0,
-          // 记录步骤详情
           stepsDetails: orderedSteps.map((step) => ({
             title: step.title,
             abstract: step.abstract
@@ -2623,10 +2620,6 @@ export const generateCodeFromSteps = createAsyncThunk<
       });
 
       const state = getState();
-      const defaultModel = selectSelectedChatModel(state);
-      if (!defaultModel) {
-        throw new Error("Default model not defined");
-      }
 
       console.log("generateCodeFromSteps called with:", {
         existingCodeLength: existingCode.length,
@@ -2638,38 +2631,13 @@ export const generateCodeFromSteps = createAsyncThunk<
           title: s.title,
           abstract: s.abstract,
         })),
-        previousSteps:
-          previouslyGeneratedSteps?.map((s) => ({
-            id: s.id,
-            title: s.title,
-          })) || [],
       });
-
-      // 第一步：生成代码
-      console.log("🚀 第一步：开始生成代码...");
-      let generatedCode = "";
-
-      // 准备新步骤信息（不包含知识卡片）
-      const newStepsForCodeGeneration = orderedSteps.map((step) => ({
-        id: step.id,
-        title: step.title,
-        abstract: step.abstract,
-      }));
-
-      // 准备之前生成的步骤信息（不包含知识卡片）
-      const previousStepsForCodeGeneration = previouslyGeneratedSteps?.map(
-        (step) => ({
-          id: step.id,
-          title: step.title,
-          abstract: step.abstract,
-        }),
-      );
 
       // 获取任务描述
       const taskDescription =
         state.codeAwareSession.userRequirement?.requirementDescription || "";
 
-      // 判断是否是最后一步：检查所有步骤中最大的顺序是否包含在当前生成的步骤中
+      // 判断是否是最后一步
       const allSteps = state.codeAwareSession.steps;
       const maxStepIndex = Math.max(...allSteps.map((_, index) => index));
       const lastStepId = allSteps[maxStepIndex]?.id;
@@ -2683,507 +2651,66 @@ export const generateCodeFromSteps = createAsyncThunk<
         isLastStep,
       });
 
-      // 构造第一步的提示词
-      const codePrompt = constructGenerateCodePrompt(
-        existingCode,
-        newStepsForCodeGeneration,
-        previousStepsForCodeGeneration,
-        taskDescription,
-        isLastStep,
+      // 使用新的流式生成thunk
+      console.log("🚀 开始使用流式生成方式生成代码...");
+
+      // 动态导入以避免循环依赖
+      const { streamCodeGenerationThunk } = await import(
+        "./streamCodeGeneration"
       );
 
-      // 第一步：调用LLM生成代码，带重试机制
-      const maxRetries = 3;
-      let lastError: Error | null = null;
-      let codeResult: any = null;
+      await dispatch(
+        streamCodeGenerationThunk({
+          orderedSteps,
+          filepath,
+          previouslyGeneratedSteps: previouslyGeneratedSteps?.map((s) => ({
+            id: s.id,
+            title: s.title,
+            abstract: s.abstract,
+          })),
+          taskDescription,
+          isLastStep,
+        }),
+      ).unwrap();
 
-      for (let attempt = 1; attempt <= maxRetries; attempt++) {
-        try {
-          console.log(`🔄 第一步代码生成尝试 ${attempt}/${maxRetries}...`);
+      console.log("✅ 流式代码生成完成");
 
-          codeResult = await extra.ideMessenger.request("llm/complete", {
-            prompt: codePrompt,
-            completionOptions: {},
-            title: defaultModel.title,
-          });
-
-          if (codeResult.status === "success" && codeResult.content) {
-            console.log("✅ 第一步代码生成成功");
-            break;
-          } else {
-            throw new Error(
-              `LLM request failed: status=${codeResult.status}, hasContent=${!!codeResult.content}`,
-            );
-          }
-        } catch (error) {
-          lastError = error instanceof Error ? error : new Error(String(error));
-          console.warn(
-            `⚠️ 第一步代码生成尝试 ${attempt}/${maxRetries} 失败:`,
-            lastError.message,
-          );
-
-          if (attempt < maxRetries) {
-            const waitTime = Math.pow(2, attempt) * 1000;
-            console.log(`⏱️ 等待 ${waitTime}ms 后重试...`);
-            await new Promise((resolve) => setTimeout(resolve, waitTime));
-          }
-        }
-      }
-
-      if (
-        !codeResult ||
-        codeResult.status !== "success" ||
-        !codeResult.content
-      ) {
-        orderedSteps.forEach((step) => {
-          dispatch(setStepStatus({ stepId: step.id, status: "confirmed" }));
-        });
-        throw new Error(
-          `第一步代码生成失败，重试 ${maxRetries} 次后仍然失败: ${lastError?.message || "Unknown error"}`,
-        );
-      }
-
-      // 解析第一步的响应
-      try {
-        // 尝试清理和解析JSON响应
-        let jsonContent = codeResult.content.trim();
-
-        // 移除可能的代码块标记
-        if (jsonContent.startsWith("```json")) {
-          jsonContent = jsonContent
-            .replace(/^```json\s*/, "")
-            .replace(/\s*```$/, "");
-        } else if (jsonContent.startsWith("```")) {
-          jsonContent = jsonContent
-            .replace(/^```\s*/, "")
-            .replace(/\s*```$/, "");
-        }
-
-        // 尝试找到JSON对象的开始和结束位置
-        const jsonStart = jsonContent.indexOf("{");
-        const jsonEnd = jsonContent.lastIndexOf("}") + 1;
-
-        if (jsonStart !== -1 && jsonEnd > jsonStart) {
-          jsonContent = jsonContent.substring(jsonStart, jsonEnd);
-        }
-
-        console.log(
-          "🔍 清理后的第一步响应内容:",
-          jsonContent.substring(0, 200) + "...",
-        );
-
-        const codeResponse = JSON.parse(jsonContent);
-        generatedCode = codeResponse.complete_code || "";
-
-        if (!generatedCode.trim()) {
-          throw new Error("生成的代码为空");
-        }
-
-        console.log("✅ 第一步代码生成完成:", {
-          codeLength: generatedCode.length,
-          preview: generatedCode.substring(0, 100) + "...",
-        });
-      } catch (parseError) {
-        console.error("❌ 解析第一步代码生成响应失败:", parseError);
-        console.error("原始响应内容:", codeResult.content);
-
-        // 提供更详细的错误信息
-        let errorMessage = "第一步代码生成响应格式无效";
-        if (parseError instanceof Error) {
-          errorMessage += `: ${parseError.message}`;
-        }
-
-        // 尝试从响应中提取有用信息
-        if (
-          codeResult.content.includes("你") ||
-          codeResult.content.includes("已经实现")
-        ) {
-          errorMessage += "\n检测到LLM返回了中文解释而不是JSON格式，请重试";
-        }
-
-        throw new Error(errorMessage);
-      }
-
+      // ⚠️⚠️⚠️ 以下逻辑已被注释掉，因为不再需要映射关系 ⚠️⚠️⚠️
+      /*
       // 第二步：并行为每个步骤找到相关的代码行
-      console.log("🎯 第二步：开始并行查找步骤相关代码行...");
-
-      // 准备所有需要处理的步骤（包括之前生成的和新生成的）
-      const allStepsToProcess = [
-        ...(previouslyGeneratedSteps || []),
-        ...orderedSteps,
-      ];
-
-      console.log(
-        "📝 准备处理的步骤:",
-        allStepsToProcess.map((s) => ({ id: s.id, title: s.title })),
-      );
-
-      // 为每个步骤并行创建查找相关代码行的请求
-      const stepCodeLinePromises = allStepsToProcess.map(
-        async (
-          step,
-        ): Promise<{
-          stepId: string;
-          stepTitle: string;
-          stepAbstract: string;
-          result: any | null;
-        }> => {
-          const prompt = constructFindStepRelatedCodeLinesPrompt(
-            generatedCode,
-            step.title,
-            step.abstract,
-          );
-
-          console.log(`🔍 为步骤 ${step.id} 创建查找代码行请求...`);
-
-          // 为每个步骤的请求添加重试机制
-          for (let attempt = 1; attempt <= maxRetries; attempt++) {
-            try {
-              const result = await extra.ideMessenger.request("llm/complete", {
-                prompt: prompt,
-                completionOptions: {},
-                title: defaultModel.title,
-              });
-
-              if (result.status === "success" && result.content) {
-                console.log(`✅ 步骤 ${step.id} 代码行查找成功`);
-                return {
-                  stepId: step.id,
-                  stepTitle: step.title,
-                  stepAbstract: step.abstract,
-                  result: result,
-                };
-              } else {
-                throw new Error(
-                  `LLM request failed for step ${step.id}: status=${result.status}`,
-                );
-              }
-            } catch (error) {
-              console.warn(
-                `⚠️ 步骤 ${step.id} 代码行查找尝试 ${attempt}/${maxRetries} 失败:`,
-                error,
-              );
-
-              if (attempt < maxRetries) {
-                const waitTime = Math.pow(2, attempt) * 1000;
-                await new Promise((resolve) => setTimeout(resolve, waitTime));
-              } else {
-                console.error(`❌ 步骤 ${step.id} 代码行查找最终失败`);
-                return {
-                  stepId: step.id,
-                  stepTitle: step.title,
-                  stepAbstract: step.abstract,
-                  result: null,
-                };
-              }
-            }
-          }
-
-          // 不应该到达这里，但为了类型安全
-          return {
-            stepId: step.id,
-            stepTitle: step.title,
-            stepAbstract: step.abstract,
-            result: null,
-          };
-        },
-      );
-
-      // 等待所有并行请求完成
-      console.log("⏳ 等待所有步骤的代码行查找完成...");
-      const stepCodeLineResults = await Promise.all(stepCodeLinePromises);
-
       // 第三步：处理所有结果，创建代码块和映射关系
-      console.log("📦 第三步：处理查找结果并创建代码块...");
+      // ... 映射关系创建逻辑 ...
+      */
+      // ⚠️⚠️⚠️ 以上逻辑已被注释掉 ⚠️⚠️⚠️
 
-      const stepsCorrespondingCode: Array<{ id: string; code: string }> = [];
-      const allCreatedCodeChunks: Array<{
-        id: string;
-        content: string;
-        range: [number, number];
-        stepIds: string[];
-      }> = [];
+      // 标记所有相关步骤为已生成
+      orderedSteps.forEach((step) => {
+        dispatch(setStepStatus({ stepId: step.id, status: "generated" }));
+      });
+      console.log("✅ 所有步骤状态已更新为 'generated'");
 
-      // 处理每个步骤的结果
-      for (const stepResult of stepCodeLineResults) {
-        if (
-          !stepResult ||
-          !stepResult.result ||
-          stepResult.result.status !== "success"
-        ) {
-          console.warn(
-            `⚠️ 跳过步骤 ${stepResult?.stepId || "unknown"}，因为没有有效结果`,
-          );
-          continue;
-        }
-
-        try {
-          // 解析LLM返回的代码行
-          let jsonContent = stepResult.result.content.trim();
-
-          // 清理JSON内容
-          if (jsonContent.startsWith("```json")) {
-            jsonContent = jsonContent
-              .replace(/^```json\s*/, "")
-              .replace(/\s*```$/, "");
-          } else if (jsonContent.startsWith("```")) {
-            jsonContent = jsonContent
-              .replace(/^```\s*/, "")
-              .replace(/\s*```$/, "");
-          }
-
-          const jsonStart = jsonContent.indexOf("{");
-          const jsonEnd = jsonContent.lastIndexOf("}") + 1;
-
-          if (jsonStart !== -1 && jsonEnd > jsonStart) {
-            jsonContent = jsonContent.substring(jsonStart, jsonEnd);
-          }
-
-          const parsedResponse = JSON.parse(jsonContent);
-          const relatedCodeLines = parsedResponse.related_code_lines || [];
-
-          console.log(
-            `📝 步骤 ${stepResult.stepId} 找到 ${relatedCodeLines.length} 行相关代码`,
-          );
-
-          if (relatedCodeLines.length > 0) {
-            // 使用 createCodeChunksFromLineArray 创建代码块
-            const codeChunks = createCodeChunksFromLineArray(
-              relatedCodeLines,
-              generatedCode,
-              `step-${stepResult.stepId}`,
-            );
-
-            // 为每个代码块添加步骤ID
-            codeChunks.forEach((chunk) => {
-              allCreatedCodeChunks.push({
-                ...chunk,
-                stepIds: [stepResult.stepId],
-              });
-            });
-
-            // 合并所有代码行作为步骤对应的代码
-            const combinedCode = relatedCodeLines.join("\n");
-            if (combinedCode.trim()) {
-              stepsCorrespondingCode.push({
-                id: stepResult.stepId,
-                code: combinedCode,
-              });
-            }
-          }
-        } catch (parseError) {
-          console.error(
-            `❌ 解析步骤 ${stepResult.stepId} 的代码行结果失败:`,
-            parseError,
-          );
-          console.error("原始响应内容:", stepResult.result.content);
-        }
-      }
-
-      // 清理现有的代码块和映射关系，但保留要求映射
-      console.log("🗑️ 保存要求映射关系并清除现有的代码块和代码映射...");
-
-      // 首先清理所有知识卡片的代码映射，因为代码生成后这些映射可能失效
-      console.log("🧹 清理知识卡片代码映射...");
-      dispatch(clearKnowledgeCardCodeMappings());
-
-      const currentState = getState();
-      // 保留 requirement-step 映射关系
-      const requirementStepMappings =
-        currentState.codeAwareSession.codeAwareMappings.filter(
-          (mapping: any) =>
-            mapping.highLevelStepId &&
-            mapping.stepId &&
-            !mapping.codeChunkId &&
-            !mapping.knowledgeCardId,
-        );
-      // 保留 requirement-step-knowledgeCard 映射关系（没有代码块的）
-      const requirementKnowledgeCardMappings =
-        currentState.codeAwareSession.codeAwareMappings.filter(
-          (mapping: any) =>
-            mapping.highLevelStepId &&
-            mapping.stepId &&
-            mapping.knowledgeCardId &&
-            !mapping.codeChunkId,
-        );
-
-      console.log("💾 保存的要求映射关系:", {
-        requirementStepMappings: requirementStepMappings.length,
-        requirementKnowledgeCardMappings:
-          requirementKnowledgeCardMappings.length,
+      // 调用各个步骤的 checkAndMapKnowledgeCardsToCode
+      console.log("🧭 开始为所有步骤检查和映射知识卡片...");
+      orderedSteps.forEach((step) => {
+        dispatch(checkAndMapKnowledgeCardsToCode({ stepId: step.id }));
+        console.log(`🎯 已触发步骤 ${step.id} 的知识卡片映射检查`);
       });
 
-      dispatch(clearAllCodeChunks());
-      dispatch(clearAllCodeAwareMappings());
-
-      // 重新添加要求映射关系
-      requirementStepMappings.forEach((mapping: any) => {
-        dispatch(createCodeAwareMapping(mapping));
-      });
-      // 重新添加要求-知识卡片映射关系
-      requirementKnowledgeCardMappings.forEach((mapping: any) => {
-        dispatch(createCodeAwareMapping(mapping));
-      });
-
-      // 创建所有代码块和映射关系
-      console.log("📦 开始创建代码块和映射关系...");
-
-      allCreatedCodeChunks.forEach((chunk) => {
-        // 创建代码块
-        dispatch(
-          createOrGetCodeChunk({
-            content: chunk.content,
-            range: chunk.range,
-            filePath: filepath,
-            id: chunk.id,
-          }),
-        );
-
-        console.log(`✅ 创建代码块 ${chunk.id}:`, {
-          contentLength: chunk.content.length,
-          range: chunk.range,
-          filepath: filepath,
-          stepIds: chunk.stepIds,
-        });
-
-        // 为每个相关步骤创建映射关系
-        chunk.stepIds.forEach((stepId: string) => {
-          const existingStepMapping = requirementStepMappings.find(
-            (mapping: any) => mapping.stepId === stepId,
-          );
-
-          let mapping: CodeAwareMapping;
-          if (existingStepMapping) {
-            mapping = {
-              codeChunkId: chunk.id,
-              stepId: stepId,
-              highLevelStepId: existingStepMapping.highLevelStepId,
-              isHighlighted: false,
-            };
-          } else {
-            mapping = {
-              codeChunkId: chunk.id,
-              stepId: stepId,
-              isHighlighted: false,
-            };
-          }
-
-          dispatch(createCodeAwareMapping(mapping));
-          console.log(`🔗 创建步骤映射: ${chunk.id} -> ${stepId}`);
-        });
-      });
-
-      // 应用生成的代码到IDE
-      console.log("🚀 开始将生成的代码应用到IDE文件...");
-
-      try {
-        const currentFileResponse = await extra.ideMessenger.request(
-          "getCurrentFile",
-          undefined,
-        );
-
-        if (
-          currentFileResponse &&
-          typeof currentFileResponse === "object" &&
-          "status" in currentFileResponse &&
-          "content" in currentFileResponse
-        ) {
-          if (
-            currentFileResponse.status === "success" &&
-            currentFileResponse.content
-          ) {
-            const currentFile = currentFileResponse.content;
-
-            await extra.ideMessenger.request("applyDiffChanges", {
-              filepath: currentFile.path,
-              oldCode: existingCode,
-              newCode: generatedCode,
-            });
-
-            console.log("✅ 代码已成功应用到IDE文件");
-
-            // 标记所有相关步骤为已生成
-            orderedSteps.forEach((step) => {
-              dispatch(setStepStatus({ stepId: step.id, status: "generated" }));
-            });
-            console.log("✅ 所有步骤状态已更新为 'generated'");
-
-            // 调用各个步骤的 checkAndMapKnowledgeCardsToCode
-            console.log("🧭 开始为所有步骤检查和映射知识卡片...");
-            orderedSteps.forEach((step) => {
-              // 不等待完成，直接调用
-              dispatch(checkAndMapKnowledgeCardsToCode({ stepId: step.id }));
-              console.log(`🎯 已触发步骤 ${step.id} 的知识卡片映射检查`);
-            });
-
-            // 触发有序步骤的高亮显示
-            console.log("🌟 触发有序步骤高亮显示...");
-            const finalState = getState();
-            const highlightEvents = orderedSteps
-              .map((step) => {
-                const stepInfo = finalState.codeAwareSession.steps.find(
-                  (s) => s.id === step.id,
-                );
-                if (stepInfo) {
-                  console.log(`🔆 准备高亮步骤 ${step.id}: ${step.title}`);
-                  return {
-                    sourceType: "step" as const,
-                    identifier: step.id,
-                    additionalInfo: stepInfo,
-                  };
-                }
-                return null;
-              })
-              .filter((event) => event !== null) as HighlightEvent[];
-
-            if (highlightEvents.length > 0) {
-              dispatch(updateHighlight(highlightEvents));
-              console.log(
-                `✨ 同时触发了 ${highlightEvents.length} 个步骤的高亮事件`,
-              );
-            }
-          } else {
-            console.warn("⚠️ 无法获取当前文件信息，跳过代码应用");
-          }
-        } else {
-          console.warn("⚠️ 当前文件响应格式错误，跳过代码应用");
-        }
-      } catch (error) {
-        console.error("❌ 应用代码到IDE失败:", error);
-        // 不抛出错误，允许流程继续
-      }
-
-      console.log("✅ generateCodeFromSteps 重构版本执行完成:", {
-        generatedCodeLength: generatedCode.length,
-        stepsWithCode: stepsCorrespondingCode.length,
-        createdCodeChunks: allCreatedCodeChunks.length,
-      });
+      console.log("✅ generateCodeFromSteps 简化版本执行完成");
 
       // Log: 代码生成完成
       await extra.ideMessenger.request("addCodeAwareLogEntry", {
         eventType: "user_get_code_generation_result",
         payload: {
-          generatedCodeLength: generatedCode.length,
-          stepsWithCodeCount: stepsCorrespondingCode.length,
-          createdCodeChunksCount: allCreatedCodeChunks.length,
           filepath,
-          // 记录步骤与代码的对应关系详情
-          stepsCodeDetails: stepsCorrespondingCode.map((stepCode) => ({
-            stepTitle:
-              orderedSteps.find((s) => s.id === stepCode.id)?.title ||
-              "Unknown",
-            codeLength: stepCode.code.length,
-            codePreview:
-              stepCode.code.substring(0, 100) +
-              (stepCode.code.length > 100 ? "..." : ""),
-          })),
+          stepsCount: orderedSteps.length,
           timestamp: new Date().toISOString(),
         },
       });
 
       return {
-        changedCode: generatedCode,
-        stepsCorrespondingCode,
+        changedCode: "", // 不再返回代码，由tool call处理
+        stepsCorrespondingCode: [], // 不再返回映射关系
       };
     } catch (error) {
       console.error("❌ generateCodeFromSteps 执行失败:", error);

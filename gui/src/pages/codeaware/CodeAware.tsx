@@ -711,6 +711,11 @@ export const CodeAware = () => {
     matchedCodeChunks: [],
   });
 
+  const codeGenDebugLogs = useAppSelector(
+    (state) => state.codeAwareSession.codeGenerationDebugLogs,
+  );
+  const [showDebugPanel, setShowDebugPanel] = useState(false);
+
   // Track steps that should be force expanded due to code selection questions
   const [forceExpandedSteps, setForceExpandedSteps] = useState<Set<string>>(
     new Set(),
@@ -2379,6 +2384,30 @@ export const CodeAware = () => {
             onClearHighlight={removeHighlightEvent}
           />
         )}
+
+      {/* Debug panel for CodeAware streaming output */}
+      <div className="mt-2 px-4">
+        <button
+          className="rounded border border-gray-600 bg-[#0b1224] px-2 py-1 text-xs text-gray-100 hover:bg-[#111a30]"
+          onClick={() => setShowDebugPanel((v) => !v)}
+        >
+          {showDebugPanel ? "隐藏 Debug 面板" : "显示 Debug 面板"} (
+          {codeGenDebugLogs.length})
+        </button>
+        {showDebugPanel && (
+          <div className="mt-2 max-h-64 space-y-1 overflow-auto rounded border border-gray-700 bg-[#0b1224] p-2 font-mono text-xs text-gray-100">
+            {codeGenDebugLogs.length === 0 ? (
+              <div className="text-gray-400">暂无流式输出</div>
+            ) : (
+              codeGenDebugLogs.map((line, idx) => (
+                <div key={idx} className="whitespace-pre-wrap break-words">
+                  {line}
+                </div>
+              ))
+            )}
+          </div>
+        )}
+      </div>
 
       {/* 可滚动的内容区域 */}
       <ScrollableContent ref={scrollableContentRef}>

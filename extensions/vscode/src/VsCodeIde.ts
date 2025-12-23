@@ -20,8 +20,6 @@ import { getExtensionVersion, isExtensionPrerelease } from "./util/util";
 import { getExtensionUri, openEditorAndRevealRange } from "./util/vscode";
 import { VsCodeWebviewProtocol } from "./webviewProtocol";
 
-
-
 import type {
   DocumentSymbol,
   FileStatsMap,
@@ -38,9 +36,6 @@ import type {
   Thread,
 } from "core";
 
-
-
-
 class VsCodeIde implements IDE {
   ideUtils: VsCodeIdeUtils;
   secretStorage: SecretStorage;
@@ -52,15 +47,17 @@ class VsCodeIde implements IDE {
   ) {
     this.ideUtils = new VsCodeIdeUtils();
     this.secretStorage = new SecretStorage(context);
-    
+
     // 设置代码编辑模式切换时的自动保存回调
     if (this.codeEditModeManager) {
-      this.codeEditModeManager.setOnModeChangeCallback(async (enabled: boolean) => {
-        // 当从代码编辑模式切换到webview-only模式时自动保存
-        if (!enabled) {
-          await this.autoSaveCurrentFile();
-        }
-      });
+      this.codeEditModeManager.setOnModeChangeCallback(
+        async (enabled: boolean) => {
+          // 当从代码编辑模式切换到webview-only模式时自动保存
+          if (!enabled) {
+            await this.autoSaveCurrentFile();
+          }
+        },
+      );
     }
   }
 
@@ -158,12 +155,12 @@ class VsCodeIde implements IDE {
     vscode.window.onDidChangeActiveTextEditor((editor) => {
       if (editor) {
         let filePath = editor.document.uri.fsPath;
-        
+
         // 确保移除 file:// 前缀（如果存在）
-        if (filePath.startsWith('file://')) {
-          filePath = filePath.replace('file://', '');
+        if (filePath.startsWith("file://")) {
+          filePath = filePath.replace("file://", "");
         }
-        
+
         callback(filePath);
       }
     });
@@ -178,7 +175,9 @@ class VsCodeIde implements IDE {
       case "error":
         return showErrorMessage(message, "Show logs").then((selection) => {
           if (selection === "Show logs") {
-            void vscode.commands.executeCommand("workbench.action.toggleDevTools");
+            void vscode.commands.executeCommand(
+              "workbench.action.toggleDevTools",
+            );
           }
         });
       case "info":
@@ -334,7 +333,10 @@ class VsCodeIde implements IDE {
   }
 
   // CodeAware: Create and open a new file
-  async createAndOpenFile(filename: string, content: string = ""): Promise<void> {
+  async createAndOpenFile(
+    filename: string,
+    content: string = "",
+  ): Promise<void> {
     try {
       // Get the first workspace folder
       const workspaceFolders = vscode.workspace.workspaceFolders;
@@ -349,15 +351,20 @@ class VsCodeIde implements IDE {
       // Write the file with the provided content
       await vscode.workspace.fs.writeFile(
         fileUri,
-        Buffer.from(content, 'utf8')
+        Buffer.from(content, "utf8"),
       );
 
       // Open the file in the editor
       await this.ideUtils.openFile(fileUri);
 
-      console.log(`📄 [VsCodeIde] Created and opened file: ${fileUri.toString()}`);
+      console.log(
+        `📄 [VsCodeIde] Created and opened file: ${fileUri.toString()}`,
+      );
     } catch (error) {
-      console.error(`❌ [VsCodeIde] Failed to create and open file ${filename}:`, error);
+      console.error(
+        `❌ [VsCodeIde] Failed to create and open file ${filename}:`,
+        error,
+      );
       throw error;
     }
   }
@@ -476,16 +483,12 @@ class VsCodeIde implements IDE {
       return undefined;
     }
     const uri = vscode.window.activeTextEditor.document.uri;
-    let filePath = uri.fsPath;
-    
-    // 确保移除 file:// 前缀（如果存在）
-    if (filePath.startsWith('file://')) {
-      filePath = filePath.replace('file://', '');
-    }
-    
+    // 返回规范的 URI 字符串（包含 file:// 协议），以满足核心模块对 URI 的校验
+    const fileUriString = uri.toString();
+
     return {
       isUntitled: vscode.window.activeTextEditor.document.isUntitled,
-      path: filePath, // 使用处理后的绝对文件系统路径
+      path: fileUriString,
       contents: vscode.window.activeTextEditor.document.getText(),
     };
   }
@@ -767,14 +770,14 @@ class VsCodeIde implements IDE {
       if (activeEditor && activeEditor.document.isDirty) {
         await activeEditor.document.save();
         console.log(`💾 Auto-saved file: ${activeEditor.document.fileName}`);
-        
+
         // 更新最后保存时间戳
         this.updateLastFileSaveTimestamp();
-        
+
         // 显示简短的状态信息
         vscode.window.setStatusBarMessage(
-          `💾 已自动保存: ${activeEditor.document.fileName.split('/').pop()}`, 
-          2000
+          `💾 已自动保存: ${activeEditor.document.fileName.split("/").pop()}`,
+          2000,
         );
       }
     } catch (error) {
@@ -787,7 +790,9 @@ class VsCodeIde implements IDE {
   private updateLastFileSaveTimestamp(): void {
     // Store the timestamp of the last auto-save
     const now = Date.now();
-    console.log(`📅 Updated last file save timestamp: ${new Date(now).toISOString()}`);
+    console.log(
+      `📅 Updated last file save timestamp: ${new Date(now).toISOString()}`,
+    );
   }
 
   // CodeAware: Apply diff changes using WorkspaceEdit
@@ -797,53 +802,53 @@ class VsCodeIde implements IDE {
     newCode: string;
   }): Promise<void> {
     const { filepath, oldCode, newCode } = args;
-    
+
     try {
       console.log("apply! diff changes!");
-      
+
       // 标记开始程序化更新，防止CodeEditModeManager拦截
       if (this.codeEditModeManager) {
         this.codeEditModeManager.allowProgrammaticUpdate();
       }
-      
+
       // 如果新旧代码相同，直接返回
       if (oldCode === newCode) {
         console.log("No changes to apply - old and new code are identical.");
         return;
       }
-      
+
       // 创建 URI
       const uri = vscode.Uri.file(filepath);
-      
+
       // 打开文档
       const document = await vscode.workspace.openTextDocument(uri);
-      
+
       // 验证当前文档内容是否与oldCode匹配
       const currentContent = document.getText();
       if (currentContent !== oldCode) {
         console.warn("⚠️ Current file content differs from expected oldCode");
         console.log("Current content length:", currentContent.length);
         console.log("Expected oldCode length:", oldCode.length);
-        
+
         // 仍然尝试应用，但使用当前内容作为基础
       }
-      
+
       // 创建一个简单的替换编辑
       const edit = new vscode.WorkspaceEdit();
       const fullRange = new vscode.Range(
         document.positionAt(0),
-        document.positionAt(document.getText().length)
+        document.positionAt(document.getText().length),
       );
-      
+
       // 替换整个文档内容
       edit.replace(uri, fullRange, newCode);
-      
+
       // 应用编辑
       const success = await vscode.workspace.applyEdit(edit);
-      
+
       if (success) {
         console.log(`✅ 代码差异已成功应用到文件: ${filepath}`);
-        
+
         // 自动保存应用了更改的文件
         try {
           await this.saveFile(uri.toString());
@@ -851,30 +856,31 @@ class VsCodeIde implements IDE {
         } catch (saveError) {
           console.warn("Failed to auto-save after applying diff:", saveError);
         }
-        
+
         // 显示成功通知
-        void vscode.window.showInformationMessage(
-          `代码已更新并保存: ${filepath.split('/').pop()}`,
-          "查看文件"
-        ).then(selection => {
-          if (selection === "查看文件") {
-            // 将绝对路径转换为 URI 格式
-            const fileUri = vscode.Uri.file(filepath).toString();
-            void this.openFile(fileUri);
-          }
-        });
+        void vscode.window
+          .showInformationMessage(
+            `代码已更新并保存: ${filepath.split("/").pop()}`,
+            "查看文件",
+          )
+          .then((selection) => {
+            if (selection === "查看文件") {
+              // 将绝对路径转换为 URI 格式
+              const fileUri = vscode.Uri.file(filepath).toString();
+              void this.openFile(fileUri);
+            }
+          });
       } else {
         throw new Error("WorkspaceEdit application failed");
       }
-      
     } catch (error) {
       console.error("应用代码差异失败:", error);
-      
+
       // 显示错误通知
       void vscode.window.showErrorMessage(
-        `代码更新失败: ${error instanceof Error ? error.message : String(error)}`
+        `代码更新失败: ${error instanceof Error ? error.message : String(error)}`,
       );
-      
+
       throw error;
     } finally {
       // 确保在任何情况下都结束程序化更新标记

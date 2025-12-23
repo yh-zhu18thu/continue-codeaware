@@ -64,6 +64,20 @@ export type CodeAwareSessionState = {
     content: string;
     timestamp: number;
   } | null;
+  // Code generation state
+  codeGeneration: {
+    status:
+      | "idle"
+      | "collecting-context"
+      | "generating"
+      | "completed"
+      | "error";
+    message: string;
+    progress: number; // 0-100
+    currentStep: string;
+    error?: string;
+  };
+  codeGenerationDebugLogs: string[];
 };
 
 const initialCodeAwareState: CodeAwareSessionState = {
@@ -84,6 +98,14 @@ const initialCodeAwareState: CodeAwareSessionState = {
   codeChunksToHighlightInIde: [],
   isCodeEditModeEnabled: false, // Default to CodeAware mode
   codeEditModeSnapshot: null, // No snapshot initially
+  codeGeneration: {
+    status: "idle",
+    message: "",
+    progress: 0,
+    currentStep: "",
+    error: undefined,
+  },
+  codeGenerationDebugLogs: [],
 };
 
 export const codeAwareSessionSlice = createSlice({
@@ -1142,6 +1164,56 @@ export const codeAwareSessionSlice = createSlice({
       // Clear highlights
       codeAwareSessionSlice.caseReducers.clearAllHighlights(state);
     },
+    // Code generation state management
+    setCodeGenerationStatus: (
+      state,
+      action: PayloadAction<CodeAwareSessionState["codeGeneration"]["status"]>,
+    ) => {
+      state.codeGeneration.status = action.payload;
+    },
+    setCodeGenerationProgress: (state, action: PayloadAction<number>) => {
+      state.codeGeneration.progress = Math.max(
+        0,
+        Math.min(100, action.payload),
+      );
+    },
+    setCodeGenerationMessage: (state, action: PayloadAction<string>) => {
+      state.codeGeneration.message = action.payload;
+    },
+    setCodeGenerationCurrentStep: (state, action: PayloadAction<string>) => {
+      state.codeGeneration.currentStep = action.payload;
+    },
+    setCodeGenerationError: (
+      state,
+      action: PayloadAction<string | undefined>,
+    ) => {
+      state.codeGeneration.error = action.payload;
+    },
+    resetCodeGenerationState: (state) => {
+      state.codeGeneration = {
+        status: "idle",
+        message: "",
+        progress: 0,
+        currentStep: "",
+        error: undefined,
+      };
+      state.codeGenerationDebugLogs = [];
+    },
+    appendCodeGenerationDebugLog: (state, action: PayloadAction<string>) => {
+      // Keep the log bounded to avoid UI performance issues
+      const nextLogs = [...state.codeGenerationDebugLogs, action.payload];
+      const MAX_LOGS = 200;
+      if (nextLogs.length > MAX_LOGS) {
+        state.codeGenerationDebugLogs = nextLogs.slice(
+          nextLogs.length - MAX_LOGS,
+        );
+      } else {
+        state.codeGenerationDebugLogs = nextLogs;
+      }
+    },
+    clearCodeGenerationDebugLogs: (state) => {
+      state.codeGenerationDebugLogs = [];
+    },
   },
   selectors: {
     //CATODO: write all the selectors to fetch the data
@@ -1291,6 +1363,14 @@ export const {
   updateSaqTestResult,
   setSaqTestLoading,
   clearAllCodeAndMappings,
+  setCodeGenerationStatus,
+  setCodeGenerationProgress,
+  setCodeGenerationMessage,
+  setCodeGenerationCurrentStep,
+  setCodeGenerationError,
+  resetCodeGenerationState,
+  appendCodeGenerationDebugLog,
+  clearCodeGenerationDebugLogs,
 } = codeAwareSessionSlice.actions;
 
 export const {

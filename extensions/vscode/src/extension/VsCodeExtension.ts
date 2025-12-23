@@ -20,7 +20,7 @@ import * as vscode from "vscode";
 // import { MetaCompleteProvider } from "../autocomplete/metacomplete";
 import {
   monitorBatteryChanges,
-  setupStatusBar
+  setupStatusBar,
 } from "../autocomplete/statusBar";
 import { CodeAwareActionProvider } from "../codeActions/CodeAwareActionProvider";
 import { CodeEditModeManager } from "../CodeEditModeManager";
@@ -175,7 +175,7 @@ export class VsCodeExtension {
   private codeSelectionHandler: CodeSelectionHandler;
 
   // private metacompleteProvider: MetaCompleteProvider;
-  
+
   // CodeAware: 代码选择监听相关属性
   private lastSelectionData: {
     filePath: string;
@@ -186,16 +186,21 @@ export class VsCodeExtension {
 
   constructor(context: vscode.ExtensionContext) {
     console.log("VsCodeExtension: Initializing...");
-    
+
     // CodeAware: 设置工作区根路径给 logger
     const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
     if (workspaceRoot) {
       codeAwareLogger.setWorkspaceRoot(workspaceRoot);
-      console.log("[VsCodeExtension] Set workspace root for CodeAware logger:", workspaceRoot);
+      console.log(
+        "[VsCodeExtension] Set workspace root for CodeAware logger:",
+        workspaceRoot,
+      );
     } else {
-      console.warn("[VsCodeExtension] No workspace folder found, CodeAware logger will use fallback directory");
+      console.warn(
+        "[VsCodeExtension] No workspace folder found, CodeAware logger will use fallback directory",
+      );
     }
-    
+
     // Register auth provider
     this.workOsAuthProvider = new WorkOsAuthProvider(context, this.uriHandler);
 
@@ -217,7 +222,11 @@ export class VsCodeExtension {
       },
     );
     this.ideUtils = new VsCodeIdeUtils();
-    this.ide = new VsCodeIde(this.webviewProtocolPromise, context, this.codeEditModeManager);
+    this.ide = new VsCodeIde(
+      this.webviewProtocolPromise,
+      context,
+      this.codeEditModeManager,
+    );
 
     this.extensionContext = context;
     this.windowId = uuidv4();
@@ -304,25 +313,27 @@ export class VsCodeExtension {
     // Initialize CodeSelectionHandler after webviewProtocol is ready
     this.codeSelectionHandler = new CodeSelectionHandler(
       this.sidebar.webviewProtocol,
-      context
+      context,
     );
 
     // Register CodeAware Code Action Provider
-    const codeAwareActionProvider = new CodeAwareActionProvider(this.sidebar.webviewProtocol);
+    const codeAwareActionProvider = new CodeAwareActionProvider(
+      this.sidebar.webviewProtocol,
+    );
     context.subscriptions.push(
       vscode.languages.registerCodeActionsProvider(
         "*", // 支持所有语言
-        codeAwareActionProvider
-      )
+        codeAwareActionProvider,
+      ),
     );
 
     // CodeAware: 监听代码选择变化
     vscode.window.onDidChangeTextEditorSelection(async (event) => {
       const editor = event.textEditor;
       const document = editor.document;
-      
+
       // 确保这是一个有效的文本文档
-      if (document.uri.scheme !== 'file') {
+      if (document.uri.scheme !== "file") {
         return;
       }
 
@@ -341,7 +352,9 @@ export class VsCodeExtension {
         };
 
         // 检查是否与上次选择相同
-        if (this.isSameSelection(currentSelectionData, this.lastSelectionData)) {
+        if (
+          this.isSameSelection(currentSelectionData, this.lastSelectionData)
+        ) {
           return;
         }
 
@@ -354,7 +367,10 @@ export class VsCodeExtension {
         this.selectionDebounceTimer = setTimeout(async () => {
           this.lastSelectionData = currentSelectionData;
           const webviewProtocol = await this.webviewProtocolPromise;
-          void webviewProtocol.request("codeSelectionChanged", currentSelectionData);
+          void webviewProtocol.request(
+            "codeSelectionChanged",
+            currentSelectionData,
+          );
         }, 300); // 300ms 防抖延迟，适合多行选择场景
       } else {
         // 如果没有选中内容且之前有选择，发送取消选择事件
@@ -364,13 +380,13 @@ export class VsCodeExtension {
             clearTimeout(this.selectionDebounceTimer);
             this.selectionDebounceTimer = null;
           }
-          
+
           // 发送取消选择事件
           const webviewProtocol = await this.webviewProtocolPromise;
           void webviewProtocol.request("codeSelectionCleared", {
-            filePath: document.uri.fsPath
+            filePath: document.uri.fsPath,
           });
-          
+
           // 清除上次选择数据
           this.lastSelectionData = null;
         }
@@ -380,12 +396,16 @@ export class VsCodeExtension {
     // CodeAware: 监听工作区文件夹变化，更新日志目录
     context.subscriptions.push(
       vscode.workspace.onDidChangeWorkspaceFolders((event) => {
-        const newWorkspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+        const newWorkspaceRoot =
+          vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
         if (newWorkspaceRoot) {
           codeAwareLogger.setWorkspaceRoot(newWorkspaceRoot);
-          console.log("[VsCodeExtension] Workspace folder changed, updated CodeAware logger root:", newWorkspaceRoot);
+          console.log(
+            "[VsCodeExtension] Workspace folder changed, updated CodeAware logger root:",
+            newWorkspaceRoot,
+          );
         }
-      })
+      }),
     );
 
     // Config Handler with output channel
@@ -407,6 +427,8 @@ export class VsCodeExtension {
       this.editDecorationManager,
       context,
       this,
+      this.highlightCodeManager,
+      this.codeEditModeManager,
     );
 
     this.core = new Core(inProcessMessenger, this.ide);
@@ -791,8 +813,16 @@ export class VsCodeExtension {
 
   // CodeAware: 检查选择是否相同的辅助方法
   private isSameSelection(
-    current: { filePath: string; selectedLines: [number, number]; selectedContent: string } | null,
-    previous: { filePath: string; selectedLines: [number, number]; selectedContent: string } | null
+    current: {
+      filePath: string;
+      selectedLines: [number, number];
+      selectedContent: string;
+    } | null,
+    previous: {
+      filePath: string;
+      selectedLines: [number, number];
+      selectedContent: string;
+    } | null,
   ): boolean {
     if (!current || !previous) {
       return false;

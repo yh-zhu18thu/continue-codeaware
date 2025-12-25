@@ -494,10 +494,10 @@ export const CodeAware = () => {
       try {
         const pythonFilename = `${sessionName}.py`;
 
-        await ideMessenger?.request("createAndOpenFile", {
+        /*await ideMessenger?.request("createAndOpenFile", {
           filename: pythonFilename,
           content: "",
-        });
+        });*/
 
         console.log(
           `📄 [CodeAware] Created and opened Python file: ${pythonFilename}`,

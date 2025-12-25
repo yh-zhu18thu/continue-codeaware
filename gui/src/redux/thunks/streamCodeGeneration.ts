@@ -67,7 +67,7 @@ ${previouslyGeneratedSteps.map((s, i) => `${i + 1}. ${s.title}`).join("\n")}
 `
     : "";
 
-  return `You are a code generation assistant. Your task is to implement the following programming steps by editing the current file.
+  return `You are a code generation assistant. Your task is to implement the following programming steps.
 
 **Task Description**: 
 ${taskDescription}
@@ -79,11 +79,12 @@ ${previousStepsText}
 **Important Instructions**:
 - Implement ONLY the steps listed above
 - ${isLastStep ? "This is the final step - ensure all functionality is complete and working" : "Focus only on the current steps"}
-- Use the edit_existing_file or multi_edit tool to make your changes
+- If no file is currently open, use the create_new_file tool to create a new file first, then use edit_existing_file or multi_edit tool to add code
+- If a file is already open, use the edit_existing_file or multi_edit tool to make your changes
 - Ensure code is correct, idiomatic, and maintains consistency
 - Do NOT explain what you're doing, just make the edits
 
-Begin implementing the steps now by editing the file.`;
+Begin implementing the steps now.`;
 }
 
 /**
@@ -372,83 +373,193 @@ async function streamCodeAwareGeneration({
 
     let progress = 10;
     let next = await gen.next();
+    let chunkCount = 0;
+
+    console.log("[CodeAware][Stream] Starting stream consumption...");
 
     while (!next.done) {
+      chunkCount++;
       logIfToolRelated(next.value);
       pushDebug(`stream-chunk ${formatEvent(next.value)}`);
+
+      // Log every chunk for debugging
+      console.log(`[CodeAware][Stream] Chunk #${chunkCount}:`, {
+        done: next.done,
+        hasValue: !!next.value,
+        valueType: next.value?.constructor?.name,
+      });
+
       // Mirror streamNormalInput: forward stream updates so tool calls are captured and executed
       dispatch(streamUpdate(next.value));
+
       const toolState = selectCurrentToolCalls(getState());
       if (toolState.length > 0) {
         console.log(
-          "[CodeAware][Stream] tool calls in state",
+          `[CodeAware][Stream] 🔧 Tool calls detected in chunk #${chunkCount}:`,
           toolState.map((t) => ({
             id: t.toolCallId,
             name: (t as any).function?.name,
             status: t.status,
             argsLen: (t as any).function?.arguments?.length,
+            argsPreview: ((t as any).function?.arguments || "").slice(0, 100),
           })),
         );
         pushDebug(
           `tool-state count=${toolState.length} sample=${JSON.stringify(toolState.slice(0, 2).map((t) => ({ id: t.toolCallId, name: (t as any).function?.name, status: t.status })))} `,
         );
       }
+
       // Update progress (simulate progress, real progress is hard to track)
       progress = Math.min(progress + 2, 95);
       dispatch(setCodeGenerationProgress(progress));
 
-      // Don't dispatch streamUpdate to avoid UI updates
-      // Just continue consuming the stream
+      // Continue consuming the stream
       next = await gen.next();
     }
+
+    console.log(
+      `[CodeAware][Stream] ✅ Stream completed. Total chunks: ${chunkCount}`,
+    );
 
     // Log final event for visibility
     logIfToolRelated(next.value);
     pushDebug(`stream-final ${formatEvent(next.value || {})}`);
+  } catch (e) {
+    const toolCallsToCancel = selectCurrentToolCalls(getState());
+    if (
+      toolCallsToCancel.length > 0 &&
+      e instanceof Error &&
+      e.message.toLowerCase().includes("premature close")
+    ) {
+      console.error("[CodeAware] Premature close error, canceling tool calls");
+      for (const tc of toolCallsToCancel) {
+        dispatch(setInactive());
+      }
+    }
+    throw e;
+  }
 
-    // Tool-call execution pipeline (mirrors streamNormalInput) to ensure edits actually run
-    const stateAfterStream = getState();
-    const originalToolCalls = selectCurrentToolCalls(stateAfterStream);
-    const streamAborted = streamAborter.signal.aborted;
-
-    console.log("[CodeAware][Tools] After stream", {
-      streamAborted,
-      currentToolCalls: originalToolCalls.length,
-    });
-    pushDebug(
-      `after-stream toolCalls=${originalToolCalls.length} aborted=${streamAborted} sample=${JSON.stringify(originalToolCalls.slice(0, 2).map((t) => ({ id: t.toolCallId, name: (t as any).function?.name, status: t.status, argsLen: (t as any).function?.arguments?.length })))} `,
+  // Tool-call execution outside try block to ensure it runs
+  try {
+    console.log(
+      "\n[CodeAware][Tools] ========== TOOL EXECUTION PIPELINE START ==========",
     );
 
-    if (streamAborted) {
-      console.log("[CodeAware][Tools] Stream aborted, skip tool execution");
+    // Tool-call execution pipeline (mirrors streamNormalInput) to ensure edits actually run
+    const state1 = getState();
+    console.log("[CodeAware][Tools] Step 1: Checking stream state", {
+      aborted: streamAborter.signal.aborted,
+      isStreaming: state1.session.isStreaming,
+    });
+
+    if (streamAborter.signal.aborted || !state1.session.isStreaming) {
+      console.log(
+        "[CodeAware][Tools] ❌ Stream not active, skip tool execution",
+      );
       return;
     }
 
+    const originalToolCalls = selectCurrentToolCalls(state1);
+    console.log("[CodeAware][Tools] Step 2: Retrieved tool calls", {
+      count: originalToolCalls.length,
+      tools: originalToolCalls.map((t) => ({
+        id: t.toolCallId,
+        name: (t as any).function?.name,
+        status: t.status,
+        hasArgs: !!(t as any).function?.arguments,
+        argsLength: ((t as any).function?.arguments || "").length,
+      })),
+    });
+
+    pushDebug(
+      `after-stream toolCalls=${originalToolCalls.length} streaming=${state1.session.isStreaming} sample=${JSON.stringify(originalToolCalls.slice(0, 2).map((t) => ({ id: t.toolCallId, name: (t as any).function?.name, status: t.status, argsLen: (t as any).function?.arguments?.length })))} `,
+    );
+
+    console.log("[CodeAware][Tools] Step 3: Filtering generating calls");
     const generatingCalls = originalToolCalls.filter(
       (tc) => tc.status === "generating",
     );
+    console.log("[CodeAware][Tools] Generating calls:", {
+      count: generatingCalls.length,
+      ids: generatingCalls.map((t) => t.toolCallId),
+    });
+
+    console.log(
+      "[CodeAware][Tools] Step 4: Setting tools to 'generated' status",
+    );
     for (const { toolCallId } of generatingCalls) {
+      console.log(`[CodeAware][Tools]   - Setting ${toolCallId} to generated`);
       dispatch(
         setToolGenerated({
           toolCallId,
-          tools: state.config.config.tools,
+          tools: activeTools,
         }),
       );
     }
+    console.log(
+      "[CodeAware][Tools] ✅ All generating calls marked as generated",
+    );
 
-    const stateAfterGenerated = getState();
-    if (streamAborter.signal.aborted) return;
-    const generatedCalls2 = selectPendingToolCalls(stateAfterGenerated);
-    console.log("[CodeAware][Tools] Pending after generation", {
+    const state2 = getState();
+    console.log(
+      "[CodeAware][Tools] Step 5: Checking stream state after setToolGenerated",
+      {
+        aborted: streamAborter.signal.aborted,
+        isStreaming: state2.session.isStreaming,
+      },
+    );
+    if (streamAborter.signal.aborted || !state2.session.isStreaming) {
+      console.log(
+        "[CodeAware][Tools] ❌ Stream not active after setToolGenerated, exiting",
+      );
+      return;
+    }
+    console.log("[CodeAware][Tools] Step 6: Getting pending tool calls");
+    const generatedCalls2 = selectPendingToolCalls(state2);
+    console.log("[CodeAware][Tools] Pending after generation:", {
       count: generatedCalls2.length,
+      tools: generatedCalls2.map((t) => ({
+        id: t.toolCallId,
+        name: (t as any).function?.name,
+        status: t.status,
+      })),
     });
     pushDebug(`pending-after-generation=${generatedCalls2.length}`);
-    await preprocessToolCalls(dispatch, extra.ideMessenger, generatedCalls2);
 
-    const stateAfterPreprocess = getState();
-    if (streamAborter.signal.aborted) return;
-    const generatedCalls3 = selectPendingToolCalls(stateAfterPreprocess);
-    const toolPolicies = stateAfterPreprocess.ui.toolSettings;
+    console.log("[CodeAware][Tools] Step 7: Preprocessing tool calls...");
+    await preprocessToolCalls(dispatch, extra.ideMessenger, generatedCalls2);
+    console.log("[CodeAware][Tools] ✅ Preprocessing completed");
+
+    const state3 = getState();
+    console.log(
+      "[CodeAware][Tools] Step 8: Checking stream state after preprocessing",
+      {
+        aborted: streamAborter.signal.aborted,
+        isStreaming: state3.session.isStreaming,
+      },
+    );
+    if (streamAborter.signal.aborted || !state3.session.isStreaming) {
+      console.log(
+        "[CodeAware][Tools] ❌ Stream not active after preprocessing, exiting",
+      );
+      return;
+    }
+
+    console.log(
+      "[CodeAware][Tools] Step 9: Getting pending calls after preprocessing",
+    );
+    const generatedCalls3 = selectPendingToolCalls(state3);
+    console.log("[CodeAware][Tools] Pending after preprocessing:", {
+      count: generatedCalls3.length,
+      tools: generatedCalls3.map((t) => ({
+        id: t.toolCallId,
+        name: (t as any).function?.name,
+        status: t.status,
+      })),
+    });
+
+    console.log("[CodeAware][Tools] Step 10: Evaluating tool policies...");
+    const toolPolicies = state3.ui.toolSettings;
     const policies = await evaluateToolPolicies(
       dispatch,
       extra.ideMessenger,
@@ -459,52 +570,127 @@ async function streamCodeAwareGeneration({
     const anyRequireApproval = policies.find(
       ({ policy }) => policy === "allowedWithPermission",
     );
+    console.log("[CodeAware][Tools] Policy evaluation results:", {
+      totalPolicies: policies.length,
+      requiresApproval: !!anyRequireApproval,
+      policies: policies.map((p) => ({
+        policy: p.policy,
+      })),
+    });
     pushDebug(
       `policies checked calls=${generatedCalls3.length} requireApproval=${!!anyRequireApproval}`,
     );
 
-    if (originalToolCalls.length === 0 || anyRequireApproval) {
+    if (originalToolCalls.length === 0) {
       console.log(
-        "[CodeAware][Tools] Setting inactive (no tools or needs approval)",
+        "[CodeAware][Tools] ⚠️ Setting inactive (no tool calls to execute)",
       );
       dispatch(setInactive());
     } else {
-      const stateBeforeExecute = getState();
-      const generatedCalls4 = selectPendingToolCalls(stateBeforeExecute);
-      if (streamAborter.signal.aborted) return;
+      if (anyRequireApproval) {
+        console.log(
+          "[CodeAware][Tools] ⚠️ Policies require approval; auto-approving for CodeAware flow",
+          policies,
+        );
+      }
+
+      console.log("[CodeAware][Tools] Step 11: Proceeding with tool execution");
+      const state4 = getState();
+      const generatedCalls4 = selectPendingToolCalls(state4);
+
+      console.log(
+        "[CodeAware][Tools] Step 12: Checking stream state before execution",
+        {
+          aborted: streamAborter.signal.aborted,
+          isStreaming: state4.session.isStreaming,
+        },
+      );
+      if (streamAborter.signal.aborted || !state4.session.isStreaming) {
+        console.log(
+          "[CodeAware][Tools] ❌ Stream not active before execution, exiting",
+        );
+        return;
+      }
+
       if (generatedCalls4.length > 0) {
-        console.log("[CodeAware][Tools] Auto-approving tool calls", {
-          count: generatedCalls4.length,
-        });
+        console.log(
+          "[CodeAware][Tools] Step 13: 🚀 Executing auto-approved tool calls",
+          {
+            count: generatedCalls4.length,
+            tools: generatedCalls4.map((t) => ({
+              id: t.toolCallId,
+              name: (t as any).function?.name,
+              argsLength: ((t as any).function?.arguments || "").length,
+            })),
+          },
+        );
         pushDebug(`execute auto-approved toolCalls=${generatedCalls4.length}`);
+
         await Promise.all(
-          generatedCalls4.map(async ({ toolCallId }) => {
-            unwrapResult(
-              await dispatch(
+          generatedCalls4.map(async ({ toolCallId }, index) => {
+            console.log(
+              `[CodeAware][Tools]   📞 Calling tool ${index + 1}/${generatedCalls4.length}: ${toolCallId}`,
+            );
+            try {
+              const result = await dispatch(
                 callToolById({
                   toolCallId,
                   isAutoApproved: true,
                   depth: depth + 1,
                 }),
-              ),
-            );
+              );
+              unwrapResult(result);
+              console.log(
+                `[CodeAware][Tools]   ✅ Tool ${toolCallId} executed successfully`,
+              );
+            } catch (error) {
+              console.error(
+                `[CodeAware][Tools]   ❌ Tool ${toolCallId} execution failed:`,
+                error,
+              );
+              throw error;
+            }
+
             // After execution, summarize apply state for visibility
             const applyState = selectApplyStateByToolCallId(
               getState(),
               toolCallId,
             );
             if (applyState) {
+              console.log(
+                `[CodeAware][Tools]   📊 Apply state for ${toolCallId}:`,
+                {
+                  status: applyState.status,
+                  file: applyState.filepath || "<no file>",
+                  diffs: applyState.numDiffs ?? 0,
+                },
+              );
               pushDebug(
                 `apply-status tool=${toolCallId} status=${applyState.status} file=${applyState.filepath || ""} diffs=${applyState.numDiffs ?? 0}`,
               );
             } else {
+              console.log(
+                `[CodeAware][Tools]   ⚠️ No apply state for ${toolCallId}`,
+              );
               pushDebug(`apply-status tool=${toolCallId} <no-apply-state>`);
             }
           }),
         );
+        console.log("[CodeAware][Tools] ✅ All tool calls executed");
         // Summarize done apply states across session
         const doneStates = selectDoneApplyStates(getState());
+        console.log("[CodeAware][Tools] Step 14: Summarizing apply states", {
+          totalDone: doneStates.length,
+        });
         if (doneStates.length) {
+          console.log(
+            "[CodeAware][Tools] Done apply states:",
+            doneStates.map((s) => ({
+              file: s.filepath,
+              diffs: s.numDiffs,
+              status: s.status,
+            })),
+          );
           pushDebug(
             `apply-done-total=${doneStates.length} sample=${JSON.stringify(
               doneStates.slice(0, 2).map((s) => ({
@@ -517,10 +703,13 @@ async function streamCodeAwareGeneration({
         }
       } else {
         console.log(
-          "[CodeAware][Tools] No pending calls, stream response after tool call",
+          "[CodeAware][Tools] ⚠️ No pending calls, streaming response after tool call",
         );
         pushDebug("execute streamResponseAfterToolCall for original calls");
         for (const { toolCallId } of originalToolCalls) {
+          console.log(
+            `[CodeAware][Tools] Streaming response for ${toolCallId}`,
+          );
           unwrapResult(
             await dispatch(
               streamResponseAfterToolCall({
@@ -533,23 +722,27 @@ async function streamCodeAwareGeneration({
       }
     }
 
-    console.log("[CodeAware] Code generation completed successfully");
+    console.log("\n[CodeAware] ✅ Code generation completed successfully");
+    console.log(
+      "[CodeAware][Tools] ========== TOOL EXECUTION PIPELINE END ==========",
+    );
     dispatch(setCodeGenerationProgress(100));
     dispatch(setCodeGenerationMessage("代码生成完成"));
     dispatch(setCodeGenerationStatus("completed"));
     pushDebug("status:completed");
-    dispatch(setInactive());
   } catch (e) {
-    console.error("[CodeAware] Code generation failed:", e);
+    console.error("[CodeAware] Tool execution failed:", e);
     dispatch(setCodeGenerationStatus("error"));
     dispatch(
-      setCodeGenerationMessage(e instanceof Error ? e.message : "生成失败"),
+      setCodeGenerationMessage(e instanceof Error ? e.message : "工具执行失败"),
     );
     pushDebug(
-      `status:error ${(e instanceof Error ? e.message : String(e)).slice(0, 300)}`,
+      `tool-exec-error ${(e instanceof Error ? e.message : String(e)).slice(0, 300)}`,
     );
-    dispatch(setInactive());
     throw e;
+  } finally {
+    // Always set inactive when done, regardless of success or failure
+    dispatch(setInactive());
   }
 }
 

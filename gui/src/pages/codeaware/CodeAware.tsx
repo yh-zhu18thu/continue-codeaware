@@ -1577,39 +1577,31 @@ export const CodeAware = () => {
           unexecutedStepIds: unexecutedSteps.map((s) => s.id),
         });
 
-        // 2. 通过ideMessenger获取当前文件的所有代码
+        // 2. 通过ideMessenger获取当前文件的所有代码（如果有打开的文件）
+        // 如果没有打开的文件，将由agent通过tool calling创建新文件
+        let currentFile = null;
         const currentFileResponse = await ideMessenger?.request(
           "getCurrentFile",
           undefined,
         );
 
-        // 检查响应是否成功并提取内容
-        if (!currentFileResponse || currentFileResponse.status !== "success") {
-          console.warn("⚠️ 无法获取当前文件信息");
-          await logger.addLogEntry("user_execute_steps_error", {
-            stepId,
-            error: "Unable to get current file information",
-          });
-          // 恢复步骤状态为"confirmed"
-          for (const step of unexecutedSteps) {
-            dispatch(setStepStatus({ stepId: step.id, status: "confirmed" }));
-          }
-          return;
+        if (currentFileResponse && currentFileResponse.status === "success") {
+          currentFile = currentFileResponse.content;
         }
 
-        const currentFile = currentFileResponse.content;
-
+        // 如果没有当前文件，创建一个默认的文件对象
+        // Agent将通过tool calling来创建实际的文件
         if (!currentFile) {
-          console.warn("⚠️ 当前没有打开的文件");
-          await logger.addLogEntry("user_execute_steps_error", {
+          console.log("💡 没有打开的文件，agent将通过tool calling创建新文件");
+          currentFile = {
+            path: "untitled.ts", // 默认文件名，agent可以通过tool指定其他名称
+            isUntitled: true,
+            contents: "", // 从空文件开始
+          };
+          await logger.addLogEntry("user_execute_steps_no_file", {
             stepId,
-            error: "No current file open",
+            message: "No current file, agent will create one via tool calling",
           });
-          // 恢复步骤状态为"confirmed"
-          for (const step of unexecutedSteps) {
-            dispatch(setStepStatus({ stepId: step.id, status: "confirmed" }));
-          }
-          return;
         }
 
         console.log("📁 当前文件信息:", {
@@ -1677,17 +1669,10 @@ export const CodeAware = () => {
 
         if (generateCodeFromSteps.fulfilled.match(result)) {
           console.log("✅ 代码生成完成!", result.payload);
-          // 设置步骤状态为"generated"
-          for (const step of unexecutedSteps) {
-            dispatch(setStepStatus({ stepId: step.id, status: "generated" }));
-          }
+          // 注意：generateCodeFromSteps已在内部设置步骤状态为"generated"
+          // 和调用checkAndUpdateHighLevelStepCompletion，无需在此重复
 
-          // 检查并更新高级步骤的完成状态
-          dispatch(checkAndUpdateHighLevelStepCompletion());
-
-          // TODO: 后续处理生成的代码，例如：
-          // - 将生成的代码应用到IDE中
-          // - 更新代码映射关系
+          console.log("✨ 代码生成和步骤状态更新已完成，可以继续其他操作");
         } else if (generateCodeFromSteps.rejected.match(result)) {
           console.error("❌ 代码生成失败:", result.error.message);
           // 恢复步骤状态为"confirmed"并显示错误提示

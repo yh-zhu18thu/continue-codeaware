@@ -24,7 +24,6 @@ import {
 import * as vscode from "vscode";
 
 import { ApplyManager } from "../apply";
-import { CodeEditModeManager } from "../CodeEditModeManager";
 import { VerticalDiffManager } from "../diff/vertical/manager";
 import { addCurrentSelectionToEdit } from "../quickEdit/AddCurrentSelection";
 import EditDecorationManager from "../quickEdit/EditDecorationManager";
@@ -44,7 +43,6 @@ import { VsCodeExtension } from "./VsCodeExtension";
 
 type ToIdeOrWebviewFromCoreProtocol = ToIdeFromCoreProtocol &
   ToWebviewFromCoreProtocol;
-
 
 /**
  * A shared messenger class between Core and Webview
@@ -97,7 +95,6 @@ export class VsCodeMessenger {
     private readonly context: vscode.ExtensionContext,
     private readonly vsCodeExtension: VsCodeExtension,
     private readonly highlightCodeManager: HighlightCodeManager,
-    private readonly codeEditModeManager: CodeEditModeManager
   ) {
     /** WEBVIEW ONLY LISTENERS **/
     this.onWebview("showFile", (msg) => {
@@ -671,17 +668,6 @@ export class VsCodeMessenger {
       this.highlightCodeManager.clearAllHighlights();
     });
 
-    // CodeAware: 设置代码编辑模式
-    this.onWebview("setCodeEditMode", async (msg) => {
-      console.log("💡 设置代码编辑模式:", msg.data);
-      await this.codeEditModeManager.setCodeEditMode(msg.data.enabled);
-      
-      // 向webview发送状态变化通知
-      await this.webviewProtocol.request("didChangeCodeEditMode", {
-        enabled: msg.data.enabled
-      });
-    });
-
     // CodeAware: 日志记录相关
     this.onWebview("startCodeAwareLogSession", async (msg) => {
       console.log("📊 [CodeAware] Starting log session:", msg.data);
@@ -766,12 +752,12 @@ export class VsCodeMessenger {
     this.onWebviewOrCore("openFile", async (msg) => {
       return ide.openFile(msg.data.path);
     });
-    
+
     // CodeAware: Handle createAndOpenFile requests
     this.onWebviewOrCore("createAndOpenFile", async (msg) => {
       return ide.createAndOpenFile(msg.data.filename, msg.data.content);
     });
-    
+
     this.onWebviewOrCore("runCommand", async (msg) => {
       await ide.runCommand(msg.data.command);
     });
@@ -849,7 +835,7 @@ export class VsCodeMessenger {
     this.onWebviewOrCore("getDocumentSymbols", async (msg) => {
       return await ide.getDocumentSymbols(msg.data.textDocumentIdentifier);
     });
-    
+
     // CodeAware: Apply diff changes using WorkspaceEdit
     this.onWebviewOrCore("applyDiffChanges", async (msg) => {
       return await ide.applyDiffChanges(msg.data);

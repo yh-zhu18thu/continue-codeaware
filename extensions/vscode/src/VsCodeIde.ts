@@ -12,7 +12,6 @@ import {
   executeSignatureHelpProvider,
   executeSymbolProvider,
 } from "./autocomplete/lsp";
-import { CodeEditModeManager } from "./CodeEditModeManager";
 import { Repository } from "./otherExtensions/git";
 import { SecretStorage } from "./stubs/SecretStorage";
 import { VsCodeIdeUtils } from "./util/ideUtils";
@@ -43,22 +42,9 @@ class VsCodeIde implements IDE {
   constructor(
     private readonly vscodeWebviewProtocolPromise: Promise<VsCodeWebviewProtocol>,
     private readonly context: vscode.ExtensionContext,
-    private readonly codeEditModeManager?: CodeEditModeManager,
   ) {
     this.ideUtils = new VsCodeIdeUtils();
     this.secretStorage = new SecretStorage(context);
-
-    // 设置代码编辑模式切换时的自动保存回调
-    if (this.codeEditModeManager) {
-      this.codeEditModeManager.setOnModeChangeCallback(
-        async (enabled: boolean) => {
-          // 当从代码编辑模式切换到webview-only模式时自动保存
-          if (!enabled) {
-            await this.autoSaveCurrentFile();
-          }
-        },
-      );
-    }
   }
 
   async readSecrets(keys: string[]): Promise<Record<string, string>> {
@@ -806,11 +792,6 @@ class VsCodeIde implements IDE {
     try {
       console.log("apply! diff changes!");
 
-      // 标记开始程序化更新，防止CodeEditModeManager拦截
-      if (this.codeEditModeManager) {
-        this.codeEditModeManager.allowProgrammaticUpdate();
-      }
-
       // 如果新旧代码相同，直接返回
       if (oldCode === newCode) {
         console.log("No changes to apply - old and new code are identical.");
@@ -882,11 +863,6 @@ class VsCodeIde implements IDE {
       );
 
       throw error;
-    } finally {
-      // 确保在任何情况下都结束程序化更新标记
-      if (this.codeEditModeManager) {
-        this.codeEditModeManager.endProgrammaticUpdate();
-      }
     }
   }
 }

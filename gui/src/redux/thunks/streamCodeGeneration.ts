@@ -67,7 +67,7 @@ ${previouslyGeneratedSteps.map((s, i) => `${i + 1}. ${s.title}`).join("\n")}
 `
     : "";
 
-  return `You are a code generation assistant. Your task is to implement the following programming steps.
+  return `You are a code generation assistant. Your task is to implement the following programming steps by using tools to edit files.
 
 **Task Description**: 
 ${taskDescription}
@@ -79,12 +79,32 @@ ${previousStepsText}
 **Important Instructions**:
 - Implement ONLY the steps listed above
 - ${isLastStep ? "This is the final step - ensure all functionality is complete and working" : "Focus only on the current steps"}
-- If no file is currently open, use the create_new_file tool to create a new file first, then use edit_existing_file or multi_edit tool to add code
-- If a file is already open, use the edit_existing_file or multi_edit tool to make your changes
-- Ensure code is correct, idiomatic, and maintains consistency
-- Do NOT explain what you're doing, just make the edits
+- If no file is currently open, use the create_new_file tool to create a new file with COMPLETE working code
+- If a file is already open, use the edit_existing_file tool to make your changes
 
-Begin implementing the steps now.`;
+**For create_new_file tool**:
+- Generate COMPLETE, WORKING code - do NOT use placeholders like "... rest of code ..." or "... existing code ..."
+- Write the entire file content from start to finish
+- Include all necessary imports, function definitions, and logic
+- The file must be immediately runnable after creation
+
+**For edit_existing_file tool**:
+- The "changes" parameter MUST show the exact modifications
+- Use language-appropriate placeholders (e.g., "// ... existing code ...") ONLY for unmodified sections
+- Example format:
+  \`\`\`python
+  // ... existing code ...
+  
+  def new_function():
+      return "new code"
+  
+  // ... existing code ...
+  \`\`\`
+
+- Ensure code is correct, idiomatic, and maintains consistency
+- Do NOT explain what you're doing, just call the tools with proper parameters
+
+Begin implementing the steps now by calling the appropriate tools.`;
 }
 
 /**
@@ -492,7 +512,7 @@ async function streamCodeAwareGeneration({
       dispatch(
         setToolGenerated({
           toolCallId,
-          tools: activeTools,
+          tools: state1.config.config.tools,
         }),
       );
     }
@@ -656,21 +676,35 @@ async function streamCodeAwareGeneration({
               getState(),
               toolCallId,
             );
+            console.log(
+              `[CodeAware][Tools]   📊 Apply state for ${toolCallId}:`,
+              applyState,
+            );
             if (applyState) {
-              console.log(
-                `[CodeAware][Tools]   📊 Apply state for ${toolCallId}:`,
-                {
-                  status: applyState.status,
-                  file: applyState.filepath || "<no file>",
-                  diffs: applyState.numDiffs ?? 0,
-                },
-              );
+              console.log(`[CodeAware][Tools]   📊 Apply state details:`, {
+                status: applyState.status,
+                file: applyState.filepath || "<no file>",
+                diffs: applyState.numDiffs ?? 0,
+                streamId: applyState.streamId,
+                numDiffsWithErrors: applyState.numDiffsWithErrors,
+                toolName: (
+                  generatedCalls4.find(
+                    (c) => c.toolCallId === toolCallId,
+                  ) as any
+                )?.function?.name,
+              });
               pushDebug(
                 `apply-status tool=${toolCallId} status=${applyState.status} file=${applyState.filepath || ""} diffs=${applyState.numDiffs ?? 0}`,
               );
             } else {
               console.log(
                 `[CodeAware][Tools]   ⚠️ No apply state for ${toolCallId}`,
+              );
+              console.log(
+                `[CodeAware][Tools]   Tool name: ${(generatedCalls4.find((c) => c.toolCallId === toolCallId) as any)?.function?.name}`,
+              );
+              console.log(
+                `[CodeAware][Tools]   This might be a server-side tool (like create_new_file) that doesn't need apply`,
               );
               pushDebug(`apply-status tool=${toolCallId} <no-apply-state>`);
             }

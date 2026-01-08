@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import { v4 as uuidv4 } from "uuid";
 
 import { IContextProvider } from "core";
 import { ConfigHandler } from "core/config/ConfigHandler";
@@ -14,7 +15,6 @@ import {
   getConfigYamlPath,
   getContinueGlobalPath,
 } from "core/util/paths";
-import { v4 as uuidv4 } from "uuid";
 import * as vscode from "vscode";
 
 // import { MetaCompleteProvider } from "../autocomplete/metacomplete";
@@ -23,7 +23,6 @@ import {
   setupStatusBar,
 } from "../autocomplete/statusBar";
 import { CodeAwareActionProvider } from "../codeActions/CodeAwareActionProvider";
-import { CodeEditModeManager } from "../CodeEditModeManager";
 import { CodeSelectionHandler } from "../codeSelection/CodeSelectionHandler";
 import { registerAllCommands } from "../commands";
 import { ContinueConsoleWebviewViewProvider } from "../ContinueConsoleWebviewViewProvider";
@@ -74,7 +73,6 @@ export class VsCodeExtension {
   private windowId: string;
   private editDecorationManager: EditDecorationManager;
   private highlightCodeManager: HighlightCodeManager;
-  private codeEditModeManager: CodeEditModeManager;
   private verticalDiffManager: VerticalDiffManager;
   webviewProtocolPromise: Promise<VsCodeWebviewProtocol>;
   private core: Core;
@@ -187,6 +185,10 @@ export class VsCodeExtension {
   constructor(context: vscode.ExtensionContext) {
     console.log("VsCodeExtension: Initializing...");
 
+    // Initialize essential properties first
+    this.extensionContext = context;
+    this.windowId = uuidv4();
+
     // CodeAware: 设置工作区根路径给 logger
     const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
     if (workspaceRoot) {
@@ -209,11 +211,9 @@ export class VsCodeExtension {
 
     this.editDecorationManager = new EditDecorationManager(context);
     this.highlightCodeManager = new HighlightCodeManager();
-    this.codeEditModeManager = new CodeEditModeManager();
 
     // Register managers for automatic disposal
     context.subscriptions.push(this.highlightCodeManager);
-    context.subscriptions.push(this.codeEditModeManager);
 
     let resolveWebviewProtocol: any = undefined;
     this.webviewProtocolPromise = new Promise<VsCodeWebviewProtocol>(
@@ -222,15 +222,7 @@ export class VsCodeExtension {
       },
     );
     this.ideUtils = new VsCodeIdeUtils();
-    this.ide = new VsCodeIde(
-      this.webviewProtocolPromise,
-      context,
-      this.codeEditModeManager,
-    );
-
-    this.extensionContext = context;
-    this.windowId = uuidv4();
-
+    this.ide = new VsCodeIde(this.webviewProtocolPromise, context);
     // Check if model supports next edit to determine if we should use full file diff.
     const getUsingFullFileDiff = async () => {
       const { config } = await this.configHandler.loadConfig();
@@ -428,7 +420,6 @@ export class VsCodeExtension {
       context,
       this,
       this.highlightCodeManager,
-      this.codeEditModeManager,
     );
 
     this.core = new Core(inProcessMessenger, this.ide);
@@ -848,8 +839,6 @@ export class VsCodeExtension {
   }
 
   public dispose(): void {
-    // 清理CodeEditModeManager资源
-    this.codeEditModeManager?.dispose();
     // 清理CodeSelectionHandler资源
     this.codeSelectionHandler?.dispose();
     // 清理HighlightCodeManager资源

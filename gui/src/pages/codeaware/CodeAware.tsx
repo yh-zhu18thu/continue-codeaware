@@ -18,25 +18,21 @@ import { useAppDispatch, useAppSelector } from "../../redux/hooks";
 import {
   clearAllCodeAndMappings,
   clearAllHighlights,
-  clearCodeEditModeSnapshot,
-  newCodeAwareSession, // Add this import
+  newCodeAwareSession,
   resetIdeCommFlags,
-  resetSessionExceptRequirement, // Add this import
-  saveCodeEditModeSnapshot, // Add this import
+  resetSessionExceptRequirement,
   selectCurrentSessionId,
-  selectIsCodeEditModeEnabled, // Add this import for code edit mode
-  selectIsRequirementInEditMode, // Import submitRequirementContent
+  selectIsRequirementInEditMode,
   selectIsStepsGenerated,
-  selectLearningGoal, // Add this import
+  selectLearningGoal,
   selectTask,
-  selectTitle, // Add this import for reading title
-  setCodeEditMode, // Add this import for code edit mode action
-  setKnowledgeCardDisabled, // Add this import for knowledge card disable
-  setKnowledgeCardGenerationStatus, // Add this import for knowledge card generation status
-  setStepAbstract, // Add this import for step editing
-  setStepStatus, // Add this import for step status change
+  selectTitle,
+  setKnowledgeCardDisabled,
+  setKnowledgeCardGenerationStatus,
+  setStepAbstract,
+  setStepStatus,
   setUserRequirementStatus,
-  submitRequirementContent, // Add this import
+  submitRequirementContent,
   updateHighlight,
 } from "../../redux/slices/codeAwareSlice";
 import {
@@ -49,14 +45,12 @@ import {
   generateKnowledgeCardThemesFromQuery,
   generateStepsFromRequirement,
   getStepCorrespondingCode,
-  processCodeChanges,
   processGlobalQuestion,
   processSaqSubmission,
   rerunStep,
 } from "../../redux/thunks/codeAwareGeneration";
 import { useCodeAwareLogger } from "../../util/codeAwareWebViewLogger";
 import "./CodeAware.css";
-import CodeEditModeToggle from "./components/CodeEditModeToggle"; // Import the toggle component
 import GlobalQuestionModal from "./components/QuestionPopup/GlobalQuestionModal";
 import RequirementDisplay from "./components/Requirements/RequirementDisplay"; // Import RequirementDisplay
 import RequirementDisplayHorizontal from "./components/Requirements/RequirementDisplayHorizontal"; // Import RequirementDisplayHorizontal
@@ -251,7 +245,6 @@ export const CodeAware = () => {
   // 当前requirement部分应该使用
   const isEditMode = useAppSelector(selectIsRequirementInEditMode);
   const isStepsGenerated = useAppSelector(selectIsStepsGenerated); // Use the selector
-  const isCodeEditModeEnabled = useAppSelector(selectIsCodeEditModeEnabled); // Get code edit mode state
   const sessionTitle = useAppSelector(selectTitle); // Get title from codeAwareSlice
   const currentSessionId = useAppSelector(selectCurrentSessionId); // Get current session ID
   // 获取可能有的requirement内容
@@ -303,28 +296,6 @@ export const CodeAware = () => {
     }
   }, [steps.length, ideMessenger]);
 
-  // Sync code edit mode state to IDE
-  useEffect(() => {
-    const syncCodeEditModeToIde = async () => {
-      try {
-        await ideMessenger?.request("setCodeEditMode", {
-          enabled: isCodeEditModeEnabled,
-        });
-
-        console.log("📡 [CodeAware] Code edit mode synced to IDE:", {
-          isCodeEditModeEnabled,
-        });
-      } catch (error) {
-        console.warn(
-          "⚠️ [CodeAware] Failed to sync code edit mode to IDE:",
-          error,
-        );
-      }
-    };
-
-    syncCodeEditModeToIde();
-  }, [isCodeEditModeEnabled, ideMessenger]);
-
   // Monitor knowledge card generation completion and log events
   const prevStepsRef = useRef<StepItem[]>([]);
   useEffect(() => {
@@ -370,109 +341,6 @@ export const CodeAware = () => {
     // Update the ref with current steps
     prevStepsRef.current = [...currentSteps];
   }, [steps, logger]);
-
-  // Handle local code edit mode changes (from toggle button)
-  useEffect(() => {
-    const handleLocalCodeEditModeChange = async () => {
-      const previousMode = prevCodeEditModeRef.current;
-      const currentMode = isCodeEditModeEnabled;
-
-      // Update the ref to current state
-      prevCodeEditModeRef.current = currentMode;
-
-      // Only process if the mode actually changed
-      if (previousMode === currentMode) {
-        return;
-      }
-
-      if (currentMode && !previousMode) {
-        // Entering code edit mode - save current code snapshot
-        try {
-          const currentFileResponse = await ideMessenger?.request(
-            "getCurrentFile",
-            undefined,
-          );
-
-          if (
-            currentFileResponse &&
-            currentFileResponse.status === "success" &&
-            currentFileResponse.content
-          ) {
-            const currentFile = currentFileResponse.content;
-
-            dispatch(
-              saveCodeEditModeSnapshot({
-                filePath: currentFile.path,
-                content: currentFile.contents || "",
-              }),
-            );
-
-            console.log("📸 [CodeAware] Code snapshot saved (local toggle):", {
-              filePath: currentFile.path,
-              contentLength: (currentFile.contents || "").length,
-            });
-          } else {
-            console.warn(
-              "⚠️ [CodeAware] Could not get current file for snapshot (local toggle)",
-            );
-          }
-        } catch (error) {
-          console.error(
-            "❌ [CodeAware] Failed to save code snapshot (local toggle):",
-            error,
-          );
-        }
-      } else if (!currentMode && previousMode) {
-        // Exiting code edit mode - process code changes
-        try {
-          const currentFileResponse = await ideMessenger?.request(
-            "getCurrentFile",
-            undefined,
-          );
-
-          if (
-            currentFileResponse &&
-            currentFileResponse.status === "success" &&
-            currentFileResponse.content
-          ) {
-            const currentFile = currentFileResponse.content;
-
-            console.log(
-              "🔄 [CodeAware] Processing code changes (local toggle)...",
-            );
-
-            // Process code changes in the background
-            await dispatch(
-              processCodeChanges({
-                currentFilePath: currentFile.path,
-                currentContent: currentFile.contents || "",
-              }),
-            );
-
-            console.log(
-              "✅ [CodeAware] Code changes processed successfully (local toggle)",
-            );
-          } else {
-            console.warn(
-              "⚠️ [CodeAware] Could not get current file for change processing (local toggle)",
-            );
-          }
-
-          // Clear the snapshot after processing
-          dispatch(clearCodeEditModeSnapshot());
-        } catch (error) {
-          console.error(
-            "❌ [CodeAware] Failed to process code changes (local toggle):",
-            error,
-          );
-          // Clear snapshot even if processing failed
-          dispatch(clearCodeEditModeSnapshot());
-        }
-      }
-    };
-
-    handleLocalCodeEditModeChange();
-  }, [isCodeEditModeEnabled, ideMessenger, dispatch]);
 
   // Add dialog handlers
   const handleSessionInfoSubmit = useCallback(
@@ -550,111 +418,6 @@ export const CodeAware = () => {
     [dispatch, logger],
   );
 
-  // Add webview listener for code edit mode changes from IDE
-  useWebviewListener(
-    "didChangeCodeEditMode",
-    async (data: { enabled: boolean }) => {
-      console.log(
-        "📡 [CodeAware] Received code edit mode change from IDE:",
-        data,
-      );
-
-      const currentCodeEditMode = isCodeEditModeEnabled;
-
-      if (data.enabled && !currentCodeEditMode) {
-        // Log: 用户进入代码编辑模式
-        await logger.addLogEntry("user_enter_code_edit_mode", {
-          timestamp: new Date().toISOString(),
-        });
-
-        // Entering code edit mode - save current code snapshot
-        try {
-          const currentFileResponse = await ideMessenger?.request(
-            "getCurrentFile",
-            undefined,
-          );
-
-          if (
-            currentFileResponse &&
-            currentFileResponse.status === "success" &&
-            currentFileResponse.content
-          ) {
-            const currentFile = currentFileResponse.content;
-
-            dispatch(
-              saveCodeEditModeSnapshot({
-                filePath: currentFile.path,
-                content: currentFile.contents || "",
-              }),
-            );
-
-            console.log("📸 [CodeAware] Code snapshot saved:", {
-              filePath: currentFile.path,
-              contentLength: (currentFile.contents || "").length,
-            });
-          } else {
-            console.warn(
-              "⚠️ [CodeAware] Could not get current file for snapshot",
-            );
-          }
-        } catch (error) {
-          console.error("❌ [CodeAware] Failed to save code snapshot:", error);
-        }
-      } else if (!data.enabled && currentCodeEditMode) {
-        // Log: 用户退出代码编辑模式
-        await logger.addLogEntry("user_exit_code_edit_mode", {
-          timestamp: new Date().toISOString(),
-        });
-
-        // Exiting code edit mode - process code changes
-        try {
-          const currentFileResponse = await ideMessenger?.request(
-            "getCurrentFile",
-            undefined,
-          );
-
-          if (
-            currentFileResponse &&
-            currentFileResponse.status === "success" &&
-            currentFileResponse.content
-          ) {
-            const currentFile = currentFileResponse.content;
-
-            console.log("🔄 [CodeAware] Processing code changes...");
-
-            // Process code changes in the background
-            await dispatch(
-              processCodeChanges({
-                currentFilePath: currentFile.path,
-                currentContent: currentFile.contents || "",
-              }),
-            );
-
-            console.log("✅ [CodeAware] Code changes processed successfully");
-          } else {
-            console.warn(
-              "⚠️ [CodeAware] Could not get current file for change processing",
-            );
-          }
-
-          // Clear the snapshot after processing
-          dispatch(clearCodeEditModeSnapshot());
-        } catch (error) {
-          console.error(
-            "❌ [CodeAware] Failed to process code changes:",
-            error,
-          );
-          // Clear snapshot even if processing failed
-          dispatch(clearCodeEditModeSnapshot());
-        }
-      }
-
-      // Update the code edit mode state
-      dispatch(setCodeEditMode(data.enabled));
-    },
-    [dispatch, ideMessenger, isCodeEditModeEnabled],
-  );
-
   // Get IDE communication flags
   const shouldClearIdeHighlights = useAppSelector(
     (state) => state.codeAwareSession.shouldClearIdeHighlights,
@@ -689,9 +452,6 @@ export const CodeAware = () => {
 
   // 设置全局样式：
   const codeAwareDivRef = useRef<HTMLDivElement>(null);
-
-  // Track previous code edit mode state for local toggles
-  const prevCodeEditModeRef = useRef<boolean>(isCodeEditModeEnabled);
 
   // CodeAware: 调试状态 - 跟踪最近的光标位置和选择信息
   const [debugInfo, setDebugInfo] = useState<{
@@ -951,13 +711,6 @@ export const CodeAware = () => {
   const AIHandleRequirementConfirmation = useCallback(
     async (requirement: string) => {
       // Expect requirement from editor
-      // Disable in code edit mode
-      if (isCodeEditModeEnabled) {
-        console.warn(
-          "⚠️ Requirement confirmation is disabled in code edit mode",
-        );
-        return;
-      }
 
       if (!userRequirement) {
         return;
@@ -1010,16 +763,10 @@ export const CodeAware = () => {
         });
       });
     },
-    [dispatch, userRequirement, isCodeEditModeEnabled, logger],
+    [dispatch, userRequirement, logger],
   );
 
   const handleEditRequirement = useCallback(async () => {
-    // Disable in code edit mode
-    if (isCodeEditModeEnabled) {
-      console.warn("⚠️ Requirement editing is disabled in code edit mode");
-      return;
-    }
-
     await logger.addLogEntry("user_start_edit_requirement", {
       currentRequirement: userRequirement?.requirementDescription
         ? userRequirement.requirementDescription.length > 300
@@ -1029,15 +776,9 @@ export const CodeAware = () => {
     });
 
     dispatch(setUserRequirementStatus("editing"));
-  }, [dispatch, isCodeEditModeEnabled, logger, userRequirement]);
+  }, [dispatch, logger, userRequirement]);
 
   const handleRegenerateCode = useCallback(async () => {
-    // Disable in code edit mode
-    if (isCodeEditModeEnabled) {
-      console.warn("⚠️ Code regeneration is disabled in code edit mode");
-      return;
-    }
-
     await logger.addLogEntry("user_request_regenerate_code", {
       timestamp: new Date().toISOString(),
     });
@@ -1203,7 +944,7 @@ export const CodeAware = () => {
         timestamp: new Date().toISOString(),
       });
     }
-  }, [steps, ideMessenger, dispatch, isCodeEditModeEnabled, logger]);
+  }, [steps, ideMessenger, dispatch, logger]);
 
   // CodeAware: 获取学习目标和代码上下文
   const learningGoal = useAppSelector(selectLearningGoal);
@@ -1507,12 +1248,6 @@ export const CodeAware = () => {
   // Add new functions for step operations
   const executeUntilStep = useCallback(
     async (stepId: string) => {
-      // Disable in code edit mode
-      if (isCodeEditModeEnabled) {
-        console.warn("⚠️ Code execution is disabled in code edit mode");
-        return;
-      }
-
       console.log(`执行到步骤: ${stepId}`);
 
       // Log step execution
@@ -1705,26 +1440,12 @@ export const CodeAware = () => {
         ]);
       }
     },
-    [
-      steps,
-      ideMessenger,
-      dispatch,
-      isCodeEditModeEnabled,
-      allMappings,
-      codeChunks,
-      logger,
-    ],
+    [steps, ideMessenger, dispatch, allMappings, codeChunks, logger],
   );
 
   // Handle rerun step when step is dirty
   const handleRerunStep = useCallback(
     async (stepId: string) => {
-      // Disable in code edit mode
-      if (isCodeEditModeEnabled) {
-        console.warn("⚠️ Step rerun is disabled in code edit mode");
-        return;
-      }
-
       console.log(`重新运行步骤: ${stepId}`);
 
       await logger.addLogEntry("user_start_rerun_step", {
@@ -1817,17 +1538,11 @@ export const CodeAware = () => {
         ]);
       }
     },
-    [steps, dispatch, ideMessenger, isCodeEditModeEnabled, logger],
+    [steps, dispatch, ideMessenger, logger],
   );
 
   const handleStepEdit = useCallback(
     async (stepId: string, newContent: string) => {
-      // Disable in code edit mode
-      if (isCodeEditModeEnabled) {
-        console.warn("⚠️ Step editing is disabled in code edit mode");
-        return;
-      }
-
       await logger.addLogEntry("user_edit_step_content", {
         stepId,
         newContent: newContent.substring(0, 200), // Log first 200 chars to avoid huge logs
@@ -1837,7 +1552,7 @@ export const CodeAware = () => {
       // Update step abstract in Redux store
       dispatch(setStepAbstract({ stepId, abstract: newContent }));
     },
-    [dispatch, isCodeEditModeEnabled, logger],
+    [dispatch, logger],
   );
 
   const handleStepStatusChange = useCallback(
@@ -2352,12 +2067,7 @@ export const CodeAware = () => {
         showGlobalQuestionButton={
           userRequirementStatus === "finalized" && steps.length > 0
         }
-        rightContent={
-          <CodeEditModeToggle
-            onRegenerateCode={handleRegenerateCode}
-            showRegenerateCode={userRequirementStatus === "finalized"}
-          />
-        }
+        rightContent={null}
       />
 
       {/* RequirementSummary - 只在 RequirementDisplay 不可见且不在编辑模式且需求已确认时显示 */}
@@ -2401,7 +2111,6 @@ export const CodeAware = () => {
           <RequirementEditor
             onConfirm={AIHandleRequirementConfirmation}
             onContentChange={handleRequirementContentChange}
-            disabled={isCodeEditModeEnabled} // Disable in code edit mode
           />
         ) : (
           <div ref={requirementDisplayRef}>
@@ -2409,7 +2118,6 @@ export const CodeAware = () => {
               onEdit={handleEditRequirement}
               onChunkFocus={handleHighlightEvent} // Pass the highlight event handler
               onClearHighlight={removeHighlightEvent} // Pass the clear highlight function
-              disabled={isCodeEditModeEnabled} // Disable in code edit mode
             />
           </div>
         )}
@@ -2453,7 +2161,6 @@ export const CodeAware = () => {
                   onDisableKnowledgeCard={handleDisableKnowledgeCard} // Pass knowledge card disable function
                   onQuestionSubmit={handleQuestionSubmit} // Pass question submit function
                   onRegisterRef={registerStepRef} // Pass step ref registration function
-                  disabled={isCodeEditModeEnabled} // Disable in code edit mode
                   knowledgeCards={step.knowledgeCards.map(
                     (kc: KnowledgeCardItem, kcIndex: number) => {
                       // 使用testStatesMap获取测试项目数据

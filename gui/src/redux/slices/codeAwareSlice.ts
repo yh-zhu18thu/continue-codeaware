@@ -56,14 +56,6 @@ export type CodeAwareSessionState = {
   // IDE communication flags
   shouldClearIdeHighlights: boolean;
   codeChunksToHighlightInIde: CodeChunk[];
-  // Code editing mode - when true, allows manual code editing; when false, allows CodeAware operations
-  isCodeEditModeEnabled: boolean;
-  // Code state snapshot when entering code edit mode
-  codeEditModeSnapshot: {
-    filePath: string;
-    content: string;
-    timestamp: number;
-  } | null;
   // Code generation state
   codeGeneration: {
     status:
@@ -96,8 +88,6 @@ const initialCodeAwareState: CodeAwareSessionState = {
   codeAwareMappings: [],
   shouldClearIdeHighlights: false,
   codeChunksToHighlightInIde: [],
-  isCodeEditModeEnabled: false, // Default to CodeAware mode
-  codeEditModeSnapshot: null, // No snapshot initially
   codeGeneration: {
     status: "idle",
     message: "",
@@ -1025,32 +1015,6 @@ export const codeAwareSessionSlice = createSlice({
       state.shouldClearIdeHighlights = false;
       state.codeChunksToHighlightInIde = [];
     },
-    // Toggle code edit mode - controls whether user can edit code manually or use CodeAware features
-    toggleCodeEditMode: (state) => {
-      state.isCodeEditModeEnabled = !state.isCodeEditModeEnabled;
-    },
-    // Set code edit mode explicitly
-    setCodeEditMode: (state, action: PayloadAction<boolean>) => {
-      state.isCodeEditModeEnabled = action.payload;
-    },
-    // Save code snapshot when entering code edit mode
-    saveCodeEditModeSnapshot: (
-      state,
-      action: PayloadAction<{
-        filePath: string;
-        content: string;
-      }>,
-    ) => {
-      state.codeEditModeSnapshot = {
-        filePath: action.payload.filePath,
-        content: action.payload.content,
-        timestamp: Date.now(),
-      };
-    },
-    // Clear code edit mode snapshot
-    clearCodeEditModeSnapshot: (state) => {
-      state.codeEditModeSnapshot = null;
-    },
     // Mark steps as code_dirty based on code changes
     markStepsCodeDirty: (
       state,
@@ -1278,9 +1242,6 @@ export const codeAwareSessionSlice = createSlice({
       // 返回session的任务信息
       return state.userRequirement;
     },
-    selectIsCodeEditModeEnabled: (state: CodeAwareSessionState) => {
-      return state.isCodeEditModeEnabled;
-    },
     selectTitle: (state: CodeAwareSessionState) => {
       return state.title;
     },
@@ -1354,10 +1315,6 @@ export const {
   setStepGeneratedUntil,
   setKnowledgeCardGenerationStatus,
   setStepAbstract,
-  toggleCodeEditMode,
-  setCodeEditMode,
-  saveCodeEditModeSnapshot,
-  clearCodeEditModeSnapshot,
   markStepsCodeDirty,
   updateCodeChunkPositions,
   updateSaqTestResult,
@@ -1382,7 +1339,6 @@ export const {
   selectLearningGoal,
   selectTask,
   selectCanExecuteUntilStep,
-  selectIsCodeEditModeEnabled,
   selectTitle,
 } = codeAwareSessionSlice.selectors;
 

@@ -1,5 +1,6 @@
 import { Tool } from "../..";
 import { EDIT_CODE_INSTRUCTIONS } from "../../llm/defaultSystemMessages";
+import { ContinueError, ContinueErrorReason } from "../../util/errors";
 import { BUILT_IN_GROUP_NAME, BuiltInToolNames } from "../builtIn";
 
 export interface EditToolArgs {
@@ -11,7 +12,7 @@ export const NO_PARALLEL_TOOL_CALLING_INSTRUCTION =
   "This tool CANNOT be called in parallel with other tools.";
 
 const CHANGES_DESCRIPTION =
-  "Any modifications to the file, showing only needed changes. Do NOT wrap this in a codeblock or write anything besides the code changes. In larger files, use brief language-appropriate placeholders for large unmodified sections, e.g. '// ... existing code ...'";
+  '⚠️ CRITICAL: Provide ONLY RAW CODE - no JSON, no structure, no wrapping. Do NOT use formats like {"result": "code", "language": "python", "notes": [...]}. Simply provide the code modifications directly with comment placeholders (e.g., \'# ... existing code ...\') for unchanged sections.';
 
 export const editFileTool: Tool = {
   type: "function",
@@ -24,7 +25,7 @@ export const editFileTool: Tool = {
   isInstant: false,
   function: {
     name: BuiltInToolNames.EditExistingFile,
-    description: `Use this tool to edit an existing file. If you don't know the contents of the file, read it first.\n${EDIT_CODE_INSTRUCTIONS}\n${NO_PARALLEL_TOOL_CALLING_INSTRUCTION}`,
+    description: `Use this tool to edit an existing file. If you don't know the contents of the file, read it first.\n${EDIT_CODE_INSTRUCTIONS}\n\n⚠️ CRITICAL REQUIREMENT: The 'changes' parameter must contain ONLY RAW CODE directly - never wrap in JSON like {\"result\": \"...\", \"language\": \"...\", \"notes\": [...]} or {\"updated_code\": \"...\"}. Provide the code modifications DIRECTLY.\n\n${NO_PARALLEL_TOOL_CALLING_INSTRUCTION}`,
     parameters: {
       type: "object",
       required: ["filepath", "changes"],
@@ -55,5 +56,69 @@ For example:`,
         "// ... existing code ...\nfunction subtract(a: number, b: number): number {\n  return a - b;\n}\n// ... rest of code ...",
       ],
     ],
+  },
+  preprocessArgs: async (args) => {
+    const changes = args.changes as string;
+
+    // Check if changes is in JSON format (which is incorrect)
+    if (changes && typeof changes === "string") {
+      const trimmed = changes.trim();
+
+      // Check for common JSON patterns that indicate incorrect format
+      if (
+        (trimmed.startsWith("{") && trimmed.endsWith("}")) ||
+        (trimmed.startsWith("[") && trimmed.endsWith("]"))
+      ) {
+        try {
+          const parsed = JSON.parse(trimmed);
+
+          // Check for ANY JSON structure - if it successfully parses as JSON with object/array structure,
+          // it's likely incorrect format. Common fields to check:
+          const suspiciousFields = [
+            "updated_code",
+            "changes_applied",
+            "complete_code",
+            "comments_changed",
+            "language",
+            "result",
+            "notes",
+            "code",
+            "modifications",
+            "edits",
+          ];
+
+          // If it's an object with any of these fields, or if it has a 'result' field containing code
+          if (typeof parsed === "object" && parsed !== null) {
+            const hasJsonStructure = suspiciousFields.some(
+              (field) => field in parsed,
+            );
+
+            if (hasJsonStructure) {
+              throw new ContinueError(
+                ContinueErrorReason.InvalidToolCallArgs,
+                `ERROR: The 'changes' parameter must contain ONLY RAW CODE, not JSON format.\n\n` +
+                  `You provided JSON with fields: [${Object.keys(parsed).join(", ")}]\n\n` +
+                  `CORRECT format - provide ONLY the code directly:\n` +
+                  `// ... existing code ...\n` +
+                  `def new_function():\n` +
+                  `    return "new code"\n` +
+                  `// ... existing code ...\n\n` +
+                  `INCORRECT format - do NOT wrap in JSON:\n` +
+                  `{"result": "code here", "language": "python"}\n\n` +
+                  `Please call the tool again with ONLY the raw code in the 'changes' parameter.`,
+              );
+            }
+          }
+        } catch (e) {
+          // If it's a JSON parse error, that's fine - it's probably code
+          // If it's our ContinueError, re-throw it
+          if (e instanceof ContinueError) {
+            throw e;
+          }
+        }
+      }
+    }
+
+    return args;
   },
 };

@@ -34,6 +34,17 @@ export const EMPTY_CONFIG: BrowserSerializedContinueConfig = {
     embed: null,
   },
   rules: [],
+  // CodeAware specific configurations
+  codeAware: {
+    codeGeneration: {
+      model: null,
+      systemMessage: undefined,
+    },
+    jsonGeneration: {
+      model: null,
+      systemMessage: undefined,
+    },
+  },
 };
 
 export const INITIAL_CONFIG_SLICE: ConfigState = {
@@ -93,6 +104,28 @@ export const configSlice = createSlice({
     selectUIConfig: (state) => {
       return state.config?.ui ?? null;
     },
+    // CodeAware: Select code generation model (fallback to chat model)
+    selectCodeGenerationModel: (state) => {
+      return (
+        state.config.codeAware?.codeGeneration?.model ??
+        state.config.selectedModelByRole.chat
+      );
+    },
+    // CodeAware: Select code generation system message
+    selectCodeGenerationSystemMessage: (state) => {
+      return state.config.codeAware?.codeGeneration?.systemMessage;
+    },
+    // CodeAware: Select json generation model (fallback to chat model)
+    selectJsonGenerationModel: (state) => {
+      return (
+        state.config.codeAware?.jsonGeneration?.model ??
+        state.config.selectedModelByRole.chat
+      );
+    },
+    // CodeAware: Select json generation system message
+    selectJsonGenerationSystemMessage: (state) => {
+      return state.config.codeAware?.jsonGeneration?.systemMessage;
+    },
   },
 });
 
@@ -103,6 +136,10 @@ export const {
   selectSelectedChatModelContextLength,
   selectUIConfig,
   selectSelectedChatModel,
+  selectCodeGenerationModel,
+  selectCodeGenerationSystemMessage,
+  selectJsonGenerationModel,
+  selectJsonGenerationSystemMessage,
 } = configSlice.selectors;
 
 export default configSlice.reducer;

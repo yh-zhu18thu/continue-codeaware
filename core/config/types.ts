@@ -1251,6 +1251,16 @@ declare global {
     analytics?: AnalyticsConfig;
     docs?: SiteIndexingConfig[];
     tools: Tool[];
+    codeAware?: {
+      codeGeneration?: {
+        model?: ModelDescription | null;
+        systemMessage?: string;
+      };
+      jsonGeneration?: {
+        model?: ModelDescription | null;
+        systemMessage?: string;
+      };
+    };
   }
   
   // DOCS SUGGESTIONS AND PACKAGE INFO

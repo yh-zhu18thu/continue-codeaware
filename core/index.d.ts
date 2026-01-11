@@ -1961,6 +1961,16 @@ export interface BrowserSerializedContinueConfig {
   tabAutocompleteOptions?: Partial<TabAutocompleteOptions>;
   modelsByRole: Record<ModelRole, ModelDescription[]>;
   selectedModelByRole: Record<ModelRole, ModelDescription | null>;
+  codeAware?: {
+    codeGeneration?: {
+      model?: ModelDescription | null;
+      systemMessage?: string;
+    };
+    jsonGeneration?: {
+      model?: ModelDescription | null;
+      systemMessage?: string;
+    };
+  };
 }
 
 // DOCS SUGGESTIONS AND PACKAGE INFO

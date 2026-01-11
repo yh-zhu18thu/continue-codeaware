@@ -1,4 +1,5 @@
 import {
+  AcademicCapIcon,
   ArrowLeftIcon,
   BuildingOfficeIcon,
   CircleStackIcon,
@@ -10,6 +11,7 @@ import {
   WrenchScrewdriverIcon,
 } from "@heroicons/react/24/outline";
 import { ConfigSection } from "./components/ConfigSection";
+import { CodeAwareSection } from "./sections/CodeAwareSection";
 import { ConfigsSection } from "./sections/ConfigsSection";
 import { HelpSection } from "./sections/HelpSection";
 import { IndexingSettingsSection } from "./sections/IndexingSettingsSection";
@@ -126,6 +128,24 @@ export const topTabSections: TabSection[] = [
         ),
         icon: (
           <CircleStackIcon className="xs:h-4 xs:w-4 h-3 w-3 flex-shrink-0" />
+        ),
+      },
+    ],
+  },
+  {
+    id: "codeaware",
+    showTopDivider: true,
+    tabs: [
+      {
+        id: "codeaware",
+        label: "CodeAware",
+        component: (
+          <ConfigSection>
+            <CodeAwareSection />
+          </ConfigSection>
+        ),
+        icon: (
+          <AcademicCapIcon className="xs:h-4 xs:w-4 h-3 w-3 flex-shrink-0" />
         ),
       },
     ],

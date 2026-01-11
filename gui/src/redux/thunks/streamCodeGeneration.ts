@@ -25,7 +25,10 @@ import {
   setCodeGenerationProgress,
   setCodeGenerationStatus,
 } from "../slices/codeAwareSlice";
-import { selectSelectedChatModel } from "../slices/configSlice";
+import {
+  selectCodeGenerationModel,
+  selectCodeGenerationSystemMessage,
+} from "../slices/configSlice";
 import {
   setActive,
   setInactive,
@@ -89,20 +92,29 @@ ${previousStepsText}
 - The file must be immediately runnable after creation
 
 **For edit_existing_file tool**:
-- The "changes" parameter MUST show the exact modifications
-- Use language-appropriate placeholders (e.g., "// ... existing code ...") ONLY for unmodified sections
-- Example format:
+- ⚠️ CRITICAL REQUIREMENT: The "changes" parameter MUST contain ONLY RAW CODE ⚠️
+- DO NOT wrap in ANY structured format (JSON, XML, YAML, etc.)
+- DO NOT use fields like: "result", "language", "notes", "updated_code", "changes_applied"
+- Show the exact code modifications with placeholders for unchanged sections
+
+- ✅ CORRECT format (provide code directly in the 'changes' parameter):
   \`\`\`python
-  // ... existing code ...
+  # ... existing code ...
   
   def new_function():
       return "new code"
   
-  // ... existing code ...
+  # ... existing code ...
   \`\`\`
 
+- ❌ INCORRECT formats (NEVER use these):
+  {"result": "code here", "language": "python", "notes": [...]}
+  {"updated_code": "code here", "changes_applied": [...]}
+  {"code": "code here", "modifications": [...]}
+
+- Use language-appropriate comment placeholders (e.g., "# ... existing code ..." for Python, "// ... existing code ..." for JavaScript)
 - Ensure code is correct, idiomatic, and maintains consistency
-- Do NOT explain what you're doing, just call the tools with proper parameters
+- Do NOT add explanations or notes - just provide the raw code changes
 
 Begin implementing the steps now by calling the appropriate tools.`;
 }
@@ -263,17 +275,25 @@ async function streamCodeAwareGeneration({
   };
 
   const state = getState();
-  const selectedChatModel = selectSelectedChatModel(state);
+  const selectedChatModel = selectCodeGenerationModel(state);
+  const customSystemMessage = selectCodeGenerationSystemMessage(state);
 
   if (!selectedChatModel) {
-    throw new Error("No chat model selected");
+    throw new Error("No code generation model selected");
   }
 
   console.log(
     "[CodeAware] Starting code generation with model:",
     selectedChatModel.title,
   );
+  console.log(
+    "[CodeAware] Using custom system message:",
+    customSystemMessage ? customSystemMessage : "No (using default)",
+  );
   pushDebug(`[model] ${selectedChatModel.title}`);
+  if (customSystemMessage) {
+    pushDebug(`[system-message] custom`);
+  }
 
   // Get active tools
   const activeTools = selectActiveTools(state);
@@ -325,7 +345,34 @@ async function streamCodeAwareGeneration({
   );
 
   // Build system message
-  const baseSystemMessage = `You are a helpful coding assistant specialized in implementing code changes based on specific requirements.`;
+  const defaultCodeGenerationSystemMessage = `You are a helpful coding assistant specialized in implementing code changes based on specific requirements.
+
+CRITICAL TOOL USAGE RULES:
+1. When using the edit_existing_file tool, the "changes" parameter MUST contain ONLY raw code
+2. Provide code modifications DIRECTLY in the "changes" parameter with comment placeholders for unchanged sections
+
+Example CORRECT tool call:
+{
+  "name": "edit_existing_file",
+  "arguments": {
+    "filepath": "main.py",
+    "changes": "# ... existing code ...\\n\\ndef new_function():\\n    return 'result'\\n\\n# ... existing code ..."
+  }
+}
+
+Example INCORRECT tool call (DO NOT DO THIS):
+{
+  "name": "edit_existing_file",
+  "arguments": {
+    "filepath": "main.py",
+    "changes": "{\\"result\\": \\"def new_function():\\\\n    return 'result'\\", \\"language\\": \\"python\\"}"
+  }
+}`;
+
+  // Use custom system message if provided, otherwise use default
+  const baseSystemMessage =
+    customSystemMessage || defaultCodeGenerationSystemMessage;
+
   const systemMessage = systemToolsFramework
     ? addSystemMessageToolsToSystemMessage(
         systemToolsFramework,
@@ -686,7 +733,6 @@ async function streamCodeAwareGeneration({
                 file: applyState.filepath || "<no file>",
                 diffs: applyState.numDiffs ?? 0,
                 streamId: applyState.streamId,
-                numDiffsWithErrors: applyState.numDiffsWithErrors,
                 toolName: (
                   generatedCalls4.find(
                     (c) => c.toolCallId === toolCallId,

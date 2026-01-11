@@ -27,7 +27,6 @@ import {
   createCodeAwareMapping,
   createKnowledgeCard,
   createOrGetCodeChunk,
-  markStepsCodeDirty,
   removeCodeAwareMappings,
   resetKnowledgeCardContent,
   selectTestByTestId,
@@ -48,7 +47,6 @@ import {
   setUserRequirementStatus,
   submitRequirementContent,
   updateCodeAwareMappings,
-  updateCodeChunkPositions,
   updateHighLevelStepCompletion,
   updateHighlight,
   updateKnowledgeCardContent,
@@ -56,7 +54,10 @@ import {
   updateKnowledgeCardTitle,
   updateSaqTestResult,
 } from "../slices/codeAwareSlice";
-import { selectSelectedChatModel } from "../slices/configSlice";
+import {
+  selectJsonGenerationModel,
+  selectSelectedChatModel,
+} from "../slices/configSlice";
 import { ThunkApiType } from "../store";
 
 // 辅助函数：检查并更新高级步骤的完成状态
@@ -852,7 +853,8 @@ export const paraphraseUserIntent = createAsyncThunk<
   async ({ programRequirement }, { dispatch, extra, getState }) => {
     try {
       const state = getState();
-      const defaultModel = selectSelectedChatModel(state);
+      const defaultModel =
+        selectJsonGenerationModel(state) || selectSelectedChatModel(state);
       if (!defaultModel) {
         throw new Error("Default model not defined");
       }
@@ -908,7 +910,8 @@ export const generateStepsFromRequirement = createAsyncThunk<
       });
 
       const state = getState();
-      const defaultModel = selectSelectedChatModel(state);
+      const defaultModel =
+        selectJsonGenerationModel(state) || selectSelectedChatModel(state);
       if (!defaultModel) {
         throw new Error("Default model not defined");
       }
@@ -1158,7 +1161,8 @@ export const generateKnowledgeCardDetail = createAsyncThunk<
       });
 
       const state = getState();
-      const defaultModel = selectSelectedChatModel(state);
+      const defaultModel =
+        selectJsonGenerationModel(state) || selectSelectedChatModel(state);
       if (!defaultModel) {
         throw new Error("Default model not defined");
       }
@@ -1352,7 +1356,8 @@ export const generateKnowledgeCardTests = createAsyncThunk<
       });
 
       const state = getState();
-      const defaultModel = selectSelectedChatModel(state);
+      const defaultModel =
+        selectJsonGenerationModel(state) || selectSelectedChatModel(state);
       if (!defaultModel) {
         throw new Error("Default model not defined");
       }
@@ -1548,7 +1553,8 @@ export const generateKnowledgeCardThemes = createAsyncThunk<
       });
 
       const state = getState();
-      const defaultModel = selectSelectedChatModel(state);
+      const defaultModel =
+        selectJsonGenerationModel(state) || selectSelectedChatModel(state);
       if (!defaultModel) {
         throw new Error("Default model not defined");
       }
@@ -2064,7 +2070,8 @@ export const generateKnowledgeCardThemesFromQuery = createAsyncThunk<
       });
 
       const state = getState();
-      const defaultModel = selectSelectedChatModel(state);
+      const defaultModel =
+        selectJsonGenerationModel(state) || selectSelectedChatModel(state);
       if (!defaultModel) {
         throw new Error("Default model not defined");
       }
@@ -2761,7 +2768,8 @@ export const rerunStep = createAsyncThunk<
       });
 
       const state = getState();
-      const defaultModel = selectSelectedChatModel(state);
+      const defaultModel =
+        selectJsonGenerationModel(state) || selectSelectedChatModel(state);
       if (!defaultModel) {
         throw new Error("Default model not defined");
       }
@@ -3248,452 +3256,6 @@ export const rerunStep = createAsyncThunk<
   },
 );
 
-// Process code changes when exiting code edit mode
-export const processCodeChanges = createAsyncThunk<
-  void,
-  {
-    currentFilePath: string;
-    currentContent: string;
-  },
-  ThunkApiType
->(
-  "codeAware/processCodeChanges",
-  async (
-    { currentFilePath, currentContent },
-    { getState, dispatch, extra },
-  ) => {
-    try {
-      // Log: 用户触发代码变化处理
-      await extra.ideMessenger.request("addCodeAwareLogEntry", {
-        eventType: "user_order_code_changes_processing",
-        payload: {
-          currentFilePath,
-          currentContentLength: currentContent.length,
-          timestamp: new Date().toISOString(),
-        },
-      });
-
-      const state = getState();
-      const snapshot = state.codeAwareSession.codeEditModeSnapshot;
-
-      if (!snapshot) {
-        console.warn("No code snapshot found, cannot process changes");
-        return;
-      }
-
-      // Check if we're working on the same file
-      if (snapshot.filePath !== currentFilePath) {
-        console.warn(
-          "File path changed, processing changes might not be accurate",
-        );
-      }
-
-      // Import diff library dynamically to avoid bundling issues
-      const { diffLines } = await import("diff");
-
-      // Calculate diff between snapshot and current content
-      const changes = diffLines(snapshot.content, currentContent);
-
-      console.log("📊 Code changes detected:", {
-        totalChanges: changes.length,
-        additions: changes.filter((c) => c.added).length,
-        deletions: changes.filter((c) => c.removed).length,
-      });
-
-      // Track real edits (including whitespace-only changes like adding/removing empty lines)
-      const realEdits: Array<{
-        type: "added" | "removed" | "modified";
-        lineStart: number;
-        lineEnd: number;
-        content: string;
-      }> = [];
-
-      let currentLine = 1;
-
-      for (const change of changes) {
-        if (!change.value) continue;
-
-        const lines = change.value.split("\n");
-        // Remove last empty line if it exists
-        if (lines[lines.length - 1] === "") {
-          lines.pop();
-        }
-
-        if (change.added) {
-          // Include all additions, even if they're just whitespace/empty lines
-          realEdits.push({
-            type: "added",
-            lineStart: currentLine,
-            lineEnd: currentLine + lines.length - 1,
-            content: change.value,
-          });
-          currentLine += lines.length;
-        } else if (change.removed) {
-          // Include all removals, even if they're just whitespace/empty lines
-          realEdits.push({
-            type: "removed",
-            lineStart: currentLine,
-            lineEnd: currentLine + lines.length - 1,
-            content: change.value,
-          });
-          // Don't increment currentLine for removed content
-        } else {
-          // Unchanged content
-          currentLine += lines.length;
-        }
-      }
-
-      console.log("🔍 All edits found:", realEdits);
-
-      if (realEdits.length === 0) {
-        console.log("✅ No code changes detected");
-        return;
-      }
-
-      // Separate substantial edits (code changes) from formatting edits (whitespace only)
-      const substantialEdits = realEdits.filter((edit) => {
-        const lines = edit.content.split("\n");
-        return lines.some((line) => line.trim() !== "");
-      });
-
-      const formattingOnlyEdits = realEdits.filter((edit) => {
-        const lines = edit.content.split("\n");
-        return lines.every((line) => line.trim() === "");
-      });
-
-      console.log("📊 Edit analysis:", {
-        totalEdits: realEdits.length,
-        substantialEdits: substantialEdits.length,
-        formattingOnlyEdits: formattingOnlyEdits.length,
-      });
-
-      // Log details of each edit for debugging
-      realEdits.forEach((edit, index) => {
-        console.log(
-          `📝 Edit ${index + 1}: ${edit.type} at lines ${edit.lineStart}-${edit.lineEnd}`,
-          {
-            content: edit.content.replace(/\n/g, "\\n"),
-            isSubstantial: substantialEdits.includes(edit),
-            isFormatting: formattingOnlyEdits.includes(edit),
-          },
-        );
-      });
-
-      // Get current code chunks and steps
-      const codeChunks = state.codeAwareSession.codeChunks;
-      const steps = state.codeAwareSession.steps;
-      const mappings = state.codeAwareSession.codeAwareMappings;
-
-      // Find which code chunks are affected by real edits
-      const affectedChunkIds = new Set<string>();
-      const unaffectedChunks: Array<{
-        chunkId: string;
-        newRange: [number, number];
-      }> = [];
-      const subtlyAffectedChunks: Array<{
-        chunkId: string;
-        newRange: [number, number];
-      }> = [];
-
-      for (const chunk of codeChunks) {
-        if (chunk.filePath !== currentFilePath) {
-          continue; // Skip chunks from other files
-        }
-
-        let isAffected = false;
-        let lineOffset = 0;
-        let hasSubtleChanges = false;
-
-        console.log(
-          `🔍 Analyzing chunk ${chunk.id} at range [${chunk.range[0]}, ${chunk.range[1]}]`,
-        );
-
-        // Check if this chunk overlaps with any edit (including formatting)
-        for (const edit of realEdits) {
-          const chunkStart = chunk.range[0];
-          const chunkEnd = chunk.range[1];
-          const editStart = edit.lineStart;
-          const editEnd = edit.lineEnd;
-
-          // Check for overlap
-          if (chunkStart <= editEnd && chunkEnd >= editStart) {
-            console.log(
-              `  📍 Chunk ${chunk.id} overlaps with ${edit.type} edit at lines ${editStart}-${editEnd}`,
-            );
-
-            // Check if this is a substantial change that affects semantics
-            const isSubstantialChange = substantialEdits.some(
-              (substantialEdit) =>
-                substantialEdit.lineStart === edit.lineStart &&
-                substantialEdit.lineEnd === edit.lineEnd,
-            );
-
-            if (isSubstantialChange) {
-              console.log(
-                `  ⚡ Substantial change detected in chunk ${chunk.id}`,
-              );
-              isAffected = true;
-              affectedChunkIds.add(chunk.id);
-              break;
-            } else {
-              console.log(`  ✨ Subtle change detected in chunk ${chunk.id}`);
-              // This is just formatting/whitespace change within the chunk
-              hasSubtleChanges = true;
-            }
-          }
-
-          // Calculate line offset for chunks that come after edits
-          if (editEnd < chunkStart) {
-            if (edit.type === "added") {
-              lineOffset += editEnd - editStart + 1;
-            } else if (edit.type === "removed") {
-              lineOffset -= editEnd - editStart + 1;
-            }
-          }
-        }
-
-        console.log(
-          `  📊 Chunk ${chunk.id} analysis: isAffected=${isAffected}, hasSubtleChanges=${hasSubtleChanges}, lineOffset=${lineOffset}`,
-        );
-
-        // Always try to recalculate range if there are any changes affecting this chunk
-        // This includes: substantial changes, subtle changes, or position offset
-        if (isAffected || hasSubtleChanges || lineOffset !== 0) {
-          try {
-            // Try to recalculate the range for this chunk's content in the new code
-            const newRange = calculateCodeChunkRange(
-              currentContent,
-              chunk.content,
-            );
-
-            console.log(
-              `  🔄 Recalculated range for chunk ${chunk.id}: [${chunk.range[0]}, ${chunk.range[1]}] -> [${newRange[0]}, ${newRange[1]}]`,
-            );
-            console.log(
-              `  📝 Chunk content preview:`,
-              chunk.content.substring(0, 100).replace(/\n/g, "\\n"),
-            );
-
-            // If we can find the chunk content with a different range, update it
-            if (
-              newRange[0] !== chunk.range[0] ||
-              newRange[1] !== chunk.range[1]
-            ) {
-              console.log(
-                `📏 Detected range changes in chunk ${chunk.id}: [${chunk.range[0]}, ${chunk.range[1]}] -> [${newRange[0]}, ${newRange[1]}]`,
-              );
-
-              // If this chunk was marked as affected (substantial changes), keep it there
-              if (!isAffected) {
-                // This is a subtle change or position change
-                subtlyAffectedChunks.push({
-                  chunkId: chunk.id,
-                  newRange: newRange,
-                });
-                console.log(
-                  `  ✅ Added chunk ${chunk.id} to subtlyAffectedChunks`,
-                );
-              } else {
-                console.log(
-                  `  ⚡ Chunk ${chunk.id} has range changes but will be handled by LLM due to substantial changes`,
-                );
-              }
-            } else {
-              console.log(
-                `  ❓ Chunk ${chunk.id} range unchanged despite detected changes - investigating...`,
-              );
-
-              // Additional debugging: let's check what exactly changed
-              if (hasSubtleChanges) {
-                const overlappingEdits = realEdits.filter((edit) => {
-                  const chunkStart = chunk.range[0];
-                  const chunkEnd = chunk.range[1];
-                  return (
-                    chunkStart <= edit.lineEnd && chunkEnd >= edit.lineStart
-                  );
-                });
-                console.log(
-                  `  🔍 Overlapping edits for chunk ${chunk.id}:`,
-                  overlappingEdits.map((e) => ({
-                    type: e.type,
-                    lines: `${e.lineStart}-${e.lineEnd}`,
-                    content: e.content.replace(/\n/g, "\\n"),
-                  })),
-                );
-              }
-
-              if (!isAffected && lineOffset !== 0) {
-                // Range calculation didn't detect changes but we know there's an offset
-                // This handles edge cases where calculateCodeChunkRange doesn't detect the change
-                unaffectedChunks.push({
-                  chunkId: chunk.id,
-                  newRange: [
-                    chunk.range[0] + lineOffset,
-                    chunk.range[1] + lineOffset,
-                  ],
-                });
-                console.log(
-                  `  📍 Added chunk ${chunk.id} to unaffectedChunks with offset (range calc failed to detect change)`,
-                );
-              }
-            }
-          } catch (rangeError) {
-            console.warn(
-              `⚠️ Could not recalculate range for chunk ${chunk.id}:`,
-              rangeError,
-            );
-
-            if (!isAffected) {
-              // If we can't recalculate the range but we know there are changes,
-              // treat as affected if there were substantial edits, otherwise use offset
-              if (hasSubtleChanges && substantialEdits.length > 0) {
-                isAffected = true;
-                affectedChunkIds.add(chunk.id);
-                console.log(
-                  `  ⚠️ Chunk ${chunk.id} moved to affectedChunkIds due to range calculation failure`,
-                );
-              } else if (lineOffset !== 0) {
-                // Fallback to simple offset calculation
-                unaffectedChunks.push({
-                  chunkId: chunk.id,
-                  newRange: [
-                    chunk.range[0] + lineOffset,
-                    chunk.range[1] + lineOffset,
-                  ],
-                });
-                console.log(
-                  `  📍 Chunk ${chunk.id} added to unaffectedChunks with fallback offset`,
-                );
-              }
-            }
-          }
-        }
-      }
-
-      console.log("📍 Code chunks analysis:", {
-        affected: Array.from(affectedChunkIds),
-        subtlyAffected: subtlyAffectedChunks.map((c) => c.chunkId),
-        unaffectedWithNewPositions: unaffectedChunks.map((c) => c.chunkId),
-      });
-
-      // Find which steps have affected code chunks
-      const affectedStepIds = new Set<string>();
-
-      for (const mapping of mappings) {
-        if (
-          mapping.codeChunkId &&
-          affectedChunkIds.has(mapping.codeChunkId) &&
-          mapping.stepId
-        ) {
-          affectedStepIds.add(mapping.stepId);
-        }
-      }
-
-      console.log(
-        "🎯 Steps affected by code changes:",
-        Array.from(affectedStepIds),
-      );
-
-      // Update Redux state
-      if (affectedStepIds.size > 0) {
-        dispatch(
-          markStepsCodeDirty({
-            stepIds: Array.from(affectedStepIds),
-          }),
-        );
-
-        // Create a formatted diff string for LLM using only substantial edits
-        const formattedDiff = substantialEdits
-          .map((edit) => {
-            const prefix =
-              edit.type === "added" ? "+" : edit.type === "removed" ? "-" : " ";
-            return `${prefix} ${edit.content.trim()}`;
-          })
-          .join("\n");
-
-        // After marking steps as code_dirty, process the code updates
-        console.log("🔄 Calling processCodeUpdates for dirty steps...");
-        try {
-          await dispatch(
-            processCodeUpdates({
-              currentFilePath,
-              previousContent: snapshot.content,
-              currentContent,
-              codeDiff: formattedDiff,
-            }),
-          ).unwrap();
-        } catch (updateError) {
-          console.error("❌ Failed to process code updates:", updateError);
-
-          // If processCodeUpdates fails, restore the affected steps to "generated" status
-          console.log(
-            "🔄 Restoring step status due to processCodeUpdates failure...",
-          );
-          for (const stepId of affectedStepIds) {
-            dispatch(setStepStatus({ stepId, status: "generated" }));
-          }
-
-          // Re-throw the error so the UI can handle it
-          throw updateError;
-        }
-      } else if (substantialEdits.length > 0) {
-        console.log(
-          "📝 Substantial code changes detected but no steps were affected",
-        );
-      }
-
-      // Update positions for unaffected chunks and subtly affected chunks
-      if (unaffectedChunks.length > 0) {
-        dispatch(
-          updateCodeChunkPositions({
-            updates: unaffectedChunks,
-          }),
-        );
-        console.log(
-          `📏 Updated positions for ${unaffectedChunks.length} unaffected chunks`,
-        );
-      }
-
-      if (subtlyAffectedChunks.length > 0) {
-        dispatch(
-          updateCodeChunkPositions({
-            updates: subtlyAffectedChunks,
-          }),
-        );
-        console.log(
-          `🔧 Updated ranges for ${subtlyAffectedChunks.length} subtly affected chunks`,
-        );
-      }
-
-      console.log("✅ Code changes processed successfully:", {
-        affectedSteps: affectedStepIds.size,
-        repositionedChunks: unaffectedChunks.length,
-        adjustedChunks: subtlyAffectedChunks.length,
-        substantialEdits: substantialEdits.length,
-        formattingEdits: formattingOnlyEdits.length,
-      });
-
-      // Log: 代码变化处理完成
-      await extra.ideMessenger.request("addCodeAwareLogEntry", {
-        eventType: "user_get_code_changes_processing_result",
-        payload: {
-          affectedStepsCount: affectedStepIds.size,
-          repositionedChunksCount: unaffectedChunks.length,
-          adjustedChunksCount: subtlyAffectedChunks.length,
-          substantialEditsCount: substantialEdits.length,
-          formattingEditsCount: formattingOnlyEdits.length,
-          timestamp: new Date().toISOString(),
-        },
-      });
-    } catch (error) {
-      console.error("❌ Error processing code changes:", error);
-      throw new Error(
-        `处理代码变化失败: ${error instanceof Error ? error.message : String(error)}`,
-      );
-    }
-  },
-);
-
 // Process code updates when steps are marked as code_dirty
 export const processCodeUpdates = createAsyncThunk<
   void,
@@ -3772,7 +3334,8 @@ export const processCodeUpdates = createAsyncThunk<
         })),
       }));
 
-      const defaultModel = selectSelectedChatModel(state);
+      const defaultModel =
+        selectJsonGenerationModel(state) || selectSelectedChatModel(state);
       if (!defaultModel) {
         throw new Error("Default model not defined");
       }
@@ -4127,7 +3690,8 @@ export const processSaqSubmission = createAsyncThunk<
       });
 
       const state = getState();
-      const defaultModel = selectSelectedChatModel(state);
+      const defaultModel =
+        selectJsonGenerationModel(state) || selectSelectedChatModel(state);
       if (!defaultModel) {
         throw new Error("Default model not defined");
       }
@@ -4353,7 +3917,8 @@ export const processGlobalQuestion = createAsyncThunk<
       const learningGoal = state.codeAwareSession.learningGoal || "";
       const taskDescription =
         state.codeAwareSession.userRequirement?.requirementDescription || "";
-      const defaultModel = selectSelectedChatModel(state);
+      const defaultModel =
+        selectJsonGenerationModel(state) || selectSelectedChatModel(state);
 
       if (!defaultModel) {
         throw new Error("没有可用的默认模型");
@@ -4696,7 +4261,8 @@ export const checkAndMapKnowledgeCardsToCode = createAsyncThunk<
       );
 
       console.log("🤖 调用LLM进行知识卡片代码映射...");
-      const defaultModel = selectSelectedChatModel(state);
+      const defaultModel =
+        selectJsonGenerationModel(state) || selectSelectedChatModel(state);
       if (!defaultModel) {
         throw new Error("No default model available");
       }

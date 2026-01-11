@@ -38,7 +38,7 @@ const rootReducer = combineReducers({
   indexing: indexingReducer,
   tabs: tabsReducer,
   profiles: profilesReducer,
-  codeAwareSession: codeAwareSessionReducer
+  codeAwareSession: codeAwareSessionReducer,
 });
 
 const saveSubsetFilters = [
@@ -59,7 +59,7 @@ const saveSubsetFilters = [
     "lastNonEditSessionWasEmpty",
     "codeToEdit",
   ]),
-  createFilter("config", []),
+  createFilter("config", ["codeAware"]),
   createFilter("ui", ["toolSettings", "toolGroupSettings", "ruleSettings"]),
   createFilter("indexing", []),
   createFilter("tabs", ["tabs"]),

@@ -450,6 +450,71 @@ export const codeAwareSessionSlice = createSlice({
 
       state.codeAwareMappings.push(...newMappings);
     },
+    // 添加单个映射到缓存
+    addMappingToCache: (state, action: PayloadAction<CodeAwareMapping>) => {
+      const newMapping = action.payload;
+
+      // 检查是否已存在相同的映射
+      const exists = state.codeAwareMappings.some(
+        (m) =>
+          m.codeChunkId === newMapping.codeChunkId &&
+          m.semanticElementId === newMapping.semanticElementId &&
+          m.semanticElementType === newMapping.semanticElementType,
+      );
+
+      if (!exists) {
+        state.codeAwareMappings.push(newMapping);
+      }
+    },
+    // 批量添加映射到缓存
+    addMappingsToBatch: (state, action: PayloadAction<CodeAwareMapping[]>) => {
+      const newMappings = action.payload;
+      const existingSet = new Set(
+        state.codeAwareMappings.map(
+          (m) =>
+            `${m.codeChunkId}-${m.semanticElementId}-${m.semanticElementType}`,
+        ),
+      );
+
+      newMappings.forEach((mapping) => {
+        const key = `${mapping.codeChunkId}-${mapping.semanticElementId}-${mapping.semanticElementType}`;
+        if (!existingSet.has(key)) {
+          state.codeAwareMappings.push(mapping);
+          existingSet.add(key);
+        }
+      });
+    },
+    // 清除过期的映射缓存（基于时间戳）
+    cleanupExpiredMappings: (state, action: PayloadAction<number>) => {
+      const expirationTime = action.payload; // 毫秒
+      const now = Date.now();
+
+      state.codeAwareMappings = state.codeAwareMappings.filter(
+        (m) => now - m.createdAt < expirationTime,
+      );
+    },
+    // 设置映射查找加载状态
+    setMappingLookupLoading: (state, action: PayloadAction<boolean>) => {
+      state.mappingLookup.isLoading = action.payload;
+    },
+    // 设置映射查找错误信息
+    setMappingLookupError: (
+      state,
+      action: PayloadAction<string | undefined>,
+    ) => {
+      state.mappingLookup.error = action.payload;
+    },
+    // 更新最后一次查询信息
+    setMappingLookupQuery: (
+      state,
+      action: PayloadAction<{
+        type: "code" | "semantic";
+        elementId: string;
+        timestamp: number;
+      }>,
+    ) => {
+      state.mappingLookup.lastQuery = action.payload;
+    },
     setCodeAwareTitle: (state, action: PayloadAction<string>) => {
       state.title = action.payload;
     },
@@ -1063,6 +1128,12 @@ export const {
   updateCodeChunkRange,
   setCodeChunkDisabled,
   updateCodeAwareMappings,
+  addMappingToCache,
+  addMappingsToBatch,
+  cleanupExpiredMappings,
+  setMappingLookupLoading,
+  setMappingLookupError,
+  setMappingLookupQuery,
   removeCodeAwareMappings,
   clearKnowledgeCardCodeMappings,
   setCodeAwareTitle,

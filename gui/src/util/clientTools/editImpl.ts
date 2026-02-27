@@ -8,6 +8,18 @@ export const editToolImpl: ClientToolImpl = async (
   toolCallId,
   extras,
 ) => {
+  console.log("[EditToolImpl] ========== START ==========");
+  console.log("[EditToolImpl] Received args:", {
+    toolCallId,
+    filepath: args.filepath,
+    changesType: typeof args.changes,
+    changesLength: args.changes?.length,
+    changesPreview:
+      typeof args.changes === "string"
+        ? args.changes.substring(0, 200)
+        : JSON.stringify(args.changes).substring(0, 200),
+  });
+
   if (!args.filepath || !args.changes) {
     throw new Error(
       "`filepath` and `changes` arguments are required to edit an existing file.",
@@ -37,6 +49,19 @@ export const editToolImpl: ClientToolImpl = async (
     throw new Error(`${filepath} does not exist`);
   }
   const streamId = uuid();
+  console.log("[EditToolImpl] Dispatching applyForEditTool:", {
+    streamId,
+    toolCallId,
+    filepath: firstUriMatch,
+    textType: typeof args.changes,
+    textLength: args.changes?.length,
+    textPreview:
+      typeof args.changes === "string"
+        ? args.changes.substring(0, 200)
+        : JSON.stringify(args.changes).substring(0, 200),
+  });
+  console.log("[EditToolImpl] ========== END ==========");
+
   void extras.dispatch(
     applyForEditTool({
       streamId,

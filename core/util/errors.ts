@@ -41,6 +41,9 @@ export enum ContinueErrorReason {
   // General Edit
   EditToolFileNotRead = "edit_tool_file_not_yet_read",
 
+  // Tool Call
+  InvalidToolCallArgs = "invalid_tool_call_args",
+
   // General File
   FileAlreadyExists = "file_already_exists",
   FileNotFound = "file_not_found",

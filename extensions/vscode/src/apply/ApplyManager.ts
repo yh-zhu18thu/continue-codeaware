@@ -32,6 +32,17 @@ export class ApplyManager {
     toolCallId,
     isSearchAndReplace,
   }: ApplyToFilePayload) {
+    console.log("[ApplyManager][applyToFile] ========== START ==========");
+    console.log("[ApplyManager][applyToFile] Received payload:", {
+      streamId,
+      filepath,
+      toolCallId,
+      isSearchAndReplace,
+      textType: typeof text,
+      textLength: text?.length,
+      textPreview: text?.substring(0, 300),
+    });
+
     if (filepath) {
       await this.ensureFileOpen(filepath);
     }
@@ -54,10 +65,19 @@ export class ApplyManager {
     });
 
     const hasExistingDocument = !!activeTextEditor.document.getText().trim();
+    console.log("[ApplyManager][applyToFile] Document status:", {
+      hasExistingDocument,
+      isSearchAndReplace,
+      originalContentLength: originalFileContent.length,
+    });
+
     if (hasExistingDocument) {
       // Currently `isSearchAndReplace` will always provide a full file rewrite
       // as the contents of `text`, so we can just instantly apply
       if (isSearchAndReplace) {
+        console.log(
+          "[ApplyManager][applyToFile] → instantApplyDiff (search and replace)",
+        );
         await this.verticalDiffManager.instantApplyDiff(
           originalFileContent,
           text,
@@ -65,6 +85,7 @@ export class ApplyManager {
           toolCallId,
         );
       } else {
+        console.log("[ApplyManager][applyToFile] → handleExistingDocument");
         await this.handleExistingDocument(
           activeTextEditor,
           text,
@@ -120,6 +141,18 @@ export class ApplyManager {
     streamId: string,
     toolCallId?: string,
   ) {
+    console.log(
+      "[ApplyManager][handleExistingDocument] ========== START ==========",
+    );
+    console.log("[ApplyManager][handleExistingDocument] Input:", {
+      streamId,
+      toolCallId,
+      textType: typeof text,
+      textLength: text?.length,
+      textPreview: text?.substring(0, 300),
+      fileUri: editor.document.uri.toString(),
+    });
+
     const { config } = await this.configHandler.loadConfig();
     if (!config) {
       void vscode.window.showErrorMessage("Config not loaded");
@@ -139,12 +172,21 @@ export class ApplyManager {
     const abortManager = ApplyAbortManager.getInstance();
     const abortController = abortManager.get(fileUri);
 
+    console.log(
+      "[ApplyManager][handleExistingDocument] Calling applyCodeBlock",
+    );
     const { isInstantApply, diffLinesGenerator } = await applyCodeBlock(
       editor.document.getText(),
       text,
       getUriPathBasename(fileUri),
       llm,
       abortController,
+    );
+    console.log(
+      "[ApplyManager][handleExistingDocument] applyCodeBlock returned:",
+      {
+        isInstantApply,
+      },
     );
 
     if (isInstantApply) {

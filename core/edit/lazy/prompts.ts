@@ -19,6 +19,8 @@ const RULES = [
   // `You may do this for imports as well if needed.`,
   // `Do not explain your changes either before or after the code block.`,
   "The code should always be syntactically valid, even with the comments.",
+  '⚠️ CRITICAL: You must return ONLY the raw code. Do NOT return JSON format like {"code": "...", "changes": [...]} or any other structured format.',
+  "⚠️ Your response must be plain code that can be directly written to a file, nothing else.",
 ];
 
 function claude35SonnetLazyApplyPrompt(

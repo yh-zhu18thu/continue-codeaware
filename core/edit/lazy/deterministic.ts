@@ -143,8 +143,19 @@ export async function deterministicApplyLazyEdit({
   filename: string;
   onlyFullFileRewrite?: boolean;
 }): Promise<DiffLine[] | undefined> {
+  console.log("[deterministicApplyLazyEdit] ========== START ==========");
+  console.log("[deterministicApplyLazyEdit] Input:", {
+    filename,
+    oldFileLength: oldFile.length,
+    newLazyFileType: typeof newLazyFile,
+    newLazyFileLength: newLazyFile?.length,
+    newLazyFilePreview: newLazyFile?.substring(0, 300),
+    onlyFullFileRewrite,
+  });
+
   const parser = await getParserForFile(filename);
   if (!parser) {
+    console.log("[deterministicApplyLazyEdit] ❌ No parser available for file");
     return undefined;
   }
 
@@ -153,15 +164,29 @@ export async function deterministicApplyLazyEdit({
   let reconstructedNewFile: string | undefined = undefined;
 
   if (onlyFullFileRewrite) {
-    if (!isLazyText(newTree.rootNode.text)) {
+    console.log("[deterministicApplyLazyEdit] Mode: onlyFullFileRewrite");
+    const hasLazyText = isLazyText(newTree.rootNode.text);
+    console.log("[deterministicApplyLazyEdit] Has lazy text:", hasLazyText);
+
+    if (!hasLazyText) {
+      console.log(
+        "[deterministicApplyLazyEdit] No lazy text, computing Myers diff",
+      );
       const diff = myersDiff(oldFile, newLazyFile);
 
       if (shouldRejectDiff(diff)) {
+        console.log(
+          "[deterministicApplyLazyEdit] ❌ Diff rejected by shouldRejectDiff",
+        );
         return undefined;
       }
 
+      console.log("[deterministicApplyLazyEdit] ✅ Returning Myers diff");
       return diff;
     } else {
+      console.log(
+        "[deterministicApplyLazyEdit] ❌ Has lazy text, returning undefined",
+      );
       return undefined;
     }
   }

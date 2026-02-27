@@ -95,26 +95,37 @@ ${previousStepsText}
 - ⚠️ CRITICAL REQUIREMENT: The "changes" parameter MUST contain ONLY RAW CODE ⚠️
 - DO NOT wrap in ANY structured format (JSON, XML, YAML, etc.)
 - DO NOT use fields like: "result", "language", "notes", "updated_code", "changes_applied"
-- Show the exact code modifications with placeholders for unchanged sections
 
-- ✅ CORRECT format (provide code directly in the 'changes' parameter):
+- ✅ CORRECT format - provide COMPLETE code directly in the 'changes' parameter:
   \`\`\`python
-  # ... existing code ...
+  import os
+  
+  def existing_function():
+      return "existing"
   
   def new_function():
       return "new code"
   
-  # ... existing code ...
+  def another_existing_function():
+      pass
   \`\`\`
 
 - ❌ INCORRECT formats (NEVER use these):
   {"result": "code here", "language": "python", "notes": [...]}
   {"updated_code": "code here", "changes_applied": [...]}
   {"code": "code here", "modifications": [...]}
+  Any use of "# ... existing code ..." or similar placeholders
 
-- Use language-appropriate comment placeholders (e.g., "# ... existing code ..." for Python, "// ... existing code ..." for JavaScript)
+**Code generation strategy - ⚠️ CRITICAL FOR STABILITY ⚠️**:
+- 🚫 NEVER use placeholders like "# ... existing code ...", "// ... existing code ...", etc.
+- 🚫 NEVER use ellipsis (...) to skip code sections
+- ✅ ALWAYS provide COMPLETE, FULL file content without any omissions
+- ✅ Write out ALL code sections explicitly, even unchanged parts
+- For files of ANY size: Generate the ENTIRE file content from start to finish
+- Include ALL imports, ALL function definitions, ALL class definitions, ALL logic
 - Ensure code is correct, idiomatic, and maintains consistency
 - Do NOT add explanations or notes - just provide the raw code changes
+- The file content you provide will be used directly via fast deterministic diff algorithm
 
 Begin implementing the steps now by calling the appropriate tools.`;
 }

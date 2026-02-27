@@ -60,17 +60,43 @@ For example:`,
   preprocessArgs: async (args) => {
     const changes = args.changes as string;
 
+    console.log("[EditFile][preprocessArgs] ========== START ==========");
+    console.log("[EditFile][preprocessArgs] Raw args:", {
+      filepath: args.filepath,
+      changesType: typeof changes,
+      changesLength: changes?.length,
+      changesPreview: changes?.substring(0, 200),
+    });
+
     // Check if changes is in JSON format (which is incorrect)
     if (changes && typeof changes === "string") {
       const trimmed = changes.trim();
+      console.log("[EditFile][preprocessArgs] Trimmed changes:", {
+        startsWithBrace: trimmed.startsWith("{"),
+        endsWithBrace: trimmed.endsWith("}"),
+        startsWithBracket: trimmed.startsWith("["),
+        endsWithBracket: trimmed.endsWith("]"),
+      });
 
       // Check for common JSON patterns that indicate incorrect format
       if (
         (trimmed.startsWith("{") && trimmed.endsWith("}")) ||
         (trimmed.startsWith("[") && trimmed.endsWith("]"))
       ) {
+        console.log(
+          "[EditFile][preprocessArgs] Detected potential JSON format, attempting parse",
+        );
         try {
           const parsed = JSON.parse(trimmed);
+          console.log(
+            "[EditFile][preprocessArgs] Successfully parsed as JSON:",
+            {
+              keys: Object.keys(parsed),
+              hasLanguageField: "language" in parsed,
+              hasCodeField: "code" in parsed,
+              hasResultField: "result" in parsed,
+            },
+          );
 
           // Check for ANY JSON structure - if it successfully parses as JSON with object/array structure,
           // it's likely incorrect format. Common fields to check:
@@ -94,6 +120,12 @@ For example:`,
             );
 
             if (hasJsonStructure) {
+              console.error(
+                "[EditFile][preprocessArgs] ❌ REJECTED: JSON structure detected",
+                {
+                  fields: Object.keys(parsed),
+                },
+              );
               throw new ContinueError(
                 ContinueErrorReason.InvalidToolCallArgs,
                 `ERROR: The 'changes' parameter must contain ONLY RAW CODE, not JSON format.\n\n` +
@@ -107,18 +139,29 @@ For example:`,
                   `{"result": "code here", "language": "python"}\n\n` +
                   `Please call the tool again with ONLY the raw code in the 'changes' parameter.`,
               );
+            } else {
+              console.log(
+                "[EditFile][preprocessArgs] ✅ JSON parsed but no suspicious fields found",
+              );
             }
           }
         } catch (e) {
+          console.log(
+            "[EditFile][preprocessArgs] JSON parse failed (this is OK - probably code):",
+            (e as Error).message.substring(0, 100),
+          );
           // If it's a JSON parse error, that's fine - it's probably code
           // If it's our ContinueError, re-throw it
           if (e instanceof ContinueError) {
             throw e;
           }
         }
+      } else {
+        console.log("[EditFile][preprocessArgs] ✅ No JSON pattern detected");
       }
     }
 
+    console.log("[EditFile][preprocessArgs] ========== END (PASS) ==========");
     return args;
   },
 };

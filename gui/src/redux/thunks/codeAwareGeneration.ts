@@ -5,6 +5,7 @@ import {
   HighLevelStepItem,
   ProgramRequirement,
   StepItem,
+  StepToHighLevelMapping,
 } from "core";
 import {
   constructEvaluateSaqAnswerPrompt,
@@ -38,6 +39,7 @@ import {
   setStepAbstract,
   setStepStatus,
   setStepTitle,
+  setStepToHighLevelMappings,
   setUserRequirementStatus,
   submitRequirementContent,
   updateCodeAwareMappings,
@@ -943,6 +945,7 @@ export const generateStepsFromRequirement = createAsyncThunk<
       let parsedSteps: StepItem[] = [];
       let initialMappings: CodeAwareMapping[] = [];
       let highLevelStepItems: HighLevelStepItem[] = [];
+      let stepToHighLevelMappings: StepToHighLevelMapping[] = []; // 步骤到高级步骤的映射（UI层级关联）
       let learningGoal = "";
       let title = "";
       let highLevelSteps: string[] = [];
@@ -986,11 +989,57 @@ export const generateStepsFromRequirement = createAsyncThunk<
               knowledgeCardGenerationStatus: "empty", // 初始状态为 empty
             });
 
-            // 注意：不再在初始生成时创建映射关系
-            // 映射关系将通过按钮触发 LLM 查找来创建
-            // 保留注释以便理解历史逻辑：
-            // - 之前会创建 stepToHighLevelMappings（已删除）
-            // - 之前会创建 initialMappings（现在按需创建）
+            // 创建步骤到高级步骤的映射关系（UI层级关联）
+            // taskCorrespondingHighLevelTask 可能是：
+            // 1. 数字或数字字符串（1-based 索引）
+            // 2. 高级步骤的名称（需要在 highLevelSteps 数组中查找匹配）
+            if (taskCorrespondingHighLevelTask) {
+              let highLevelStepIndex: number | null = null;
+
+              // 尝试解析为数字
+              const parsedIndex = parseInt(
+                String(taskCorrespondingHighLevelTask),
+                10,
+              );
+              if (
+                !isNaN(parsedIndex) &&
+                parsedIndex >= 1 &&
+                parsedIndex <= highLevelSteps.length
+              ) {
+                // 情况1: 是有效的数字索引
+                highLevelStepIndex = parsedIndex;
+              } else {
+                // 情况2: 尝试按名称匹配
+                const matchIndex = highLevelSteps.findIndex(
+                  (hlStep) =>
+                    hlStep.trim() ===
+                    String(taskCorrespondingHighLevelTask).trim(),
+                );
+                if (matchIndex !== -1) {
+                  highLevelStepIndex = matchIndex + 1; // 转换为 1-based
+                  console.log(
+                    `✅ Found high-level step by name: "${taskCorrespondingHighLevelTask}" -> index ${highLevelStepIndex}`,
+                  );
+                } else {
+                  console.warn(
+                    `⚠️ Cannot find matching high-level step for "${taskCorrespondingHighLevelTask}"`,
+                  );
+                }
+              }
+
+              // 如果找到了有效的索引，创建映射
+              if (highLevelStepIndex !== null) {
+                const highLevelStepId = `r-${highLevelStepIndex}`;
+                stepToHighLevelMappings.push({
+                  stepId: stepId,
+                  highLevelStepId: highLevelStepId,
+                  highLevelStepIndex: highLevelStepIndex,
+                });
+                console.log(
+                  `✅ Created step-to-highLevel mapping: ${stepId} -> ${highLevelStepId} (${highLevelSteps[highLevelStepIndex - 1]})`,
+                );
+              }
+            }
           } else {
             console.warn("Step is missing title or abstract:", step);
           }
@@ -1004,14 +1053,23 @@ export const generateStepsFromRequirement = createAsyncThunk<
         // CATODO: UI提示，告知用户请求失败
       }
       console.log("Generated high_level_steps array:", highLevelSteps);
+      console.log(
+        `📋 Created ${stepToHighLevelMappings.length} step-to-highLevel mappings:`,
+        stepToHighLevelMappings,
+      );
 
       // 更新 Redux 状态
       dispatch(setCodeAwareTitle(title));
       dispatch(setLearningGoal(learningGoal));
       dispatch(setHighLevelSteps(highLevelStepItems));
       dispatch(setGeneratedSteps(parsedSteps));
+      dispatch(setStepToHighLevelMappings(stepToHighLevelMappings)); // 设置步骤到高级步骤的映射
       dispatch(updateCodeAwareMappings(initialMappings));
       dispatch(setUserRequirementStatus("finalized"));
+
+      console.log(
+        `✅ Dispatched setStepToHighLevelMappings with ${stepToHighLevelMappings.length} mappings`,
+      );
 
       // Log: 步骤生成完成
       await extra.ideMessenger.request("addCodeAwareLogEntry", {

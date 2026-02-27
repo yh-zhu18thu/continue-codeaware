@@ -1188,91 +1188,203 @@ try {
 
 ### 阶段 6：实现跳转按钮功能
 
-**目标：** 连接 UI 按钮和查找逻辑
+**目标：** 连接 UI 按钮和查找逻辑，复用现有的 IDE 通信机制
 
-#### 6.1 实现代码 → 语义跳转
+#### 6.1 理解现有的 IDE 通信机制
+
+**已有的通信方式：**
+
+1. **获取当前文件**: `ideMessenger.request("getCurrentFile", undefined)`
+
+   - 返回: `{path: string, contents: string}`
+
+2. **监听代码选中**: `useWebviewListener("codeSelectionChanged", handler)`
+
+   - IDE 发送: `{filePath: string, selectedLines: [number, number], selectedContent: string}`
+   - 参考: [useSetup.ts](gui/src/hooks/useSetup.ts#L56-L150)
+
+3. **高亮代码**: `ideMessenger.post("highlightCodeChunk", {codeChunk, filepath})`
+
+   - 或批量: `ideMessenger.post("highlightCodeChunks", chunks)`
+
+4. **清除高亮**: `ideMessenger.post("clearCodeHighlight", undefined)`
+
+**存储当前选中的状态：**
+
+在 Redux state 中添加字段来跟踪最近选中的代码：
+
+```typescript
+// codeAwareSlice.ts - 添加新字段
+interface CodeAwareSessionState {
+  // ...其他字段...
+  currentCodeSelection: {
+    filePath: string;
+    selectedLines: [number, number];
+    selectedContent: string;
+    timestamp: number;
+  } | null;
+}
+```
+
+#### 6.2 实现代码 → 语义跳转
 
 **修改文件：** [CodeAware.tsx](gui/src/pages/codeaware/CodeAware.tsx)
 
+**步骤 1：添加状态跟踪**
+
 ```typescript
-// 获取当前聚焦的代码位置
-const getCurrentFocusedCode = useCallback(() => {
-  // 方案 1: 使用 IDE 的光标位置
-  // 通过 IDE API 获取当前文件和行号
+// 使用 useWebviewListener 监听代码选中事件
+const [currentCodeSelection, setCurrentCodeSelection] = useState<{
+  filePath: string;
+  selectedLines: [number, number];
+  selectedContent: string;
+} | null>(null);
 
-  // 方案 2: 使用最近一次高亮的代码块
-  const highlightedChunk = codeChunks.find((c) => c.isHighlighted);
+useWebviewListener("codeSelectionChanged", async (data) => {
+  console.log("🎯 代码选中变化:", data);
+  setCurrentCodeSelection(data);
+});
 
-  // 方案 3: 让用户先选择一个代码块
-  // 显示代码块选择器
+useWebviewListener("codeSelectionCleared", async () => {
+  console.log("❌ 代码选中已清除");
+  setCurrentCodeSelection(null);
+});
+```
 
-  return highlightedChunk?.id || null;
-}, [codeChunks]);
+**步骤 2：实现跳转逻辑**
 
+```typescript
 const handleJumpToSemantic = useCallback(async () => {
-  // 1. 获取当前聚焦的代码
-  const codeChunkId = getCurrentFocusedCode();
-  if (!codeChunkId) {
-    // 提示用户选择代码块
-    alert("请先选择或高亮一个代码块");
-    return;
-  }
+  console.log("🚀 [跳转] 代码 → 语义");
 
-  // 2. 查找对应的语义元素
-  try {
-    const mappings = await dispatch(
-      lookupCodeToSemantic({ codeChunkId }),
-    ).unwrap();
-
-    if (mappings.length === 0) {
-      alert("未找到相关的语义元素");
+  // 1. 获取当前选中的代码
+  if (!currentCodeSelection) {
+    // 尝试从 IDE 获取当前文件
+    const currentFile = await ideMessenger?.request(
+      "getCurrentFile",
+      undefined,
+    );
+    if (!currentFile?.content) {
+      ideMessenger?.post("showToast", ["warning", "请先在 IDE 中选中代码"]);
       return;
     }
 
-    // 3. 高亮找到的语义元素
-    const topMatch = mappings[0]; // 选择置信度最高的
+    // 如果没有选中，提示用户
+    ideMessenger?.post("showToast", [
+      "info",
+      "请在 IDE 中选中代码后再点击跳转按钮",
+    ]);
+    return;
+  }
+
+  // 2. 查找选中区域对应的代码块
+  const matchingChunk = codeChunks.find((chunk) => {
+    if (chunk.filePath !== currentCodeSelection.filePath) return false;
+
+    const [selStart, selEnd] = currentCodeSelection.selectedLines;
+    const [chunkStart, chunkEnd] = chunk.range;
+
+    // 计算重叠
+    const overlapStart = Math.max(selStart, chunkStart);
+    const overlapEnd = Math.min(selEnd, chunkEnd);
+    const overlapLines = overlapEnd - overlapStart + 1;
+
+    // 至少 50% 重叠
+    const chunkLines = chunkEnd - chunkStart + 1;
+    return overlapLines / chunkLines >= 0.5;
+  });
+
+  if (!matchingChunk) {
+    ideMessenger?.post("showToast", [
+      "warning",
+      "未找到匹配的代码块，请选择已生成的代码区域",
+    ]);
+    return;
+  }
+
+  console.log(`📍 找到匹配的代码块: ${matchingChunk.id}`);
+
+  // 3. 调用 LLM 查找对应的语义元素
+  try {
+    const mappings = await dispatch(
+      lookupCodeToSemantic({
+        codeChunkId: matchingChunk.id,
+        useCache: true,
+      }),
+    ).unwrap();
+
+    if (mappings.length === 0) {
+      ideMessenger?.post("showToast", [
+        "info",
+        "未找到对应的学习步骤，可能是最近生成的代码",
+      ]);
+      return;
+    }
+
+    // 4. 高亮置信度最高的语义元素
+    const topMatch = mappings[0];
+    console.log(
+      `✨ 找到语义元素: ${topMatch.semanticElementType} - ${topMatch.semanticElementId}`,
+      `(置信度: ${topMatch.confidence?.toFixed(2)}, 来源: ${topMatch.source})`,
+    );
+
     dispatch(
-      updateHighlight({
-        sourceType: topMatch.semanticElementType,
-        identifier: topMatch.semanticElementId,
+      setHighlightedElement({
+        type: topMatch.semanticElementType,
+        id: topMatch.semanticElementId,
       }),
     );
 
-    // 4. 滚动到对应位置
+    // 5. 滚动到对应位置
     scrollToSemanticElement(topMatch.semanticElementId);
 
-    // 5. 记录日志
+    // 6. 显示成功提示
+    ideMessenger?.post("showToast", [
+      "success",
+      `已跳转到: ${topMatch.semanticElementType}`,
+    ]);
+
+    // 7. 记录日志
     await logger.addLogEntry("user_jump_code_to_semantic", {
-      codeChunkId,
-      matchedElement: topMatch.semanticElementId,
+      codeChunkId: matchingChunk.id,
+      matchedElementType: topMatch.semanticElementType,
+      matchedElementId: topMatch.semanticElementId,
       confidence: topMatch.confidence,
       source: topMatch.source,
+      timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error("跳转失败:", error);
-    alert("跳转失败，请重试");
+    console.error("❌ 跳转失败:", error);
+    ideMessenger?.post("showToast", ["error", "跳转失败，请重试"]);
   }
-}, [dispatch, codeChunks, logger]);
+}, [currentCodeSelection, codeChunks, dispatch, ideMessenger, logger]);
 ```
 
-#### 6.2 实现语义 → 代码跳转
+````
+
+#### 6.3 实现语义 → 代码跳转
+
+**步骤 1：获取当前高亮的语义元素**
 
 ```typescript
 const getCurrentFocusedSemantic = useCallback(() => {
-  // 查找当前高亮或展开的语义元素
-
+  // 查找当前高亮的语义元素
   // 优先级：knowledgeCard > step > highLevelStep
+
   for (const step of steps) {
+    // 检查知识卡片
     for (const card of step.knowledgeCards) {
       if (card.isHighlighted) {
         return { id: card.id, type: "knowledgeCard" as const };
       }
     }
+    // 检查步骤
     if (step.isHighlighted) {
       return { id: step.id, type: "step" as const };
     }
   }
 
+  // 检查高级步骤
   const hlStep = highLevelSteps.find((s) => s.isHighlighted);
   if (hlStep) {
     return { id: hlStep.id, type: "highLevelStep" as const };
@@ -1280,93 +1392,277 @@ const getCurrentFocusedSemantic = useCallback(() => {
 
   return null;
 }, [steps, highLevelSteps]);
+````
 
+**步骤 2：实现跳转逻辑**
+
+```typescript
 const handleJumpToCode = useCallback(async () => {
-  // 1. 获取当前聚焦的语义元素
+  console.log("🚀 [跳转] 语义 → 代码");
+
+  // 1. 获取当前高亮的语义元素
   const semantic = getCurrentFocusedSemantic();
   if (!semantic) {
-    alert("请先选择一个语义元素");
+    ideMessenger?.post("showToast", ["info", "请先点击一个学习步骤或知识卡片"]);
     return;
   }
 
-  // 2. 查找对应的代码块
+  console.log(`📍 当前聚焦元素: ${semantic.type} - ${semantic.id}`);
+
+  // 2. 调用 LLM 查找对应的代码块
   try {
     const mappings = await dispatch(
       lookupSemanticToCode({
         semanticElementId: semantic.id,
         semanticElementType: semantic.type,
+        useCache: true,
       }),
     ).unwrap();
 
     if (mappings.length === 0) {
-      alert("未找到相关的代码");
+      ideMessenger?.post("showToast", ["info", "该步骤还没有对应的代码实现"]);
       return;
     }
 
-    // 3. 高亮找到的代码块
+    // 3. 找到对应的代码块
     const codeChunkIds = mappings.map((m) => m.codeChunkId);
-    dispatch(
-      updateHighlight({
-        sourceType: "code",
-        identifier: codeChunkIds[0],
-      }),
-    );
+    const matchedChunks = codeChunks.filter((c) => codeChunkIds.includes(c.id));
 
-    // 4. 通知 IDE 跳转到代码位置
-    const codeChunk = codeChunks.find((c) => c.id === codeChunkIds[0]);
-    if (codeChunk) {
-      // 调用 IDE API 跳转
-      // ideMessenger.post('jumpToCode', { file: codeChunk.filePath, line: codeChunk.range[0] });
+    if (matchedChunks.length === 0) {
+      ideMessenger?.post("showToast", [
+        "warning",
+        "代码块不存在，可能已被删除",
+      ]);
+      return;
     }
 
-    // 5. 记录日志
+    // 4. 高亮代码块（在 webview 中）
+    const topChunk = matchedChunks[0];
+    dispatch(
+      updateHighlight([
+        {
+          sourceType: "code",
+          identifier: topChunk.id,
+          additionalInfo: topChunk,
+        },
+      ]),
+    );
+
+    // 5. 通知 IDE 高亮代码（复用现有机制）
+    console.log(
+      `✨ 高亮代码块: ${topChunk.id} (${topChunk.range[0]}-${topChunk.range[1]})`,
+    );
+
+    // 使用现有的高亮机制
+    await ideMessenger?.post("highlightCodeChunk", {
+      codeChunk: topChunk,
+      filepath: topChunk.filePath,
+    });
+
+    // 6. 显示成功提示（包含置信度信息）
+    const topMapping = mappings[0];
+    const confidenceText = topMapping.confidence
+      ? `置信度: ${(topMapping.confidence * 100).toFixed(0)}%`
+      : "";
+
+    ideMessenger?.post("showToast", [
+      "success",
+      `已跳转到代码 (行 ${topChunk.range[0]}-${topChunk.range[1]}) ${confidenceText}`,
+    ]);
+
+    // 7. 记录日志
     await logger.addLogEntry("user_jump_semantic_to_code", {
+      semanticElementType: semantic.type,
       semanticElementId: semantic.id,
-      matchedCode: codeChunkIds,
-      source: mappings[0].source,
+      matchedCodeChunks: codeChunkIds,
+      topChunkId: topChunk.id,
+      topChunkRange: topChunk.range,
+      confidence: topMapping.confidence,
+      source: topMapping.source,
+      timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error("跳转失败:", error);
-    alert("跳转失败，请重试");
+    console.error("❌ 跳转失败:", error);
+    ideMessenger?.post("showToast", ["error", "跳转失败，请重试"]);
   }
-}, [dispatch, steps, highLevelSteps, codeChunks, logger]);
+}, [getCurrentFocusedSemantic, codeChunks, dispatch, ideMessenger, logger]);
 ```
 
-#### 6.3 添加辅助功能
+````
+
+#### 6.4 添加辅助功能
+
+**滚动到语义元素：**
 
 ```typescript
-// 滚动到语义元素
-const scrollToSemanticElement = (elementId: string) => {
-  const element = document.querySelector(`[data-element-id="${elementId}"]`);
+// 滚动到语义元素（复用现有逻辑）
+const scrollToSemanticElement = useCallback((elementId: string) => {
+  // 使用 data-element-id 或 data-step-id 属性查找元素
+  const element =
+    document.querySelector(`[data-element-id="${elementId}"]`) ||
+    document.querySelector(`[data-step-id="${elementId}"]`) ||
+    document.querySelector(`[data-card-id="${elementId}"]`);
+
   if (element) {
-    element.scrollIntoView({ behavior: "smooth", block: "center" });
+    element.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+      inline: "nearest",
+    });
+    console.log(`📜 滚动到元素: ${elementId}`);
+  } else {
+    console.warn(`⚠️ 未找到元素: ${elementId}`);
   }
-};
+}, []);
+````
 
-// 智能选择代码块（如果没有明确聚焦）
-const smartSelectCodeChunk = async () => {
-  // 从 IDE 获取当前光标位置
-  const cursorPosition = await ideMessenger.request("getCursorPosition", {});
+**更新按钮状态：**
 
-  // 找到包含该位置的代码块
-  const matchingChunk = codeChunks.find(
-    (chunk) =>
-      chunk.filePath === cursorPosition.file &&
-      chunk.range[0] <= cursorPosition.line &&
-      chunk.range[1] >= cursorPosition.line,
+```typescript
+// 判断按钮是否可用
+const canJumpToSemantic = useMemo(() => {
+  return currentCodeSelection !== null || codeChunks.some(c => c.isHighlighted);
+}, [currentCodeSelection, codeChunks]);
+
+const canJumpToCode = useMemo(() => {
+  return getCurrentFocusedSemantic() !== null;
+}, [getCurrentFocusedSemantic]);
+
+// 在 NavigationButtons 组件中使用
+<NavigationButtons
+  onJumpToSemantic={handleJumpToSemantic}
+  onJumpToCode={handleJumpToCode}
+  canJumpToSemantic={canJumpToSemantic}
+  canJumpToCode={canJumpToCode}
+  isLoading={isMappingLookupInProgress}
+/>
+```
+
+**优化：智能选择最佳匹配：**
+
+```typescript
+// 如果 LLM 返回多个结果，显示选择对话框
+const showMatchSelection = useCallback((mappings: CodeAwareMapping[]) => {
+  if (mappings.length === 1) {
+    // 只有一个结果，直接使用
+    return mappings[0];
+  }
+
+  // 多个结果，按置信度排序
+  const sorted = [...mappings].sort(
+    (a, b) => (b.confidence || 0) - (a.confidence || 0),
   );
 
-  return matchingChunk?.id || null;
-};
+  // 方案 A: 自动选择置信度最高的
+  if (sorted[0].confidence && sorted[0].confidence > 0.8) {
+    return sorted[0];
+  }
+
+  // 方案 B: 显示选择列表（可选实现）
+  // 使用 dialog 或 dropdown 让用户选择
+  // 这里先返回第一个
+  return sorted[0];
+}, []);
+```
+
+**集成到 NavigationButtons 组件：**
+
+修改 [NavigationButtons.tsx](gui/src/pages/codeaware/components/ToolBar/NavigationButtons.tsx)：
+
+```typescript
+interface NavigationButtonsProps {
+  onJumpToSemantic: () => void;
+  onJumpToCode: () => void;
+  canJumpToSemantic?: boolean;
+  canJumpToCode?: boolean;
+  isLoading?: boolean;
+}
+
+export function NavigationButtons({
+  onJumpToSemantic,
+  onJumpToCode,
+  canJumpToSemantic = false,
+  canJumpToCode = false,
+  isLoading = false,
+}: NavigationButtonsProps) {
+  return (
+    <div className="navigation-buttons">
+      <button
+        onClick={onJumpToCode}
+        disabled={!canJumpToCode || isLoading}
+        title="从当前学习步骤跳转到对应代码"
+        className="jump-button"
+      >
+        <ArrowLeftIcon />
+        跳转到代码
+      </button>
+
+      <button
+        onClick={onJumpToSemantic}
+        disabled={!canJumpToSemantic || isLoading}
+        title="从选中的代码跳转到对应学习步骤"
+        className="jump-button"
+      >
+        跳转到步骤
+        <ArrowRightIcon />
+      </button>
+
+      {isLoading && <LoadingSpinner />}
+    </div>
+  );
+}
 ```
 
 **测试点：**
 
-- [ ] 点击右箭头按钮跳转到语义元素
-- [ ] 点击左箭头按钮跳转到代码
-- [ ] 未找到映射时有提示
-- [ ] 滚动到目标元素
-- [ ] IDE 正确跳转到代码位置
+- [ ] **代码选中监听**
+
+  - [ ] 在 IDE 中选中代码后，webview 正确接收到 codeSelectionChanged 事件
+  - [ ] 选中区域与代码块正确匹配（50% 重叠阈值）
+  - [ ] 清除选中时正确接收 codeSelectionCleared 事件
+
+- [ ] **代码 → 语义跳转**
+
+  - [ ] 未选中代码时显示提示
+  - [ ] 选中代码后点击按钮成功跳转
+  - [ ] 正确找到匹配的代码块
+  - [ ] LLM 查找返回正确的语义元素
+  - [ ] 缓存命中时跳转速度 < 100ms
+  - [ ] LLM 查询时跳转速度 < 2s
+  - [ ] 未找到匹配时显示友好提示
+  - [ ] 语义元素正确高亮
+  - [ ] 页面自动滚动到语义元素
+
+- [ ] **语义 → 代码跳转**
+
+  - [ ] 未选中语义元素时显示提示
+  - [ ] 点击步骤后按钮可用
+  - [ ] 正确找到匹配的代码块
+  - [ ] IDE 中代码正确高亮（复用 highlightCodeChunk）
+  - [ ] 高亮区域正确（行号范围）
+  - [ ] 显示置信度信息
+  - [ ] 日志正确记录
+
+- [ ] **辅助功能**
+
+  - [ ] 按钮禁用状态正确
+  - [ ] Loading 状态正确显示
+  - [ ] Toast 提示信息清晰
+  - [ ] 滚动动画流畅
+  - [ ] 多个匹配结果时选择置信度最高的
+
+- [ ] **错误处理**
+
+  - [ ] LLM 查询失败时降级到模糊匹配
+  - [ ] 网络错误时显示友好提示
+  - [ ] 代码块不存在时不崩溃
+  - [ ] 语义元素不存在时不崩溃
+
+- [ ] **性能**
+  - [ ] 缓存命中率 > 70%
+  - [ ] 跳转响应时间 < 2s (P95)
+  - [ ] 页面无卡顿
+  - [ ] 内存占用合理
 
 ---
 

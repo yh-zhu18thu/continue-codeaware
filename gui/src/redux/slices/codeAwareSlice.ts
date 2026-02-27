@@ -11,6 +11,7 @@ import {
   ProgramRequirement,
   StepItem,
   StepStatus,
+  StepToHighLevelMapping,
 } from "core";
 import { v4 as uuidv4 } from "uuid";
 
@@ -44,11 +45,13 @@ export type CodeAwareSessionState = {
   learningGoal: string;
   //高级步骤列表
   highLevelSteps: HighLevelStepItem[];
+  //步骤与高级步骤的层级关系（用于UI关联，不与code映射混淆）
+  stepToHighLevelMappings: StepToHighLevelMapping[];
   //当前的flow
   steps: StepItem[];
   //当前的代码块
   codeChunks: CodeChunk[];
-  //存储所有的Mapping，用于查找和触发相关元素的高亮，各个元素的高亮写在元素之中
+  //存储code与语义元素的映射关系（用于LLM查找缓存）
   codeAwareMappings: CodeAwareMapping[];
   // 映射查找状态
   mappingLookup: {
@@ -89,6 +92,7 @@ const initialCodeAwareState: CodeAwareSessionState = {
   },
   learningGoal: "",
   highLevelSteps: [],
+  stepToHighLevelMappings: [],
   steps: [],
   codeChunks: [],
   codeAwareMappings: [],
@@ -260,6 +264,7 @@ export const codeAwareSessionSlice = createSlice({
       };
       state.learningGoal = "";
       state.highLevelSteps = [];
+      state.stepToHighLevelMappings = [];
       state.steps = [];
       state.codeAwareMappings = [];
       state.codeChunks = [];
@@ -303,6 +308,14 @@ export const codeAwareSessionSlice = createSlice({
     ) => {
       const { type, id } = action.payload;
 
+      console.log(
+        `🎯 [setHighlightedElement] type=${type}, id=${id}, mappings count=${state.stepToHighLevelMappings.length}`,
+      );
+      console.log(
+        `📋 [Mappings]:`,
+        JSON.stringify(state.stepToHighLevelMappings, null, 2),
+      );
+
       // 清除所有现有高亮（但不清除 IDE 高亮）
       // 注意：映射不再存储高亮状态
       state.codeChunks.forEach((chunk) => {
@@ -321,7 +334,7 @@ export const codeAwareSessionSlice = createSlice({
         })),
       }));
 
-      // 设置新的高亮元素
+      // 设置新的高亮元素（带双向关联）
       if (type === "highLevelStep") {
         // 高亮 high-level step
         const stepIndex = state.highLevelSteps.findIndex((s) => s.id === id);
@@ -331,7 +344,26 @@ export const codeAwareSessionSlice = createSlice({
             isHighlighted: true,
           };
 
-          console.log(`🎯 Highlighted high-level step ${id}`);
+          // 找到所有关联的 steps 并高亮它们（触发滚动和闪烁）
+          const relatedMappings = state.stepToHighLevelMappings.filter(
+            (m) => m.highLevelStepId === id,
+          );
+
+          relatedMappings.forEach((mapping) => {
+            const relatedStepIndex = state.steps.findIndex(
+              (s) => s.id === mapping.stepId,
+            );
+            if (relatedStepIndex !== -1) {
+              state.steps[relatedStepIndex] = {
+                ...state.steps[relatedStepIndex],
+                isHighlighted: true,
+              };
+            }
+          });
+
+          console.log(
+            `🎯 Highlighted high-level step ${id} and ${relatedMappings.length} related steps`,
+          );
         }
       } else if (type === "step") {
         // 高亮 step
@@ -342,7 +374,25 @@ export const codeAwareSessionSlice = createSlice({
             isHighlighted: true,
           };
 
-          console.log(`🎯 Highlighted step ${id}`);
+          // 找到关联的 high-level step 并高亮它（触发闪烁）
+          const relatedMapping = state.stepToHighLevelMappings.find(
+            (m) => m.stepId === id,
+          );
+
+          if (relatedMapping) {
+            const hlStepIndex = state.highLevelSteps.findIndex(
+              (s) => s.id === relatedMapping.highLevelStepId,
+            );
+            if (hlStepIndex !== -1) {
+              state.highLevelSteps[hlStepIndex] = {
+                ...state.highLevelSteps[hlStepIndex],
+                isHighlighted: true,
+              };
+              console.log(
+                `🎯 Highlighted step ${id} and related high-level step ${relatedMapping.highLevelStepId}`,
+              );
+            }
+          }
         }
       } else if (type === "knowledgeCard") {
         for (let i = 0; i < state.steps.length; i++) {
@@ -391,6 +441,17 @@ export const codeAwareSessionSlice = createSlice({
     // 设置高级步骤
     setHighLevelSteps: (state, action: PayloadAction<HighLevelStepItem[]>) => {
       state.highLevelSteps = action.payload;
+    },
+    // 设置步骤到高级步骤的映射关系（用于UI层级关联）
+    setStepToHighLevelMappings: (
+      state,
+      action: PayloadAction<StepToHighLevelMapping[]>,
+    ) => {
+      console.log(
+        `✅ [setStepToHighLevelMappings reducer] Setting ${action.payload.length} mappings`,
+      );
+      console.log(`📋 Mappings:`, JSON.stringify(action.payload, null, 2));
+      state.stepToHighLevelMappings = action.payload;
     },
     // 更新高级步骤的完成状态
     updateHighLevelStepCompletion: (
@@ -1123,6 +1184,7 @@ export const {
   clearAllCodeAwareMappings,
   updateHighlight,
   setHighLevelSteps,
+  setStepToHighLevelMappings,
   updateHighLevelStepCompletion,
   updateCodeChunks,
   updateCodeChunkRange,

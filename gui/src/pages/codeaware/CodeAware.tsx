@@ -49,6 +49,10 @@ import {
   processSaqSubmission,
   rerunStep,
 } from "../../redux/thunks/codeAwareGeneration";
+import {
+  lookupCodeToSemantic,
+  lookupSemanticToCode,
+} from "../../redux/thunks/mappingLookup";
 import { useCodeAwareLogger } from "../../util/codeAwareWebViewLogger";
 import "./CodeAware.css";
 import GlobalQuestionModal from "./components/QuestionPopup/GlobalQuestionModal";
@@ -243,6 +247,24 @@ export const CodeAware = () => {
   const [isMappingLookupInProgress, setIsMappingLookupInProgress] =
     useState(false);
 
+  // Track code selection state
+  const [currentCodeSelection, setCurrentCodeSelection] = useState<{
+    filePath: string;
+    selectedLines: [number, number];
+    selectedContent: string;
+  } | null>(null);
+
+  // Listen to code selection events from IDE
+  useWebviewListener("codeSelectionChanged", async (data) => {
+    console.log("🎯 代码选中变化:", data);
+    setCurrentCodeSelection(data);
+  });
+
+  useWebviewListener("codeSelectionCleared", async () => {
+    console.log("❌ 代码选中已清除");
+    setCurrentCodeSelection(null);
+  });
+
   //CodeAware: 增加一个指令，使得可以发送当前所选择的知识卡片id
   //CATODO: 参照着codeContextProvider的实现，利用上getAllSnippets的获取最近代码的功能，然后再通过coreToWebview的路径发送更新过来。
 
@@ -266,13 +288,27 @@ export const CodeAware = () => {
 
   const steps = useAppSelector((state) => state.codeAwareSession.steps); // Get steps data
 
-  // 注意：stepToHighLevelMappings 已移除
-  // 未来将通过新的映射机制来确定步骤与高级步骤的关系
-  // 暂时使用空 Map
-  const stepToHighLevelIndexMap = useMemo(
-    () => new Map<string, number | null>(),
-    [],
+  // Get code chunks and high level steps for navigation
+  const codeChunks = useAppSelector(
+    (state) => state.codeAwareSession.codeChunks,
   );
+  const highLevelSteps = useAppSelector(
+    (state) => state.codeAwareSession.highLevelSteps,
+  );
+
+  // 从 Redux 中获取步骤到高级步骤的映射
+  const stepToHighLevelMappings = useAppSelector(
+    (state) => state.codeAwareSession.stepToHighLevelMappings,
+  );
+
+  // 根据 stepToHighLevelMappings 构建 stepId -> highLevelStepIndex 的 Map
+  const stepToHighLevelIndexMap = useMemo(() => {
+    const map = new Map<string, number | null>();
+    stepToHighLevelMappings.forEach((mapping) => {
+      map.set(mapping.stepId, mapping.highLevelStepIndex);
+    });
+    return map;
+  }, [stepToHighLevelMappings]);
 
   // 监听steps变化，同步给IDE
   useEffect(() => {
@@ -478,22 +514,229 @@ export const CodeAware = () => {
   );
   const [showDebugPanel, setShowDebugPanel] = useState(false);
 
-  // Navigation button handlers (placeholder)
+  // Navigation button handlers
   const handleJumpToSemantic = useCallback(async () => {
-    console.log("TODO: 实现代码到语义的跳转");
-    // 暂时显示提示
-    await logger.addLogEntry("user_click_jump_to_semantic", {
-      timestamp: new Date().toISOString(),
-    });
-  }, [logger]);
+    console.log("🚀 [跳转] 代码 → 语义");
+
+    try {
+      setIsMappingLookupInProgress(true);
+
+      // 1. 获取当前选中的代码
+      if (!currentCodeSelection) {
+        console.warn("⚠️ 未选中代码");
+        await logger.addLogEntry("user_click_jump_to_semantic_no_selection", {
+          timestamp: new Date().toISOString(),
+        });
+        return;
+      }
+
+      // 2. 查找选中区域对应的代码块
+      const matchingChunk = codeChunks.find((chunk) => {
+        if (chunk.filePath !== currentCodeSelection.filePath) return false;
+
+        const [chunkStart, chunkEnd] = chunk.range;
+        const [selectionStart, selectionEnd] =
+          currentCodeSelection.selectedLines;
+
+        // 计算重叠
+        const overlapStart = Math.max(chunkStart, selectionStart);
+        const overlapEnd = Math.min(chunkEnd, selectionEnd);
+        const overlapLines = overlapEnd - overlapStart + 1;
+
+        if (overlapLines <= 0) return false;
+
+        // 至少50%重叠
+        const chunkLines = chunkEnd - chunkStart + 1;
+        return overlapLines / chunkLines >= 0.5;
+      });
+
+      if (!matchingChunk) {
+        console.warn("⚠️ 未找到匹配的代码块");
+        await logger.addLogEntry("user_click_jump_to_semantic_no_match", {
+          selection: currentCodeSelection,
+          timestamp: new Date().toISOString(),
+        });
+        return;
+      }
+
+      console.log("✅ 找到匹配的代码块:", matchingChunk.id);
+
+      // 3. 使用 LLM 查找语义元素
+      const result = await dispatch(
+        lookupCodeToSemantic({
+          codeChunkId: matchingChunk.id,
+          useCache: true,
+        }),
+      ).unwrap();
+
+      if (result.length === 0) {
+        console.warn("⚠️ 未找到对应的语义元素");
+        await logger.addLogEntry("user_click_jump_to_semantic_no_result", {
+          codeChunkId: matchingChunk.id,
+          timestamp: new Date().toISOString(),
+        });
+        return;
+      }
+
+      // 4. 选择置信度最高的结果
+      const bestMatch = result.reduce((prev, current) =>
+        (current.confidence || 0) > (prev.confidence || 0) ? current : prev,
+      );
+
+      console.log("✅ 找到语义元素:", bestMatch);
+
+      // 5. 高亮语义元素
+      dispatch(
+        updateHighlight([
+          {
+            sourceType: bestMatch.semanticElementType,
+            identifier: bestMatch.semanticElementId,
+          },
+        ]),
+      );
+
+      // 6. 滚动到语义元素
+      const element = document.querySelector(
+        `[data-${bestMatch.semanticElementType}-id="${bestMatch.semanticElementId}"]`,
+      );
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+
+      await logger.addLogEntry("user_click_jump_to_semantic_success", {
+        codeChunkId: matchingChunk.id,
+        semanticElementId: bestMatch.semanticElementId,
+        semanticElementType: bestMatch.semanticElementType,
+        confidence: bestMatch.confidence,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error("❌ 跳转失败:", error);
+      await logger.addLogEntry("user_click_jump_to_semantic_error", {
+        error: error instanceof Error ? error.message : String(error),
+        timestamp: new Date().toISOString(),
+      });
+    } finally {
+      setIsMappingLookupInProgress(false);
+    }
+  }, [currentCodeSelection, codeChunks, dispatch, logger]);
 
   const handleJumpToCode = useCallback(async () => {
-    console.log("TODO: 实现语义到代码的跳转");
-    // 暂时显示提示
-    await logger.addLogEntry("user_click_jump_to_code", {
-      timestamp: new Date().toISOString(),
-    });
-  }, [logger]);
+    console.log("🚀 [跳转] 语义 → 代码");
+
+    try {
+      setIsMappingLookupInProgress(true);
+
+      // 1. 获取当前高亮的语义元素
+      let focusedElement: {
+        id: string;
+        type: "highLevelStep" | "step" | "knowledgeCard";
+      } | null = null;
+
+      // 检查高级步骤
+      const highlightedHls = highLevelSteps.find((hls) => hls.isHighlighted);
+      if (highlightedHls) {
+        focusedElement = { id: highlightedHls.id, type: "highLevelStep" };
+      }
+
+      // 检查步骤
+      if (!focusedElement) {
+        const highlightedStep = steps.find((step) => step.isHighlighted);
+        if (highlightedStep) {
+          focusedElement = { id: highlightedStep.id, type: "step" };
+        }
+      }
+
+      // 检查知识卡片
+      if (!focusedElement) {
+        for (const step of steps) {
+          const highlightedCard = step.knowledgeCards?.find(
+            (card) => card.isHighlighted,
+          );
+          if (highlightedCard) {
+            focusedElement = { id: highlightedCard.id, type: "knowledgeCard" };
+            break;
+          }
+        }
+      }
+
+      if (!focusedElement) {
+        console.warn("⚠️ 未选中语义元素");
+        await logger.addLogEntry("user_click_jump_to_code_no_selection", {
+          timestamp: new Date().toISOString(),
+        });
+        return;
+      }
+
+      console.log("✅ 找到高亮的语义元素:", focusedElement);
+
+      // 2. 使用 LLM 查找代码块
+      const result = await dispatch(
+        lookupSemanticToCode({
+          semanticElementId: focusedElement.id,
+          semanticElementType: focusedElement.type,
+          useCache: true,
+        }),
+      ).unwrap();
+
+      if (result.length === 0) {
+        console.warn("⚠️ 未找到对应的代码块");
+        await logger.addLogEntry("user_click_jump_to_code_no_result", {
+          semanticElementId: focusedElement.id,
+          semanticElementType: focusedElement.type,
+          timestamp: new Date().toISOString(),
+        });
+        return;
+      }
+
+      // 3. 选择置信度最高的结果
+      const bestMatch = result.reduce((prev, current) =>
+        (current.confidence || 0) > (prev.confidence || 0) ? current : prev,
+      );
+
+      console.log("✅ 找到代码块:", bestMatch);
+
+      // 4. 找到对应的代码块详细信息
+      const codeChunk = codeChunks.find(
+        (chunk) => chunk.id === bestMatch.codeChunkId,
+      );
+
+      if (!codeChunk) {
+        console.warn("⚠️ 代码块不存在:", bestMatch.codeChunkId);
+        return;
+      }
+
+      // 5. 通知 IDE 高亮代码
+      await ideMessenger?.post("highlightCodeChunks", [codeChunk]);
+
+      // 6. 高亮代码块（在界面上）
+      dispatch(
+        updateHighlight([
+          {
+            sourceType: "code",
+            identifier: codeChunk.id,
+            additionalInfo: codeChunk,
+          },
+        ]),
+      );
+
+      await logger.addLogEntry("user_click_jump_to_code_success", {
+        semanticElementId: focusedElement.id,
+        semanticElementType: focusedElement.type,
+        codeChunkId: codeChunk.id,
+        confidence: bestMatch.confidence,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error("❌ 跳转失败:", error);
+      await logger.addLogEntry("user_click_jump_to_code_error", {
+        error: error instanceof Error ? error.message : String(error),
+        timestamp: new Date().toISOString(),
+      });
+    } finally {
+      setIsMappingLookupInProgress(false);
+    }
+  }, [highLevelSteps, steps, codeChunks, dispatch, ideMessenger, logger]);
 
   // Track steps that should be force expanded due to code selection questions
   const [forceExpandedSteps, setForceExpandedSteps] = useState<Set<string>>(
@@ -651,11 +894,6 @@ export const CodeAware = () => {
       }
     },
     [],
-  );
-
-  // 获取当前 CodeChunks 用于调试
-  const codeChunks = useAppSelector(
-    (state) => state.codeAwareSession.codeChunks,
   );
 
   // Create a memoized map of test loading states and results

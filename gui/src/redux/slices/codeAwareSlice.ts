@@ -286,6 +286,116 @@ export const codeAwareSessionSlice = createSlice({
       state.shouldClearIdeHighlights = true;
       state.codeChunksToHighlightInIde = [];
     },
+    // 设置单个元素为高亮状态（不触发代码高亮）
+    setHighlightedElement: (
+      state,
+      action: PayloadAction<{
+        type: "highLevelStep" | "step" | "knowledgeCard";
+        id: string;
+      }>,
+    ) => {
+      const { type, id } = action.payload;
+
+      // 清除所有现有高亮（但不清除 IDE 高亮）
+      state.codeAwareMappings.forEach((mapping) => {
+        mapping.isHighlighted = false;
+      });
+      state.codeChunks.forEach((chunk) => {
+        chunk.isHighlighted = false;
+      });
+      state.highLevelSteps = state.highLevelSteps.map((step) => ({
+        ...step,
+        isHighlighted: false,
+      }));
+      state.steps = state.steps.map((step) => ({
+        ...step,
+        isHighlighted: false,
+        knowledgeCards: step.knowledgeCards.map((card) => ({
+          ...card,
+          isHighlighted: false,
+        })),
+      }));
+
+      // 设置新的高亮元素（带双向关联）
+      if (type === "highLevelStep") {
+        // 高亮 high-level step
+        const stepIndex = state.highLevelSteps.findIndex((s) => s.id === id);
+        if (stepIndex !== -1) {
+          state.highLevelSteps[stepIndex] = {
+            ...state.highLevelSteps[stepIndex],
+            isHighlighted: true,
+          };
+
+          // 找到所有关联的 steps 并高亮它们（触发滚动和闪烁）
+          const relatedMappings = state.stepToHighLevelMappings.filter(
+            (m) => m.highLevelStepId === id,
+          );
+
+          relatedMappings.forEach((mapping) => {
+            const relatedStepIndex = state.steps.findIndex(
+              (s) => s.id === mapping.stepId,
+            );
+            if (relatedStepIndex !== -1) {
+              state.steps[relatedStepIndex] = {
+                ...state.steps[relatedStepIndex],
+                isHighlighted: true,
+              };
+            }
+          });
+
+          console.log(
+            `🎯 Highlighted high-level step ${id} and ${relatedMappings.length} related steps`,
+          );
+        }
+      } else if (type === "step") {
+        // 高亮 step
+        const stepIndex = state.steps.findIndex((s) => s.id === id);
+        if (stepIndex !== -1) {
+          state.steps[stepIndex] = {
+            ...state.steps[stepIndex],
+            isHighlighted: true,
+          };
+
+          // 找到关联的 high-level step 并高亮它（触发闪烁）
+          const relatedMapping = state.stepToHighLevelMappings.find(
+            (m) => m.stepId === id,
+          );
+
+          if (relatedMapping) {
+            const hlStepIndex = state.highLevelSteps.findIndex(
+              (s) => s.id === relatedMapping.highLevelStepId,
+            );
+            if (hlStepIndex !== -1) {
+              state.highLevelSteps[hlStepIndex] = {
+                ...state.highLevelSteps[hlStepIndex],
+                isHighlighted: true,
+              };
+              console.log(
+                `🎯 Highlighted step ${id} and related high-level step ${relatedMapping.highLevelStepId}`,
+              );
+            }
+          }
+        }
+      } else if (type === "knowledgeCard") {
+        for (let i = 0; i < state.steps.length; i++) {
+          const cardIndex = state.steps[i].knowledgeCards.findIndex(
+            (kc) => kc.id === id,
+          );
+          if (cardIndex !== -1) {
+            const updatedCards = [...state.steps[i].knowledgeCards];
+            updatedCards[cardIndex] = {
+              ...updatedCards[cardIndex],
+              isHighlighted: true,
+            };
+            state.steps[i] = {
+              ...state.steps[i],
+              knowledgeCards: updatedCards,
+            };
+            break;
+          }
+        }
+      }
+    },
     clearAllCodeChunks: (state) => {
       // Clear all code chunks
       state.codeChunks = [];
@@ -1283,6 +1393,7 @@ export const {
   newCodeAwareSession,
   resetSessionExceptRequirement,
   clearAllHighlights,
+  setHighlightedElement,
   clearAllCodeChunks,
   clearAllCodeAwareMappings,
   updateHighlight,

@@ -1,17 +1,32 @@
-import { PlusIcon } from '@heroicons/react/24/outline';
-import { HighlightEvent, KnowledgeCardGenerationStatus, StepStatus } from "core";
-import React, { useEffect, useRef, useState } from 'react';
+import { PlusIcon } from "@heroicons/react/24/outline";
+import {
+  HighlightEvent,
+  KnowledgeCardGenerationStatus,
+  StepStatus,
+} from "core";
+import React, { useEffect, useRef, useState } from "react";
 import styled from "styled-components";
-import { vscBackground, vscForeground, vscInputBorder } from "../../../../components";
-import { useCodeAwareLogger } from '../../../../util/codeAwareWebViewLogger';
-import KnowledgeCard, { KnowledgeCardProps } from '../KnowledgeCard/KnowledgeCard';
-import KnowledgeCardLoader from '../KnowledgeCard/KnowledgeCardLoader';
-import QuestionPopup from '../QuestionPopup/QuestionPopup';
-import StepAbstract from './StepAbstract';
-import StepEditor from './StepEditor';
-import StepTitleBar from './StepTitleBar';
+import {
+  vscBackground,
+  vscForeground,
+  vscInputBorder,
+} from "../../../../components";
+import { useAppDispatch } from "../../../../redux/hooks";
+import { setHighlightedElement } from "../../../../redux/slices/codeAwareSlice";
+import { useCodeAwareLogger } from "../../../../util/codeAwareWebViewLogger";
+import KnowledgeCard, {
+  KnowledgeCardProps,
+} from "../KnowledgeCard/KnowledgeCard";
+import KnowledgeCardLoader from "../KnowledgeCard/KnowledgeCardLoader";
+import QuestionPopup from "../QuestionPopup/QuestionPopup";
+import StepAbstract from "./StepAbstract";
+import StepEditor from "./StepEditor";
+import StepTitleBar from "./StepTitleBar";
 
-const StepContainer = styled.div<{ isHovered: boolean; stepStatus?: StepStatus }>`
+const StepContainer = styled.div<{
+  isHovered: boolean;
+  stepStatus?: StepStatus;
+}>`
   width: 100%;
   max-width: 100%;
   min-width: 0; /* 防止内容撑开 */
@@ -19,8 +34,13 @@ const StepContainer = styled.div<{ isHovered: boolean; stepStatus?: StepStatus }
   flex-direction: column;
   background-color: ${vscBackground};
   margin: 12px 0px; /* 减少垂直间距 */
-  transition: box-shadow 0.2s ease-in-out, opacity 0.2s ease-in-out;
-  box-shadow: ${({ isHovered }) => isHovered ? '0 6px 16px rgba(0, 0, 0, 0.12)' : '0 2px 4px rgba(0, 0, 0, 0.1)'};
+  transition:
+    box-shadow 0.2s ease-in-out,
+    opacity 0.2s ease-in-out;
+  box-shadow: ${({ isHovered }) =>
+    isHovered
+      ? "0 6px 16px rgba(0, 0, 0, 0.12)"
+      : "0 2px 4px rgba(0, 0, 0, 0.1)"};
   border-radius: 4px;
   overflow: hidden;
   box-sizing: border-box;
@@ -35,9 +55,9 @@ const StepContainer = styled.div<{ isHovered: boolean; stepStatus?: StepStatus }
 `;
 
 const ContentArea = styled.div<{ isVisible: boolean }>`
-  padding: ${({ isVisible }) => isVisible ? '2px' : '0'}; /* 减少内边距 */
+  padding: ${({ isVisible }) => (isVisible ? "2px" : "0")}; /* 减少内边距 */
   padding-top: 0;
-  display: ${({ isVisible }) => isVisible ? 'block' : 'none'};
+  display: ${({ isVisible }) => (isVisible ? "block" : "none")};
   transition: all 0.15s ease-in-out;
   width: 100%;
   max-width: 100%;
@@ -90,12 +110,12 @@ const AddQuestionButton = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
-  
+
   &:hover {
     background-color: rgba(255, 255, 255, 0.1);
     border-color: #007acc;
   }
-  
+
   &:active {
     background-color: rgba(255, 255, 255, 0.2);
   }
@@ -120,9 +140,18 @@ interface StepProps {
   onRerunStep?: (stepId: string) => void; // Callback for rerun step
   onStepEdit?: (stepId: string, newContent: string) => void; // Callback for step edit
   onStepStatusChange?: (stepId: string, newStatus: StepStatus) => void; // Callback for status change
-  onGenerateKnowledgeCardThemes?: (stepId: string, stepTitle: string, stepAbstract: string, learningGoal: string) => void; // Callback for generating knowledge card themes
+  onGenerateKnowledgeCardThemes?: (
+    stepId: string,
+    stepTitle: string,
+    stepAbstract: string,
+    learningGoal: string,
+  ) => void; // Callback for generating knowledge card themes
   onDisableKnowledgeCard?: (stepId: string, cardId: string) => void; // Callback for disabling knowledge card
-  onQuestionSubmit?: (stepId: string, selectedText: string, question: string) => void; // Callback for question submission
+  onQuestionSubmit?: (
+    stepId: string,
+    selectedText: string,
+    question: string,
+  ) => void; // Callback for question submission
   onRegisterRef?: (stepId: string, element: HTMLDivElement | null) => void; // Callback for registering step ref
   onStepExpansionChange?: (stepId: string, isExpanded: boolean) => void; // Callback for step expansion state change
   disabled?: boolean; // Optional disabled state for code edit mode
@@ -155,14 +184,19 @@ const Step: React.FC<StepProps> = ({
   disabled = false,
 }) => {
   const logger = useCodeAwareLogger();
-  const [isExpanded, setIsExpanded] = useState(forceExpanded || defaultExpanded);
+  const dispatch = useAppDispatch();
+  const [isExpanded, setIsExpanded] = useState(
+    forceExpanded || defaultExpanded,
+  );
   const [isFlickering, setIsFlickering] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [shouldKeepHighlighted, setShouldKeepHighlighted] = useState(false);
   const [showQuestionPopup, setShowQuestionPopup] = useState(false);
   const [isUserExpanding, setIsUserExpanding] = useState(false); // Track if user is actively expanding this step
   const [shouldCollapseCards, setShouldCollapseCards] = useState(false); // Signal to collapse all knowledge cards
-  const [currentlyExpandedCardId, setCurrentlyExpandedCardId] = useState<string | null>(null); // Track currently expanded knowledge card
+  const [currentlyExpandedCardId, setCurrentlyExpandedCardId] = useState<
+    string | null
+  >(null); // Track currently expanded knowledge card
   const flickerTimeoutRef = useRef<(NodeJS.Timeout | null)[]>([]);
 
   // Check if step is in editing mode based on stepStatus
@@ -191,14 +225,14 @@ const Step: React.FC<StepProps> = ({
     // Don't collapse if user is actively expanding this step
     if (shouldCollapse && isExpanded && !isUserExpanding) {
       setIsExpanded(false);
-      
+
       // Trigger knowledge cards collapse when step is externally collapsed
       setShouldCollapseCards(true);
       setTimeout(() => setShouldCollapseCards(false), 100); // Reset after brief delay
-      
+
       // Don't notify parent component about external collapse to avoid infinite loops
       // The parent already knows about this state change since it initiated it
-      
+
       // Clear local highlights when externally collapsed
       // Don't call onClearHighlight() as it clears ALL highlights globally
       setIsFlickering(false);
@@ -208,8 +242,8 @@ const Step: React.FC<StepProps> = ({
         if (timeout) clearTimeout(timeout);
       });
       flickerTimeoutRef.current = [];
-      
-      // Note: We don't call onClearHighlight() here because it would clear 
+
+      // Note: We don't call onClearHighlight() here because it would clear
       // highlights for the newly expanded step as well
     }
   }, [shouldCollapse, isExpanded, isUserExpanding]);
@@ -227,28 +261,37 @@ const Step: React.FC<StepProps> = ({
       // The title bar should always flicker to indicate highlighting
       setIsFlickering(true);
       setShouldKeepHighlighted(true); // Mark that we should keep highlighted after flickering
-      
+
       // Create a flickering effect with multiple flashes
       let timeoutIndex = 0;
       for (let i = 0; i < 3; i++) {
         // Turn off flickering
-        const timeoutOff = setTimeout(() => {
-          setIsFlickering(false);
-        }, 200 + (i * 400));
+        const timeoutOff = setTimeout(
+          () => {
+            setIsFlickering(false);
+          },
+          200 + i * 400,
+        );
         flickerTimeoutRef.current[timeoutIndex++] = timeoutOff;
-        
+
         // Turn on flickering
-        const timeoutOn = setTimeout(() => {
-          setIsFlickering(true);
-        }, 400 + (i * 400));
+        const timeoutOn = setTimeout(
+          () => {
+            setIsFlickering(true);
+          },
+          400 + i * 400,
+        );
         flickerTimeoutRef.current[timeoutIndex++] = timeoutOn;
       }
-      
+
       // Final timeout to turn off flickering but keep highlighted
-      const finalTimeout = setTimeout(() => {
-        setIsFlickering(false);
-        // Keep shouldKeepHighlighted as true to maintain the highlight
-      }, 200 + (3 * 400));
+      const finalTimeout = setTimeout(
+        () => {
+          setIsFlickering(false);
+          // Keep shouldKeepHighlighted as true to maintain the highlight
+        },
+        200 + 3 * 400,
+      );
       flickerTimeoutRef.current[timeoutIndex] = finalTimeout;
     } else {
       // When isHighlighted becomes false, clear both flickering and persistent highlight
@@ -275,34 +318,50 @@ const Step: React.FC<StepProps> = ({
   const handleToggle = async () => {
     const wasExpanded = isExpanded;
     const willBeExpanded = !isExpanded;
-    
+
     setIsExpanded(willBeExpanded);
-    
+
+    // 阶段2修改：点击标题时高亮，而不是展开时
+    if (stepId) {
+      // 设置高亮状态（不触发代码高亮）
+      dispatch(setHighlightedElement({ type: "step", id: stepId }));
+    }
+
     // Log step expansion/collapse events
     if (stepId) {
       if (willBeExpanded && !wasExpanded) {
         // Log step viewing start
         await logger.addLogEntry("user_view_and_highlight_step", {
           stepTitle: title,
-          stepContent: description ? (description.length > 200 ? description.substring(0, 200) + "..." : description) : "",
+          stepContent: description
+            ? description.length > 200
+              ? description.substring(0, 200) + "..."
+              : description
+            : "",
           highLevelStepIndex,
           stepStatus,
-          knowledgeCardsCount: knowledgeCards.filter(card => !card.disabled).length,
-          timestamp: new Date().toISOString()
+          knowledgeCardsCount: knowledgeCards.filter((card) => !card.disabled)
+            .length,
+          timestamp: new Date().toISOString(),
         });
       } else if (wasExpanded && !willBeExpanded) {
         // Log step viewing end
         await logger.addLogEntry("user_finished_viewing_step", {
           stepTitle: title,
-          stepContent: description ? (description.length > 200 ? description.substring(0, 200) + "..." : description) : "",
+          stepContent: description
+            ? description.length > 200
+              ? description.substring(0, 200) + "..."
+              : description
+            : "",
           highLevelStepIndex,
           stepStatus,
-          knowledgeCardsCount: knowledgeCards.filter(card => !card.disabled).length,
-          timestamp: new Date().toISOString()
+          knowledgeCardsCount: knowledgeCards.filter((card) => !card.disabled)
+            .length,
+          timestamp: new Date().toISOString(),
         });
       }
     }
-    
+
     // Set protection flag when user is expanding
     if (willBeExpanded && !wasExpanded) {
       setIsUserExpanding(true);
@@ -311,13 +370,13 @@ const Step: React.FC<StepProps> = ({
         setIsUserExpanding(false);
       }, 50); // Longer than the notification delay to ensure protection
     }
-    
+
     // If step is being collapsed, clear all highlights and immediately stop flickering
     if (wasExpanded) {
       // Trigger knowledge cards collapse when step is manually collapsed
       setShouldCollapseCards(true);
       setTimeout(() => setShouldCollapseCards(false), 100); // Reset after brief delay
-      
+
       // Immediately stop any flickering animation
       setIsFlickering(false);
       setShouldKeepHighlighted(false); // Clear persistent highlight when collapsing
@@ -326,21 +385,23 @@ const Step: React.FC<StepProps> = ({
         if (timeout) clearTimeout(timeout);
       });
       flickerTimeoutRef.current = [];
-      
+
       // Only clear global highlights when manually collapsing (user action)
       // This allows auto-collapse to work without interfering with new step highlights
       if (onClearHighlight) {
         onClearHighlight();
       }
     }
-    
+
+    // 阶段2修改：移除展开时的高亮触发
+    // 保留以前的注释以便理解
     // Trigger highlight event only when expanding from collapsed state
-    if (onHighlightEvent && stepId && willBeExpanded && !wasExpanded) {
-      onHighlightEvent({
-        sourceType: "step",
-        identifier: stepId,
-      });
-    }
+    // if (onHighlightEvent && stepId && willBeExpanded && !wasExpanded) {
+    //   onHighlightEvent({
+    //     sourceType: "step",
+    //     identifier: stepId,
+    //   });
+    // }
 
     // Notify parent component about expansion state change with a small delay
     // This ensures the highlight event is processed before other steps are collapsed
@@ -356,14 +417,18 @@ const Step: React.FC<StepProps> = ({
       }
     }
 
-    // Trigger knowledge card theme generation when expanding for the first time 
+    // Trigger knowledge card theme generation when expanding for the first time
     // and knowledge card generation status is "empty"
     // BUT NOT when the expansion is forced (e.g., from code selection question)
-    if (willBeExpanded && !wasExpanded && 
-        knowledgeCardGenerationStatus === "empty" && 
-        knowledgeCards.length === 0 &&
-        !forceExpanded && // Don't auto-generate when force expanded
-        stepId && onGenerateKnowledgeCardThemes) {
+    if (
+      willBeExpanded &&
+      !wasExpanded &&
+      knowledgeCardGenerationStatus === "empty" &&
+      knowledgeCards.length === 0 &&
+      !forceExpanded && // Don't auto-generate when force expanded
+      stepId &&
+      onGenerateKnowledgeCardThemes
+    ) {
       // Use setTimeout to ensure UI update happens first
       setTimeout(() => {
         onGenerateKnowledgeCardThemes(stepId, title, description, ""); // learningGoal will be passed from parent
@@ -396,14 +461,17 @@ const Step: React.FC<StepProps> = ({
       console.warn("⚠️ Step editing is disabled in code edit mode");
       return;
     }
-    
+
     // Log step editing start
     await logger.addLogEntry("user_start_edit_step_requirement", {
       stepTitle: title || "",
-      originalContent: description ? description.substring(0, 200) + (description.length > 200 ? "..." : "") : "",
-      timestamp: new Date().toISOString()
+      originalContent: description
+        ? description.substring(0, 200) +
+          (description.length > 200 ? "..." : "")
+        : "",
+      timestamp: new Date().toISOString(),
     });
-    
+
     // Trigger edit mode by changing status to "editing"
     if (stepId && onStepStatusChange) {
       onStepStatusChange(stepId, "editing");
@@ -415,19 +483,24 @@ const Step: React.FC<StepProps> = ({
       console.warn("⚠️ Step editing is disabled in code edit mode");
       return;
     }
-    
+
     // Log step editing submission
     await logger.addLogEntry("user_submit_step_requirement", {
       stepTitle: title || "",
-      originalContent: description ? description.substring(0, 200) + (description.length > 200 ? "..." : "") : "",
-      newContent: newContent ? newContent.substring(0, 200) + (newContent.length > 200 ? "..." : "") : "",
-      timestamp: new Date().toISOString()
+      originalContent: description
+        ? description.substring(0, 200) +
+          (description.length > 200 ? "..." : "")
+        : "",
+      newContent: newContent
+        ? newContent.substring(0, 200) + (newContent.length > 200 ? "..." : "")
+        : "",
+      timestamp: new Date().toISOString(),
     });
-    
+
     if (stepId && onStepEdit) {
       onStepEdit(stepId, newContent);
     }
-    
+
     // Note: We don't call onStepStatusChange here anymore because setStepAbstract
     // in the Redux slice will intelligently determine the correct status based on content changes
   };
@@ -438,7 +511,7 @@ const Step: React.FC<StepProps> = ({
 
   const handleQuestionSubmit = async (question: string) => {
     if (stepId && onQuestionSubmit) {
-      onQuestionSubmit(stepId, '', question); // Empty string for selectedText
+      onQuestionSubmit(stepId, "", question); // Empty string for selectedText
     }
     setShowQuestionPopup(false);
   };
@@ -447,20 +520,23 @@ const Step: React.FC<StepProps> = ({
     setShowQuestionPopup(false);
   };
 
-  const handleKnowledgeCardExpansionChange = async (cardId: string, isExpanded: boolean) => {
+  const handleKnowledgeCardExpansionChange = async (
+    cardId: string,
+    isExpanded: boolean,
+  ) => {
     console.log(`Knowledge Card ${cardId} expansion changed to: ${isExpanded}`);
-    
+
     if (isExpanded) {
       // When a knowledge card is expanded, set it as the currently expanded card
       setCurrentlyExpandedCardId(cardId);
     } else {
       // When a knowledge card is collapsed, clear the currently expanded card if it's this one
-      setCurrentlyExpandedCardId(prev => prev === cardId ? null : prev);
+      setCurrentlyExpandedCardId((prev) => (prev === cardId ? null : prev));
     }
   };
 
   return (
-    <StepContainer 
+    <StepContainer
       ref={(element) => {
         if (stepId && onRegisterRef) {
           onRegisterRef(stepId, element);
@@ -471,15 +547,18 @@ const Step: React.FC<StepProps> = ({
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      <StepTitleBar 
-        title={title} 
+      <StepTitleBar
+        title={title}
         highLevelStepIndex={highLevelStepIndex}
-        isActive={isActive} 
+        isActive={isActive}
         isExpanded={isExpanded}
         isHighlighted={isHighlighted || shouldKeepHighlighted}
         isFlickering={isFlickering}
         stepStatus={stepStatus}
-        isViewed={knowledgeCardGenerationStatus === "generating" || knowledgeCardGenerationStatus === "checked"}
+        isViewed={
+          knowledgeCardGenerationStatus === "generating" ||
+          knowledgeCardGenerationStatus === "checked"
+        }
         onToggle={handleToggle}
         onExecuteUntilStep={handleExecuteUntilStep}
         onRerunStep={handleRerunStep}
@@ -487,16 +566,22 @@ const Step: React.FC<StepProps> = ({
       />
       <ContentArea isVisible={isExpanded}>
         {isEditing ? (
-          <StepEditor 
-            markdownContent={description} 
+          <StepEditor
+            markdownContent={description}
             isVisible={isExpanded}
             onConfirm={handleConfirmEdit}
           />
         ) : (
-          <StepAbstract 
-            markdownContent={description} 
+          <StepAbstract
+            markdownContent={description}
             isVisible={isExpanded}
-            onEdit={stepStatus === "confirmed" || stepStatus === "generated" || stepStatus === "step_dirty" ? handleEditStep : undefined}
+            onEdit={
+              stepStatus === "confirmed" ||
+              stepStatus === "generated" ||
+              stepStatus === "step_dirty"
+                ? handleEditStep
+                : undefined
+            }
             onQuestionSubmit={(selectedText, question) => {
               if (stepId) {
                 onQuestionSubmit?.(stepId, selectedText, question);
@@ -504,18 +589,21 @@ const Step: React.FC<StepProps> = ({
             }}
           />
         )}
-        {knowledgeCards.filter(card => !card.disabled).length > 0 && (
+        {knowledgeCards.filter((card) => !card.disabled).length > 0 && (
           <KnowledgeCardsContainer isHovered={isHovered}>
             {knowledgeCards
-              .filter(cardProps => !cardProps.disabled)
+              .filter((cardProps) => !cardProps.disabled)
               .map((cardProps, index) => {
                 const cardId = cardProps.cardId || `card-${index}`;
-                const shouldCollapseThisCard = shouldCollapseCards || (currentlyExpandedCardId !== null && currentlyExpandedCardId !== cardId);
-                
+                const shouldCollapseThisCard =
+                  shouldCollapseCards ||
+                  (currentlyExpandedCardId !== null &&
+                    currentlyExpandedCardId !== cardId);
+
                 return (
-                  <KnowledgeCard 
-                    key={cardId} 
-                    {...cardProps} 
+                  <KnowledgeCard
+                    key={cardId}
+                    {...cardProps}
                     cardId={cardId}
                     shouldCollapse={shouldCollapseThisCard} // Pass collapse signal with auto-collapse logic
                     onHighlightEvent={onHighlightEvent}
@@ -533,7 +621,7 @@ const Step: React.FC<StepProps> = ({
             <KnowledgeCardLoader text="Generating knowledge card themes" />
           </KnowledgeCardLoaderContainer>
         )}
-        
+
         {/* Add Question Button - only show when not editing and knowledgeCardGenerationStatus is "checked" */}
         {knowledgeCardGenerationStatus === "ready" && (
           <AddQuestionButtonContainer>
@@ -543,7 +631,7 @@ const Step: React.FC<StepProps> = ({
           </AddQuestionButtonContainer>
         )}
       </ContentArea>
-      
+
       {/* Question Popup */}
       {showQuestionPopup && (
         <QuestionPopup

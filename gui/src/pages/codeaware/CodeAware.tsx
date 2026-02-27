@@ -266,16 +266,13 @@ export const CodeAware = () => {
 
   const steps = useAppSelector((state) => state.codeAwareSession.steps); // Get steps data
 
-  // 预先获取所有步骤的高级步骤索引，避免在 map 函数中使用 hook
-  const stepToHighLevelIndexMap = useAppSelector((state) => {
-    const mappings = state.codeAwareSession.stepToHighLevelMappings;
-    const map = new Map<string, number | null>();
-    steps.forEach((step) => {
-      const mapping = mappings.find((m) => m.stepId === step.id);
-      map.set(step.id, mapping ? mapping.highLevelStepIndex : null);
-    });
-    return map;
-  });
+  // 注意：stepToHighLevelMappings 已移除
+  // 未来将通过新的映射机制来确定步骤与高级步骤的关系
+  // 暂时使用空 Map
+  const stepToHighLevelIndexMap = useMemo(
+    () => new Map<string, number | null>(),
+    [],
+  );
 
   // 监听steps变化，同步给IDE
   useEffect(() => {
@@ -1000,7 +997,9 @@ export const CodeAware = () => {
       if (!contextToUse) {
         // 从mapping中查找与cardId绑定的code chunk
         const cardMappings = allMappings.filter(
-          (mapping) => mapping.knowledgeCardId === cardId,
+          (mapping) =>
+            mapping.semanticElementId === cardId &&
+            mapping.semanticElementType === "knowledgeCard",
         );
         console.log(
           `Found ${cardMappings.length} mappings for card ${cardId}:`,
@@ -1089,7 +1088,9 @@ export const CodeAware = () => {
       if (!contextToUse) {
         // 从mapping中查找与cardId绑定的code chunk
         const cardMappings = allMappings.filter(
-          (mapping) => mapping.knowledgeCardId === cardId,
+          (mapping) =>
+            mapping.semanticElementId === cardId &&
+            mapping.semanticElementType === "knowledgeCard",
         );
         console.log(
           `Found ${cardMappings.length} mappings for card ${cardId}:`,

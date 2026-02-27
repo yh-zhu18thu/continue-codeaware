@@ -11,7 +11,6 @@ import {
   ProgramRequirement,
   StepItem,
   StepStatus,
-  StepToHighLevelMapping,
 } from "core";
 import { v4 as uuidv4 } from "uuid";
 
@@ -45,14 +44,22 @@ export type CodeAwareSessionState = {
   learningGoal: string;
   //高级步骤列表
   highLevelSteps: HighLevelStepItem[];
-  //步骤与高级步骤的对应关系
-  stepToHighLevelMappings: StepToHighLevelMapping[];
   //当前的flow
   steps: StepItem[];
   //当前的代码块
   codeChunks: CodeChunk[];
   //存储所有的Mapping，用于查找和触发相关元素的高亮，各个元素的高亮写在元素之中
   codeAwareMappings: CodeAwareMapping[];
+  // 映射查找状态
+  mappingLookup: {
+    isLoading: boolean;
+    lastQuery?: {
+      type: "code" | "semantic";
+      elementId: string;
+      timestamp: number;
+    };
+    error?: string;
+  };
   // IDE communication flags
   shouldClearIdeHighlights: boolean;
   codeChunksToHighlightInIde: CodeChunk[];
@@ -82,10 +89,14 @@ const initialCodeAwareState: CodeAwareSessionState = {
   },
   learningGoal: "",
   highLevelSteps: [],
-  stepToHighLevelMappings: [],
   steps: [],
   codeChunks: [],
   codeAwareMappings: [],
+  mappingLookup: {
+    isLoading: false,
+    lastQuery: undefined,
+    error: undefined,
+  },
   shouldClearIdeHighlights: false,
   codeChunksToHighlightInIde: [],
   codeGeneration: {
@@ -249,7 +260,6 @@ export const codeAwareSessionSlice = createSlice({
       };
       state.learningGoal = "";
       state.highLevelSteps = [];
-      state.stepToHighLevelMappings = [];
       state.steps = [];
       state.codeAwareMappings = [];
       state.codeChunks = [];
@@ -257,10 +267,7 @@ export const codeAwareSessionSlice = createSlice({
       state.codeChunksToHighlightInIde = [];
     },
     clearAllHighlights: (state) => {
-      // Reset highlight status for all mappings
-      state.codeAwareMappings.forEach((mapping) => {
-        mapping.isHighlighted = false;
-      });
+      // 注意：映射不再存储高亮状态，只需清除元素本身的高亮
       // Reset highlight status for all code chunks
       state.codeChunks.forEach((chunk) => {
         chunk.isHighlighted = false;
@@ -297,9 +304,7 @@ export const codeAwareSessionSlice = createSlice({
       const { type, id } = action.payload;
 
       // 清除所有现有高亮（但不清除 IDE 高亮）
-      state.codeAwareMappings.forEach((mapping) => {
-        mapping.isHighlighted = false;
-      });
+      // 注意：映射不再存储高亮状态
       state.codeChunks.forEach((chunk) => {
         chunk.isHighlighted = false;
       });
@@ -316,7 +321,7 @@ export const codeAwareSessionSlice = createSlice({
         })),
       }));
 
-      // 设置新的高亮元素（带双向关联）
+      // 设置新的高亮元素
       if (type === "highLevelStep") {
         // 高亮 high-level step
         const stepIndex = state.highLevelSteps.findIndex((s) => s.id === id);
@@ -326,26 +331,7 @@ export const codeAwareSessionSlice = createSlice({
             isHighlighted: true,
           };
 
-          // 找到所有关联的 steps 并高亮它们（触发滚动和闪烁）
-          const relatedMappings = state.stepToHighLevelMappings.filter(
-            (m) => m.highLevelStepId === id,
-          );
-
-          relatedMappings.forEach((mapping) => {
-            const relatedStepIndex = state.steps.findIndex(
-              (s) => s.id === mapping.stepId,
-            );
-            if (relatedStepIndex !== -1) {
-              state.steps[relatedStepIndex] = {
-                ...state.steps[relatedStepIndex],
-                isHighlighted: true,
-              };
-            }
-          });
-
-          console.log(
-            `🎯 Highlighted high-level step ${id} and ${relatedMappings.length} related steps`,
-          );
+          console.log(`🎯 Highlighted high-level step ${id}`);
         }
       } else if (type === "step") {
         // 高亮 step
@@ -356,25 +342,7 @@ export const codeAwareSessionSlice = createSlice({
             isHighlighted: true,
           };
 
-          // 找到关联的 high-level step 并高亮它（触发闪烁）
-          const relatedMapping = state.stepToHighLevelMappings.find(
-            (m) => m.stepId === id,
-          );
-
-          if (relatedMapping) {
-            const hlStepIndex = state.highLevelSteps.findIndex(
-              (s) => s.id === relatedMapping.highLevelStepId,
-            );
-            if (hlStepIndex !== -1) {
-              state.highLevelSteps[hlStepIndex] = {
-                ...state.highLevelSteps[hlStepIndex],
-                isHighlighted: true,
-              };
-              console.log(
-                `🎯 Highlighted step ${id} and related high-level step ${relatedMapping.highLevelStepId}`,
-              );
-            }
-          }
+          console.log(`🎯 Highlighted step ${id}`);
         }
       } else if (type === "knowledgeCard") {
         for (let i = 0; i < state.steps.length; i++) {
@@ -408,305 +376,21 @@ export const codeAwareSessionSlice = createSlice({
       state,
       action: PayloadAction<HighlightEvent | HighlightEvent[]>,
     ) => {
-      // 统一处理单个或多个事件，保持向后兼容性
+      // TODO: 重新实现此函数以适配新的映射机制
+      // 注意：此函数已暂时简化，等待重新实现
+      // 原逻辑依赖于旧的 CodeAwareMapping 结构，现已更新
       const events = Array.isArray(action.payload)
         ? action.payload
         : [action.payload];
 
-      // 收集所有匹配的mappings
-      let allMatchedMappings: CodeAwareMapping[] = [];
+      console.log("updateHighlight: 功能暂时简化，等待重新实现", events);
 
-      // 处理每个事件
-      events.forEach(({ sourceType, identifier, additionalInfo }) => {
-        // Find all mappings that match the highlight event
-        let matchedMappings: CodeAwareMapping[] = [];
-
-        // First, try to match by identifier - collect all matching mappings
-        for (const mapping of state.codeAwareMappings) {
-          let isMatch = false;
-
-          switch (sourceType) {
-            case "code":
-              isMatch = mapping.codeChunkId === identifier;
-              break;
-            case "highLevelStep":
-              isMatch = mapping.highLevelStepId === identifier;
-              break;
-            case "step":
-              isMatch = mapping.stepId === identifier;
-              break;
-            case "knowledgeCard":
-              isMatch = mapping.knowledgeCardId === identifier;
-              break;
-          }
-
-          if (isMatch) {
-            matchedMappings.push(mapping);
-          }
-        }
-
-        // If no match found by identifier and sourceType is "code", try meta search using additionalInfo
-        if (
-          matchedMappings.length === 0 &&
-          sourceType === "code" &&
-          additionalInfo
-        ) {
-          const codeInfo = additionalInfo as CodeChunk;
-
-          // Search through code chunks to find a match by line range and content
-          for (const codeChunk of state.codeChunks) {
-            // Check if line ranges overlap or match
-            const rangesOverlap =
-              codeInfo.range[0] <= codeChunk.range[1] &&
-              codeInfo.range[1] >= codeChunk.range[0];
-
-            // Check if content matches (partial match allowed)
-            const contentMatches =
-              codeChunk.content.includes(codeInfo.content) ||
-              codeInfo.content.includes(codeChunk.content);
-
-            if (rangesOverlap && contentMatches) {
-              // Find all mappings for this code chunk
-              const foundMappings = state.codeAwareMappings.filter(
-                (mapping) => mapping.codeChunkId === codeChunk.id,
-              );
-              matchedMappings.push(...foundMappings);
-            }
-          }
-        }
-
-        // 将匹配的mappings添加到总列表中，避免重复
-        matchedMappings.forEach((mapping) => {
-          if (
-            !allMatchedMappings.some(
-              (m) =>
-                m.codeChunkId === mapping.codeChunkId &&
-                m.highLevelStepId === mapping.highLevelStepId &&
-                m.stepId === mapping.stepId &&
-                m.knowledgeCardId === mapping.knowledgeCardId,
-            )
-          ) {
-            allMatchedMappings.push(mapping);
-          }
-        });
-      });
-
-      console.log(
-        `Found ${allMatchedMappings.length} matched mappings for highlight events.`,
-      );
-      console.log("Matched mappings:", allMatchedMappings);
-      console.log("🔍 Processing events:", events);
-
-      // 特殊处理：如果是step类型的事件但没有找到映射关系，直接高亮步骤
-      events.forEach(({ sourceType, identifier }) => {
-        if (sourceType === "step") {
-          const stepIndex = state.steps.findIndex(
-            (step) => step.id === identifier,
-          );
-          if (stepIndex !== -1) {
-            // 确保步骤被加入到高亮列表中，即使没有映射关系
-            const hasStepMapping = allMatchedMappings.some(
-              (mapping) => mapping.stepId === identifier,
-            );
-            if (!hasStepMapping) {
-              console.log(
-                `🎯 No mapping found for step ${identifier}, but will highlight step directly`,
-              );
-              // 创建一个虚拟的映射来确保步骤被高亮
-              allMatchedMappings.push({
-                stepId: identifier,
-                isHighlighted: false,
-              });
-            }
-          }
-        }
-      });
-
-      // If mappings are found, update highlight status of all elements within them
-      if (allMatchedMappings.length > 0) {
-        // Clear all existing highlights using the dedicated reducer
-        codeAwareSessionSlice.caseReducers.clearAllHighlights(state);
-
-        // Collect unique IDs from all matched mappings to avoid duplicate highlighting
-        const codeChunkIds = new Set<string>();
-        const highLevelStepIds = new Set<string>();
-        const stepIds = new Set<string>();
-        const knowledgeCardIds = new Set<string>();
-
-        allMatchedMappings.forEach((mapping) => {
-          if (mapping.codeChunkId) codeChunkIds.add(mapping.codeChunkId);
-          if (mapping.highLevelStepId)
-            highLevelStepIds.add(mapping.highLevelStepId);
-          if (mapping.stepId) stepIds.add(mapping.stepId);
-          if (mapping.knowledgeCardId)
-            knowledgeCardIds.add(mapping.knowledgeCardId);
-        });
-
-        console.log("🎯 IDs to highlight:", {
-          codeChunkIds: Array.from(codeChunkIds),
-          highLevelStepIds: Array.from(highLevelStepIds),
-          stepIds: Array.from(stepIds),
-          knowledgeCardIds: Array.from(knowledgeCardIds),
-        });
-
-        // Collect code chunks to highlight in IDE
-        const codeChunksForIde: CodeChunk[] = [];
-
-        console.log("code chunks", state.codeChunks);
-        console.log(
-          "Available code chunks:",
-          state.codeChunks.map((c) => ({
-            id: c.id,
-            content: c.content.substring(0, 50),
-          })),
-        );
-
-        // Update code chunk highlights
-        codeChunkIds.forEach((codeChunkId) => {
-          const codeChunk = state.codeChunks.find(
-            (chunk) => chunk.id === codeChunkId,
-          );
-          console.log(
-            `Highlighting code chunk: ${codeChunkId}, found:`,
-            !!codeChunk,
-          );
-          if (codeChunk && !codeChunk.disabled) {
-            // 跳过被禁用的代码块
-            codeChunk.isHighlighted = true;
-            codeChunksForIde.push(codeChunk);
-          } else if (codeChunk && codeChunk.disabled) {
-            console.log(
-              `Code chunk ${codeChunkId} is disabled, skipping highlight`,
-            );
-          } else {
-            console.warn(
-              `Code chunk with id ${codeChunkId} not found in state.codeChunks`,
-            );
-          }
-        });
-
-        console.log("Code chunks to highlight in IDE:", codeChunksForIde);
-
-        // Set code chunks to highlight in IDE
-        state.codeChunksToHighlightInIde = codeChunksForIde;
-        state.shouldClearIdeHighlights = false;
-
-        // Update high level steps highlights
-        highLevelStepIds.forEach((highLevelStepId) => {
-          const highLevelStepIndex = state.highLevelSteps.findIndex(
-            (step) => step.id === highLevelStepId,
-          );
-          if (highLevelStepIndex !== -1) {
-            console.log(
-              `🎯 Highlighting high level step ${highLevelStepId} at index:`,
-              highLevelStepIndex,
-            );
-            state.highLevelSteps[highLevelStepIndex] = {
-              ...state.highLevelSteps[highLevelStepIndex],
-              isHighlighted: true,
-            };
-          }
-        });
-
-        // Update step highlights
-        stepIds.forEach((stepId) => {
-          const stepIndex = state.steps.findIndex((step) => step.id === stepId);
-          console.log(
-            `🎯 Trying to highlight step ${stepId}, found at index:`,
-            stepIndex,
-          );
-          if (stepIndex !== -1) {
-            console.log(
-              `🎯 Before highlight - step ${stepId} isHighlighted:`,
-              state.steps[stepIndex].isHighlighted,
-            );
-            // Create a new step object to ensure React detects the change
-            state.steps[stepIndex] = {
-              ...state.steps[stepIndex],
-              isHighlighted: true,
-            };
-            console.log(
-              `🎯 After highlight - step ${stepId} isHighlighted:`,
-              state.steps[stepIndex].isHighlighted,
-            );
-          } else {
-            console.warn(`🎯 Step ${stepId} not found in steps array`);
-          }
-        });
-
-        // Update knowledge card highlights (只有当事件中包含 code 或 knowledgeCard 源时才更新)
-        const hasCodeOrKnowledgeCardSource = events.some(
-          (event) =>
-            event.sourceType === "code" || event.sourceType === "knowledgeCard",
-        );
-
-        if (hasCodeOrKnowledgeCardSource) {
-          knowledgeCardIds.forEach((knowledgeCardId) => {
-            for (const step of state.steps) {
-              const knowledgeCard = step.knowledgeCards.find(
-                (card) => card.id === knowledgeCardId,
-              );
-              if (knowledgeCard) {
-                knowledgeCard.isHighlighted = true;
-                break; // Found the knowledge card, no need to continue searching
-              }
-            }
-          });
-        }
-
-        // Update all matched mappings' highlight status
-        allMatchedMappings.forEach((mapping) => {
-          mapping.isHighlighted = true;
-        });
-
-        console.log("✨ Highlight update completed");
-      } else {
-        // 如果没有找到任何映射关系，但有step事件，仍然需要高亮步骤
-        const stepOnlyEvents = events.filter(
-          (event) => event.sourceType === "step",
-        );
-        if (stepOnlyEvents.length > 0) {
-          console.log("🎯 No mappings found, but highlighting steps directly");
-
-          // Clear all existing highlights first
-          codeAwareSessionSlice.caseReducers.clearAllHighlights(state);
-
-          stepOnlyEvents.forEach(({ identifier }) => {
-            const stepIndex = state.steps.findIndex(
-              (step) => step.id === identifier,
-            );
-            console.log(
-              `🎯 Trying to highlight step ${identifier} directly, found at index:`,
-              stepIndex,
-            );
-            if (stepIndex !== -1) {
-              console.log(
-                `🎯 Before direct highlight - step ${identifier} isHighlighted:`,
-                state.steps[stepIndex].isHighlighted,
-              );
-              state.steps[stepIndex] = {
-                ...state.steps[stepIndex],
-                isHighlighted: true,
-              };
-              console.log(
-                `🎯 After direct highlight - step ${identifier} isHighlighted:`,
-                state.steps[stepIndex].isHighlighted,
-              );
-            }
-          });
-        }
-      }
+      // 暂时清除所有高亮
+      codeAwareSessionSlice.caseReducers.clearAllHighlights(state);
     },
     // 设置高级步骤
     setHighLevelSteps: (state, action: PayloadAction<HighLevelStepItem[]>) => {
       state.highLevelSteps = action.payload;
-    },
-    // 设置步骤与高级步骤的映射关系
-    setStepToHighLevelMappings: (
-      state,
-      action: PayloadAction<StepToHighLevelMapping[]>,
-    ) => {
-      state.stepToHighLevelMappings = action.payload;
     },
     // 更新高级步骤的完成状态
     updateHighLevelStepCompletion: (
@@ -754,13 +438,13 @@ export const codeAwareSessionSlice = createSlice({
       const existingMappingsSet = new Set(
         state.codeAwareMappings.map(
           (mapping) =>
-            `${mapping.codeChunkId || ""}-${mapping.highLevelStepId || ""}-${mapping.stepId || ""}-${mapping.knowledgeCardId || ""}`,
+            `${mapping.codeChunkId}-${mapping.semanticElementId}-${mapping.semanticElementType}`,
         ),
       );
 
       // 过滤出不重复的 mapping
       const newMappings = action.payload.filter((newMapping) => {
-        const mappingKey = `${newMapping.codeChunkId || ""}-${newMapping.highLevelStepId || ""}-${newMapping.stepId || ""}-${newMapping.knowledgeCardId || ""}`;
+        const mappingKey = `${newMapping.codeChunkId}-${newMapping.semanticElementId}-${newMapping.semanticElementType}`;
         return !existingMappingsSet.has(mappingKey);
       });
 
@@ -1080,19 +764,17 @@ export const codeAwareSessionSlice = createSlice({
     removeCodeAwareMappings: (
       state,
       action: PayloadAction<{
-        stepId?: string;
-        knowledgeCardId?: string;
+        semanticElementId?: string;
         codeChunkId?: string;
       }>,
     ) => {
-      const { stepId, knowledgeCardId, codeChunkId } = action.payload;
+      const { semanticElementId, codeChunkId } = action.payload;
       state.codeAwareMappings = state.codeAwareMappings.filter((mapping) => {
-        // 如果指定了stepId，删除所有包含该stepId的映射
-        if (stepId && mapping.stepId === stepId) {
-          return false;
-        }
-        // 如果指定了knowledgeCardId，删除所有包含该knowledgeCardId的映射
-        if (knowledgeCardId && mapping.knowledgeCardId === knowledgeCardId) {
+        // 如果指定了semanticElementId，删除所有包含该ID的映射
+        if (
+          semanticElementId &&
+          mapping.semanticElementId === semanticElementId
+        ) {
           return false;
         }
         // 如果指定了codeChunkId，删除所有包含该codeChunkId的映射
@@ -1102,15 +784,11 @@ export const codeAwareSessionSlice = createSlice({
         return true;
       });
     },
-    // 清除所有知识卡片的代码映射（保留步骤到需求的映射）
+    // 清除所有知识卡片的代码映射（保留highLevelStep映射）
     clearKnowledgeCardCodeMappings: (state) => {
       state.codeAwareMappings = state.codeAwareMappings.filter((mapping) => {
-        // 保留不包含知识卡片ID或代码块ID的映射（即步骤到高阶需求的映射）
-        return (
-          !mapping.knowledgeCardId &&
-          !mapping.codeChunkId &&
-          mapping.highLevelStepId
-        );
+        // 保留 highLevelStep 类型的映射
+        return mapping.semanticElementType === "highLevelStep";
       });
     },
     resetSessionExceptRequirement: (state) => {
@@ -1118,7 +796,6 @@ export const codeAwareSessionSlice = createSlice({
       codeAwareSessionSlice.caseReducers.clearAllHighlights(state);
       // Reset everything except userRequirement and currentSessionId
       state.highLevelSteps = [];
-      state.stepToHighLevelMappings = [];
       state.steps = [];
       state.codeChunks = [];
       state.codeAwareMappings = [];
@@ -1215,14 +892,12 @@ export const codeAwareSessionSlice = createSlice({
       // Clear all code chunks
       state.codeChunks = [];
 
-      // Clear all code-related mappings (keep step-to-high-level-step mappings)
+      // Clear all code-related mappings (keep highLevelStep-only mappings)
       state.codeAwareMappings = state.codeAwareMappings.filter(
         (mapping) =>
-          // 保留只包含stepId和highLevelStepId的映射（步骤到高阶需求的映射）
-          mapping.stepId &&
-          mapping.highLevelStepId &&
-          !mapping.codeChunkId &&
-          !mapping.knowledgeCardId,
+          // 保留 highLevelStep 类型的映射（不涉及代码）
+          mapping.semanticElementType === "highLevelStep" &&
+          !mapping.codeChunkId,
       );
 
       // Clear code chunks to highlight in IDE
@@ -1371,21 +1046,6 @@ export const selectHighLevelSteps = createSelector(
   (highLevelSteps): HighLevelStepItem[] => highLevelSteps || [],
 );
 
-// 选择步骤到高级步骤的映射关系
-export const selectStepToHighLevelMappings = createSelector(
-  (state: RootState) => state.codeAwareSession.stepToHighLevelMappings,
-  (mappings): StepToHighLevelMapping[] => mappings || [],
-);
-
-// 为给定步骤 ID 查找对应的高级步骤序号
-export const selectHighLevelStepIndexForStep = createSelector(
-  [selectStepToHighLevelMappings, (_: RootState, stepId: string) => stepId],
-  (mappings, stepId): number | null => {
-    const mapping = mappings.find((m) => m.stepId === stepId);
-    return mapping ? mapping.highLevelStepIndex : null;
-  },
-);
-
 export const {
   setUserRequirementStatus,
   submitRequirementContent,
@@ -1398,7 +1058,6 @@ export const {
   clearAllCodeAwareMappings,
   updateHighlight,
   setHighLevelSteps,
-  setStepToHighLevelMappings,
   updateHighLevelStepCompletion,
   updateCodeChunks,
   updateCodeChunkRange,

@@ -5,7 +5,6 @@ import {
   HighLevelStepItem,
   ProgramRequirement,
   StepItem,
-  StepToHighLevelMapping,
 } from "core";
 import {
   constructEvaluateSaqAnswerPrompt,
@@ -16,7 +15,6 @@ import {
   constructGenerateKnowledgeCardThemesPrompt,
   constructGenerateStepsPrompt,
   constructGlobalQuestionPrompt,
-  constructMapKnowledgeCardsToCodePrompt,
   constructParaphraseUserIntentPrompt,
   constructProcessCodeChangesPrompt,
 } from "../../../../core/llm/codeAwarePrompts";
@@ -24,14 +22,11 @@ import {
   clearAllCodeAwareMappings,
   clearAllCodeChunks,
   clearKnowledgeCardCodeMappings,
-  createCodeAwareMapping,
   createKnowledgeCard,
   createOrGetCodeChunk,
-  removeCodeAwareMappings,
   resetKnowledgeCardContent,
   selectTestByTestId,
   setCodeAwareTitle,
-  setCodeChunkDisabled,
   setGeneratedSteps,
   setHighLevelSteps,
   setKnowledgeCardError,
@@ -43,11 +38,9 @@ import {
   setStepAbstract,
   setStepStatus,
   setStepTitle,
-  setStepToHighLevelMappings,
   setUserRequirementStatus,
   submitRequirementContent,
   updateCodeAwareMappings,
-  updateHighLevelStepCompletion,
   updateHighlight,
   updateKnowledgeCardContent,
   updateKnowledgeCardTests,
@@ -61,6 +54,7 @@ import {
 import { ThunkApiType } from "../store";
 
 // 辅助函数：检查并更新高级步骤的完成状态
+// TODO: 重新实现此函数以适配新的映射机制
 export const checkAndUpdateHighLevelStepCompletion = createAsyncThunk<
   void,
   void,
@@ -68,34 +62,10 @@ export const checkAndUpdateHighLevelStepCompletion = createAsyncThunk<
 >(
   "codeAware/checkAndUpdateHighLevelStepCompletion",
   async (_, { dispatch, getState }) => {
-    const state = getState();
-    const steps = state.codeAwareSession.steps;
-    const stepToHighLevelMappings =
-      state.codeAwareSession.stepToHighLevelMappings;
-    const highLevelSteps = state.codeAwareSession.highLevelSteps;
-
-    // 为每个高级步骤检查其对应的所有步骤是否都已生成
-    highLevelSteps.forEach((highLevelStep) => {
-      const relatedSteps = stepToHighLevelMappings
-        .filter((mapping) => mapping.highLevelStepId === highLevelStep.id)
-        .map((mapping) => steps.find((step) => step.id === mapping.stepId))
-        .filter((step) => step !== undefined);
-
-      // 判断该高级步骤是否完成：所有相关步骤状态为 "generated"
-      const isCompleted =
-        relatedSteps.length > 0 &&
-        relatedSteps.every((step) => step!.stepStatus === "generated");
-
-      // 如果完成状态发生变化，更新状态
-      if (isCompleted !== highLevelStep.isCompleted) {
-        dispatch(
-          updateHighLevelStepCompletion({
-            highLevelStepId: highLevelStep.id,
-            isCompleted,
-          }),
-        );
-      }
-    });
+    // 注意：此函数已暂时禁用，等待重新实现
+    // 原逻辑依赖于 stepToHighLevelMappings，现已移除
+    // 未来将通过新的映射机制或其他方式来确定完成状态
+    console.log("checkAndUpdateHighLevelStepCompletion: 功能暂时禁用");
   },
 );
 
@@ -744,101 +714,104 @@ export async function getStepCorrespondingCode(
   codeChunks: any[],
   ideMessenger: any,
 ): Promise<string> {
+  // TODO: [映射重构] 此函数需要重新实现以适配新的 CodeAwareMapping 结构
   // 找到包含当前step_id的所有映射
-  const stepMappings = mappings.filter((mapping) => mapping.stepId === stepId);
+  // const stepMappings = mappings.filter((mapping) => mapping.stepId === stepId);
+  // if (stepMappings.length === 0) {
+  //   return "";
+  // }
+  console.warn("[映射重构] getStepCorrespondingCode 功能暂时禁用");
+  return "";
 
-  if (stepMappings.length === 0) {
-    return "";
-  }
+  // TODO: [映射重构] 以下代码需要重新实现
+  // // 获取所有对应的代码块
+  // const correspondingCodeChunks = stepMappings
+  //   .map((mapping) =>
+  //     codeChunks.find((chunk) => chunk.id === mapping.codeChunkId),
+  //   )
+  //   .filter((chunk) => chunk !== undefined);
 
-  // 获取所有对应的代码块
-  const correspondingCodeChunks = stepMappings
-    .map((mapping) =>
-      codeChunks.find((chunk) => chunk.id === mapping.codeChunkId),
-    )
-    .filter((chunk) => chunk !== undefined);
+  // if(correspondingCodeChunks.length === 0) {
+  //   return "";
+  // }
 
-  if (correspondingCodeChunks.length === 0) {
-    return "";
-  }
+  // // 按范围起始行号排序，确保代码片段按在文件中的顺序排列
+  // correspondingCodeChunks.sort((a, b) => a.range[0] - b.range[0]);
 
-  // 按范围起始行号排序，确保代码片段按在文件中的顺序排列
-  correspondingCodeChunks.sort((a, b) => a.range[0] - b.range[0]);
+  // // 尝试从当前IDE文件获取最新内容，以确保代码是最新的
+  // let allCodeSnippets: string[] = [];
 
-  // 尝试从当前IDE文件获取最新内容，以确保代码是最新的
-  let allCodeSnippets: string[] = [];
+  // try {
+  //   const currentFileResponse = await ideMessenger.request(
+  //     "getCurrentFile",
+  //     undefined,
+  //   );
 
-  try {
-    const currentFileResponse = await ideMessenger.request(
-      "getCurrentFile",
-      undefined,
-    );
+  //   if (
+  //     currentFileResponse?.status === "success" &&
+  //     currentFileResponse.content
+  //   ) {
+  //     const currentFile = currentFileResponse.content;
+  //     const fileLines = currentFile.contents
+  //       ? currentFile.contents.split("\n")
+  //       : [];
 
-    if (
-      currentFileResponse?.status === "success" &&
-      currentFileResponse.content
-    ) {
-      const currentFile = currentFileResponse.content;
-      const fileLines = currentFile.contents
-        ? currentFile.contents.split("\n")
-        : [];
+  //     // 为每个代码块获取最新内容
+  //     for (const chunk of correspondingCodeChunks) {
+  //       // 如果文件路径匹配，从当前文件内容中提取对应行号的代码
+  //       if (currentFile.path === chunk.filePath && fileLines.length > 0) {
+  //         const startLine = Math.max(0, chunk.range[0] - 1); // 转换为0基索引
+  //         const endLine = Math.min(fileLines.length, chunk.range[1]); // 确保不超出范围
 
-      // 为每个代码块获取最新内容
-      for (const chunk of correspondingCodeChunks) {
-        // 如果文件路径匹配，从当前文件内容中提取对应行号的代码
-        if (currentFile.path === chunk.filePath && fileLines.length > 0) {
-          const startLine = Math.max(0, chunk.range[0] - 1); // 转换为0基索引
-          const endLine = Math.min(fileLines.length, chunk.range[1]); // 确保不超出范围
+  //         const currentCode = fileLines.slice(startLine, endLine).join("\n");
+  //         allCodeSnippets.push(currentCode);
 
-          const currentCode = fileLines.slice(startLine, endLine).join("\n");
-          allCodeSnippets.push(currentCode);
+  //         console.log(
+  //           `📖 从当前文件获取步骤 ${stepId} 代码片段 ${chunk.id} (行${chunk.range[0]}-${chunk.range[1]}):`,
+  //           currentCode.substring(0, 100) +
+  //             (currentCode.length > 100 ? "..." : ""),
+  //         );
+  //       } else {
+  //         // 如果文件路径不匹配或没有文件内容，使用缓存的代码块内容
+  //         allCodeSnippets.push(chunk.content);
+  //         console.log(
+  //           `📖 使用缓存的代码块内容 ${chunk.id}:`,
+  //           chunk.content.substring(0, 100) +
+  //             (chunk.content.length > 100 ? "..." : ""),
+  //         );
+  //       }
+  //     }
+  //   } else {
+  //     // 如果无法获取当前文件，使用所有缓存的代码块内容
+  //     allCodeSnippets = correspondingCodeChunks.map((chunk) => chunk.content);
+  //     console.warn("⚠️ 无法从IDE获取当前文件内容，使用所有缓存的代码块内容");
+  //   }
+  // } catch (error) {
+  //   console.warn(
+  //     "⚠️ 无法从IDE获取当前文件内容，使用所有缓存的代码块内容:",
+  //     error,
+  //   );
+  //   allCodeSnippets = correspondingCodeChunks.map((chunk) => chunk.content);
+  // }
 
-          console.log(
-            `📖 从当前文件获取步骤 ${stepId} 代码片段 ${chunk.id} (行${chunk.range[0]}-${chunk.range[1]}):`,
-            currentCode.substring(0, 100) +
-              (currentCode.length > 100 ? "..." : ""),
-          );
-        } else {
-          // 如果文件路径不匹配或没有文件内容，使用缓存的代码块内容
-          allCodeSnippets.push(chunk.content);
-          console.log(
-            `📖 使用缓存的代码块内容 ${chunk.id}:`,
-            chunk.content.substring(0, 100) +
-              (chunk.content.length > 100 ? "..." : ""),
-          );
-        }
-      }
-    } else {
-      // 如果无法获取当前文件，使用所有缓存的代码块内容
-      allCodeSnippets = correspondingCodeChunks.map((chunk) => chunk.content);
-      console.warn("⚠️ 无法从IDE获取当前文件内容，使用所有缓存的代码块内容");
-    }
-  } catch (error) {
-    console.warn(
-      "⚠️ 无法从IDE获取当前文件内容，使用所有缓存的代码块内容:",
-      error,
-    );
-    allCodeSnippets = correspondingCodeChunks.map((chunk) => chunk.content);
-  }
+  // // 将所有代码片段合并，用适当的分隔符分开
+  // if (allCodeSnippets.length === 0) {
+  //   return "";
+  // } else if (allCodeSnippets.length === 1) {
+  //   return allCodeSnippets[0];
+  // } else {
+  //   // 多个代码片段时，用注释和空行分隔
+  //   const combinedCode = allCodeSnippets
+  //     .map((snippet, index) => {
+  //       return `// --- 代码片段 ${index + 1} ---\n${snippet}`;
+  //     })
+  //     .join("\n\n");
 
-  // 将所有代码片段合并，用适当的分隔符分开
-  if (allCodeSnippets.length === 0) {
-    return "";
-  } else if (allCodeSnippets.length === 1) {
-    return allCodeSnippets[0];
-  } else {
-    // 多个代码片段时，用注释和空行分隔
-    const combinedCode = allCodeSnippets
-      .map((snippet, index) => {
-        return `// --- 代码片段 ${index + 1} ---\n${snippet}`;
-      })
-      .join("\n\n");
-
-    console.log(
-      `📦 合并了 ${allCodeSnippets.length} 个代码片段，总长度: ${combinedCode.length}`,
-    );
-    return combinedCode;
-  }
+  //   console.log(
+  //     `📦 合并了 ${allCodeSnippets.length} 个代码片段，总长度: ${combinedCode.length}`,
+  //   );
+  //   return combinedCode;
+  // }
 }
 
 //异步对用户需求和当前知识状态进行生成
@@ -970,7 +943,6 @@ export const generateStepsFromRequirement = createAsyncThunk<
       let parsedSteps: StepItem[] = [];
       let initialMappings: CodeAwareMapping[] = [];
       let highLevelStepItems: HighLevelStepItem[] = [];
-      let stepToHighLevelMappings: StepToHighLevelMapping[] = [];
       let learningGoal = "";
       let title = "";
       let highLevelSteps: string[] = [];
@@ -1014,32 +986,11 @@ export const generateStepsFromRequirement = createAsyncThunk<
               knowledgeCardGenerationStatus: "empty", // 初始状态为 empty
             });
 
-            // 为每个step的对应high-level task创建映射
-            if (taskCorrespondingHighLevelTask) {
-              // 找到对应的高级步骤
-              const correspondingIndex = highLevelSteps.findIndex(
-                (highLevelStep) =>
-                  highLevelStep === taskCorrespondingHighLevelTask,
-              );
-
-              if (correspondingIndex !== -1) {
-                const highLevelStepId = `r-${correspondingIndex + 1}`;
-
-                // 创建步骤到高级步骤的映射
-                stepToHighLevelMappings.push({
-                  stepId: stepId,
-                  highLevelStepId: highLevelStepId,
-                  highLevelStepIndex: correspondingIndex + 1, // 序号从1开始
-                });
-
-                // 创建传统的 CodeAware 映射 (用于高亮功能)
-                initialMappings.push({
-                  highLevelStepId: highLevelStepId,
-                  stepId: stepId,
-                  isHighlighted: false,
-                });
-              }
-            }
+            // 注意：不再在初始生成时创建映射关系
+            // 映射关系将通过按钮触发 LLM 查找来创建
+            // 保留注释以便理解历史逻辑：
+            // - 之前会创建 stepToHighLevelMappings（已删除）
+            // - 之前会创建 initialMappings（现在按需创建）
           } else {
             console.warn("Step is missing title or abstract:", step);
           }
@@ -1053,16 +1004,11 @@ export const generateStepsFromRequirement = createAsyncThunk<
         // CATODO: UI提示，告知用户请求失败
       }
       console.log("Generated high_level_steps array:", highLevelSteps);
-      console.log(
-        "Generated step to high level mappings:",
-        stepToHighLevelMappings,
-      );
 
       // 更新 Redux 状态
       dispatch(setCodeAwareTitle(title));
       dispatch(setLearningGoal(learningGoal));
       dispatch(setHighLevelSteps(highLevelStepItems));
-      dispatch(setStepToHighLevelMappings(stepToHighLevelMappings));
       dispatch(setGeneratedSteps(parsedSteps));
       dispatch(updateCodeAwareMappings(initialMappings));
       dispatch(setUserRequirementStatus("finalized"));
@@ -1671,12 +1617,14 @@ export const generateKnowledgeCardThemes = createAsyncThunk<
         const themes = JSON.parse(result.content);
 
         if (Array.isArray(themes) && themes.length > 0) {
+          // TODO: 重新实现映射逻辑以适配新的 CodeAwareMapping 结构
           // 获取当前步骤相关的现有映射
           const state = getState();
-          const existingMappings =
-            state.codeAwareSession.codeAwareMappings.filter(
-              (mapping) => mapping.stepId === stepId,
-            );
+          // 暂时注释掉，等待重新实现
+          // const existingMappings =
+          //   state.codeAwareSession.codeAwareMappings.filter(
+          //     (mapping) => mapping.semanticElementId === stepId && mapping.semanticElementType === "step",
+          //   );
           const existingCodeChunks = state.codeAwareSession.codeChunks;
 
           // 检查是否为新格式（包含代码对应关系）
@@ -1774,38 +1722,31 @@ export const generateKnowledgeCardThemes = createAsyncThunk<
                       );
 
                     if (newCodeChunk) {
+                      // TODO: [映射重构] 需要重新实现映射关系创建逻辑
                       // 查找该步骤对应的requirement chunk ID
-                      const updatedMappings =
-                        updatedState.codeAwareSession.codeAwareMappings;
-                      const stepRequirementMapping = updatedMappings.find(
-                        (mapping) =>
-                          mapping.stepId === stepId &&
-                          mapping.highLevelStepId &&
-                          !mapping.codeChunkId &&
-                          !mapping.knowledgeCardId,
-                      );
+                      // const updatedMappings =
+                      //   updatedState.codeAwareSession.codeAwareMappings;
+                      // const stepRequirementMapping = updatedMappings.find(
+                      //   (mapping) =>
+                      //     mapping.stepId === stepId &&
+                      //     mapping.highLevelStepId &&
+                      //     !mapping.codeChunkId &&
+                      //     !mapping.knowledgeCardId,
+                      // );
 
                       // 创建映射关系
-                      dispatch(
-                        createCodeAwareMapping({
-                          codeChunkId: newCodeChunk.id,
-                          stepId,
-                          knowledgeCardId: cardId,
-                          highLevelStepId:
-                            stepRequirementMapping?.highLevelStepId,
-                          isHighlighted: false,
-                        }),
-                      );
-
-                      console.log(
-                        `🔗 创建知识卡片代码映射: ${cardId} -> ${newCodeChunk.id}`,
-                        {
-                          stepId,
-                          knowledgeCardId: cardId,
-                          codeChunkId: newCodeChunk.id,
-                          highLevelStepId:
-                            stepRequirementMapping?.highLevelStepId,
-                        },
+                      // dispatch(
+                      //   createCodeAwareMapping({
+                      //     codeChunkId: newCodeChunk.id,
+                      //     stepId,
+                      //     knowledgeCardId: cardId,
+                      //     highLevelStepId:
+                      //       stepRequirementMapping?.highLevelStepId,
+                      //     isHighlighted: false,
+                      //   }),
+                      // );
+                      console.warn(
+                        "[映射重构] 创建知识卡片代码映射功能暂时禁用",
                       );
                     } else {
                       console.warn(
@@ -1815,177 +1756,167 @@ export const generateKnowledgeCardThemes = createAsyncThunk<
                   }
                 }
 
+                // TODO: [映射重构] 需要重新实现基础映射创建逻辑
                 // 如果没有成功创建任何映射，创建基础映射
-                const updatedState = getState();
-                const cardMappings =
-                  updatedState.codeAwareSession.codeAwareMappings.filter(
-                    (mapping) => mapping.knowledgeCardId === cardId,
-                  );
-                if (cardMappings.length === 0) {
-                  // 查找该步骤对应的requirement chunk ID
-                  const stepRequirementMapping =
-                    updatedState.codeAwareSession.codeAwareMappings.find(
-                      (mapping) =>
-                        mapping.stepId === stepId &&
-                        mapping.highLevelStepId &&
-                        !mapping.codeChunkId &&
-                        !mapping.knowledgeCardId,
-                    );
+                // const updatedState = getState();
+                // const cardMappings =
+                //   updatedState.codeAwareSession.codeAwareMappings.filter(
+                //     (mapping) => mapping.knowledgeCardId === cardId,
+                //   );
+                // if (cardMappings.length === 0) {
+                //   // 查找该步骤对应的requirement chunk ID
+                //   const stepRequirementMapping =
+                //     updatedState.codeAwareSession.codeAwareMappings.find(
+                //       (mapping) =>
+                //         mapping.stepId === stepId &&
+                //         mapping.highLevelStepId &&
+                //         !mapping.codeChunkId &&
+                //         !mapping.knowledgeCardId,
+                //     );
 
-                  dispatch(
-                    createCodeAwareMapping({
-                      stepId,
-                      knowledgeCardId: cardId,
-                      highLevelStepId: stepRequirementMapping?.highLevelStepId,
-                      isHighlighted: false,
-                    }),
-                  );
-
-                  console.log(`🔗 创建基础知识卡片映射: ${cardId}`, {
-                    stepId,
-                    knowledgeCardId: cardId,
-                    highLevelStepId: stepRequirementMapping?.highLevelStepId,
-                  });
-                }
+                //   dispatch(
+                //     createCodeAwareMapping({
+                //       stepId,
+                //       knowledgeCardId: cardId,
+                //       highLevelStepId: stepRequirementMapping?.highLevelStepId,
+                //       isHighlighted: false,
+                //     }),
+                //   );
+                console.warn("[映射重构] 创建基础知识卡片映射功能暂时禁用");
               } else {
+                // TODO: [映射重构] 需要重新实现没有代码对应关系时的映射逻辑
                 // 没有代码对应关系，使用现有映射或创建基础映射
-                if (existingMappings.length > 0) {
-                  existingMappings.forEach((existingMapping) => {
-                    dispatch(
-                      createCodeAwareMapping({
-                        codeChunkId: existingMapping.codeChunkId,
-                        highLevelStepId: existingMapping.highLevelStepId,
-                        stepId,
-                        knowledgeCardId: cardId,
-                        isHighlighted: false,
-                      }),
-                    );
-                  });
-                } else {
-                  // 查找该步骤对应的requirement chunk ID
-                  const currentState = getState();
-                  const stepRequirementMapping =
-                    currentState.codeAwareSession.codeAwareMappings.find(
-                      (mapping) =>
-                        mapping.stepId === stepId &&
-                        mapping.highLevelStepId &&
-                        !mapping.codeChunkId &&
-                        !mapping.knowledgeCardId,
-                    );
+                // if (existingMappings.length > 0) {
+                //   existingMappings.forEach((existingMapping) => {
+                //     dispatch(
+                //       createCodeAwareMapping({
+                //         codeChunkId: existingMapping.codeChunkId,
+                //         highLevelStepId: existingMapping.highLevelStepId,
+                //         stepId,
+                //         knowledgeCardId: cardId,
+                //         isHighlighted: false,
+                //       }),
+                //     );
+                //   });
+                // } else {
+                //   // 查找该步骤对应的requirement chunk ID
+                //   const currentState = getState();
+                //   const stepRequirementMapping =
+                //     currentState.codeAwareSession.codeAwareMappings.find(
+                //       (mapping) =>
+                //         mapping.stepId === stepId &&
+                //         mapping.highLevelStepId &&
+                //         !mapping.codeChunkId &&
+                //         !mapping.knowledgeCardId,
+                //     );
 
-                  dispatch(
-                    createCodeAwareMapping({
-                      stepId,
-                      knowledgeCardId: cardId,
-                      highLevelStepId: stepRequirementMapping?.highLevelStepId,
-                      isHighlighted: false,
-                    }),
-                  );
-
-                  console.log(`🔗 创建知识卡片基础映射: ${cardId}`, {
-                    stepId,
-                    knowledgeCardId: cardId,
-                    highLevelStepId: stepRequirementMapping?.highLevelStepId,
-                  });
-                }
+                //   dispatch(
+                //     createCodeAwareMapping({
+                //       stepId,
+                //       knowledgeCardId: cardId,
+                //       highLevelStepId: stepRequirementMapping?.highLevelStepId,
+                //       isHighlighted: false,
+                //     }),
+                //   );
+                console.warn(
+                  "[映射重构] 创建知识卡片映射（无代码）功能暂时禁用",
+                );
               }
             }
           } else {
+            // TODO: [映射重构] 需要重新实现旧格式主题列表的处理逻辑
             // 旧格式：处理简单的字符串主题列表
-            themes.forEach((theme: string, index: number) => {
-              const cardId = `${stepId}-kc-${index + 1}`;
+            // themes.forEach((theme: string, index: number) => {
+            //   const cardId = `${stepId}-kc-${index + 1}`;
 
-              // 创建知识卡片
-              dispatch(
-                createKnowledgeCard({
-                  stepId,
-                  cardId,
-                  theme,
-                }),
-              );
+            //   // 创建知识卡片
+            //   dispatch(
+            //     createKnowledgeCard({
+            //       stepId,
+            //       cardId,
+            //       theme,
+            //     }),
+            //   );
 
-              // 为每个现有映射创建包含新知识卡片的映射关系
-              if (existingMappings.length > 0) {
-                existingMappings.forEach((existingMapping) => {
-                  dispatch(
-                    createCodeAwareMapping({
-                      codeChunkId: existingMapping.codeChunkId,
-                      highLevelStepId: existingMapping.highLevelStepId,
-                      stepId,
-                      knowledgeCardId: cardId,
-                      isHighlighted: false,
-                    }),
-                  );
-                });
-              } else {
-                // 如果没有现有映射，创建基础映射关系
-                // 查找该步骤对应的requirement chunk ID
-                const currentState = getState();
-                const stepRequirementMapping =
-                  currentState.codeAwareSession.codeAwareMappings.find(
-                    (mapping) =>
-                      mapping.stepId === stepId &&
-                      mapping.highLevelStepId &&
-                      !mapping.codeChunkId &&
-                      !mapping.knowledgeCardId,
-                  );
+            //   // 为每个现有映射创建包含新知识卡片的映射关系
+            //   // if (existingMappings.length > 0) {
+            //   //   existingMappings.forEach((existingMapping) => {
+            //   //     dispatch(
+            //   //       createCodeAwareMapping({
+            //   //         codeChunkId: existingMapping.codeChunkId,
+            //   //         highLevelStepId: existingMapping.highLevelStepId,
+            //   //         stepId,
+            //   //         knowledgeCardId: cardId,
+            //   //         isHighlighted: false,
+            //   //       }),
+            //   //     );
+            //   //   });
+            //   // } else {
+            //   //   // 如果没有现有映射，创建基础映射关系
+            //   //   // 查找该步骤对应的requirement chunk ID
+            //   //   const currentState = getState();
+            //   //   const stepRequirementMapping =
+            //   //     currentState.codeAwareSession.codeAwareMappings.find(
+            //   //       (mapping) =>
+            //   //         mapping.stepId === stepId &&
+            //   //         mapping.highLevelStepId &&
+            //   //         !mapping.codeChunkId &&
+            //   //         !mapping.knowledgeCardId,
+            //   //     );
 
-                dispatch(
-                  createCodeAwareMapping({
-                    stepId,
-                    knowledgeCardId: cardId,
-                    highLevelStepId: stepRequirementMapping?.highLevelStepId,
-                    isHighlighted: false,
-                  }),
-                );
-
-                console.log(`🔗 创建旧格式知识卡片基础映射: ${cardId}`, {
-                  stepId,
-                  knowledgeCardId: cardId,
-                  highLevelStepId: stepRequirementMapping?.highLevelStepId,
-                });
-              }
-            });
+            //   //   dispatch(
+            //   //     createCodeAwareMapping({
+            //   //       stepId,
+            //   //       knowledgeCardId: cardId,
+            //   //       highLevelStepId: stepRequirementMapping?.highLevelStepId,
+            //   //       isHighlighted: false,
+            //   //     }),
+            //   //   );
+            //   console.warn('[映射重构] 创建旧格式知识卡片映射功能暂时禁用');
+            // });
+            console.warn("[映射重构] 旧格式主题列表处理功能暂时禁用");
           }
 
-          console.log(
-            `✅ 生成 ${themes.length} 个知识卡片主题，步骤: ${stepId}`,
-          );
+          // TODO: [映射重构] 以下日志记录和映射检查功能需要重新实现
+          // console.log(
+          //   `✅ 生成 ${themes.length} 个知识卡片主题，步骤: ${stepId}`,
+          // );
 
-          // Log: 知识卡片主题生成完成
-          await extra.ideMessenger.request("addCodeAwareLogEntry", {
-            eventType: "user_get_knowledge_card_themes_generation_result",
-            payload: {
-              stepTitle,
-              themesCount: themes.length,
-              // 记录生成的知识卡片主题详情
-              themesDetails: themes.map((theme) => ({
-                title: theme,
-              })),
-              isNewFormat,
-              timestamp: new Date().toISOString(),
-            },
-          });
+          // // Log: 知识卡片主题生成完成
+          // await extra.ideMessenger.request("addCodeAwareLogEntry", {
+          //   eventType: "user_get_knowledge_card_themes_generation_result",
+          //   payload: {
+          //     stepTitle,
+          //     themesCount: themes.length,
+          //     // 记录生成的知识卡片主题详情
+          //     themesDetails: themes.map((theme) => ({
+          //       title: theme,
+          //     })),
+          //     isNewFormat,
+          //     timestamp: new Date().toISOString(),
+          //   },
+          // });
 
-          // 知识卡片主题生成完成后，检查并映射代码
-          try {
-            await dispatch(checkAndMapKnowledgeCardsToCode({ stepId }));
-            console.log(`✅ 完成步骤 ${stepId} 新生成知识卡片的代码映射检查`);
-          } catch (mappingError) {
-            console.warn(
-              `⚠️ 步骤 ${stepId} 新生成知识卡片的代码映射检查失败:`,
-              mappingError,
-            );
-            // 不抛出错误，让知识卡片生成操作继续完成
-          }
+          // // 知识卡片主题生成完成后，检查并映射代码
+          // try {
+          //   await dispatch(checkAndMapKnowledgeCardsToCode({ stepId }));
+          //   console.log(`✅ 完成步骤 ${stepId} 新生成知识卡片的代码映射检查`);
+          // } catch (mappingError) {
+          //   console.warn(
+          //     `⚠️ 步骤 ${stepId} 新生成知识卡片的代码映射检查失败:`,
+          //     mappingError,
+          //   );
+          //   // 不抛出错误，让知识卡片生成操作继续完成
+          // }
 
-          // 设置生成完成状态 - 移到最后确保状态正确设置
-          dispatch(
-            setKnowledgeCardGenerationStatus({ stepId, status: "ready" }),
-          );
+          // // 设置生成完成状态 - 移到最后确保状态正确设置
+          // dispatch(
+          //   setKnowledgeCardGenerationStatus({ stepId, status: "ready" }),
+          // );
 
           // Log knowledge card themes generation completion
           // We'll add the log in the calling component
+          console.warn("[映射重构] 后续处理步骤暂时禁用");
         } else {
           console.warn("No valid themes returned from LLM");
           dispatch(
@@ -2182,12 +2113,13 @@ export const generateKnowledgeCardThemesFromQuery = createAsyncThunk<
         const themeResponses = JSON.parse(result.content);
 
         if (Array.isArray(themeResponses) && themeResponses.length > 0) {
+          // TODO: [映射重构] 需要重新实现映射查找和管理逻辑
           // 获取当前状态以确保实时性
           const currentState = getState();
-          const existingMappings =
-            currentState.codeAwareSession.codeAwareMappings.filter(
-              (mapping) => mapping.stepId === stepId,
-            );
+          // const existingMappings =
+          //   currentState.codeAwareSession.codeAwareMappings.filter(
+          //     (mapping) => mapping.semanticElementId === stepId && mapping.semanticElementType === "step",
+          //   );
 
           // 收集新创建的知识卡片ID，用于后续高亮
           const newlyCreatedCardIds: string[] = [];
@@ -2278,55 +2210,45 @@ export const generateKnowledgeCardThemesFromQuery = createAsyncThunk<
                           correspondingCodeChunk.trim().includes(chunk.content),
                       );
 
+                    // TODO: [映射重构] 需要重新实现匹配代码块的映射创建逻辑
                     if (matchingChunk) {
                       // 如果找到了匹配的代码块，使用现有的映射或创建新的
-                      const existingMapping = existingMappings.find(
-                        (mapping) => mapping.codeChunkId === matchingChunk.id,
-                      );
+                      // const existingMapping = existingMappings.find(
+                      //   (mapping) => mapping.codeChunkId === matchingChunk.id,
+                      // );
 
-                      if (existingMapping) {
-                        // 基于现有映射创建新的映射
-                        dispatch(
-                          createCodeAwareMapping({
-                            codeChunkId: existingMapping.codeChunkId,
-                            highLevelStepId: existingMapping.highLevelStepId,
-                            stepId,
-                            knowledgeCardId: cardId,
-                            isHighlighted: false,
-                          }),
-                        );
-                      } else {
-                        // 创建基础映射，查找该步骤对应的requirement chunk ID
-                        const stepRequirementMapping = existingMappings.find(
-                          (mapping) =>
-                            mapping.stepId === stepId &&
-                            mapping.highLevelStepId &&
-                            !mapping.codeChunkId &&
-                            !mapping.knowledgeCardId,
-                        );
+                      // if (existingMapping) {
+                      //   // 基于现有映射创建新的映射
+                      //   dispatch(
+                      //     createCodeAwareMapping({
+                      //       codeChunkId: existingMapping.codeChunkId,
+                      //       highLevelStepId: existingMapping.highLevelStepId,
+                      //       stepId,
+                      //       knowledgeCardId: cardId,
+                      //       isHighlighted: false,
+                      //     }),
+                      //   );
+                      // } else {
+                      //   // 创建基础映射，查找该步骤对应的requirement chunk ID
+                      //   const stepRequirementMapping = existingMappings.find(
+                      //     (mapping) =>
+                      //       mapping.stepId === stepId &&
+                      //       mapping.highLevelStepId &&
+                      //       !mapping.codeChunkId &&
+                      //       !mapping.knowledgeCardId,
+                      //   );
 
-                        dispatch(
-                          createCodeAwareMapping({
-                            codeChunkId: matchingChunk.id,
-                            stepId,
-                            knowledgeCardId: cardId,
-                            highLevelStepId:
-                              stepRequirementMapping?.highLevelStepId,
-                            isHighlighted: false,
-                          }),
-                        );
-
-                        console.log(
-                          `🔗 创建基础知识卡片映射 (匹配代码块): ${cardId} -> ${matchingChunk.id}`,
-                          {
-                            stepId,
-                            knowledgeCardId: cardId,
-                            codeChunkId: matchingChunk.id,
-                            highLevelStepId:
-                              stepRequirementMapping?.highLevelStepId,
-                          },
-                        );
-                      }
+                      //   dispatch(
+                      //     createCodeAwareMapping({
+                      //       codeChunkId: matchingChunk.id,
+                      //       stepId,
+                      //       knowledgeCardId: cardId,
+                      //       highLevelStepId:
+                      //         stepRequirementMapping?.highLevelStepId,
+                      //       isHighlighted: false,
+                      //     }),
+                      //   );
+                      console.warn("[映射重构] 创建匹配代码块映射功能暂时禁用");
                     } else {
                       // 如果没有找到匹配的代码块，创建新的代码块
 
@@ -2350,85 +2272,72 @@ export const generateKnowledgeCardThemesFromQuery = createAsyncThunk<
                         );
 
                       if (newCodeChunk) {
+                        // TODO: [映射重构] 需要重新实现新代码块的映射创建逻辑
                         // 查找该步骤对应的requirement chunk ID
-                        const stepRequirementMapping =
-                          updatedState.codeAwareSession.codeAwareMappings.find(
-                            (mapping) =>
-                              mapping.stepId === stepId &&
-                              mapping.highLevelStepId &&
-                              !mapping.codeChunkId &&
-                              !mapping.knowledgeCardId,
-                          );
+                        // const stepRequirementMapping =
+                        //   updatedState.codeAwareSession.codeAwareMappings.find(
+                        //     (mapping) =>
+                        //       mapping.stepId === stepId &&
+                        //       mapping.highLevelStepId &&
+                        //       !mapping.codeChunkId &&
+                        //       !mapping.knowledgeCardId,
+                        //   );
 
-                        // 创建映射关系
-                        dispatch(
-                          createCodeAwareMapping({
-                            codeChunkId: newCodeChunk.id,
-                            stepId,
-                            knowledgeCardId: cardId,
-                            highLevelStepId:
-                              stepRequirementMapping?.highLevelStepId,
-                            isHighlighted: false,
-                          }),
-                        );
-
-                        console.log(
-                          `✅ 为知识卡片 ${cardId} 创建了新代码块: ${newCodeChunk.id} (${codeChunkRange[0]}-${codeChunkRange[1]}行)`,
-                          {
-                            stepId,
-                            knowledgeCardId: cardId,
-                            codeChunkId: newCodeChunk.id,
-                            highLevelStepId:
-                              stepRequirementMapping?.highLevelStepId,
-                          },
-                        );
+                        // // 创建映射关系
+                        // dispatch(
+                        //   createCodeAwareMapping({
+                        //     codeChunkId: newCodeChunk.id,
+                        //     stepId,
+                        //     knowledgeCardId: cardId,
+                        //     highLevelStepId:
+                        //       stepRequirementMapping?.highLevelStepId,
+                        //     isHighlighted: false,
+                        //   }),
+                        // );
+                        console.warn("[映射重构] 创建新代码块映射功能暂时禁用");
                       }
                     }
                   }
                 }
               } else {
+                // TODO: [映射重构] 需要重新实现无代码块时的映射创建逻辑
                 // 如果没有对应的代码块，使用现有映射或创建基础映射
-                if (existingMappings.length > 0) {
-                  existingMappings.forEach((existingMapping) => {
-                    dispatch(
-                      createCodeAwareMapping({
-                        codeChunkId: existingMapping.codeChunkId,
-                        highLevelStepId: existingMapping.highLevelStepId,
-                        stepId,
-                        knowledgeCardId: cardId,
-                        isHighlighted: false,
-                      }),
-                    );
-                  });
-                } else {
-                  // 创建基础映射关系，查找该步骤对应的requirement chunk ID
-                  const stepRequirementMapping = existingMappings.find(
-                    (mapping) =>
-                      mapping.stepId === stepId &&
-                      mapping.highLevelStepId &&
-                      !mapping.codeChunkId &&
-                      !mapping.knowledgeCardId,
-                  );
+                // if (existingMappings.length > 0) {
+                //   existingMappings.forEach((existingMapping) => {
+                //     dispatch(
+                //       createCodeAwareMapping({
+                //         codeChunkId: existingMapping.codeChunkId,
+                //         highLevelStepId: existingMapping.highLevelStepId,
+                //         stepId,
+                //         knowledgeCardId: cardId,
+                //         isHighlighted: false,
+                //       }),
+                //     );
+                //   });
+                // } else {
+                //   // 创建基础映射关系，查找该步骤对应的requirement chunk ID
+                //   const stepRequirementMapping = existingMappings.find(
+                //     (mapping) =>
+                //       mapping.stepId === stepId &&
+                //       mapping.highLevelStepId &&
+                //       !mapping.codeChunkId &&
+                //       !mapping.knowledgeCardId,
+                //   );
 
-                  dispatch(
-                    createCodeAwareMapping({
-                      stepId,
-                      knowledgeCardId: cardId,
-                      highLevelStepId: stepRequirementMapping?.highLevelStepId,
-                      isHighlighted: false,
-                    }),
-                  );
-
-                  console.log(`🔗 创建基础知识卡片映射 (无代码): ${cardId}`, {
-                    stepId,
-                    knowledgeCardId: cardId,
-                    highLevelStepId: stepRequirementMapping?.highLevelStepId,
-                  });
-                }
+                //   dispatch(
+                //     createCodeAwareMapping({
+                //       stepId,
+                //       knowledgeCardId: cardId,
+                //       highLevelStepId: stepRequirementMapping?.highLevelStepId,
+                //       isHighlighted: false,
+                //     }),
+                //   );
+                console.warn("[映射重构] 创建无代码块映射功能暂时禁用");
               }
             }
           }
 
+          // TODO: [映射重构] 需要重新实现日志记录和后续处理
           console.log(
             `✅ 基于查询生成 ${themeResponses.length} 个知识卡片主题，步骤: ${stepId}`,
           );
@@ -2699,7 +2608,9 @@ export const generateCodeFromSteps = createAsyncThunk<
       // 调用各个步骤的 checkAndMapKnowledgeCardsToCode
       console.log("🧭 开始为所有步骤检查和映射知识卡片...");
       orderedSteps.forEach((step) => {
-        dispatch(checkAndMapKnowledgeCardsToCode({ stepId: step.id }));
+        // TODO: [映射重构] 需要重新实现知识卡片映射检查
+        // void dispatch(checkAndMapKnowledgeCardsToCode({ stepId: step.id }));
+        console.warn("[映射重构] 知识卡片映射检查功能暂时禁用");
         console.log(`🎯 已触发步骤 ${step.id} 的知识卡片映射检查`);
       });
 
@@ -3082,25 +2993,28 @@ export const rerunStep = createAsyncThunk<
       console.log("🧹 清理知识卡片代码映射...");
       dispatch(clearKnowledgeCardCodeMappings());
 
+      // TODO: [映射重构] 需要重新实现保留映射关系的逻辑
       const currentState = getState();
       // 保留 requirement-step 映射关系
-      const requirementStepMappings =
-        currentState.codeAwareSession.codeAwareMappings.filter(
-          (mapping: any) =>
-            mapping.highLevelStepId &&
-            mapping.stepId &&
-            !mapping.codeChunkId &&
-            !mapping.knowledgeCardId,
-        );
+      // const requirementStepMappings =
+      //   currentState.codeAwareSession.codeAwareMappings.filter(
+      //     (mapping: any) =>
+      //       mapping.highLevelStepId &&
+      //       mapping.stepId &&
+      //       !mapping.codeChunkId &&
+      //       !mapping.knowledgeCardId,
+      //   );
       // 保留 requirement-step-knowledgeCard 映射关系（没有代码块的）
-      const requirementKnowledgeCardMappings =
-        currentState.codeAwareSession.codeAwareMappings.filter(
-          (mapping: any) =>
-            mapping.highLevelStepId &&
-            mapping.stepId &&
-            mapping.knowledgeCardId &&
-            !mapping.codeChunkId,
-        );
+      // const requirementKnowledgeCardMappings =
+      //   currentState.codeAwareSession.codeAwareMappings.filter(
+      //     (mapping: any) =>
+      //       mapping.highLevelStepId &&
+      //       mapping.stepId &&
+      //       mapping.knowledgeCardId &&
+      //       !mapping.codeChunkId,
+      //   );
+      const requirementStepMappings: any[] = [];
+      const requirementKnowledgeCardMappings: any[] = [];
 
       console.log("💾 保存的要求映射关系:", {
         requirementStepMappings: requirementStepMappings.length,
@@ -3111,14 +3025,16 @@ export const rerunStep = createAsyncThunk<
       dispatch(clearAllCodeChunks());
       dispatch(clearAllCodeAwareMappings());
 
+      // TODO: [映射重构] 需要重新实现映射关系恢复逻辑
       // 重新添加要求映射关系
-      requirementStepMappings.forEach((mapping: any) => {
-        dispatch(createCodeAwareMapping(mapping));
-      });
-      // 重新添加要求-知识卡片映射关系
-      requirementKnowledgeCardMappings.forEach((mapping: any) => {
-        dispatch(createCodeAwareMapping(mapping));
-      });
+      // requirementStepMappings.forEach((mapping: any) => {
+      //   dispatch(createCodeAwareMapping(mapping));
+      // });
+      // // 重新添加要求-知识卡片映射关系
+      // requirementKnowledgeCardMappings.forEach((mapping: any) => {
+      //   dispatch(createCodeAwareMapping(mapping));
+      // });
+      console.warn("[映射重构] 映射关系恢复功能暂时禁用");
 
       // 创建所有代码块
       allCreatedCodeChunks.forEach((chunk) => {
@@ -3135,34 +3051,36 @@ export const rerunStep = createAsyncThunk<
         );
       });
 
+      // TODO: [映射重构] 需要重新实现步骤映射创建逻辑
       // 创建映射关系
       console.log("🔗 开始创建映射关系...");
-      const updatedState = getState();
-      const existingRequirementMappings =
-        updatedState.codeAwareSession.codeAwareMappings.filter(
-          (mapping: any) =>
-            mapping.highLevelStepId && mapping.stepId && !mapping.codeChunkId,
-        );
+      // const updatedState = getState();
+      // const existingRequirementMappings =
+      //   updatedState.codeAwareSession.codeAwareMappings.filter(
+      //     (mapping: any) =>
+      //       mapping.highLevelStepId && mapping.stepId && !mapping.codeChunkId,
+      //   );
 
-      // 为所有创建的代码块创建映射关系
-      allCreatedCodeChunks.forEach((chunk) => {
-        chunk.stepIds.forEach((stepId) => {
-          // 找到对应的需求块ID
-          const existingReqMapping = existingRequirementMappings.find(
-            (mapping) => mapping.stepId === stepId,
-          );
+      // // 为所有创建的代码块创建映射关系
+      // allCreatedCodeChunks.forEach((chunk) => {
+      //   chunk.stepIds.forEach((stepId) => {
+      //     // 找到对应的需求块ID
+      //     const existingReqMapping = existingRequirementMappings.find(
+      //       (mapping) => mapping.stepId === stepId,
+      //     );
 
-          const stepMapping: CodeAwareMapping = {
-            codeChunkId: chunk.id,
-            stepId: stepId,
-            highLevelStepId: existingReqMapping?.highLevelStepId,
-            isHighlighted: false,
-          };
+      //     const stepMapping: CodeAwareMapping = {
+      //       codeChunkId: chunk.id,
+      //       stepId: stepId,
+      //       highLevelStepId: existingReqMapping?.highLevelStepId,
+      //       isHighlighted: false,
+      //     };
 
-          dispatch(createCodeAwareMapping(stepMapping));
-          console.log(`🔗 创建步骤映射: ${chunk.id} -> ${stepId}`);
-        });
-      });
+      //     dispatch(createCodeAwareMapping(stepMapping));
+      //     console.log(`🔗 创建步骤映射: ${chunk.id} -> ${stepId}`);
+      //   });
+      // });
+      console.warn("[映射重构] 步骤映射创建功能暂时禁用");
 
       // 应用生成的代码到IDE
       console.log("🚀 开始将更新的代码应用到IDE文件...");
@@ -3224,7 +3142,9 @@ export const rerunStep = createAsyncThunk<
 
       // 调用 checkAndMapKnowledgeCardsToCode
       console.log(`🧭 为步骤 ${stepId} 检查和映射知识卡片...`);
-      dispatch(checkAndMapKnowledgeCardsToCode({ stepId: stepId }));
+      // TODO: [映射重构] 需要重新实现知识卡片映射检查
+      // void dispatch(checkAndMapKnowledgeCardsToCode({ stepId: stepId }));
+      console.warn("[映射重构] 知识卡片映射检查功能暂时禁用");
       console.log(`🎯 已触发步骤 ${stepId} 的知识卡片映射检查`);
 
       // 触发highlight事件，以step为source高亮重新运行的步骤变化
@@ -3295,28 +3215,32 @@ export const processCodeUpdates = createAsyncThunk<
 
       // Disable code chunks and remove mappings for code_dirty steps
       for (const step of codeDirtySteps) {
-        // Find all mappings related to this step (including knowledge cards)
-        const relatedMappings = mappings.filter(
-          (mapping) =>
-            mapping.stepId === step.id ||
-            (mapping.knowledgeCardId &&
-              mapping.knowledgeCardId.startsWith(`${step.id}-kc-`)),
-        );
+        // TODO: [映射重构] 需要重新实现映射查找和禁用逻辑
+        // 查找所有与此步骤相关的映射（包括知识卡片）
+        // const relatedMappings = mappings.filter(
+        //   (mapping) =>
+        //     mapping.semanticElementId === step.id ||
+        //     (mapping.semanticElementType === "knowledgeCard" &&
+        //       mapping.semanticElementId.startsWith(`${step.id}-kc-`)),
+        // );
+        const relatedMappings: any[] = [];
 
         // Disable related code chunks
-        relatedMappings.forEach((mapping) => {
-          if (mapping.codeChunkId) {
-            dispatch(
-              setCodeChunkDisabled({
-                codeChunkId: mapping.codeChunkId,
-                disabled: true,
-              }),
-            );
-          }
-        });
+        // relatedMappings.forEach((mapping) => {
+        //   if (mapping.codeChunkId) {
+        //     dispatch(
+        //       setCodeChunkDisabled({
+        //         codeChunkId: mapping.codeChunkId,
+        //         disabled: true,
+        //       }),
+        //     );
+        //   }
+        // });
 
         // Remove mappings for this step
-        dispatch(removeCodeAwareMappings({ stepId: step.id }));
+        // TODO: [映射重构] removeCodeAwareMappings 需要更新以适配新的映射结构
+        // dispatch(removeCodeAwareMappings({ semanticElementId: step.id }));
+        console.warn("[映射重构] 禁用代码块和移除映射功能暂时禁用");
 
         console.log(
           `🚫 Disabled ${relatedMappings.length} code chunks and removed mappings for step ${step.id}`,
@@ -3486,25 +3410,27 @@ export const processCodeUpdates = createAsyncThunk<
               // 添加到新代码块跟踪列表
               newCodeChunks.push(newChunk);
 
+              // TODO: [映射重构] 需要重新实现步骤映射查找和创建逻辑
               // Find requirement chunk for mapping
-              const existingStepMapping = mappings.find(
-                (mapping) =>
-                  mapping.stepId === stepId && mapping.highLevelStepId,
-              );
-              const highLevelStepId = existingStepMapping?.highLevelStepId;
+              // const existingStepMapping = mappings.find(
+              //   (mapping) =>
+              //     mapping.stepId === stepId && mapping.highLevelStepId,
+              // );
+              // const highLevelStepId = existingStepMapping?.highLevelStepId;
 
-              // Create step mapping
-              const stepMapping: CodeAwareMapping = {
-                codeChunkId: stepCodeChunkId,
-                stepId: stepId,
-                highLevelStepId: highLevelStepId,
-                isHighlighted: false,
-              };
+              // // Create step mapping
+              // const stepMapping: CodeAwareMapping = {
+              //   codeChunkId: stepCodeChunkId,
+              //   stepId: stepId,
+              //   highLevelStepId: highLevelStepId,
+              //   isHighlighted: false,
+              // };
 
-              dispatch(createCodeAwareMapping(stepMapping));
-              console.log(
-                `🔗 Created new step mapping: ${stepCodeChunkId} -> ${stepId}`,
-              );
+              // dispatch(createCodeAwareMapping(stepMapping));
+              // console.log(
+              //   `🔗 Created new step mapping: ${stepCodeChunkId} -> ${stepId}`,
+              // );
+              console.warn("[映射重构] 步骤映射创建功能暂时禁用");
             }
 
             // Set step status to generated (only if code is not broken)
@@ -3512,7 +3438,9 @@ export const processCodeUpdates = createAsyncThunk<
 
             // 调用 checkAndMapKnowledgeCardsToCode
             console.log(`🧭 为步骤 ${stepId} 检查和映射知识卡片...`);
-            dispatch(checkAndMapKnowledgeCardsToCode({ stepId: stepId }));
+            // TODO: [映射重构] 需要重新实现知识卡片映射检查
+            // void dispatch(checkAndMapKnowledgeCardsToCode({ stepId: stepId }));
+            console.warn("[映射重构] 知识卡片映射检查功能暂时禁用");
             console.log(`🎯 已触发步骤 ${stepId} 的知识卡片映射检查`);
           } catch (stepError) {
             console.error(`❌ Error processing step ${stepId}:`, stepError);
@@ -3584,25 +3512,27 @@ export const processCodeUpdates = createAsyncThunk<
               // 添加到新代码块跟踪列表
               newCodeChunks.push(newKnowledgeCardChunk);
 
+              // TODO: [映射重构] 需要重新实现知识卡片映射查找和创建逻辑
               // Find requirement chunk for mapping
-              const existingCardMapping = mappings.find(
-                (mapping) => mapping.knowledgeCardId === cardId,
-              );
-              const highLevelStepId = existingCardMapping?.highLevelStepId;
+              // const existingCardMapping = mappings.find(
+              //   (mapping) => mapping.knowledgeCardId === cardId,
+              // );
+              // const highLevelStepId = existingCardMapping?.highLevelStepId;
 
-              // Create knowledge card mapping
-              const cardMapping: CodeAwareMapping = {
-                codeChunkId: cardCodeChunkId,
-                stepId,
-                knowledgeCardId: cardId,
-                highLevelStepId: highLevelStepId,
-                isHighlighted: false,
-              };
+              // // Create knowledge card mapping
+              // const cardMapping: CodeAwareMapping = {
+              //   codeChunkId: cardCodeChunkId,
+              //   stepId,
+              //   knowledgeCardId: cardId,
+              //   highLevelStepId: highLevelStepId,
+              //   isHighlighted: false,
+              // };
 
-              dispatch(createCodeAwareMapping(cardMapping));
-              console.log(
-                `🎯 Created new knowledge card mapping: ${cardCodeChunkId} -> ${cardId}`,
-              );
+              // dispatch(createCodeAwareMapping(cardMapping));
+              // console.log(
+              //   `🎯 Created new knowledge card mapping: ${cardCodeChunkId} -> ${cardId}`,
+              // );
+              console.warn("[映射重构] 知识卡片映射创建功能暂时禁用");
             }
           } catch (cardError) {
             console.error(
@@ -4072,31 +4002,33 @@ export const processGlobalQuestion = createAsyncThunk<
           }),
         );
 
+        // TODO: [映射重构] 需要重新实现知识卡片映射查找和创建逻辑
         // 查找该步骤对应的requirement chunk ID
-        const stepRequirementMapping =
-          currentState.codeAwareSession.codeAwareMappings.find(
-            (mapping) =>
-              mapping.stepId === selected_step_id &&
-              mapping.highLevelStepId &&
-              !mapping.codeChunkId &&
-              !mapping.knowledgeCardId,
-          );
+        // const stepRequirementMapping =
+        //   currentState.codeAwareSession.codeAwareMappings.find(
+        //     (mapping) =>
+        //       mapping.stepId === selected_step_id &&
+        //       mapping.highLevelStepId &&
+        //       !mapping.codeChunkId &&
+        //       !mapping.knowledgeCardId,
+        //   );
 
-        // 创建知识卡片与步骤的映射关系
-        dispatch(
-          createCodeAwareMapping({
-            stepId: selected_step_id,
-            knowledgeCardId: cardId,
-            highLevelStepId: stepRequirementMapping?.highLevelStepId,
-            isHighlighted: false,
-          }),
-        );
+        // // 创建知识卡片与步骤的映射关系
+        // dispatch(
+        //   createCodeAwareMapping({
+        //     stepId: selected_step_id,
+        //     knowledgeCardId: cardId,
+        //     highLevelStepId: stepRequirementMapping?.highLevelStepId,
+        //     isHighlighted: false,
+        //   }),
+        // );
 
-        console.log(`🔗 创建全局问题知识卡片映射: ${cardId}`, {
-          stepId: selected_step_id,
-          knowledgeCardId: cardId,
-          highLevelStepId: stepRequirementMapping?.highLevelStepId,
-        });
+        // console.log(`🔗 创建全局问题知识卡片映射: ${cardId}`, {
+        //   stepId: selected_step_id,
+        //   knowledgeCardId: cardId,
+        //   highLevelStepId: stepRequirementMapping?.highLevelStepId,
+        // });
+        console.warn("[映射重构] 全局问题知识卡片映射创建功能暂时禁用");
       }
 
       // 设置知识卡片生成状态为checked
@@ -4214,16 +4146,18 @@ export const checkAndMapKnowledgeCardsToCode = createAsyncThunk<
         return;
       }
 
+      // TODO: [映射重构] 需要重新实现知识卡片代码映射查找逻辑
       // 找出没有代码映射的知识卡片
-      const knowledgeCardsWithoutMapping = step.knowledgeCards.filter(
-        (card) => {
-          const hasMapping = allMappings.some(
-            (mapping) =>
-              mapping.knowledgeCardId === card.id && mapping.codeChunkId,
-          );
-          return !hasMapping;
-        },
-      );
+      // const knowledgeCardsWithoutMapping = step.knowledgeCards.filter(
+      //   (card) => {
+      //     const hasMapping = allMappings.some(
+      //       (mapping) =>
+      //         mapping.semanticElementId === card.id && mapping.codeChunkId && mapping.semanticElementType === "knowledgeCard",
+      //     );
+      //     return !hasMapping;
+      //   },
+      // );
+      const knowledgeCardsWithoutMapping = step.knowledgeCards; // 暂时返回所有知识卡片
 
       if (knowledgeCardsWithoutMapping.length === 0) {
         console.log(`步骤 ${stepId} 的所有知识卡片都已有代码映射`);
@@ -4231,220 +4165,26 @@ export const checkAndMapKnowledgeCardsToCode = createAsyncThunk<
       }
 
       console.log(
-        `步骤 ${stepId} 中有 ${knowledgeCardsWithoutMapping.length} 个知识卡片缺少代码映射:`,
-        knowledgeCardsWithoutMapping.map((card) => card.title),
+        `[映射重构] 步骤 ${stepId} 中有 ${knowledgeCardsWithoutMapping.length} 个知识卡片缺少代码映射（功能暂时禁用）`,
       );
+      // TODO: [映射重构] 需要重新实现后续的映射逻辑
+      return;
 
-      // 获取该步骤对应的所有代码
-      const stepCorrespondingCode = await getStepCorrespondingCode(
-        stepId,
-        allMappings,
-        codeChunks,
-        extra.ideMessenger,
-      );
+      // TODO: [映射重构] 以下代码需要重新实现
+      // // 获取该步骤对应的所有代码
+      // const stepCorrespondingCode = await getStepCorrespondingCode(
+      //   stepId,
+      //   allMappings,
+      //   codeChunks,
+      //   extra.ideMessenger,
+      // );
 
-      if (!stepCorrespondingCode || stepCorrespondingCode.trim().length === 0) {
-        console.warn(`步骤 ${stepId} 没有对应的代码，无法进行映射`);
-        return;
-      }
+      // if (!stepCorrespondingCode || stepCorrespondingCode.trim().length === 0) {
+      //   console.warn(`步骤 ${stepId} 没有对应的代码，无法进行映射`);
+      //   return;
+      // }
 
-      // 将代码按行分割
-      const codeLines = stepCorrespondingCode.split("\n");
-      const knowledgeCardTitles = knowledgeCardsWithoutMapping.map(
-        (card) => card.title,
-      );
-
-      // 构建prompt并调用LLM
-      const prompt = constructMapKnowledgeCardsToCodePrompt(
-        codeLines,
-        knowledgeCardTitles,
-      );
-
-      console.log("🤖 调用LLM进行知识卡片代码映射...");
-      const defaultModel =
-        selectJsonGenerationModel(state) || selectSelectedChatModel(state);
-      if (!defaultModel) {
-        throw new Error("No default model available");
-      }
-
-      const result = await extra.ideMessenger.request("llm/complete", {
-        prompt: prompt,
-        completionOptions: {},
-        title: defaultModel.title,
-      });
-
-      if (result.status !== "success") {
-        throw new Error(`LLM request failed: ${result.status}`);
-      }
-
-      // 解析LLM响应
-      let mappingResults;
-      try {
-        mappingResults = JSON.parse(result.content);
-      } catch (parseError) {
-        console.error("解析LLM映射响应失败:", parseError);
-        throw new Error("Failed to parse LLM mapping response");
-      }
-
-      if (
-        !mappingResults.knowledge_card_mappings ||
-        !Array.isArray(mappingResults.knowledge_card_mappings)
-      ) {
-        console.warn("LLM返回的映射结果格式不正确");
-        return;
-      }
-
-      // 获取当前文件信息以计算代码块行号
-      let currentFilePath = "";
-      let currentFileContents = "";
-
-      try {
-        const currentFileResponse = await extra.ideMessenger.request(
-          "getCurrentFile",
-          undefined,
-        );
-        if (
-          currentFileResponse?.status === "success" &&
-          currentFileResponse.content
-        ) {
-          currentFilePath = currentFileResponse.content.path || "";
-          currentFileContents = currentFileResponse.content.contents || "";
-        }
-      } catch (fileError) {
-        console.warn("无法获取当前文件内容，将使用默认范围");
-      }
-
-      // 处理每个知识卡片的映射结果
-      for (const mappingResult of mappingResults.knowledge_card_mappings) {
-        const { title, code_snippets } = mappingResult;
-
-        // 找到对应的知识卡片
-        const knowledgeCard = knowledgeCardsWithoutMapping.find(
-          (card) => card.title === title,
-        );
-        if (!knowledgeCard) {
-          console.warn(`未找到标题为 "${title}" 的知识卡片`);
-          continue;
-        }
-
-        // 如果没有对应的代码片段，跳过
-        if (!code_snippets || code_snippets.length === 0) {
-          console.log(`知识卡片 "${title}" 没有找到对应的代码片段`);
-          continue;
-        }
-
-        // 为每个代码片段创建代码块并建立映射
-        for (const codeSnippet of code_snippets) {
-          if (!codeSnippet || codeSnippet.trim().length === 0) {
-            continue;
-          }
-
-          // 计算代码片段在完整代码中的行号范围
-          let codeRange: [number, number];
-          if (currentFileContents) {
-            codeRange = calculateCodeChunkRange(
-              currentFileContents,
-              codeSnippet.trim(),
-            );
-          } else {
-            // 如果无法获取当前文件内容，使用默认范围
-            const lineIndex = codeLines.findIndex(
-              (line) => line.trim() === codeSnippet.trim(),
-            );
-            if (lineIndex >= 0) {
-              codeRange = [lineIndex + 1, lineIndex + 1];
-            } else {
-              codeRange = [1, 1];
-            }
-          }
-
-          // 检查是否已存在相同的代码块
-          const existingCodeChunk = codeChunks.find(
-            (chunk) =>
-              chunk.content.trim() === codeSnippet.trim() &&
-              chunk.range[0] === codeRange[0] &&
-              chunk.range[1] === codeRange[1],
-          );
-
-          let codeChunkId: string;
-          if (existingCodeChunk) {
-            codeChunkId = existingCodeChunk.id;
-            console.log(`🔄 使用现有代码块: ${codeChunkId}`);
-          } else {
-            // 创建新的代码块，使用当前代码块数量+1作为顺序编号
-            const currentState = getState();
-            const newCodeChunkId = `c-${currentState.codeAwareSession.codeChunks.length + 1}`;
-            dispatch(
-              createOrGetCodeChunk({
-                content: codeSnippet.trim(),
-                range: codeRange,
-                filePath: currentFilePath,
-                id: newCodeChunkId,
-              }),
-            );
-            codeChunkId = newCodeChunkId;
-            console.log(
-              `✅ 创建新代码块: ${codeChunkId} (${codeRange[0]}-${codeRange[1]}行)`,
-            );
-          }
-
-          // 查找该知识卡片对应的requirement chunk ID
-          // 首先查找是否已有 requirement-step-knowledgeCard 的映射关系
-          const existingKnowledgeCardMapping = allMappings.find(
-            (mapping) =>
-              mapping.stepId === stepId &&
-              mapping.knowledgeCardId === knowledgeCard.id &&
-              mapping.highLevelStepId &&
-              !mapping.codeChunkId,
-          );
-
-          let highLevelStepId: string | undefined;
-          if (existingKnowledgeCardMapping) {
-            highLevelStepId = existingKnowledgeCardMapping.highLevelStepId;
-            console.log(
-              `📋 从现有知识卡片映射中找到 highLevelStepId: ${highLevelStepId}`,
-            );
-          } else {
-            // 如果没有找到知识卡片映射，尝试从步骤映射中查找
-            const existingStepMapping = allMappings.find(
-              (mapping) =>
-                mapping.stepId === stepId &&
-                mapping.highLevelStepId &&
-                !mapping.codeChunkId &&
-                !mapping.knowledgeCardId,
-            );
-            if (existingStepMapping) {
-              highLevelStepId = existingStepMapping.highLevelStepId;
-              console.log(
-                `📋 从步骤映射中找到 highLevelStepId: ${highLevelStepId}`,
-              );
-            }
-          }
-
-          // 创建知识卡片到代码块的映射
-          const knowledgeCardMapping: CodeAwareMapping = {
-            codeChunkId: codeChunkId,
-            stepId: stepId,
-            knowledgeCardId: knowledgeCard.id,
-            highLevelStepId: highLevelStepId,
-            isHighlighted: false,
-          };
-
-          dispatch(createCodeAwareMapping(knowledgeCardMapping));
-
-          console.log(
-            `🔗 创建知识卡片映射: ${knowledgeCard.title} -> ${codeChunkId}`,
-            {
-              stepId,
-              knowledgeCardId: knowledgeCard.id,
-              codeChunkId,
-              highLevelStepId,
-            },
-          );
-        }
-      }
-
-      console.log(`✅ 完成步骤 ${stepId} 的知识卡片代码映射检查`);
+      // // ... 其余所有代码已注释 ...
     } catch (error) {
       console.error(
         `❌ 检查步骤 ${stepId} 的知识卡片代码映射时发生错误:`,

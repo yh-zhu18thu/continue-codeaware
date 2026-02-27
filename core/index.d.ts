@@ -625,13 +625,16 @@ export interface SelfTestItem {
   questionType: "shortAnswer" | "multipleChoice";
 }
 
-//CODEAWARE: 一个用于表征并存储所有的对应关系的数据结构，它有着相当大的冗余，主要是为了生成的时候方便，几乎所有元素都是可以
+//CODEAWARE: 代码块与语义元素之间的映射关系（作为缓存使用）
 export interface CodeAwareMapping {
-  codeChunkId?: string;
-  highLevelStepId?: string;
-  stepId?: string;
-  knowledgeCardId?: string;
-  isHighlighted: boolean;
+  codeChunkId: string;
+  semanticElementId: string;
+  semanticElementType: "highLevelStep" | "step" | "knowledgeCard";
+
+  // 缓存元数据
+  createdAt: number;
+  source: "llm" | "manual" | "initial";
+  confidence?: number;
 }
 
 export interface HighlightEvent {

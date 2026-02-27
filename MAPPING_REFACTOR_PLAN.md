@@ -371,18 +371,8 @@ setHighlightedElement: (state, action: PayloadAction<{
 **修改文件：** [core/index.d.ts](core/index.d.ts)
 
 ```typescript
-// 旧定义（保留向后兼容，标记为 deprecated）
-/** @deprecated 请使用新的 CodeAwareMappingV2 */
+// 直接替换旧定义（不保留向后兼容）
 export interface CodeAwareMapping {
-  codeChunkId?: string;
-  highLevelStepId?: string;
-  stepId?: string;
-  knowledgeCardId?: string;
-  isHighlighted: boolean;
-}
-
-// 新定义
-export interface CodeAwareMappingV2 {
   codeChunkId: string;
   semanticElementId: string;
   semanticElementType: "highLevelStep" | "step" | "knowledgeCard";
@@ -392,10 +382,13 @@ export interface CodeAwareMappingV2 {
   source: "llm" | "manual" | "initial";
   confidence?: number;
 }
-
-// 过渡期使用联合类型
-export type CodeAwareMappingUnion = CodeAwareMapping | CodeAwareMappingV2;
 ```
+
+**说明：**
+
+- 直接覆盖旧的 `CodeAwareMapping` 定义
+- 不需要 V2 后缀，不需要联合类型
+- 现有的 mappings 数据会被清空重建
 
 #### 3.2 更新 Redux State
 
@@ -405,8 +398,8 @@ export type CodeAwareMappingUnion = CodeAwareMapping | CodeAwareMappingV2;
 export type CodeAwareSessionState = {
   // ...其他字段...
 
-  // 改用新的 mapping 类型
-  codeAwareMappings: CodeAwareMappingV2[];
+  // 直接使用新的 mapping 类型（不需要V2后缀）
+  codeAwareMappings: CodeAwareMapping[];
 
   // 删除冗余的层级映射
   // - stepToHighLevelMappings: StepToHighLevelMapping[];  // 删除此行
@@ -424,53 +417,21 @@ export type CodeAwareSessionState = {
 };
 ```
 
-#### 3.3 添加数据迁移逻辑
-
-**新建 Reducer：** `migrateMappingsToV2`
+**初始化状态：**
 
 ```typescript
-// 将旧的 mapping 转换为新格式
-function convertLegacyMapping(old: CodeAwareMapping): CodeAwareMappingV2[] {
-  const results: CodeAwareMappingV2[] = [];
-
-  if (!old.codeChunkId) return results;
-
-  // 拆分多对多关系为多个一对一关系
-  if (old.highLevelStepId) {
-    results.push({
-      codeChunkId: old.codeChunkId,
-      semanticElementId: old.highLevelStepId,
-      semanticElementType: "highLevelStep",
-      createdAt: Date.now(),
-      source: "initial",
-    });
-  }
-
-  if (old.stepId) {
-    results.push({
-      codeChunkId: old.codeChunkId,
-      semanticElementId: old.stepId,
-      semanticElementType: "step",
-      createdAt: Date.now(),
-      source: "initial",
-    });
-  }
-
-  if (old.knowledgeCardId) {
-    results.push({
-      codeChunkId: old.codeChunkId,
-      semanticElementId: old.knowledgeCardId,
-      semanticElementType: "knowledgeCard",
-      createdAt: Date.now(),
-      source: "initial",
-    });
-  }
-
-  return results;
-}
+const initialCodeAwareState: CodeAwareSessionState = {
+  // ...其他字段...
+  codeAwareMappings: [], // 空数组，不需要迁移
+  mappingLookup: {
+    isLoading: false,
+    lastQuery: undefined,
+    error: undefined,
+  },
+};
 ```
 
-#### 3.4 删除 stepToHighLevelMappings 相关代码
+#### 3.3 删除 stepToHighLevelMappings 相关代码
 
 **删除内容：**
 
@@ -487,10 +448,10 @@ function convertLegacyMapping(old: CodeAwareMapping): CodeAwareMappingV2[] {
 
 **测试点：**
 
-- [ ] 新旧 mapping 数据可以共存
-- [ ] 迁移函数正确转换数据
+- [ ] 新的 mapping 类型定义正确
 - [ ] 删除 stepToHighLevelMappings 后编译无错误
-- [ ] 现有功能不受影响
+- [ ] State 初始化正确
+- [ ] 现有功能不受影响（已有 mappings 会被清空重建）
 
 ---
 
@@ -505,13 +466,13 @@ function convertLegacyMapping(old: CodeAwareMapping): CodeAwareMappingV2[] {
 ```typescript
 import { createSelector } from "@reduxjs/toolkit";
 import { RootState } from "../store";
-import { CodeAwareMappingV2 } from "core";
+import { CodeAwareMapping } from "core";
 
 // 根据代码块 ID 查找语义元素
 export const selectSemanticElementsByCodeChunkId = createSelector(
   (state: RootState) => state.codeAwareSession.codeAwareMappings,
   (_: RootState, codeChunkId: string) => codeChunkId,
-  (mappings, codeChunkId): CodeAwareMappingV2[] => {
+  (mappings, codeChunkId): CodeAwareMapping[] => {
     return mappings.filter((m) => m.codeChunkId === codeChunkId);
   },
 );
@@ -520,7 +481,7 @@ export const selectSemanticElementsByCodeChunkId = createSelector(
 export const selectCodeChunksBySemanticElementId = createSelector(
   (state: RootState) => state.codeAwareSession.codeAwareMappings,
   (_: RootState, semanticElementId: string) => semanticElementId,
-  (mappings, semanticElementId): CodeAwareMappingV2[] => {
+  (mappings, semanticElementId): CodeAwareMapping[] => {
     return mappings.filter((m) => m.semanticElementId === semanticElementId);
   },
 );
@@ -555,7 +516,7 @@ reducers: {
   // ... 其他 reducers ...
 
   // 添加映射到缓存
-  addMappingToCache: (state, action: PayloadAction<CodeAwareMappingV2>) => {
+  addMappingToCache: (state, action: PayloadAction<CodeAwareMapping>) => {
     const newMapping = action.payload;
 
     // 检查是否已存在相同的映射
@@ -570,7 +531,7 @@ reducers: {
   },
 
   // 批量添加映射
-  addMappingsToBatch: (state, action: PayloadAction<CodeAwareMappingV2[]>) => {
+  addMappingsToBatch: (state, action: PayloadAction<CodeAwareMapping[]>) => {
     const newMappings = action.payload;
     const existingSet = new Set(
       state.codeAwareMappings.map(m => `${m.codeChunkId}-${m.semanticElementId}`)
@@ -688,7 +649,7 @@ const SEMANTIC_TO_CODE_PROMPT = `
 
 ```typescript
 import { createAsyncThunk } from "@reduxjs/toolkit";
-import { CodeAwareMappingV2 } from "core";
+import { CodeAwareMapping } from "core";
 import { RootState } from "../store";
 
 interface LookupCodeToSemanticParams {
@@ -704,7 +665,7 @@ interface LookupSemanticToCodeParams {
 
 // 代码 → 语义查找
 export const lookupCodeToSemantic = createAsyncThunk<
-  CodeAwareMappingV2[],
+  CodeAwareMapping[],
   LookupCodeToSemanticParams,
   { state: RootState }
 >("codeAware/lookupCodeToSemantic", async (params, { getState, dispatch }) => {
@@ -784,7 +745,7 @@ export const lookupCodeToSemantic = createAsyncThunk<
 
 // 语义 → 代码查找（类似实现）
 export const lookupSemanticToCode = createAsyncThunk<
-  CodeAwareMappingV2[],
+  CodeAwareMapping[],
   LookupSemanticToCodeParams,
   { state: RootState }
 >("codeAware/lookupSemanticToCode", async (params, { getState, dispatch }) => {
@@ -1034,7 +995,7 @@ const smartSelectCodeChunk = async () => {
 
 ```typescript
 // 显示选择列表
-const showMatchResults = (mappings: CodeAwareMappingV2[]) => {
+const showMatchResults = (mappings: CodeAwareMapping[]) => {
   // 方案 A: 自动选择置信度最高的
   const topMatch = mappings.sort(
     (a, b) => (b.confidence || 0) - (a.confidence || 0),
@@ -1236,10 +1197,23 @@ mappingLookup: {
 
 ```typescript
 // 旧：
-codeAwareMappings: CodeAwareMapping[];
+interface CodeAwareMapping {
+  codeChunkId?: string;
+  highLevelStepId?: string;
+  stepId?: string;
+  knowledgeCardId?: string;
+  isHighlighted: boolean;
+}
 
 // 新：
-codeAwareMappings: CodeAwareMappingV2[];
+interface CodeAwareMapping {
+  codeChunkId: string;
+  semanticElementId: string;
+  semanticElementType: "highLevelStep" | "step" | "knowledgeCard";
+  createdAt: number;
+  source: "llm" | "manual" | "initial";
+  confidence?: number;
+}
 ```
 
 **删除字段：**
@@ -1265,7 +1239,7 @@ interface CodeAwareMapping {
 **新结构：**
 
 ```typescript
-interface CodeAwareMappingV2 {
+interface CodeAwareMapping {
   // 必填：直接映射关系
   codeChunkId: string;
   semanticElementId: string;
@@ -1302,7 +1276,7 @@ interface CodeAwareMappingV2 {
 
 ```typescript
 {
-  mappings: CodeAwareMappingV2[];
+  mappings: CodeAwareMapping[];
   createdAt: number;
   lastAccessedAt: number;
   hitCount: number;
@@ -1427,10 +1401,10 @@ interface CodeAwareMappingV2 {
 
 ### 7.3 兼容性风险
 
-1. **数据迁移**
+1. **数据清空**
 
-   - **问题**：旧的 mapping 数据需要转换
-   - **缓解**：添加迁移逻辑 + 向后兼容
+   - **问题**：现有的 mapping 数据会被清空
+   - **缓解**：可以在第一次运行时从代码和语义元素重新生成初始映射
 
 2. **IDE 集成**
    - **问题**：不同 IDE 的 API 可能不同

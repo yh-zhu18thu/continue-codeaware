@@ -56,6 +56,7 @@ import RequirementDisplay from "./components/Requirements/RequirementDisplay"; /
 import RequirementDisplayHorizontal from "./components/Requirements/RequirementDisplayHorizontal"; // Import RequirementDisplayHorizontal
 import RequirementEditor from "./components/Requirements/RequirementEditor"; // Import RequirementEditor
 import Step from "./components/Steps/Step"; // Import Step
+import { NavigationButtons } from "./components/ToolBar/NavigationButtons"; // Import NavigationButtons
 
 // Helper function to find the most relevant step for a given code selection
 const findMostRelevantStepForSelection = (
@@ -237,6 +238,10 @@ export const CodeAware = () => {
 
   // Dialog state for session info
   const [isSessionDialogOpen, setIsSessionDialogOpen] = useState(false);
+
+  // Navigation buttons state
+  const [isMappingLookupInProgress, setIsMappingLookupInProgress] =
+    useState(false);
 
   //CodeAware: 增加一个指令，使得可以发送当前所选择的知识卡片id
   //CATODO: 参照着codeContextProvider的实现，利用上getAllSnippets的获取最近代码的功能，然后再通过coreToWebview的路径发送更新过来。
@@ -475,6 +480,23 @@ export const CodeAware = () => {
     (state) => state.codeAwareSession.codeGenerationDebugLogs,
   );
   const [showDebugPanel, setShowDebugPanel] = useState(false);
+
+  // Navigation button handlers (placeholder)
+  const handleJumpToSemantic = useCallback(async () => {
+    console.log("TODO: 实现代码到语义的跳转");
+    // 暂时显示提示
+    await logger.addLogEntry("user_click_jump_to_semantic", {
+      timestamp: new Date().toISOString(),
+    });
+  }, [logger]);
+
+  const handleJumpToCode = useCallback(async () => {
+    console.log("TODO: 实现语义到代码的跳转");
+    // 暂时显示提示
+    await logger.addLogEntry("user_click_jump_to_code", {
+      timestamp: new Date().toISOString(),
+    });
+  }, [logger]);
 
   // Track steps that should be force expanded due to code selection questions
   const [forceExpandedSteps, setForceExpandedSteps] = useState<Set<string>>(
@@ -2079,6 +2101,17 @@ export const CodeAware = () => {
             onClearHighlight={removeHighlightEvent}
           />
         )}
+
+      {/* Navigation Buttons - 显式跳转按钮 */}
+      {userRequirementStatus === "finalized" && steps.length > 0 && (
+        <div className="mt-2 px-4">
+          <NavigationButtons
+            onJumpToSemantic={handleJumpToSemantic}
+            onJumpToCode={handleJumpToCode}
+            isLoading={isMappingLookupInProgress}
+          />
+        </div>
+      )}
 
       {/* Debug panel for CodeAware streaming output */}
       <div className="mt-2 px-4">

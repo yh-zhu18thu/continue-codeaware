@@ -584,73 +584,88 @@ reducers: {
 
 **策略选择：**
 
-**方案 A：快速定位（推荐）**
+**方案一：快速定位（推荐 ✅）**
 
-- 使用轻量级模型（如 GPT-3.5-turbo, Claude Haiku）
-- 简单的语义匹配，返回最可能的映射
-- 速度优先（< 1s）
+- 使用轻量级模型（GPT-3.5-turbo / Claude Haiku）
+- 简单的语义匹配，一次调用返回完整结果
+- 参考 codeAwareGeneration.ts 的 `ideMessenger.request("llm/complete")` 方式
+- 速度目标：< 1.5s
 
-**方案 B：精确匹配**
+**优势：**
 
-- 使用更强大的模型
-- 多轮对话确认
-- 准确度优先（2-3s）
+- ✅ 简单直接，易于实现和调试
+- ✅ 已验证可靠（codeAwareGeneration.ts 大量使用）
+- ✅ 易于实现缓存和错误处理
+- ✅ 可复用现有的重试机制和超时控制
 
-**Prompt 模板（方案 A）：**
+**方案二：Agent Tool Call（暂不使用）**
+
+- 使用流式 LLM + tool call 机制
+- 适用于需要多步推理的复杂场景
+- **不适合当前场景**：映射查找是简单匹配任务，不需要复杂推理
+
+---
+
+**Prompt 设计（方案一）：**
 
 ```typescript
 // 代码 → 语义
-const CODE_TO_SEMANTIC_PROMPT = `
-你是一个代码理解助手。给定一段代码，请快速识别它对应的学习步骤或知识点。
+function constructCodeToSemanticPrompt(
+  codeContent: string,
+  candidates: Array<{id: string; type: string; title: string}>,
+): string {
+  const candidatesList = candidates
+    .slice(0, 20) // 限制候选数量
+    .map((c, i) => `${i+1}. [${c.type}] ${c.id}: ${c.title.substring(0, 50)}`)
+    .join('\n');
 
-代码：
+  return `你是代码语义匹配助手。快速识别代码对应的学习步骤。
+
+代码片段（${codeContent.length} 字符）:
 \`\`\`
-{codeContent}
+${codeContent.substring(0, 500)}
 \`\`\`
 
-可选的语义元素：
-{semanticElementsList}
+候选元素（最多选3个）:
+${candidatesList}
 
-请返回最相关的 1-3 个元素 ID，按相关性排序。
-仅返回 JSON 格式：
-{
-  "matches": [
-    { "id": "step-1", "type": "step", "confidence": 0.95 },
-    { "id": "hlstep-2", "type": "highLevelStep", "confidence": 0.80 }
-  ]
+要求：
+1. 返回最相关的1-3个元素
+2. 按相关性排序
+3. 置信度：0-1（1最相关）
+
+JSON格式（必须）:
+{"matches":[{"id":"step-1","type":"step","confidence":0.9}]}`;
 }
-`;
 
 // 语义 → 代码
-const SEMANTIC_TO_CODE_PROMPT = `
-你是一个代码理解助手。给定一个学习步骤或知识点，请快速识别相关的代码段。
+function constructSemanticToCodePrompt(
+  semanticType: string,
+  semanticContent: string,
+  codeChunks: Array<{id: string; content: string}>,
+): string {
+  const chunksList = codeChunks
+    .slice(0, 15) // 限制候选数量
+    .map((c, i) => `${i+1}. ${c.id}: ${c.content.substring(0, 80)}...`)
+    .join('\n');
 
-语义元素：
-类型: {semanticType}
-内容: {semanticContent}
+  return `你是代码语义匹配助手。找到与学习步骤相关的代码。
 
-可选的代码块：
-{codeChunksList}
-
-请返回最相关的 1-3 个代码块 ID，按相关性排序。
-仅返回 JSON 格式：
-{
-  "matches": [
-    { "id": "c-1", "confidence": 0.90 },
-    { "id": "c-3", "confidence": 0.75 }
-  ]
-}
-`;
-```
-
-#### 5.2 实现 LLM 查找逻辑
-
-**新建文件：** [gui/src/redux/thunks/mappingLookup.ts](gui/src/redux/thunks/mappingLookup.ts)
-
-```typescript
-import { createAsyncThunk } from "@reduxjs/toolkit";
-import { CodeAwareMapping } from "core";
-import { RootState } from "../store";
+语义元素:
+import { ThunkApiType } from "../store";
+import {
+  selectSemanticElementsByCodeChunkId,
+  selectCodeChunksBySemanticElementId,
+} from "../selectors/mappingSelectors";
+import {
+  addMappingsToBatch,
+  setMappingLookupLoading,
+  setMappingLookupError,
+} from "../slices/codeAwareSlice";
+import {
+  selectJsonGenerationModel,
+  selectSelectedChatModel,
+} from "../selectors/modelSelectors";
 
 interface LookupCodeToSemanticParams {
   codeChunkId: string;
@@ -667,81 +682,414 @@ interface LookupSemanticToCodeParams {
 export const lookupCodeToSemantic = createAsyncThunk<
   CodeAwareMapping[],
   LookupCodeToSemanticParams,
-  { state: RootState }
->("codeAware/lookupCodeToSemantic", async (params, { getState, dispatch }) => {
-  const { codeChunkId, useCache = true } = params;
-  const state = getState();
-
-  // 1. 检查缓存
-  if (useCache) {
-    const cached = state.codeAwareSession.codeAwareMappings.filter(
-      (m) => m.codeChunkId === codeChunkId,
-    );
-    if (cached.length > 0) {
-      console.log("✅ 使用缓存的映射");
-      return cached;
-    }
-  }
-
-  // 2. 准备 LLM 查询数据
-  const codeChunk = state.codeAwareSession.codeChunks.find(
-    (c) => c.id === codeChunkId,
-  );
-  if (!codeChunk) throw new Error("Code chunk not found");
-
-  const semanticElements = [
-    ...state.codeAwareSession.highLevelSteps.map((s) => ({
-      id: s.id,
-      type: "highLevelStep" as const,
-      content: s.content,
-    })),
-    ...state.codeAwareSession.steps.map((s) => ({
-      id: s.id,
-      type: "step" as const,
-      content: `${s.title}: ${s.abstract}`,
-    })),
-    ...state.codeAwareSession.steps.flatMap((s) =>
-      s.knowledgeCards.map((kc) => ({
-        id: kc.id,
-        type: "knowledgeCard" as const,
-        content: `${kc.title}: ${kc.content?.substring(0, 200) || ""}`,
-      })),
-    ),
-  ];
-
-  // 3. 调用 LLM
-  dispatch(setMappingLookupLoading(true));
-  try {
-    const llmResponse = await callLLMForMapping({
-      type: "codeToSemantic",
-      codeContent: codeChunk.content,
-      semanticElements,
-    });
-
-    // 4. 解析结果并创建映射
-    const newMappings: CodeAwareMappingV2[] = llmResponse.matches.map(
-      (match) => ({
+  ThunkApiType
+>(
+  "codeAware/lookupCodeToSemantic",
+  async ({ codeChunkId, useCache = true }, { getState, dispatch, extra }) => {
+    // 1. 检查缓存
+    if (useCache) {
+      const cachedMappings = selectSemanticElementsByCodeChunkId(
+        getState(),
         codeChunkId,
-        semanticElementId: match.id,
-        semanticElementType: match.type,
-        createdAt: Date.now(),
-        source: "llm" as const,
-        confidence: match.confidence,
-      }),
+      );
+      if (cachedMappings.length > 0) {
+        console.log("✅ 缓存命中，直接返回映射");
+        return cachedMappings;
+      }
+    }
+
+    // 2. 准备 LLM 查询数据
+    const state = getState();
+    const codeChunk = state.codeAwareSession.codeChunks.find(
+      (c) => c.id === codeChunkId,
+    );
+    if (!codeChunk) {
+      throw new Error(`Code chunk ${codeChunkId} not found`);
+    }
+
+    // 获取所有候选语义元素（限制数量）
+    const candidates = [
+      ...state.codeAwareSession.highLevelSteps.slice(0, 10).map((s) => ({
+        id: s.id,
+        type: "highLevelStep" as const,
+        title: s.content,
+      })),
+      ...state.codeAwareSession.steps.slice(0, 20).map((s) => ({
+        id: s.id,
+        type: "step" as const,
+        title: s.title,
+      })),
+    ];
+
+    // 3. 获取模型配置
+    const defaultModel =
+      selectJsonGenerationModel(state) || selectSelectedChatModel(state);
+    if (!defaultModel) {
+      throw new Error("No LLM model available");
+    }
+
+    // 4. 构造 prompt
+    const prompt = constructCodeToSemanticPrompt(
+      codeChunk.content,
+      candidates,
     );
 
-    // 5. 添加到缓存
-    dispatch(addMappingsToBatch(newMappings));
+    // 5. 调用 LLM（参考 codeAwareGeneration 的重试逻辑）
+    dispatch(setMappingLookupLoading(true));
 
-    return newMappings;
-  } catch (error) {
-    console.error("LLM 查找失败:", error);
-    dispatch(setMappingLookupError(error.message));
-    throw error;
-  } finally {
-    dispatch(setMappingLookupLoading(false));
-  }
-});
+    const maxRetries = 2;
+    let result: any = null;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`🔄 LLM 映射查找尝试 ${attempt}/${maxRetries}`);
+
+        // 超时控制（1.5秒）
+        const llmPromise = extra.ideMessenger.request("llm/complete", {
+          prompt,
+          completionOptions: {
+            temperature: 0.3, // 降低温度提高确定性
+            maxTokens: 500, // 限制输出长度
+          },
+          title: defaultModel.title,
+        });
+
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("LLM 查询超时")), 1500),
+        );
+
+        result = await Promise.race([llmPromise, timeoutPromise]);
+
+        if (result.status === "success" && result.content) {
+          break; // 成功，跳出重试循环
+        }
+      } catch (error) {
+        console.warn(
+          `⚠️ LLM 查找第 ${attempt} 次尝试失败:`,
+          error instanceof Error ? error.message : error,
+        );
+
+        // 如果是最后一次尝试，使用模糊匹配降级
+        if (attempt === maxRetries) {
+          console.log("🔀 LLM 查找失败，使用模糊匹配降级");
+          const fallbackMappings = fuzzyMatchCodeToSemantic(
+            codeChunk,
+            candidates,
+          );
+          dispatch(addMappingsToBatch(fallbackMappings));
+          dispatch(setMappingLookupLoading(false));
+          return fallbackMappings;
+        }
+
+        // 等待后重试
+        await new Promise((resolve) => setTimeout(resolve, 300));
+      }
+    }
+
+    // 6. 解析 LLM 响应
+    try {
+      const parsed = JSON.parse(result.content);
+      const newMappings: CodeAwareMapping[] = parsed.matches.map(
+        (match: any) => ({
+          codeChunkId,
+          semanticElementId: match.id,
+          semanticElementType: match.type,
+          createdAt: Date.now(),
+          source: "llm" as const,
+          confidence: match.confidence,
+        }),
+      );
+
+      console.log(`✅ LLM 返回 ${newMappings.length} 个映射`);
+
+      // 7. 添加到缓存
+      dispatch(addMappingsToBatch(newMappings));
+      dispatch(setMappingLookupLoading(false));
+
+      return newMappings;
+    } catch (parseError) {
+      console.error("❌ LLM 响应解析失败:", parseError);
+      dispatch(
+        setMappingLookupError("LLM 响应格式错误，使用模糊匹配降级"),
+      );
+
+      // 解析失败，使用模糊匹配
+      const fallbackMappings = fuzzyMatchCodeToSemantic(codeChunk, candidates);
+      dispatch(addMappingsToBatch(fallbackMappings));
+      dispatch(setMappingLookupLoading(false));
+      return fallbackMappings;
+    }
+  },
+);
+
+// 语义 → 代码查找
+export const lookupSemanticToCode = createAsyncThunk<
+  CodeAwareMapping[],
+  LookupSemanticToCodeParams,
+  ThunkApiType
+>(
+  "codeAware/lookupSemanticToCode",
+  async (
+    { semanticElementId, semanticElementType, useCache = true },
+    { getState, dispatch, extra },
+  ) => {
+    // 1. 检查缓存
+    if (useCache) {
+      const cachedMappings = selectCodeChunksBySemanticElementId(
+        getState(),
+        semanticElementId,
+        semanticElementType,
+      );
+      if (cachedMappings.length > 0) {
+        console.log("✅ 缓存命中，直接返回映射");
+        return cachedMappings;
+      }
+    }
+
+    // 2. 准备数据
+    const state = getState();
+    let semanticContent = "";
+
+    if (semanticElementType === "highLevelStep") {
+      const hlStep = state.codeAwareSession.highLevelSteps.find(
+        (s) => s.id === semanticElementId,
+      );
+      semanticContent = hlStep?.content || "";
+    } else if (semanticElementType === "step") {
+      const step = state.codeAwareSession.steps.find(
+        (s) => s.id === semanticElementId,
+      );
+      semanticContent = `${step?.title}: ${step?.abstract || ""}`;
+    } else {
+      // knowledgeCard
+      const card = state.codeAwareSession.steps
+        .flatMap((s) => s.knowledgeCards)
+        .find((kc) => kc.id === semanticElementId);
+      semanticContent = `${card?.title}: ${card?.content?.substring(0, 200) || ""}`;
+    }
+
+    const codeChunks = state.codeAwareSession.codeChunks.slice(0, 15); // 限制候选数量
+
+    // 3. 构造 prompt
+    const prompt = constructSemanticToCodePrompt(
+      semanticElementType,
+      semanticContent,
+      codeChunks,
+    );
+
+    // 4. 获取模型配置
+    const defaultModel =
+      selectJsonGenerationModel(state) || selectSelectedChatModel(state);
+    if (!defaultModel) {
+      throw new Error("No LLM model available");
+    }
+
+    // 5. 调用 LLM（同样的重试逻辑）
+    dispatch(setMappingLookupLoading(true));
+
+    const maxRetries = 2;
+    let result: any = null;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const llmPromise = extra.ideMessenger.request("llm/complete", {
+          prompt,
+          completionOptions: {
+            temperature: 0.3,
+            maxTokens: 500,
+          },
+          title: defaultModel.title,
+        });
+
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("LLM 查询超时")), 1500),
+        );
+
+        result = await Promise.race([llmPromise, timeoutPromise]);
+
+        if (result.status === "success" && result.content) {
+          break;
+        }
+      } catch (error) {
+        if (attempt === maxRetries) {
+          // 降级处理
+          const fallbackMappings = fuzzyMatchSemanticToCode(
+            semanticElementId,
+            semanticElementType,
+            semanticContent,
+            codeChunks,
+          );
+          dispatch(addMappingsToBatch(fallbackMappings));
+          dispatch(setMappingLookupLoading(false));
+          return fallbackMappings;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 300));
+      }
+    }
+
+    // 6. 解析响应
+    try {
+      const parsed = JSON.parse(result.content);
+      const newMappings: CodeAwareMapping[] = parsed.matches.map(
+        (match: any) => ({
+          codeChunkId: match.id,
+          semanticElementId,
+          semanticElementType,
+          createdAt: Date.now(),
+          source: "llm" as const,
+          confidence: match.confidence,
+        }),
+      );
+
+      dispatch(addMappingsToBatch(newMappings));
+      dispatch(setMappingLookupLoading(false));
+      return newMappings;
+    } catch (parseError) {
+      // 降级处理
+      const fallbackMappings = fuzzyMatchSemanticToCode(
+        semanticElementId,
+        semanticElementType,
+        semanticContent,
+        codeChunks,
+      );
+      dispatch(addMappingsToBatch(fallbackMappings));
+      dispatch(setMappingLookupLoading(false));
+      return fallbackMappings;
+    }
+  },
+);
+
+// 辅助函数：模糊匹配降级方案（代码 → 语义）
+function fuzzyMatchCodeToSemantic(
+  codeChunk: any,
+  candidates: Array<{ id: string; type: string; title: string }>,
+): CodeAwareMapping[] {
+  // 简单实现：基于关键词匹配
+  const codeKeywords = extractKeywords(codeChunk.content);
+  const matches = candidates
+    .map((candidate) => {
+      const titleKeywords = extractKeywords(candidate.title);
+      const commonKeywords = codeKeywords.filter((kw) =>
+        titleKeywords.includes(kw),
+      );
+      const score = commonKeywords.length / Math.max(codeKeywords.length, 1);
+      return { candidate, score };
+    })
+    .filter((m) => m.score > 0.1)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 3)
+    .map(({ candidate, score }) => ({
+      codeChunkId: codeChunk.id,
+      semanticElementId: candidate.id,
+      semanticElementType: candidate.type as any,
+      createdAt: Date.now(),
+      source: "manual" as const, // 标记为手动匹配
+      confidence: score,
+    }));
+
+  return matches;
+}
+
+// 辅助函数：模糊匹配降级方案（语义 → 代码）
+function fuzzyMatchSemanticToCode(
+  semanticElementId: string,
+  semanticElementType: string,
+  semanticContent: string,
+  codeChunks: any[],
+): CodeAwareMapping[] {
+  const semanticKeywords = extractKeywords(semanticContent);
+  const matches = codeChunks
+    .map((chunk) => {
+      const codeKeywords = extractKeywords(chunk.content);
+      const commonKeywords = semanticKeywords.filter((kw) =>
+        codeKeywords.includes(kw),
+      );
+      const score = commonKeywords.length / Math.max(semanticKeywords.length, 1);
+      return { chunk, score };
+    })
+    .filter((m) => m.score > 0.1)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 3)
+    .map(({ chunk, score }) => ({
+      codeChunkId: chunk.id,
+      semanticElementId,
+      semanticElementType: semanticElementType as any,
+      createdAt: Date.now(),
+      source: "manual" as const,
+      confidence: score,
+    }));
+
+  return matches;
+}
+
+// 辅助函数：提取关键词
+function extractKeywords(text: string): string[] {
+  return text
+    .toLowerCase()
+    .replace(/[^\w\s]/g, " ")
+    .split(/\s+/)
+    .filter((word) => word.length > 3) // 过滤短词
+    .filter(
+      (word) =>
+        !["function", "const", "return", "import", "export"].includes(word),
+    ); // 过滤常见词
+}
+
+// 辅助函数：构造 prompt（单独导出以便测试）
+export function constructCodeToSemanticPrompt(
+  codeContent: string,
+  candidates: Array<{ id: string; type: string; title: string }>,
+): string {
+  const candidatesList = candidates
+    .slice(0, 20)
+    .map((c, i) => `${i + 1}. [${c.type}] ${c.id}: ${c.title.substring(0, 50)}`)
+    .join("\n");
+
+  return `你是代码语义匹配助手。快速识别代码对应的学习步骤。
+
+代码片段（${codeContent.length} 字符）:
+\`\`\`
+${codeContent.substring(0, 500)}
+\`\`\`
+
+候选元素（最多选3个）:
+${candidatesList}
+
+要求：
+1. 返回最相关的1-3个元素
+2. 按相关性排序
+3. 置信度：0-1（1最相关）
+
+JSON格式（必须）:
+{"matches":[{"id":"step-1","type":"step","confidence":0.9}]}`;
+}
+
+export function constructSemanticToCodePrompt(
+  semanticType: string,
+  semanticContent: string,
+  codeChunks: Array<{ id: string; content: string }>,
+): string {
+  const chunksList = codeChunks
+    .slice(0, 15)
+    .map((c, i) => `${i + 1}. ${c.id}: ${c.content.substring(0, 80)}...`)
+    .join("\n");
+
+  return `你是代码语义匹配助手。找到与学习步骤相关的代码。
+
+语义元素:
+类型: ${semanticType}
+内容: ${semanticContent.substring(0, 300)}
+
+候选代码块:
+${chunksList}
+
+要求：
+1. 返回最相关的1-3个代码块
+2. 按相关性排序
+3. 置信度：0-1
+
+JSON格式（必须）:
+{"matches":[{"id":"c-1","confidence":0.85}]}`
 
 // 语义 → 代码查找（类似实现）
 export const lookupSemanticToCode = createAsyncThunk<
@@ -769,21 +1117,72 @@ async function callLLMForMapping(params: any): Promise<any> {
 }
 ```
 
-#### 5.3 优化 LLM 查询性能
+#### 5.3 性能优化和错误处理
 
-**策略：**
+**性能优化策略：**
 
-1. **限制候选数量**：只提供最相关的 10-20 个候选元素
-2. **内容截断**：代码和语义内容截取前 500 字符
-3. **并行查询**：使用 Promise.all 并行处理多个查询
-4. **超时控制**：设置 2 秒超时，超时则使用模糊匹配
+1. **限制候选数量**
+
+   - 代码 → 语义：最多 20 个候选元素（10 个高级步骤 + 20 个步骤）
+   - 语义 → 代码：最多 15 个代码块
+
+2. **内容截断**
+
+   - 代码内容：前 500 字符
+   - 语义内容：前 300 字符
+   - 标题：前 50 字符
+
+3. **超时控制**
+
+   - 单次 LLM 调用超时：1.5 秒
+   - 超时后自动降级到模糊匹配
+
+4. **重试机制**
+   - 最多重试 2 次
+   - 指数退避：300ms 延迟
+   - 所有重试失败后使用模糊匹配降级
+
+**错误处理：**
+
+```typescript
+// 完整的错误处理流程
+try {
+  result = await Promise.race([llmPromise, timeoutPromise]);
+} catch (error) {
+  if (error.message === "LLM 查询超时") {
+    // 超时降级
+    return fuzzyMatchCodeToSemantic(codeChunk, candidates);
+  }
+
+  if (attempt < maxRetries) {
+    // 重试
+    await delay(300);
+    continue;
+  }
+
+  // 最终降级
+  return fuzzyMatchCodeToSemantic(codeChunk, candidates);
+}
+```
+
+**降级方案：模糊匹配**
+
+当 LLM 查询失败、超时或解析错误时，使用基于关键词的模糊匹配：
+
+1. 提取代码/语义文本的关键词
+2. 计算关键词交集
+3. 按匹配度排序，取前 3 个
+4. 标记 `source: "manual"`，表示非 LLM 生成
 
 **测试点：**
 
-- [ ] LLM 查询返回正确格式
-- [ ] 查询时间 < 1.5s（方案 A）
-- [ ] 缓存命中时立即返回
-- [ ] 查询失败有合理降级
+- [ ] LLM 查询返回正确 JSON 格式
+- [ ] 查询时间 < 1.5s (P95)
+- [ ] 缓存命中时立即返回 (< 100ms)
+- [ ] 查询失败自动降级到模糊匹配
+- [ ] 超时控制正常工作
+- [ ] 重试机制正常工作
+- [ ] 模糊匹配返回合理结果
 
 ---
 

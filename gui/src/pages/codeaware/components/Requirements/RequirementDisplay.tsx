@@ -7,6 +7,7 @@ import styled, { css, keyframes } from "styled-components";
 import { defaultBorderRadius, vscForeground } from "../../../../components";
 import { useAppDispatch, useAppSelector } from "../../../../redux/hooks";
 import {
+  clearElementHighlight,
   selectHighLevelSteps,
   selectRequirementText,
   setHighlightedElement,
@@ -377,6 +378,20 @@ export default function RequirementDisplay({
           newFlickering.forEach((id) => updated.delete(id));
           return updated;
         });
+
+        // After flickering completes, check if any of the steps are 'related' highlights
+        // and clear them automatically
+        newFlickering.forEach((stepId) => {
+          const step = highLevelSteps.find((s) => s.id === stepId);
+          if (step && step.highlightType === "related") {
+            dispatch(
+              clearElementHighlight({ type: "highLevelStep", id: stepId }),
+            );
+            console.log(
+              `🧹 Auto-cleared related highlight for high-level step ${stepId}`,
+            );
+          }
+        });
       }, 1800); // 3 cycles of 0.6s animation
     }
 
@@ -386,7 +401,7 @@ export default function RequirementDisplay({
       newPreviousStates.set(step.id, step.isHighlighted);
     });
     previousHighlightStatesRef.current = newPreviousStates;
-  }, [highLevelSteps, steps]);
+  }, [highLevelSteps, steps, dispatch]);
 
   // Cleanup timeout on unmount
   useEffect(() => {

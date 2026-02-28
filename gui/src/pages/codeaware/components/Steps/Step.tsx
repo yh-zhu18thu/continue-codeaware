@@ -11,8 +11,11 @@ import {
   vscForeground,
   vscInputBorder,
 } from "../../../../components";
-import { useAppDispatch } from "../../../../redux/hooks";
-import { setHighlightedElement } from "../../../../redux/slices/codeAwareSlice";
+import { useAppDispatch, useAppSelector } from "../../../../redux/hooks";
+import {
+  clearElementHighlight,
+  setHighlightedElement,
+} from "../../../../redux/slices/codeAwareSlice";
 import { useCodeAwareLogger } from "../../../../util/codeAwareWebViewLogger";
 import KnowledgeCard, {
   KnowledgeCardProps,
@@ -185,6 +188,13 @@ const Step: React.FC<StepProps> = ({
 }) => {
   const logger = useCodeAwareLogger();
   const dispatch = useAppDispatch();
+
+  // Get the full step from Redux to access highlightType
+  const fullStep = useAppSelector((state) =>
+    state.codeAwareSession.steps.find((s) => s.id === stepId),
+  );
+  const highlightType = fullStep?.highlightType;
+
   const [isExpanded, setIsExpanded] = useState(
     forceExpanded || defaultExpanded,
   );
@@ -260,7 +270,11 @@ const Step: React.FC<StepProps> = ({
       // Start flickering when highlighted, regardless of expanded state
       // The title bar should always flicker to indicate highlighting
       setIsFlickering(true);
-      setShouldKeepHighlighted(true); // Mark that we should keep highlighted after flickering
+
+      // For 'primary' highlights, keep highlighted after flickering
+      // For 'related' highlights, clear after flickering
+      const shouldKeepAfterFlicker = highlightType === "primary";
+      setShouldKeepHighlighted(shouldKeepAfterFlicker);
 
       // Create a flickering effect with multiple flashes
       let timeoutIndex = 0;
@@ -284,11 +298,17 @@ const Step: React.FC<StepProps> = ({
         flickerTimeoutRef.current[timeoutIndex++] = timeoutOn;
       }
 
-      // Final timeout to turn off flickering but keep highlighted
+      // Final timeout to turn off flickering
       const finalTimeout = setTimeout(
         () => {
           setIsFlickering(false);
-          // Keep shouldKeepHighlighted as true to maintain the highlight
+
+          // If this is a 'related' highlight, clear it after flickering
+          if (highlightType === "related" && stepId) {
+            dispatch(clearElementHighlight({ type: "step", id: stepId }));
+            console.log(`🧹 Auto-cleared related highlight for step ${stepId}`);
+          }
+          // For 'primary' highlights, keep shouldKeepHighlighted as true
         },
         200 + 3 * 400,
       );
@@ -306,7 +326,7 @@ const Step: React.FC<StepProps> = ({
       });
       flickerTimeoutRef.current = [];
     };
-  }, [isHighlighted, stepId]);
+  }, [isHighlighted, stepId, highlightType, dispatch]);
 
   // Cleanup timeouts on unmount
   useEffect(() => {

@@ -1,16 +1,15 @@
-import {
-  StepIcon,
-  Typography
-} from "@mui/material";
+import { StepIcon, Typography } from "@mui/material";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 import { HighlightEvent } from "core";
 import { useCallback, useEffect, useRef } from "react";
 import styled, { css, keyframes } from "styled-components";
+import { defaultBorderRadius } from "../../../../components";
+import { useAppDispatch, useAppSelector } from "../../../../redux/hooks";
 import {
-  defaultBorderRadius
-} from "../../../../components";
-import { useAppSelector } from "../../../../redux/hooks";
-import { selectHighLevelSteps } from "../../../../redux/slices/codeAwareSlice";
+  clearElementHighlight,
+  selectHighLevelSteps,
+  setHighlightedElement,
+} from "../../../../redux/slices/codeAwareSlice";
 import { useCodeAwareLogger } from "../../../../util/codeAwareWebViewLogger";
 
 // Flickering animation for highlight state changes
@@ -22,7 +21,9 @@ const flicker = keyframes`
 // Custom step icon component with flickering animation
 const AnimatedStepIcon = styled(StepIcon)<{ isHighlighted: boolean }>`
   // 高亮状态样式
-  ${props => props.isHighlighted ? `
+  ${(props) =>
+    props.isHighlighted
+      ? `
     &.MuiStepIcon-root {
       color: #00BFFF !important;
       background-color: #00BFFF !important;
@@ -47,7 +48,8 @@ const AnimatedStepIcon = styled(StepIcon)<{ isHighlighted: boolean }>`
       rx: 6 !important;
       ry: 6 !important;
     }
-  ` : `
+  `
+      : `
     &.MuiStepIcon-root {
       color: #888888 !important;
       background-color: #888888 !important;
@@ -72,14 +74,14 @@ const AnimatedStepIcon = styled(StepIcon)<{ isHighlighted: boolean }>`
       ry: 6 !important;
     }
   `}
-  
+
   cursor: pointer;
   transition: all 0.3s ease;
   width: 20px;
   height: 20px;
   border-radius: 6px;
   flex-shrink: 0;
-  
+
   &:hover {
     transform: scale(1.05);
   }
@@ -88,41 +90,41 @@ const AnimatedStepIcon = styled(StepIcon)<{ isHighlighted: boolean }>`
 // Custom theme for Material UI components to match VS Code colors
 const muiTheme = createTheme({
   palette: {
-    mode: 'dark',
+    mode: "dark",
     primary: {
-      main: '#00BFFF', // Brighter blue
+      main: "#00BFFF", // Brighter blue
     },
     background: {
-      default: '#1e1e1e',
-      paper: '#2d2d30',
+      default: "#1e1e1e",
+      paper: "#2d2d30",
     },
     text: {
-      primary: '#cccccc',
-      secondary: '#969696',
+      primary: "#cccccc",
+      secondary: "#969696",
     },
   },
   components: {
     MuiStepIcon: {
       styleOverrides: {
         root: {
-          borderRadius: '6px',
-          '&.Mui-active': {
-            color: '#00BFFF',
+          borderRadius: "6px",
+          "&.Mui-active": {
+            color: "#00BFFF",
           },
-          '&.Mui-completed': {
-            color: '#00BFFF',
+          "&.Mui-completed": {
+            color: "#00BFFF",
           },
         },
         text: {
-          fill: '#ffffff',
-          fontWeight: 'bold',
+          fill: "#ffffff",
+          fontWeight: "bold",
         },
       },
     },
     MuiTypography: {
       styleOverrides: {
         root: {
-          color: '#ffffff', // White text
+          color: "#ffffff", // White text
         },
       },
     },
@@ -145,11 +147,11 @@ const SummaryContainer = styled.div`
   overflow-y: hidden;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   flex-shrink: 0;
-  
+
   /* 隐藏滚动条但保持滚动功能 */
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none; /* Internet Explorer 10+ */
-  
+
   &::-webkit-scrollbar {
     display: none; /* Safari and Chrome */
   }
@@ -165,17 +167,19 @@ const SummaryItem = styled.div<{ isHighlighted: boolean }>`
   transition: all 0.3s ease;
   flex-shrink: 0;
   white-space: nowrap;
-  
+
   &:hover {
     background-color: rgba(255, 255, 255, 0.1);
   }
-  
-  ${props => props.isHighlighted && css`
-    background-color: rgba(0, 191, 255, 0.2);
-    border: 1px solid rgba(0, 191, 255, 0.5);
-    transform: scale(1.02); /* 轻微放大高亮项 */
-    box-shadow: 0 2px 8px rgba(0, 191, 255, 0.3); /* 添加蓝色阴影 */
-  `}
+
+  ${(props) =>
+    props.isHighlighted &&
+    css`
+      background-color: rgba(0, 191, 255, 0.2);
+      border: 1px solid rgba(0, 191, 255, 0.5);
+      transform: scale(1.02); /* 轻微放大高亮项 */
+      box-shadow: 0 2px 8px rgba(0, 191, 255, 0.3); /* 添加蓝色阴影 */
+    `}
 `;
 
 const SummaryText = styled(Typography)<{ isHighlighted: boolean }>`
@@ -185,8 +189,9 @@ const SummaryText = styled(Typography)<{ isHighlighted: boolean }>`
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: ${props => props.isHighlighted ? '#00BFFF' : '#ffffff'} !important;
-  font-weight: ${props => props.isHighlighted ? 'bold' : 'normal'} !important;
+  color: ${(props) => (props.isHighlighted ? "#00BFFF" : "#ffffff")} !important;
+  font-weight: ${(props) =>
+    props.isHighlighted ? "bold" : "normal"} !important;
 `;
 
 interface RequirementSummaryProps {
@@ -198,42 +203,46 @@ export default function RequirementDisplayHorizontal({
   onChunkFocus,
   onClearHighlight,
 }: RequirementSummaryProps) {
+  const dispatch = useAppDispatch();
   const highLevelSteps = useAppSelector(selectHighLevelSteps);
   const containerRef = useRef<HTMLDivElement>(null);
   const highlightedItemRef = useRef<HTMLDivElement>(null);
-  
+
   // CodeAware logger
   const logger = useCodeAwareLogger();
 
-  const handleChunkClick = useCallback(async (chunkId: string) => {
-    // Find the chunk to get its content for logging
-  const highLevelStep = highLevelSteps.find(step => step.id === chunkId);
-    
-    // Log high level step viewing start  
-    await logger.addLogEntry("user_view_and_highlight_high_level_step", {
-      stepId: chunkId,
-      stepContent: (highLevelStep?.content || "").substring(0, 200), // First 200 chars for analysis
-      isFromHighLevelSteps: true,
-      isFromHighlightChunks: false,
-      sourceComponent: "RequirementSummary",
-      timestamp: new Date().toISOString()
-    });
-    
-    if (onChunkFocus) {
-      const highlightEvent: HighlightEvent = {
-        sourceType: "highLevelStep",
-        identifier: chunkId,
-      };
-      onChunkFocus(highlightEvent);
-    }
-  }, [onChunkFocus, logger, highLevelSteps]);
+  const handleChunkClick = useCallback(
+    async (chunkId: string) => {
+      // Find the chunk to get its content for logging
+      const highLevelStep = highLevelSteps.find((step) => step.id === chunkId);
 
-  const handleChunkKeyDown = useCallback((event: React.KeyboardEvent, chunkId: string) => {
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      handleChunkClick(chunkId);
-    }
-  }, [handleChunkClick]);
+      // Log high level step viewing start
+      await logger.addLogEntry("user_view_and_highlight_high_level_step", {
+        stepId: chunkId,
+        stepContent: (highLevelStep?.content || "").substring(0, 200), // First 200 chars for analysis
+        isFromHighLevelSteps: true,
+        isFromHighlightChunks: false,
+        sourceComponent: "RequirementSummary",
+        timestamp: new Date().toISOString(),
+      });
+
+      // 直接调用 setHighlightedElement，与 RequirementDisplay 保持一致
+      if (highLevelStep) {
+        dispatch(setHighlightedElement({ type: "highLevelStep", id: chunkId }));
+      }
+    },
+    [dispatch, logger, highLevelSteps],
+  );
+
+  const handleChunkKeyDown = useCallback(
+    (event: React.KeyboardEvent, chunkId: string) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        handleChunkClick(chunkId);
+      }
+    },
+    [handleChunkClick],
+  );
 
   // Create steps from highlight chunks
   const createSteps = useCallback(() => {
@@ -259,31 +268,33 @@ export default function RequirementDisplayHorizontal({
 
   // 自动滚动到高亮的步骤
   useEffect(() => {
-    const highlightedStep = steps.find(step => step.isHighlighted);
-    
+    const highlightedStep = steps.find((step) => step.isHighlighted);
+
     if (highlightedStep && highlightedItemRef.current && containerRef.current) {
       // 使用 setTimeout 来防抖，避免频繁滚动
       const scrollTimeout = setTimeout(() => {
         const container = containerRef.current;
         const highlightedElement = highlightedItemRef.current;
-        
+
         if (!container || !highlightedElement) return;
-        
+
         // 获取容器和高亮元素的位置信息
         const containerRect = container.getBoundingClientRect();
         const elementRect = highlightedElement.getBoundingClientRect();
-        
+
         // 计算相对于容器的位置
-        const elementLeftInContainer = elementRect.left - containerRect.left + container.scrollLeft;
-        const elementRightInContainer = elementLeftInContainer + elementRect.width;
-        
+        const elementLeftInContainer =
+          elementRect.left - containerRect.left + container.scrollLeft;
+        const elementRightInContainer =
+          elementLeftInContainer + elementRect.width;
+
         // 检查元素是否在可见区域内
         const containerWidth = containerRect.width;
         const scrollLeft = container.scrollLeft;
         const scrollRight = scrollLeft + containerWidth;
-        
+
         let newScrollLeft = scrollLeft;
-        
+
         // 如果元素在左侧超出视野，滚动到元素左边缘
         if (elementLeftInContainer < scrollLeft) {
           newScrollLeft = elementLeftInContainer - 20; // 留一些边距
@@ -292,19 +303,42 @@ export default function RequirementDisplayHorizontal({
         else if (elementRightInContainer > scrollRight) {
           newScrollLeft = elementRightInContainer - containerWidth + 20; // 留一些边距
         }
-        
+
         // 只有在需要滚动时才执行
         if (newScrollLeft !== scrollLeft) {
           container.scrollTo({
             left: Math.max(0, newScrollLeft), // 确保不会滚动到负值
-            behavior: 'smooth'
+            behavior: "smooth",
           });
         }
+
+        // Check if the highlighted step is a 'related' highlight
+        // If so, auto-clear it after a delay (simulating flicker effect)
+        const fullHighlightedStep = highLevelSteps.find(
+          (s) => s.id === highlightedStep.id,
+        );
+        if (
+          fullHighlightedStep &&
+          fullHighlightedStep.highlightType === "related"
+        ) {
+          // Clear after 1800ms (same as flickering duration in vertical display)
+          setTimeout(() => {
+            dispatch(
+              clearElementHighlight({
+                type: "highLevelStep",
+                id: highlightedStep.id,
+              }),
+            );
+            console.log(
+              `🧹 Auto-cleared related highlight for high-level step ${highlightedStep.id} (horizontal)`,
+            );
+          }, 1800);
+        }
       }, 100); // 100ms 防抖延迟
-      
+
       return () => clearTimeout(scrollTimeout);
     }
-  }, [steps]); // 依赖 steps，当步骤的高亮状态变化时触发
+  }, [steps, highLevelSteps, dispatch]); // 依赖 steps，当步骤的高亮状态变化时触发
 
   // 如果没有任何步骤，则不显示缩略模式
   if (steps.length === 0) {

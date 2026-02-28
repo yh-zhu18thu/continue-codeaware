@@ -540,6 +540,7 @@ export interface HighLevelStepItem {
   id: string;
   content: string;
   isHighlighted: boolean;
+  highlightType?: "primary" | "related"; // 区分主要高亮和关联高亮
   isCompleted: boolean; // 标记该高级步骤是否已完成
 }
 
@@ -581,6 +582,7 @@ export interface StepItem {
   stepStatus: StepStatus;
   knowledgeCardGenerationStatus: KnowledgeCardGenerationStatus;
   isHighlighted: boolean;
+  highlightType?: "primary" | "related"; // 区分主要高亮和关联高亮
 }
 
 // CODEAWARE: 知识卡片
@@ -590,6 +592,7 @@ export interface KnowledgeCardItem {
   content?: string;
   tests?: SelfTestItem[]; //维护该知识卡片下的自测题目
   isHighlighted: boolean;
+  highlightType?: "primary" | "related"; // 区分主要高亮和关联高亮
   disabled: boolean;
   codeContext?: string; // 代码上下文，在触发knowledge card item生成时一并存储。
 }

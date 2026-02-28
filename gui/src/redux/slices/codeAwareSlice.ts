@@ -281,15 +281,18 @@ export const codeAwareSessionSlice = createSlice({
       state.highLevelSteps = state.highLevelSteps.map((step) => ({
         ...step,
         isHighlighted: false,
+        highlightType: undefined,
       }));
       // Reset highlight status for all steps
       state.steps = state.steps.map((step) => {
         return {
           ...step,
           isHighlighted: false,
+          highlightType: undefined,
           knowledgeCards: step.knowledgeCards.map((card) => ({
             ...card,
             isHighlighted: false,
+            highlightType: undefined,
           })),
         };
       });
@@ -297,6 +300,57 @@ export const codeAwareSessionSlice = createSlice({
       // Set flag to clear IDE highlights
       state.shouldClearIdeHighlights = true;
       state.codeChunksToHighlightInIde = [];
+    },
+    // 清除单个元素的高亮状态（用于闪烁后自动清除关联高亮）
+    clearElementHighlight: (
+      state,
+      action: PayloadAction<{
+        type: "highLevelStep" | "step" | "knowledgeCard";
+        id: string;
+      }>,
+    ) => {
+      const { type, id } = action.payload;
+
+      if (type === "highLevelStep") {
+        const stepIndex = state.highLevelSteps.findIndex((s) => s.id === id);
+        if (stepIndex !== -1) {
+          state.highLevelSteps[stepIndex] = {
+            ...state.highLevelSteps[stepIndex],
+            isHighlighted: false,
+            highlightType: undefined,
+          };
+        }
+      } else if (type === "step") {
+        const stepIndex = state.steps.findIndex((s) => s.id === id);
+        if (stepIndex !== -1) {
+          state.steps[stepIndex] = {
+            ...state.steps[stepIndex],
+            isHighlighted: false,
+            highlightType: undefined,
+          };
+        }
+      } else if (type === "knowledgeCard") {
+        for (let i = 0; i < state.steps.length; i++) {
+          const cardIndex = state.steps[i].knowledgeCards.findIndex(
+            (kc) => kc.id === id,
+          );
+          if (cardIndex !== -1) {
+            const updatedCards = [...state.steps[i].knowledgeCards];
+            updatedCards[cardIndex] = {
+              ...updatedCards[cardIndex],
+              isHighlighted: false,
+              highlightType: undefined,
+            };
+            state.steps[i] = {
+              ...state.steps[i],
+              knowledgeCards: updatedCards,
+            };
+            break;
+          }
+        }
+      }
+
+      console.log(`🧹 Cleared highlight for ${type} ${id}`);
     },
     // 设置单个元素为高亮状态（不触发代码高亮）
     setHighlightedElement: (
@@ -324,27 +378,31 @@ export const codeAwareSessionSlice = createSlice({
       state.highLevelSteps = state.highLevelSteps.map((step) => ({
         ...step,
         isHighlighted: false,
+        highlightType: undefined,
       }));
       state.steps = state.steps.map((step) => ({
         ...step,
         isHighlighted: false,
+        highlightType: undefined,
         knowledgeCards: step.knowledgeCards.map((card) => ({
           ...card,
           isHighlighted: false,
+          highlightType: undefined,
         })),
       }));
 
       // 设置新的高亮元素（带双向关联）
       if (type === "highLevelStep") {
-        // 高亮 high-level step
+        // 高亮 high-level step（主要高亮）
         const stepIndex = state.highLevelSteps.findIndex((s) => s.id === id);
         if (stepIndex !== -1) {
           state.highLevelSteps[stepIndex] = {
             ...state.highLevelSteps[stepIndex],
             isHighlighted: true,
+            highlightType: "primary", // 主要高亮
           };
 
-          // 找到所有关联的 steps 并高亮它们（触发滚动和闪烁）
+          // 找到所有关联的 steps 并设置为关联高亮（触发滚动和闪烁）
           const relatedMappings = state.stepToHighLevelMappings.filter(
             (m) => m.highLevelStepId === id,
           );
@@ -357,24 +415,26 @@ export const codeAwareSessionSlice = createSlice({
               state.steps[relatedStepIndex] = {
                 ...state.steps[relatedStepIndex],
                 isHighlighted: true,
+                highlightType: "related", // 关联高亮（只闪烁）
               };
             }
           });
 
           console.log(
-            `🎯 Highlighted high-level step ${id} and ${relatedMappings.length} related steps`,
+            `🎯 Highlighted high-level step ${id} (primary) and ${relatedMappings.length} related steps (flicker only)`,
           );
         }
       } else if (type === "step") {
-        // 高亮 step
+        // 高亮 step（主要高亮）
         const stepIndex = state.steps.findIndex((s) => s.id === id);
         if (stepIndex !== -1) {
           state.steps[stepIndex] = {
             ...state.steps[stepIndex],
             isHighlighted: true,
+            highlightType: "primary", // 主要高亮
           };
 
-          // 找到关联的 high-level step 并高亮它（触发闪烁）
+          // 找到关联的 high-level step 并设置为关联高亮（触发闪烁）
           const relatedMapping = state.stepToHighLevelMappings.find(
             (m) => m.stepId === id,
           );
@@ -387,9 +447,10 @@ export const codeAwareSessionSlice = createSlice({
               state.highLevelSteps[hlStepIndex] = {
                 ...state.highLevelSteps[hlStepIndex],
                 isHighlighted: true,
+                highlightType: "related", // 关联高亮（只闪烁）
               };
               console.log(
-                `🎯 Highlighted step ${id} and related high-level step ${relatedMapping.highLevelStepId}`,
+                `🎯 Highlighted step ${id} (primary) and related high-level step ${relatedMapping.highLevelStepId} (flicker only)`,
               );
             }
           }
@@ -404,6 +465,7 @@ export const codeAwareSessionSlice = createSlice({
             updatedCards[cardIndex] = {
               ...updatedCards[cardIndex],
               isHighlighted: true,
+              highlightType: "primary", // 主要高亮
             };
             state.steps[i] = {
               ...state.steps[i],
@@ -1179,6 +1241,7 @@ export const {
   newCodeAwareSession,
   resetSessionExceptRequirement,
   clearAllHighlights,
+  clearElementHighlight,
   setHighlightedElement,
   clearAllCodeChunks,
   clearAllCodeAwareMappings,

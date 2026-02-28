@@ -276,7 +276,7 @@ const Step: React.FC<StepProps> = ({
       const shouldKeepAfterFlicker = highlightType === "primary";
       setShouldKeepHighlighted(shouldKeepAfterFlicker);
 
-      // Create a flickering effect with multiple flashes
+      // Create a flickering effect with multiple flashes (3 cycles, 600ms each = 1800ms total)
       let timeoutIndex = 0;
       for (let i = 0; i < 3; i++) {
         // Turn off flickering
@@ -284,7 +284,7 @@ const Step: React.FC<StepProps> = ({
           () => {
             setIsFlickering(false);
           },
-          200 + i * 400,
+          300 + i * 600,
         );
         flickerTimeoutRef.current[timeoutIndex++] = timeoutOff;
 
@@ -293,25 +293,22 @@ const Step: React.FC<StepProps> = ({
           () => {
             setIsFlickering(true);
           },
-          400 + i * 400,
+          600 + i * 600,
         );
         flickerTimeoutRef.current[timeoutIndex++] = timeoutOn;
       }
 
-      // Final timeout to turn off flickering
-      const finalTimeout = setTimeout(
-        () => {
-          setIsFlickering(false);
+      // Final timeout to turn off flickering (at 1800ms)
+      const finalTimeout = setTimeout(() => {
+        setIsFlickering(false);
 
-          // If this is a 'related' highlight, clear it after flickering
-          if (highlightType === "related" && stepId) {
-            dispatch(clearElementHighlight({ type: "step", id: stepId }));
-            console.log(`🧹 Auto-cleared related highlight for step ${stepId}`);
-          }
-          // For 'primary' highlights, keep shouldKeepHighlighted as true
-        },
-        200 + 3 * 400,
-      );
+        // If this is a 'related' highlight, clear it after flickering
+        if (highlightType === "related" && stepId) {
+          dispatch(clearElementHighlight({ type: "step", id: stepId }));
+          console.log(`🧹 Auto-cleared related highlight for step ${stepId}`);
+        }
+        // For 'primary' highlights, keep shouldKeepHighlighted as true
+      }, 1800);
       flickerTimeoutRef.current[timeoutIndex] = finalTimeout;
     } else {
       // When isHighlighted becomes false, clear both flickering and persistent highlight

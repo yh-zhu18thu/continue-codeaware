@@ -1,7 +1,7 @@
 import { StepIcon, Typography } from "@mui/material";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 import { HighlightEvent } from "core";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import styled, { css, keyframes } from "styled-components";
 import { defaultBorderRadius } from "../../../../components";
 import { useAppDispatch, useAppSelector } from "../../../../redux/hooks";
@@ -19,7 +19,16 @@ const flicker = keyframes`
 `;
 
 // Custom step icon component with flickering animation
-const AnimatedStepIcon = styled(StepIcon)<{ isHighlighted: boolean }>`
+const AnimatedStepIcon = styled(StepIcon)<{
+  isFlickering: boolean;
+  isHighlighted: boolean;
+}>`
+  ${(props) =>
+    props.isFlickering &&
+    css`
+      animation: ${flicker} 0.6s ease-in-out 3;
+    `}
+
   // 高亮状态样式
   ${(props) =>
     props.isHighlighted
@@ -182,7 +191,16 @@ const SummaryItem = styled.div<{ isHighlighted: boolean }>`
     `}
 `;
 
-const SummaryText = styled(Typography)<{ isHighlighted: boolean }>`
+const SummaryText = styled(Typography)<{
+  isFlickering: boolean;
+  isHighlighted: boolean;
+}>`
+  ${(props) =>
+    props.isFlickering &&
+    css`
+      animation: ${flicker} 0.6s ease-in-out 3;
+    `}
+
   font-size: 14px !important;
   line-height: 1.2 !important;
   max-width: 180px; /* 减小最大宽度以容纳更多项目 */
@@ -207,6 +225,12 @@ export default function RequirementDisplayHorizontal({
   const highLevelSteps = useAppSelector(selectHighLevelSteps);
   const containerRef = useRef<HTMLDivElement>(null);
   const highlightedItemRef = useRef<HTMLDivElement>(null);
+
+  // Track previous highlight states for flickering animation
+  const previousHighlightStatesRef = useRef<Map<string, boolean>>(new Map());
+  const [flickeringSteps, setFlickeringSteps] = useState<Set<string>>(
+    new Set(),
+  );
 
   // CodeAware logger
   const logger = useCodeAwareLogger();
@@ -266,6 +290,66 @@ export default function RequirementDisplayHorizontal({
 
   const steps = createSteps();
 
+  // Monitor highlight state changes and trigger flickering
+  useEffect(() => {
+    const newFlickering = new Set<string>();
+
+    // Check each step for state changes - only flicker items that become highlighted
+    steps.forEach((step) => {
+      const previousState = previousHighlightStatesRef.current.get(step.id);
+      // Only add to flickering if the step becomes highlighted (false -> true)
+      if (previousState === false && step.isHighlighted === true) {
+        console.log(
+          `⚡ Horizontal step ${step.id} became highlighted, will flicker`,
+        );
+        newFlickering.add(step.id);
+      }
+    });
+
+    // Only update flickering state if there are actually new flickering chunks
+    if (newFlickering.size > 0) {
+      console.log(
+        "🎬 Starting flicker animation for (horizontal):",
+        Array.from(newFlickering),
+      );
+      setFlickeringSteps((prev) => {
+        // Merge with existing flickering chunks to avoid conflicts
+        const merged = new Set([...prev, ...newFlickering]);
+        return merged;
+      });
+
+      // Clear flickering after animation completes
+      setTimeout(() => {
+        setFlickeringSteps((prev) => {
+          const updated = new Set(prev);
+          newFlickering.forEach((id) => updated.delete(id));
+          return updated;
+        });
+
+        // After flickering completes, check if any of the steps are 'related' highlights
+        // and clear them automatically
+        newFlickering.forEach((stepId) => {
+          const step = highLevelSteps.find((s) => s.id === stepId);
+          if (step && step.highlightType === "related") {
+            dispatch(
+              clearElementHighlight({ type: "highLevelStep", id: stepId }),
+            );
+            console.log(
+              `🧹 Auto-cleared related highlight for high-level step ${stepId} (horizontal)`,
+            );
+          }
+        });
+      }, 1800); // 3 cycles of 0.6s animation
+    }
+
+    // Update previous states after processing
+    const newPreviousStates = new Map(previousHighlightStatesRef.current);
+    steps.forEach((step) => {
+      newPreviousStates.set(step.id, step.isHighlighted);
+    });
+    previousHighlightStatesRef.current = newPreviousStates;
+  }, [highLevelSteps, steps, dispatch]);
+
   // 自动滚动到高亮的步骤
   useEffect(() => {
     const highlightedStep = steps.find((step) => step.isHighlighted);
@@ -311,34 +395,11 @@ export default function RequirementDisplayHorizontal({
             behavior: "smooth",
           });
         }
-
-        // Check if the highlighted step is a 'related' highlight
-        // If so, auto-clear it after a delay (simulating flicker effect)
-        const fullHighlightedStep = highLevelSteps.find(
-          (s) => s.id === highlightedStep.id,
-        );
-        if (
-          fullHighlightedStep &&
-          fullHighlightedStep.highlightType === "related"
-        ) {
-          // Clear after 1800ms (same as flickering duration in vertical display)
-          setTimeout(() => {
-            dispatch(
-              clearElementHighlight({
-                type: "highLevelStep",
-                id: highlightedStep.id,
-              }),
-            );
-            console.log(
-              `🧹 Auto-cleared related highlight for high-level step ${highlightedStep.id} (horizontal)`,
-            );
-          }, 1800);
-        }
       }, 100); // 100ms 防抖延迟
 
       return () => clearTimeout(scrollTimeout);
     }
-  }, [steps, highLevelSteps, dispatch]); // 依赖 steps，当步骤的高亮状态变化时触发
+  }, [steps]); // 依赖 steps，当步骤的高亮状态变化时触发
 
   // 如果没有任何步骤，则不显示缩略模式
   if (steps.length === 0) {
@@ -348,26 +409,35 @@ export default function RequirementDisplayHorizontal({
   return (
     <ThemeProvider theme={muiTheme}>
       <SummaryContainer ref={containerRef}>
-        {steps.map((step) => (
-          <SummaryItem
-            key={step.id}
-            ref={step.isHighlighted ? highlightedItemRef : undefined}
-            isHighlighted={step.isHighlighted}
-            onClick={() => handleChunkClick(step.id)}
-            onKeyDown={(e) => handleChunkKeyDown(e, step.id)}
-            tabIndex={0}
-            role="button"
-            aria-label={`任务 ${step.index}: ${step.content}`}
-          >
-            <AnimatedStepIcon
-              icon={step.index}
-              isHighlighted={step.isHighlighted}
-            />
-            <SummaryText isHighlighted={step.isHighlighted}>
-              {step.content}
-            </SummaryText>
-          </SummaryItem>
-        ))}
+        {steps.map((step) => {
+          const isFlickering = flickeringSteps.has(step.id);
+          const isHighlighted = step.isHighlighted;
+
+          return (
+            <SummaryItem
+              key={step.id}
+              ref={step.isHighlighted ? highlightedItemRef : undefined}
+              isHighlighted={isHighlighted}
+              onClick={() => handleChunkClick(step.id)}
+              onKeyDown={(e) => handleChunkKeyDown(e, step.id)}
+              tabIndex={0}
+              role="button"
+              aria-label={`任务 ${step.index}: ${step.content}`}
+            >
+              <AnimatedStepIcon
+                icon={step.index}
+                isFlickering={isFlickering}
+                isHighlighted={isHighlighted}
+              />
+              <SummaryText
+                isFlickering={isFlickering}
+                isHighlighted={isHighlighted}
+              >
+                {step.content}
+              </SummaryText>
+            </SummaryItem>
+          );
+        })}
       </SummaryContainer>
     </ThemeProvider>
   );

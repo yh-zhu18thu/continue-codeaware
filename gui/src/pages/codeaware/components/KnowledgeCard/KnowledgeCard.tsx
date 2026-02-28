@@ -331,7 +331,7 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
       // The card should always flicker to indicate highlighting
       setIsFlickering(true);
 
-      // Create a flickering effect with multiple flashes
+      // Create a flickering effect with multiple flashes (3 cycles, 600ms each = 1800ms total)
       let timeoutIndex = 0;
       for (let i = 0; i < 3; i++) {
         // Turn off flickering
@@ -339,7 +339,7 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
           () => {
             setIsFlickering(false);
           },
-          200 + i * 400,
+          300 + i * 600,
         );
         flickerTimeoutRef.current[timeoutIndex++] = timeoutOff;
 
@@ -348,18 +348,15 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
           () => {
             setIsFlickering(true);
           },
-          400 + i * 400,
+          600 + i * 600,
         );
         flickerTimeoutRef.current[timeoutIndex++] = timeoutOn;
       }
 
-      // Final timeout to turn off flickering and keep highlighted
-      const finalTimeout = setTimeout(
-        () => {
-          setIsFlickering(false);
-        },
-        200 + 3 * 400,
-      );
+      // Final timeout to turn off flickering and keep highlighted (at 1800ms)
+      const finalTimeout = setTimeout(() => {
+        setIsFlickering(false);
+      }, 1800);
       flickerTimeoutRef.current[timeoutIndex] = finalTimeout;
     } else {
       // Immediately turn off flickering when not highlighted

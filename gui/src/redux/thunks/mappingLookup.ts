@@ -15,7 +15,10 @@ import {
   generateCodeChunks,
   isChunkStillValid,
 } from "../../utils/codeChunkUtils";
-import { selectCodeChunksBySemanticElementId } from "../selectors/mappingSelectors";
+import {
+  selectCodeChunksBySemanticElementId,
+  selectSemanticElementsByCodeChunkId,
+} from "../selectors/mappingSelectors";
 import {
   addMappingsToBatch,
   setMappingLookupError,
@@ -28,6 +31,42 @@ import type { RootState, ThunkApiType } from "../store";
  * 辅助函数：从 IDE 实时读取和分割代码
  * ===============================
  */
+
+/**
+ * 标准化文件路径，确保路径格式一致
+ * - 将 file:// URI 转换为普通路径
+ * - 统一路径分隔符
+ * @param path 文件路径或 URI
+ * @returns 标准化后的路径
+ */
+function normalizeFilePath(path: string): string {
+  let normalized = path;
+
+  // 如果是 file:// URI，转换为普通路径
+  if (normalized.startsWith("file://")) {
+    // 移除 file:// 前缀
+    normalized = normalized.replace(/^file:\/\//, "");
+
+    // 在 Windows 上，处理类似 file:///C:/... 的情况
+    // 在 Unix 上，file:///path 变为 /path
+    if (normalized.startsWith("/") && normalized.includes(":")) {
+      // Windows 路径：/C:/... -> C:/...
+      normalized = normalized.slice(1);
+    }
+  }
+
+  // 解码 URI 编码的字符（如空格等）
+  try {
+    normalized = decodeURIComponent(normalized);
+  } catch (e) {
+    // 如果解码失败，保持原样
+  }
+
+  // 统一路径分隔符为正斜杠
+  normalized = normalized.replace(/\\/g, "/");
+
+  return normalized;
+}
 
 /**
  * 从 IDE 读取当前文件并分割为 code chunks
@@ -649,9 +688,19 @@ export const establishCodeToSemanticMapping = createAsyncThunk<
 
       const { filePath, chunks } = fileData;
 
-      // 验证文件路径是否匹配
-      if (filePath !== codeSelection.filePath) {
-        throw new Error("当前文件与选中的代码文件不匹配");
+      // 验证文件路径是否匹配（标准化路径格式）
+      const normalizedCurrentPath = normalizeFilePath(filePath);
+      const normalizedSelectionPath = normalizeFilePath(codeSelection.filePath);
+
+      console.log("📂 路径对比:", {
+        currentFile: normalizedCurrentPath,
+        selectionFile: normalizedSelectionPath,
+      });
+
+      if (normalizedCurrentPath !== normalizedSelectionPath) {
+        throw new Error(
+          `当前文件与选中的代码文件不匹配\n当前文件: ${normalizedCurrentPath}\n选中文件: ${normalizedSelectionPath}`,
+        );
       }
 
       // 2. 根据行号范围找到对应的 code chunk
@@ -728,15 +777,3 @@ export const establishCodeToSemanticMapping = createAsyncThunk<
     }
   },
 );
-
-/**
- * 导出辅助 selector（用于外部调用）
- */
-function selectSemanticElementsByCodeChunkId(
-  state: RootState,
-  codeChunkId: string,
-): CodeAwareMapping[] {
-  return state.codeAwareSession.codeAwareMappings.filter(
-    (m) => m.codeChunkId === codeChunkId,
-  );
-}

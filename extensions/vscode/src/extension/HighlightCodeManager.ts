@@ -6,9 +6,11 @@ interface CodeChunk {
 }
 
 export class HighlightCodeManager implements vscode.Disposable {
-  private activeDecorations: Map<string, vscode.TextEditorDecorationType[]> = new Map();
+  private activeDecorations: Map<string, vscode.TextEditorDecorationType[]> =
+    new Map();
   private blinkTimeouts: Map<string, NodeJS.Timeout[]> = new Map();
-  private blinkDecorations: Map<string, vscode.TextEditorDecorationType[]> = new Map(); // 新增：跟踪闪烁装饰器
+  private blinkDecorations: Map<string, vscode.TextEditorDecorationType[]> =
+    new Map(); // 新增：跟踪闪烁装饰器
   private disposables: vscode.Disposable[] = [];
   private onHighlightClearedCallback?: (filePath: string) => void;
 
@@ -24,7 +26,7 @@ export class HighlightCodeManager implements vscode.Disposable {
     this.disposables.push(
       vscode.window.onDidChangeTextEditorSelection((event) => {
         this.handleUserInteraction(event.textEditor);
-      })
+      }),
     );
 
     // Listen for active text editor changes (switching between files)
@@ -33,7 +35,7 @@ export class HighlightCodeManager implements vscode.Disposable {
         if (editor) {
           this.handleUserInteraction(editor);
         }
-      })
+      }),
     );
 
     // Listen for text document changes (typing)
@@ -41,22 +43,22 @@ export class HighlightCodeManager implements vscode.Disposable {
       vscode.workspace.onDidChangeTextDocument((event) => {
         // Find editors showing this document
         const editors = vscode.window.visibleTextEditors.filter(
-          editor => editor.document === event.document
+          (editor) => editor.document === event.document,
         );
-        editors.forEach(editor => this.handleUserInteraction(editor));
-      })
+        editors.forEach((editor) => this.handleUserInteraction(editor));
+      }),
     );
 
     // Listen for visible text editors changes (opening new editors, closing editors)
     this.disposables.push(
       vscode.window.onDidChangeVisibleTextEditors((editors) => {
         // When editors change, check for interactions in all visible editors
-        editors.forEach(editor => {
-          if (editor.document.uri.scheme === 'file') {
+        editors.forEach((editor) => {
+          if (editor.document.uri.scheme === "file") {
             this.handleUserInteraction(editor);
           }
         });
-      })
+      }),
     );
   }
 
@@ -65,7 +67,7 @@ export class HighlightCodeManager implements vscode.Disposable {
    * @param editor The text editor where interaction occurred
    */
   private handleUserInteraction(editor: vscode.TextEditor): void {
-    if (!editor || editor.document.uri.scheme !== 'file') {
+    if (!editor || editor.document.uri.scheme !== "file") {
       return;
     }
 
@@ -74,16 +76,30 @@ export class HighlightCodeManager implements vscode.Disposable {
 
     // Check if there are active highlights for this file
     if (this.hasActiveHighlights(filePath)) {
-      console.log(`User interaction detected in file: ${filePath}, clearing highlights`);
-      console.log(`Active decorations before clear:`, Array.from(this.activeDecorations.keys()));
-      console.log(`Active timeouts before clear:`, Array.from(this.blinkTimeouts.keys()));
-      
+      console.log(
+        `User interaction detected in file: ${filePath}, clearing highlights`,
+      );
+      console.log(
+        `Active decorations before clear:`,
+        Array.from(this.activeDecorations.keys()),
+      );
+      console.log(
+        `Active timeouts before clear:`,
+        Array.from(this.blinkTimeouts.keys()),
+      );
+
       // Clear highlights for this file
       this.clearHighlightForFile(filePath);
-      
-      console.log(`Active decorations after clear:`, Array.from(this.activeDecorations.keys()));
-      console.log(`Active timeouts after clear:`, Array.from(this.blinkTimeouts.keys()));
-      
+
+      console.log(
+        `Active decorations after clear:`,
+        Array.from(this.activeDecorations.keys()),
+      );
+      console.log(
+        `Active timeouts after clear:`,
+        Array.from(this.blinkTimeouts.keys()),
+      );
+
       // Notify callback if set (to inform webview)
       if (this.onHighlightClearedCallback) {
         this.onHighlightClearedCallback(filePath);
@@ -106,7 +122,9 @@ export class HighlightCodeManager implements vscode.Disposable {
    */
   hasActiveHighlights(filepath: string): boolean {
     const normalizedFilepath = this.normalizeFilePath(filepath);
-    const decorations = this.activeDecorations.get(normalizedFilepath) || this.activeDecorations.get(filepath);
+    const decorations =
+      this.activeDecorations.get(normalizedFilepath) ||
+      this.activeDecorations.get(filepath);
     return Boolean(decorations && decorations.length > 0);
   }
 
@@ -123,7 +141,7 @@ export class HighlightCodeManager implements vscode.Disposable {
 
     // Group code chunks by file path
     const chunksByFile = new Map<string, CodeChunk[]>();
-    codeChunks.forEach(chunk => {
+    codeChunks.forEach((chunk) => {
       const normalizedPath = this.normalizeFilePath(chunk.filePath);
       if (!chunksByFile.has(normalizedPath)) {
         chunksByFile.set(normalizedPath, []);
@@ -141,7 +159,7 @@ export class HighlightCodeManager implements vscode.Disposable {
    * Merges overlapping ranges to avoid color overlay issues
    * @param ranges Array of ranges to merge
    * @returns Array of non-overlapping ranges
-   * 
+   *
    * Example:
    * Input: [Range(1-5), Range(3-7), Range(10-12), Range(11-15)]
    * Output: [Range(1-7), Range(10-15)]
@@ -164,25 +182,28 @@ export class HighlightCodeManager implements vscode.Disposable {
 
     for (let i = 1; i < sortedRanges.length; i++) {
       const nextRange = sortedRanges[i];
-      
+
       // Check if ranges overlap or are adjacent
       const currentEnd = currentRange.end;
       const nextStart = nextRange.start;
-      
+
       // Ranges overlap if:
       // 1. Next range starts before current range ends
       // 2. Next range starts on the same line as current range ends
-      const overlaps = 
+      const overlaps =
         nextStart.line < currentEnd.line ||
-        (nextStart.line === currentEnd.line && nextStart.character <= currentEnd.character);
-      
+        (nextStart.line === currentEnd.line &&
+          nextStart.character <= currentEnd.character);
+
       if (overlaps) {
         // Merge the ranges by extending current range to cover both
-        const newEnd = currentEnd.line > nextRange.end.line ||
-                      (currentEnd.line === nextRange.end.line && currentEnd.character >= nextRange.end.character)
-                      ? currentEnd
-                      : nextRange.end;
-        
+        const newEnd =
+          currentEnd.line > nextRange.end.line ||
+          (currentEnd.line === nextRange.end.line &&
+            currentEnd.character >= nextRange.end.character)
+            ? currentEnd
+            : nextRange.end;
+
         currentRange = new vscode.Range(currentRange.start, newEnd);
       } else {
         // No overlap, add current range to results and move to next
@@ -190,11 +211,13 @@ export class HighlightCodeManager implements vscode.Disposable {
         currentRange = nextRange;
       }
     }
-    
+
     // Add the last range
     mergedRanges.push(currentRange);
-    
-    console.log(`Merged ${ranges.length} ranges into ${mergedRanges.length} non-overlapping ranges`);
+
+    console.log(
+      `Merged ${ranges.length} ranges into ${mergedRanges.length} non-overlapping ranges`,
+    );
     return mergedRanges;
   }
 
@@ -205,7 +228,7 @@ export class HighlightCodeManager implements vscode.Disposable {
    */
   private findLargestRange(ranges: vscode.Range[]): vscode.Range {
     if (ranges.length === 0) {
-      throw new Error('Cannot find largest range from empty array');
+      throw new Error("Cannot find largest range from empty array");
     }
 
     if (ranges.length === 1) {
@@ -223,7 +246,9 @@ export class HighlightCodeManager implements vscode.Disposable {
       }
     }
 
-    console.log(`Found largest range with ${maxLineCount} lines: [${largestRange.start.line + 1}, ${largestRange.end.line + 1}]`);
+    console.log(
+      `Found largest range with ${maxLineCount} lines: [${largestRange.start.line + 1}, ${largestRange.end.line + 1}]`,
+    );
     return largestRange;
   }
 
@@ -242,19 +267,22 @@ export class HighlightCodeManager implements vscode.Disposable {
    * @param normalizedPath The normalized file path
    * @returns Array of all possible path variations
    */
-  private findAllPathVariations(originalPath: string, normalizedPath: string): string[] {
+  private findAllPathVariations(
+    originalPath: string,
+    normalizedPath: string,
+  ): string[] {
     const variations = new Set<string>();
-    
+
     // Add the original and normalized paths
     variations.add(originalPath);
     variations.add(normalizedPath);
-    
+
     // Check all existing keys in our maps for potential matches
     const allKeys = new Set([
       ...this.activeDecorations.keys(),
-      ...this.blinkTimeouts.keys()
+      ...this.blinkTimeouts.keys(),
     ]);
-    
+
     for (const key of allKeys) {
       // Check if this key represents the same file
       try {
@@ -267,7 +295,7 @@ export class HighlightCodeManager implements vscode.Disposable {
         console.warn(`Failed to normalize path: ${key}`, error);
       }
     }
-    
+
     return Array.from(variations);
   }
 
@@ -281,16 +309,32 @@ export class HighlightCodeManager implements vscode.Disposable {
       // Create a temporary decoration type and immediately clear it
       // This helps remove any potential orphaned decorations
       const tempDecorationType = vscode.window.createTextEditorDecorationType({
-        backgroundColor: 'transparent'
+        backgroundColor: "transparent",
       });
-      
+
       editor.setDecorations(tempDecorationType, []);
       tempDecorationType.dispose();
-      
-      console.log(`Performed aggressive decoration cleanup for editor: ${editor.document.fileName}`);
+
+      console.log(
+        `Performed aggressive decoration cleanup for editor: ${editor.document.fileName}`,
+      );
     } catch (error) {
       console.warn(`Failed to perform aggressive decoration cleanup:`, error);
     }
+  }
+
+  /**
+   * Converts a file path to vscode.Uri, handling both file:// URIs and regular paths
+   * @param filePath The file path or URI string
+   * @returns vscode.Uri object
+   */
+  private filePathToUri(filePath: string): vscode.Uri {
+    // Check if the path is already a URI (contains file:// or other schemes)
+    if (filePath.includes("://")) {
+      return vscode.Uri.parse(filePath);
+    }
+    // Otherwise treat it as a regular file path
+    return vscode.Uri.file(filePath);
   }
 
   /**
@@ -298,26 +342,34 @@ export class HighlightCodeManager implements vscode.Disposable {
    * @param normalizedFilepath The normalized file path
    * @param codeChunks Array of code chunks in the same file
    */
-  private async highlightCodeChunksInFile(normalizedFilepath: string, codeChunks: CodeChunk[]): Promise<void> {
+  private async highlightCodeChunksInFile(
+    normalizedFilepath: string,
+    codeChunks: CodeChunk[],
+  ): Promise<void> {
     if (!codeChunks || codeChunks.length === 0) {
       return;
     }
 
     // Use the original file path from the first chunk for opening
     const originalFilepath = codeChunks[0].filePath;
-    console.log(`Highlighting ${codeChunks.length} code chunks in file: ${originalFilepath}`);
+    console.log(
+      `Highlighting ${codeChunks.length} code chunks in file: ${originalFilepath}`,
+    );
 
     try {
       // First try to find an existing editor for the file
-      let editor = vscode.window.visibleTextEditors.find(e => 
-        this.normalizeFilePath(e.document.fileName) === normalizedFilepath ||
-        this.normalizeFilePath(e.document.uri.fsPath) === normalizedFilepath
+      let editor = vscode.window.visibleTextEditors.find(
+        (e) =>
+          this.normalizeFilePath(e.document.fileName) === normalizedFilepath ||
+          this.normalizeFilePath(e.document.uri.fsPath) ===
+            normalizedFilepath ||
+          e.document.uri.toString() === originalFilepath,
       );
-      
+
       // If no editor is found, try to open the file
       if (!editor) {
         try {
-          const uri = vscode.Uri.file(originalFilepath);
+          const uri = this.filePathToUri(originalFilepath);
           const document = await vscode.workspace.openTextDocument(uri);
           editor = await vscode.window.showTextDocument(document);
         } catch (openError) {
@@ -325,12 +377,12 @@ export class HighlightCodeManager implements vscode.Disposable {
           return;
         }
       }
-      
+
       if (!editor) {
         console.warn(`No editor available for file ${originalFilepath}`);
         return;
       }
-      
+
       // Check if file is empty
       if (editor.document.lineCount === 0) {
         console.warn(`Cannot highlight in empty file ${originalFilepath}`);
@@ -347,22 +399,31 @@ export class HighlightCodeManager implements vscode.Disposable {
 
       for (const chunk of codeChunks) {
         const [startLine, endLine] = chunk.range;
-        
+
         // Convert from 1-based to 0-based line numbers if needed
         const adjustedStartLine = Math.max(0, startLine - 1);
         const adjustedEndLine = Math.max(0, endLine - 1);
-        
+
         // Validate line numbers (now 0-based)
-        if (adjustedStartLine < 0 || adjustedStartLine >= editor.document.lineCount ||
-            adjustedEndLine < 0 || adjustedEndLine >= editor.document.lineCount ||
-            adjustedStartLine > adjustedEndLine) {
-            console.warn(`Invalid line range [${startLine}, ${endLine}] (0-based: [${adjustedStartLine}, ${adjustedEndLine}]) for file ${originalFilepath}. File has ${editor.document.lineCount} lines.`);
-            continue;
+        if (
+          adjustedStartLine < 0 ||
+          adjustedStartLine >= editor.document.lineCount ||
+          adjustedEndLine < 0 ||
+          adjustedEndLine >= editor.document.lineCount ||
+          adjustedStartLine > adjustedEndLine
+        ) {
+          console.warn(
+            `Invalid line range [${startLine}, ${endLine}] (0-based: [${adjustedStartLine}, ${adjustedEndLine}]) for file ${originalFilepath}. File has ${editor.document.lineCount} lines.`,
+          );
+          continue;
         }
-        
+
         const range = new vscode.Range(
-            new vscode.Position(adjustedStartLine, 0),
-            new vscode.Position(adjustedEndLine, editor.document.lineAt(adjustedEndLine).text.length)
+          new vscode.Position(adjustedStartLine, 0),
+          new vscode.Position(
+            adjustedEndLine,
+            editor.document.lineAt(adjustedEndLine).text.length,
+          ),
         );
 
         allValidRanges.push(range);
@@ -379,28 +440,33 @@ export class HighlightCodeManager implements vscode.Disposable {
       // Create decorations for each merged range
       const decorations: vscode.TextEditorDecorationType[] = [];
       for (let i = 0; i < mergedRanges.length; i++) {
-        const permanentDecorationType = vscode.window.createTextEditorDecorationType({
-          backgroundColor: 'rgba(255, 255, 0, 0.15)', // 淡黄色背景，透明度15%
-          border: '1px solid rgba(255, 255, 0, 0.3)', // 淡黄色边框，透明度30%
-          borderRadius: '3px',
-          overviewRulerColor: 'rgba(255, 255, 0, 0.5)',
-          overviewRulerLane: vscode.OverviewRulerLane.Right,
-          isWholeLine: false,
-        });
+        const permanentDecorationType =
+          vscode.window.createTextEditorDecorationType({
+            backgroundColor: "rgba(255, 255, 0, 0.15)", // 淡黄色背景，透明度15%
+            border: "1px solid rgba(255, 255, 0, 0.3)", // 淡黄色边框，透明度30%
+            borderRadius: "3px",
+            overviewRulerColor: "rgba(255, 255, 0, 0.5)",
+            overviewRulerLane: vscode.OverviewRulerLane.Right,
+            isWholeLine: false,
+          });
         decorations.push(permanentDecorationType);
       }
 
       // Apply blinking effect for all merged ranges simultaneously
-      await this.applyBlinkEffectForMultipleRanges(editor, mergedRanges, decorations, normalizedFilepath);
-      
+      await this.applyBlinkEffectForMultipleRanges(
+        editor,
+        mergedRanges,
+        decorations,
+        normalizedFilepath,
+      );
+
       // Reveal the largest range in the editor
       if (mergedRanges.length > 0) {
         const largestRange = this.findLargestRange(mergedRanges);
         editor.revealRange(largestRange, vscode.TextEditorRevealType.InCenter);
       }
-      
     } catch (error) {
-      console.error('Error highlighting code chunks:', error);
+      console.error("Error highlighting code chunks:", error);
       vscode.window.showErrorMessage(`Failed to highlight code: ${error}`);
     }
   }
@@ -411,21 +477,26 @@ export class HighlightCodeManager implements vscode.Disposable {
    */
   async highlightCodeChunk(codeChunk: CodeChunk): Promise<void> {
     const filepath = codeChunk.filePath;
-    console.log(`Highlighting code chunk in file: ${filepath}, range: ${codeChunk.range}`);
+    console.log(
+      `Highlighting code chunk in file: ${filepath}, range: ${codeChunk.range}`,
+    );
     try {
       // Normalize the filepath for comparison
       const normalizedFilepath = this.normalizeFilePath(filepath);
-      
+
       // First try to find an existing editor for the file
-      let editor = vscode.window.visibleTextEditors.find(e => 
-        this.normalizeFilePath(e.document.fileName) === normalizedFilepath ||
-        this.normalizeFilePath(e.document.uri.fsPath) === normalizedFilepath
+      let editor = vscode.window.visibleTextEditors.find(
+        (e) =>
+          this.normalizeFilePath(e.document.fileName) === normalizedFilepath ||
+          this.normalizeFilePath(e.document.uri.fsPath) ===
+            normalizedFilepath ||
+          e.document.uri.toString() === filepath,
       );
-      
+
       // If no editor is found, try to open the file
       if (!editor) {
         try {
-          const uri = vscode.Uri.file(filepath);
+          const uri = this.filePathToUri(filepath);
           const document = await vscode.workspace.openTextDocument(uri);
           editor = await vscode.window.showTextDocument(document);
         } catch (openError) {
@@ -433,66 +504,81 @@ export class HighlightCodeManager implements vscode.Disposable {
           return;
         }
       }
-      
+
       if (!editor) {
         console.warn(`No editor available for file ${filepath}`);
         return;
       }
-        
+
       const [startLine, endLine] = codeChunk.range;
-      
+
       // Check if file is empty
       if (editor.document.lineCount === 0) {
         console.warn(`Cannot highlight in empty file ${filepath}`);
         return;
       }
-      
+
       // Convert from 1-based to 0-based line numbers if needed
       const adjustedStartLine = Math.max(0, startLine - 1);
       const adjustedEndLine = Math.max(0, endLine - 1);
-      
+
       // Validate line numbers (now 0-based)
-      if (adjustedStartLine < 0 || adjustedStartLine >= editor.document.lineCount ||
-          adjustedEndLine < 0 || adjustedEndLine >= editor.document.lineCount ||
-          adjustedStartLine > adjustedEndLine) {
-          console.warn(`Invalid line range [${startLine}, ${endLine}] (0-based: [${adjustedStartLine}, ${adjustedEndLine}]) for file ${filepath}. File has ${editor.document.lineCount} lines.`);
-          return;
-        }
-        
-        const range = new vscode.Range(
-            new vscode.Position(adjustedStartLine, 0),
-            new vscode.Position(adjustedEndLine, editor.document.lineAt(adjustedEndLine).text.length)
-        );        // Create decoration type for highlighting with better visual feedback
-        const permanentDecorationType = vscode.window.createTextEditorDecorationType({
-            backgroundColor: 'rgba(255, 255, 0, 0.15)', // 淡黄色背景，透明度15%
-            border: '1px solid rgba(255, 255, 0, 0.3)', // 淡黄色边框，透明度30%
-            borderRadius: '3px',
-            overviewRulerColor: 'rgba(255, 255, 0, 0.5)',
-            overviewRulerLane: vscode.OverviewRulerLane.Right,
-            isWholeLine: false,
+      if (
+        adjustedStartLine < 0 ||
+        adjustedStartLine >= editor.document.lineCount ||
+        adjustedEndLine < 0 ||
+        adjustedEndLine >= editor.document.lineCount ||
+        adjustedStartLine > adjustedEndLine
+      ) {
+        console.warn(
+          `Invalid line range [${startLine}, ${endLine}] (0-based: [${adjustedStartLine}, ${adjustedEndLine}]) for file ${filepath}. File has ${editor.document.lineCount} lines.`,
+        );
+        return;
+      }
+
+      const range = new vscode.Range(
+        new vscode.Position(adjustedStartLine, 0),
+        new vscode.Position(
+          adjustedEndLine,
+          editor.document.lineAt(adjustedEndLine).text.length,
+        ),
+      ); // Create decoration type for highlighting with better visual feedback
+      const permanentDecorationType =
+        vscode.window.createTextEditorDecorationType({
+          backgroundColor: "rgba(255, 255, 0, 0.15)", // 淡黄色背景，透明度15%
+          border: "1px solid rgba(255, 255, 0, 0.3)", // 淡黄色边框，透明度30%
+          borderRadius: "3px",
+          overviewRulerColor: "rgba(255, 255, 0, 0.5)",
+          overviewRulerLane: vscode.OverviewRulerLane.Right,
+          isWholeLine: false,
         });
 
-        // Create decoration type for blinking effect
-        const blinkDecorationType = vscode.window.createTextEditorDecorationType({
-            backgroundColor: 'rgba(0, 120, 215, 0.2)', // 淡蓝色背景，透明度20%
-            border: '1px solid rgba(0, 120, 215, 0.4)', // 淡蓝色边框，透明度40%
-            borderRadius: '3px',
-            isWholeLine: false,
-        });
-        
-        // Clear any existing highlights for this file before applying new one
-        // Use more aggressive clearing to prevent decoration residue
-        this.clearHighlightForFile(normalizedFilepath);
-        this.clearHighlightForFile(filepath); // Also clear using original path
-        
-        // Apply blinking effect first (this will handle storing the decoration)
-        await this.applyBlinkEffect(editor, range, blinkDecorationType, permanentDecorationType, normalizedFilepath);
-        
-        // Reveal the range in the editor
-        editor.revealRange(range, vscode.TextEditorRevealType.InCenter);
-      
+      // Create decoration type for blinking effect
+      const blinkDecorationType = vscode.window.createTextEditorDecorationType({
+        backgroundColor: "rgba(0, 120, 215, 0.2)", // 淡蓝色背景，透明度20%
+        border: "1px solid rgba(0, 120, 215, 0.4)", // 淡蓝色边框，透明度40%
+        borderRadius: "3px",
+        isWholeLine: false,
+      });
+
+      // Clear any existing highlights for this file before applying new one
+      // Use more aggressive clearing to prevent decoration residue
+      this.clearHighlightForFile(normalizedFilepath);
+      this.clearHighlightForFile(filepath); // Also clear using original path
+
+      // Apply blinking effect first (this will handle storing the decoration)
+      await this.applyBlinkEffect(
+        editor,
+        range,
+        blinkDecorationType,
+        permanentDecorationType,
+        normalizedFilepath,
+      );
+
+      // Reveal the range in the editor
+      editor.revealRange(range, vscode.TextEditorRevealType.InCenter);
     } catch (error) {
-      console.error('Error highlighting code chunk:', error);
+      console.error("Error highlighting code chunk:", error);
       vscode.window.showErrorMessage(`Failed to highlight code: ${error}`);
     }
   }
@@ -503,44 +589,55 @@ export class HighlightCodeManager implements vscode.Disposable {
    */
   clearHighlightForFile(filepath: string): void {
     const normalizedFilepath = this.normalizeFilePath(filepath);
-    console.log(`Clearing highlights for file: ${filepath} (normalized: ${normalizedFilepath})`);
-    
+    console.log(
+      `Clearing highlights for file: ${filepath} (normalized: ${normalizedFilepath})`,
+    );
+
     // Find all possible path variations for this file
-    const pathVariations = this.findAllPathVariations(filepath, normalizedFilepath);
-    console.log(`Found ${pathVariations.length} path variations to check:`, pathVariations);
-    
+    const pathVariations = this.findAllPathVariations(
+      filepath,
+      normalizedFilepath,
+    );
+    console.log(
+      `Found ${pathVariations.length} path variations to check:`,
+      pathVariations,
+    );
+
     // Clear timeouts for all path variations
     let totalTimeoutsCleared = 0;
-    pathVariations.forEach(path => {
+    pathVariations.forEach((path) => {
       const timeouts = this.blinkTimeouts.get(path);
       if (timeouts) {
         console.log(`Clearing ${timeouts.length} timeouts for path: ${path}`);
-        timeouts.forEach(timeout => clearTimeout(timeout));
+        timeouts.forEach((timeout) => clearTimeout(timeout));
         this.blinkTimeouts.delete(path);
         totalTimeoutsCleared += timeouts.length;
       }
     });
-    
+
     if (totalTimeoutsCleared > 0) {
       console.log(`Total timeouts cleared: ${totalTimeoutsCleared}`);
     }
-    
+
     // Find the editor for this file
-    const editor = vscode.window.visibleTextEditors.find(e => 
-      this.normalizeFilePath(e.document.fileName) === normalizedFilepath ||
-      this.normalizeFilePath(e.document.uri.fsPath) === normalizedFilepath ||
-      e.document.fileName === filepath ||
-      e.document.uri.fsPath === filepath
+    const editor = vscode.window.visibleTextEditors.find(
+      (e) =>
+        this.normalizeFilePath(e.document.fileName) === normalizedFilepath ||
+        this.normalizeFilePath(e.document.uri.fsPath) === normalizedFilepath ||
+        e.document.fileName === filepath ||
+        e.document.uri.fsPath === filepath,
     );
-    
+
     // Clear active decorations for all path variations
     let totalDecorationsCleared = 0;
     const allDecorations: vscode.TextEditorDecorationType[] = [];
-    
-    pathVariations.forEach(path => {
+
+    pathVariations.forEach((path) => {
       const decorations = this.activeDecorations.get(path);
       if (decorations && decorations.length > 0) {
-        console.log(`Found ${decorations.length} active decorations for path: ${path}`);
+        console.log(
+          `Found ${decorations.length} active decorations for path: ${path}`,
+        );
         allDecorations.push(...decorations);
         this.activeDecorations.delete(path);
         totalDecorationsCleared += decorations.length;
@@ -548,24 +645,30 @@ export class HighlightCodeManager implements vscode.Disposable {
     });
 
     // Clear blink decorations for all path variations (新增：清除闪烁装饰器)
-    pathVariations.forEach(path => {
+    pathVariations.forEach((path) => {
       const blinkDecorations = this.blinkDecorations.get(path);
       if (blinkDecorations && blinkDecorations.length > 0) {
-        console.log(`Found ${blinkDecorations.length} blink decorations for path: ${path}`);
+        console.log(
+          `Found ${blinkDecorations.length} blink decorations for path: ${path}`,
+        );
         allDecorations.push(...blinkDecorations);
         this.blinkDecorations.delete(path);
         totalDecorationsCleared += blinkDecorations.length;
       }
     });
-    
+
     // Clear all decorations from the editor and dispose them
     if (allDecorations.length > 0) {
-      console.log(`Clearing and disposing ${allDecorations.length} total decorations`);
-      
+      console.log(
+        `Clearing and disposing ${allDecorations.length} total decorations`,
+      );
+
       if (editor) {
-        console.log(`Clearing decorations from visible editor for file: ${normalizedFilepath}`);
+        console.log(
+          `Clearing decorations from visible editor for file: ${normalizedFilepath}`,
+        );
         // Clear each decoration from the editor
-        allDecorations.forEach(decoration => {
+        allDecorations.forEach((decoration) => {
           try {
             editor.setDecorations(decoration, []);
           } catch (error) {
@@ -575,21 +678,21 @@ export class HighlightCodeManager implements vscode.Disposable {
       } else {
         console.log(`No visible editor found for file: ${normalizedFilepath}`);
       }
-      
+
       // Dispose of all decorations
-      allDecorations.forEach(decoration => {
+      allDecorations.forEach((decoration) => {
         try {
           decoration.dispose();
         } catch (error) {
           console.warn(`Failed to dispose decoration:`, error);
         }
       });
-      
+
       console.log(`All decorations disposed for file: ${normalizedFilepath}`);
     } else {
       console.log(`No decorations found for file: ${normalizedFilepath}`);
     }
-    
+
     // Additional safety: clear any remaining decorations from the editor using a more aggressive approach
     if (editor) {
       this.clearAllDecorationsFromEditor(editor);
@@ -600,65 +703,74 @@ export class HighlightCodeManager implements vscode.Disposable {
    * Clears all active code highlights
    */
   clearAllHighlights(): void {
-    console.log('Clearing all highlights...');
-    
+    console.log("Clearing all highlights...");
+
     // Clear all timeouts
     let totalTimeoutsCleared = 0;
     for (const [filepath, timeouts] of this.blinkTimeouts) {
       console.log(`Clearing ${timeouts.length} timeouts for file: ${filepath}`);
-      timeouts.forEach(timeout => clearTimeout(timeout));
+      timeouts.forEach((timeout) => clearTimeout(timeout));
       totalTimeoutsCleared += timeouts.length;
     }
     this.blinkTimeouts.clear();
     console.log(`Total timeouts cleared: ${totalTimeoutsCleared}`);
-    
+
     // Clear all decorations (包括活动装饰器和闪烁装饰器)
     let totalDecorationsCleared = 0;
     const allDecorations: vscode.TextEditorDecorationType[] = [];
-    
+
     // 收集活动装饰器
     for (const [filepath, decorations] of this.activeDecorations) {
-      console.log(`Processing ${decorations.length} active decorations for file: ${filepath}`);
+      console.log(
+        `Processing ${decorations.length} active decorations for file: ${filepath}`,
+      );
       allDecorations.push(...decorations);
       totalDecorationsCleared += decorations.length;
     }
-    
+
     // 收集闪烁装饰器 (新增)
     for (const [filepath, blinkDecorations] of this.blinkDecorations) {
-      console.log(`Processing ${blinkDecorations.length} blink decorations for file: ${filepath}`);
+      console.log(
+        `Processing ${blinkDecorations.length} blink decorations for file: ${filepath}`,
+      );
       allDecorations.push(...blinkDecorations);
       totalDecorationsCleared += blinkDecorations.length;
     }
-    
+
     // Clear decorations from all visible editors
-    vscode.window.visibleTextEditors.forEach(editor => {
-      if (editor.document.uri.scheme === 'file') {
+    vscode.window.visibleTextEditors.forEach((editor) => {
+      if (editor.document.uri.scheme === "file") {
         // Clear decorations from each editor
-        allDecorations.forEach(decoration => {
+        allDecorations.forEach((decoration) => {
           try {
             editor.setDecorations(decoration, []);
           } catch (error) {
-            console.warn(`Failed to clear decoration from editor ${editor.document.fileName}:`, error);
+            console.warn(
+              `Failed to clear decoration from editor ${editor.document.fileName}:`,
+              error,
+            );
           }
         });
-        
+
         // Perform aggressive cleanup
         this.clearAllDecorationsFromEditor(editor);
       }
     });
-    
+
     // Dispose of all decorations
-    allDecorations.forEach(decoration => {
+    allDecorations.forEach((decoration) => {
       try {
         decoration.dispose();
       } catch (error) {
         console.warn(`Failed to dispose decoration:`, error);
       }
     });
-    
+
     this.activeDecorations.clear();
     this.blinkDecorations.clear(); // 新增：清除闪烁装饰器映射
-    console.log(`Total decorations cleared and disposed: ${totalDecorationsCleared}`);
+    console.log(
+      `Total decorations cleared and disposed: ${totalDecorationsCleared}`,
+    );
   }
 
   /**
@@ -666,11 +778,11 @@ export class HighlightCodeManager implements vscode.Disposable {
    */
   dispose(): void {
     this.clearAllHighlights();
-    
+
     // Dispose of all event listeners
-    this.disposables.forEach(disposable => disposable.dispose());
+    this.disposables.forEach((disposable) => disposable.dispose());
     this.disposables = [];
-    
+
     // Clear callback reference
     this.onHighlightClearedCallback = undefined;
   }
@@ -682,14 +794,14 @@ export class HighlightCodeManager implements vscode.Disposable {
    * @returns The normalized file path
    */
   private normalizeFilePath(filepath: string): string {
-    // Convert to absolute path using VS Code's URI system
-    const uri = vscode.Uri.file(filepath);
+    // Convert to absolute path using VS Code's URI system, handling both URIs and paths
+    const uri = this.filePathToUri(filepath);
     const normalizedPath = uri.fsPath;
-    
+
     // On case-insensitive file systems (like macOS and Windows), convert to lowercase
     // for consistent comparison
-    return process.platform === 'win32' || process.platform === 'darwin' 
-      ? normalizedPath.toLowerCase() 
+    return process.platform === "win32" || process.platform === "darwin"
+      ? normalizedPath.toLowerCase()
       : normalizedPath;
   }
 
@@ -706,117 +818,136 @@ export class HighlightCodeManager implements vscode.Disposable {
     range: vscode.Range,
     blinkDecorationType: vscode.TextEditorDecorationType,
     permanentDecorationType: vscode.TextEditorDecorationType,
-    normalizedFilepath?: string
+    normalizedFilepath?: string,
   ): Promise<void> {
-    const filepath = normalizedFilepath || this.normalizeFilePath(editor.document.uri.fsPath);
+    const filepath =
+      normalizedFilepath || this.normalizeFilePath(editor.document.uri.fsPath);
     const timeouts: NodeJS.Timeout[] = [];
-    
+
     // Clear any existing timeouts for this file
     const existingTimeouts = this.blinkTimeouts.get(filepath);
     if (existingTimeouts) {
-      existingTimeouts.forEach(timeout => clearTimeout(timeout));
+      existingTimeouts.forEach((timeout) => clearTimeout(timeout));
     }
 
     // 将闪烁装饰器添加到跟踪映射中
     const existingBlinkDecorations = this.blinkDecorations.get(filepath) || [];
     existingBlinkDecorations.push(blinkDecorationType);
     this.blinkDecorations.set(filepath, existingBlinkDecorations);
-    
+
     // Blink 3 times (on-off-on-off-on-off)
     const blinkCount = 3;
     const blinkDuration = 200; // milliseconds
-    
+
     for (let i = 0; i < blinkCount; i++) {
       // Blink on
-      const onTimeout = setTimeout(() => {
-        // Check if highlights for this file have been cleared during blinking
-        if (!this.blinkTimeouts.has(filepath)) {
-          // 清除编辑器中的装饰器
-          try {
-            editor.setDecorations(blinkDecorationType, []);
-          } catch (error) {
-            console.warn('Failed to clear blink decoration during cleanup:', error);
+      const onTimeout = setTimeout(
+        () => {
+          // Check if highlights for this file have been cleared during blinking
+          if (!this.blinkTimeouts.has(filepath)) {
+            // 清除编辑器中的装饰器
+            try {
+              editor.setDecorations(blinkDecorationType, []);
+            } catch (error) {
+              console.warn(
+                "Failed to clear blink decoration during cleanup:",
+                error,
+              );
+            }
+            blinkDecorationType.dispose();
+            permanentDecorationType.dispose();
+            return;
           }
-          blinkDecorationType.dispose();
-          permanentDecorationType.dispose();
-          return;
-        }
-        try {
-          editor.setDecorations(blinkDecorationType, [range]);
-        } catch (error) {
-          console.warn('Failed to apply blink decoration:', error);
-        }
-      }, i * blinkDuration * 2);
+          try {
+            editor.setDecorations(blinkDecorationType, [range]);
+          } catch (error) {
+            console.warn("Failed to apply blink decoration:", error);
+          }
+        },
+        i * blinkDuration * 2,
+      );
       timeouts.push(onTimeout);
-      
+
       // Blink off
-      const offTimeout = setTimeout(() => {
-        // Check if highlights for this file have been cleared during blinking
-        if (!this.blinkTimeouts.has(filepath)) {
-          // 清除编辑器中的装饰器
+      const offTimeout = setTimeout(
+        () => {
+          // Check if highlights for this file have been cleared during blinking
+          if (!this.blinkTimeouts.has(filepath)) {
+            // 清除编辑器中的装饰器
+            try {
+              editor.setDecorations(blinkDecorationType, []);
+            } catch (error) {
+              console.warn(
+                "Failed to clear blink decoration during cleanup:",
+                error,
+              );
+            }
+            blinkDecorationType.dispose();
+            permanentDecorationType.dispose();
+            return;
+          }
           try {
             editor.setDecorations(blinkDecorationType, []);
           } catch (error) {
-            console.warn('Failed to clear blink decoration during cleanup:', error);
+            console.warn("Failed to clear blink decoration:", error);
           }
-          blinkDecorationType.dispose();
-          permanentDecorationType.dispose();
-          return;
-        }
-        try {
-          editor.setDecorations(blinkDecorationType, []);
-        } catch (error) {
-          console.warn('Failed to clear blink decoration:', error);
-        }
-      }, i * blinkDuration * 2 + blinkDuration);
+        },
+        i * blinkDuration * 2 + blinkDuration,
+      );
       timeouts.push(offTimeout);
     }
-    
+
     // Apply permanent highlight after blinking
-    const finalTimeout = setTimeout(() => {
-      // Check if highlights for this file have been cleared during blinking
-      if (!this.blinkTimeouts.has(filepath)) {
-        // 清除编辑器中的装饰器
+    const finalTimeout = setTimeout(
+      () => {
+        // Check if highlights for this file have been cleared during blinking
+        if (!this.blinkTimeouts.has(filepath)) {
+          // 清除编辑器中的装饰器
+          try {
+            editor.setDecorations(blinkDecorationType, []);
+          } catch (error) {
+            console.warn(
+              "Failed to clear blink decoration during final cleanup:",
+              error,
+            );
+          }
+          blinkDecorationType.dispose();
+          permanentDecorationType.dispose();
+          return;
+        }
+
         try {
-          editor.setDecorations(blinkDecorationType, []);
+          editor.setDecorations(permanentDecorationType, [range]);
+          editor.setDecorations(blinkDecorationType, []); // 确保清除闪烁装饰器
         } catch (error) {
-          console.warn('Failed to clear blink decoration during final cleanup:', error);
+          console.warn("Failed to apply permanent decoration:", error);
+        }
+
+        // 从闪烁装饰器映射中移除并处置
+        const blinkDecorations = this.blinkDecorations.get(filepath) || [];
+        const index = blinkDecorations.indexOf(blinkDecorationType);
+        if (index > -1) {
+          blinkDecorations.splice(index, 1);
+          if (blinkDecorations.length === 0) {
+            this.blinkDecorations.delete(filepath);
+          } else {
+            this.blinkDecorations.set(filepath, blinkDecorations);
+          }
         }
         blinkDecorationType.dispose();
-        permanentDecorationType.dispose();
-        return;
-      }
-      
-      try {
-        editor.setDecorations(permanentDecorationType, [range]);
-        editor.setDecorations(blinkDecorationType, []); // 确保清除闪烁装饰器
-      } catch (error) {
-        console.warn('Failed to apply permanent decoration:', error);
-      }
-      
-      // 从闪烁装饰器映射中移除并处置
-      const blinkDecorations = this.blinkDecorations.get(filepath) || [];
-      const index = blinkDecorations.indexOf(blinkDecorationType);
-      if (index > -1) {
-        blinkDecorations.splice(index, 1);
-        if (blinkDecorations.length === 0) {
-          this.blinkDecorations.delete(filepath);
-        } else {
-          this.blinkDecorations.set(filepath, blinkDecorations);
-        }
-      }
-      blinkDecorationType.dispose();
-      
-      // Store the permanent decoration for management (as array)
-      const existingDecorations = this.activeDecorations.get(filepath) || [];
-      existingDecorations.push(permanentDecorationType);
-      this.activeDecorations.set(filepath, existingDecorations);
-      
-      // Clean up timeouts
-      this.blinkTimeouts.delete(filepath);
-    }, blinkCount * blinkDuration * 2);
+
+        // Store the permanent decoration for management (as array)
+        const existingDecorations = this.activeDecorations.get(filepath) || [];
+        existingDecorations.push(permanentDecorationType);
+        this.activeDecorations.set(filepath, existingDecorations);
+
+        // Clean up timeouts
+        this.blinkTimeouts.delete(filepath);
+      },
+      blinkCount * blinkDuration * 2,
+    );
     timeouts.push(finalTimeout);
-    
+
     // Store timeouts for cleanup
     this.blinkTimeouts.set(filepath, timeouts);
   }
@@ -832,26 +963,28 @@ export class HighlightCodeManager implements vscode.Disposable {
     editor: vscode.TextEditor,
     ranges: vscode.Range[],
     permanentDecorationTypes: vscode.TextEditorDecorationType[],
-    normalizedFilepath: string
+    normalizedFilepath: string,
   ): Promise<void> {
     if (ranges.length !== permanentDecorationTypes.length) {
-      throw new Error('Ranges and decoration types arrays must have the same length');
+      throw new Error(
+        "Ranges and decoration types arrays must have the same length",
+      );
     }
 
     const filepath = normalizedFilepath;
     const timeouts: NodeJS.Timeout[] = [];
-    
+
     // Clear any existing timeouts for this file
     const existingTimeouts = this.blinkTimeouts.get(filepath);
     if (existingTimeouts) {
-      existingTimeouts.forEach(timeout => clearTimeout(timeout));
+      existingTimeouts.forEach((timeout) => clearTimeout(timeout));
     }
 
     // Create a single blink decoration type for all ranges
     const blinkDecorationType = vscode.window.createTextEditorDecorationType({
-      backgroundColor: 'rgba(0, 120, 215, 0.2)', // 淡蓝色背景，透明度20%
-      border: '1px solid rgba(0, 120, 215, 0.4)', // 淡蓝色边框，透明度40%
-      borderRadius: '3px',
+      backgroundColor: "rgba(0, 120, 215, 0.2)", // 淡蓝色背景，透明度20%
+      border: "1px solid rgba(0, 120, 215, 0.4)", // 淡蓝色边框，透明度40%
+      borderRadius: "3px",
       isWholeLine: false,
     });
 
@@ -859,104 +992,131 @@ export class HighlightCodeManager implements vscode.Disposable {
     const existingBlinkDecorations = this.blinkDecorations.get(filepath) || [];
     existingBlinkDecorations.push(blinkDecorationType);
     this.blinkDecorations.set(filepath, existingBlinkDecorations);
-    
+
     // Blink 3 times (on-off-on-off-on-off)
     const blinkCount = 3;
     const blinkDuration = 200; // milliseconds
-    
+
     for (let i = 0; i < blinkCount; i++) {
       // Blink on - apply blink decoration to all ranges
-      const onTimeout = setTimeout(() => {
-        // Check if highlights for this file have been cleared during blinking
-        if (!this.blinkTimeouts.has(filepath)) {
-          // 清除编辑器中的装饰器
-          try {
-            editor.setDecorations(blinkDecorationType, []);
-          } catch (error) {
-            console.warn('Failed to clear blink decoration during cleanup:', error);
+      const onTimeout = setTimeout(
+        () => {
+          // Check if highlights for this file have been cleared during blinking
+          if (!this.blinkTimeouts.has(filepath)) {
+            // 清除编辑器中的装饰器
+            try {
+              editor.setDecorations(blinkDecorationType, []);
+            } catch (error) {
+              console.warn(
+                "Failed to clear blink decoration during cleanup:",
+                error,
+              );
+            }
+            blinkDecorationType.dispose();
+            permanentDecorationTypes.forEach((decoration) =>
+              decoration.dispose(),
+            );
+            return;
           }
-          blinkDecorationType.dispose();
-          permanentDecorationTypes.forEach(decoration => decoration.dispose());
-          return;
-        }
-        try {
-          editor.setDecorations(blinkDecorationType, ranges);
-        } catch (error) {
-          console.warn('Failed to apply blink decoration to ranges:', error);
-        }
-      }, i * blinkDuration * 2);
+          try {
+            editor.setDecorations(blinkDecorationType, ranges);
+          } catch (error) {
+            console.warn("Failed to apply blink decoration to ranges:", error);
+          }
+        },
+        i * blinkDuration * 2,
+      );
       timeouts.push(onTimeout);
-      
+
       // Blink off - remove blink decoration from all ranges
-      const offTimeout = setTimeout(() => {
-        // Check if highlights for this file have been cleared during blinking
-        if (!this.blinkTimeouts.has(filepath)) {
-          // 清除编辑器中的装饰器
+      const offTimeout = setTimeout(
+        () => {
+          // Check if highlights for this file have been cleared during blinking
+          if (!this.blinkTimeouts.has(filepath)) {
+            // 清除编辑器中的装饰器
+            try {
+              editor.setDecorations(blinkDecorationType, []);
+            } catch (error) {
+              console.warn(
+                "Failed to clear blink decoration during cleanup:",
+                error,
+              );
+            }
+            blinkDecorationType.dispose();
+            permanentDecorationTypes.forEach((decoration) =>
+              decoration.dispose(),
+            );
+            return;
+          }
           try {
             editor.setDecorations(blinkDecorationType, []);
           } catch (error) {
-            console.warn('Failed to clear blink decoration during cleanup:', error);
+            console.warn(
+              "Failed to clear blink decoration from ranges:",
+              error,
+            );
           }
-          blinkDecorationType.dispose();
-          permanentDecorationTypes.forEach(decoration => decoration.dispose());
-          return;
-        }
-        try {
-          editor.setDecorations(blinkDecorationType, []);
-        } catch (error) {
-          console.warn('Failed to clear blink decoration from ranges:', error);
-        }
-      }, i * blinkDuration * 2 + blinkDuration);
+        },
+        i * blinkDuration * 2 + blinkDuration,
+      );
       timeouts.push(offTimeout);
     }
-    
+
     // Apply permanent highlights after blinking
-    const finalTimeout = setTimeout(() => {
-      // Check if highlights for this file have been cleared during blinking
-      if (!this.blinkTimeouts.has(filepath)) {
-        // 清除编辑器中的装饰器
+    const finalTimeout = setTimeout(
+      () => {
+        // Check if highlights for this file have been cleared during blinking
+        if (!this.blinkTimeouts.has(filepath)) {
+          // 清除编辑器中的装饰器
+          try {
+            editor.setDecorations(blinkDecorationType, []);
+          } catch (error) {
+            console.warn(
+              "Failed to clear blink decoration during final cleanup:",
+              error,
+            );
+          }
+          blinkDecorationType.dispose();
+          permanentDecorationTypes.forEach((decoration) =>
+            decoration.dispose(),
+          );
+          return;
+        }
+
+        // Apply each permanent decoration to its corresponding range
         try {
+          for (let i = 0; i < ranges.length; i++) {
+            editor.setDecorations(permanentDecorationTypes[i], [ranges[i]]);
+          }
+          // 确保清除闪烁装饰器
           editor.setDecorations(blinkDecorationType, []);
         } catch (error) {
-          console.warn('Failed to clear blink decoration during final cleanup:', error);
+          console.warn("Failed to apply permanent decorations:", error);
+        }
+
+        // 从闪烁装饰器映射中移除并处置
+        const blinkDecorations = this.blinkDecorations.get(filepath) || [];
+        const index = blinkDecorations.indexOf(blinkDecorationType);
+        if (index > -1) {
+          blinkDecorations.splice(index, 1);
+          if (blinkDecorations.length === 0) {
+            this.blinkDecorations.delete(filepath);
+          } else {
+            this.blinkDecorations.set(filepath, blinkDecorations);
+          }
         }
         blinkDecorationType.dispose();
-        permanentDecorationTypes.forEach(decoration => decoration.dispose());
-        return;
-      }
-      
-      // Apply each permanent decoration to its corresponding range
-      try {
-        for (let i = 0; i < ranges.length; i++) {
-          editor.setDecorations(permanentDecorationTypes[i], [ranges[i]]);
-        }
-        // 确保清除闪烁装饰器
-        editor.setDecorations(blinkDecorationType, []);
-      } catch (error) {
-        console.warn('Failed to apply permanent decorations:', error);
-      }
-      
-      // 从闪烁装饰器映射中移除并处置
-      const blinkDecorations = this.blinkDecorations.get(filepath) || [];
-      const index = blinkDecorations.indexOf(blinkDecorationType);
-      if (index > -1) {
-        blinkDecorations.splice(index, 1);
-        if (blinkDecorations.length === 0) {
-          this.blinkDecorations.delete(filepath);
-        } else {
-          this.blinkDecorations.set(filepath, blinkDecorations);
-        }
-      }
-      blinkDecorationType.dispose();
-      
-      // Store all permanent decorations for management
-      this.activeDecorations.set(filepath, [...permanentDecorationTypes]);
-      
-      // Clean up timeouts
-      this.blinkTimeouts.delete(filepath);
-    }, blinkCount * blinkDuration * 2);
+
+        // Store all permanent decorations for management
+        this.activeDecorations.set(filepath, [...permanentDecorationTypes]);
+
+        // Clean up timeouts
+        this.blinkTimeouts.delete(filepath);
+      },
+      blinkCount * blinkDuration * 2,
+    );
     timeouts.push(finalTimeout);
-    
+
     // Store timeouts for cleanup
     this.blinkTimeouts.set(filepath, timeouts);
   }

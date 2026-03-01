@@ -490,17 +490,76 @@ export const codeAwareSessionSlice = createSlice({
       state,
       action: PayloadAction<HighlightEvent | HighlightEvent[]>,
     ) => {
-      // TODO: 重新实现此函数以适配新的映射机制
-      // 注意：此函数已暂时简化，等待重新实现
-      // 原逻辑依赖于旧的 CodeAwareMapping 结构，现已更新
       const events = Array.isArray(action.payload)
         ? action.payload
         : [action.payload];
 
-      console.log("updateHighlight: 功能暂时简化，等待重新实现", events);
+      console.log("✨ updateHighlight: 处理高亮事件", events);
 
-      // 暂时清除所有高亮
+      // 先清除所有高亮状态
       codeAwareSessionSlice.caseReducers.clearAllHighlights(state);
+
+      // 收集需要在 IDE 中高亮的代码块
+      const codeChunksToHighlight: CodeChunk[] = [];
+
+      // 处理每个高亮事件
+      for (const event of events) {
+        switch (event.sourceType) {
+          case "code":
+            // 直接高亮代码块
+            if (event.additionalInfo) {
+              const codeChunk = event.additionalInfo as CodeChunk;
+              codeChunksToHighlight.push(codeChunk);
+              console.log(`  ✅ 添加代码块高亮: ${codeChunk.id}`);
+            }
+            break;
+
+          case "highLevelStep":
+            // 高亮 high level step
+            const highLevelStep = state.highLevelSteps.find(
+              (s) => s.id === event.identifier,
+            );
+            if (highLevelStep) {
+              highLevelStep.isHighlighted = true;
+              highLevelStep.highlightType = "primary";
+              console.log(`  ✅ 高亮 highLevelStep: ${event.identifier}`);
+            }
+            break;
+
+          case "step":
+            // 高亮 step
+            const step = state.steps.find((s) => s.id === event.identifier);
+            if (step) {
+              step.isHighlighted = true;
+              step.highlightType = "primary";
+              console.log(`  ✅ 高亮 step: ${event.identifier}`);
+            }
+            break;
+
+          case "knowledgeCard":
+            // 高亮 knowledge card
+            for (const step of state.steps) {
+              const card = step.knowledgeCards.find(
+                (c) => c.id === event.identifier,
+              );
+              if (card) {
+                card.isHighlighted = true;
+                card.highlightType = "primary";
+                console.log(`  ✅ 高亮 knowledgeCard: ${event.identifier}`);
+                break;
+              }
+            }
+            break;
+        }
+      }
+
+      // 更新需要在 IDE 中高亮的代码块
+      if (codeChunksToHighlight.length > 0) {
+        state.codeChunksToHighlightInIde = codeChunksToHighlight;
+        console.log(
+          `  📤 将向 IDE 发送 ${codeChunksToHighlight.length} 个代码块高亮请求`,
+        );
+      }
     },
     // 设置高级步骤
     setHighLevelSteps: (state, action: PayloadAction<HighLevelStepItem[]>) => {

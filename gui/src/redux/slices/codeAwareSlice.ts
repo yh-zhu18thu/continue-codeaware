@@ -49,8 +49,6 @@ export type CodeAwareSessionState = {
   stepToHighLevelMappings: StepToHighLevelMapping[];
   //当前的flow
   steps: StepItem[];
-  //当前的代码块
-  codeChunks: CodeChunk[];
   //存储code与语义元素的映射关系（用于LLM查找缓存）
   codeAwareMappings: CodeAwareMapping[];
   // 映射查找状态
@@ -94,7 +92,6 @@ const initialCodeAwareState: CodeAwareSessionState = {
   highLevelSteps: [],
   stepToHighLevelMappings: [],
   steps: [],
-  codeChunks: [],
   codeAwareMappings: [],
   mappingLookup: {
     isLoading: false,
@@ -267,16 +264,17 @@ export const codeAwareSessionSlice = createSlice({
       state.stepToHighLevelMappings = [];
       state.steps = [];
       state.codeAwareMappings = [];
-      state.codeChunks = [];
+      // state.codeChunks = []; // 已移除：不再静态存储 code chunks
       state.shouldClearIdeHighlights = false;
       state.codeChunksToHighlightInIde = [];
     },
     clearAllHighlights: (state) => {
       // 注意：映射不再存储高亮状态，只需清除元素本身的高亮
       // Reset highlight status for all code chunks
-      state.codeChunks.forEach((chunk) => {
-        chunk.isHighlighted = false;
-      });
+      // state.codeChunks.forEach((chunk) => {
+      //   chunk.isHighlighted = false;
+      // }); // 已移除：不再静态存储 code chunks
+
       // Reset highlight status for all high level steps
       state.highLevelSteps = state.highLevelSteps.map((step) => ({
         ...step,
@@ -372,9 +370,10 @@ export const codeAwareSessionSlice = createSlice({
 
       // 清除所有现有高亮（但不清除 IDE 高亮）
       // 注意：映射不再存储高亮状态
-      state.codeChunks.forEach((chunk) => {
-        chunk.isHighlighted = false;
-      });
+      // state.codeChunks.forEach((chunk) => {
+      //   chunk.isHighlighted = false;
+      // }); // 已移除：不再静态存储 code chunks
+
       state.highLevelSteps = state.highLevelSteps.map((step) => ({
         ...step,
         isHighlighted: false,
@@ -478,7 +477,10 @@ export const codeAwareSessionSlice = createSlice({
     },
     clearAllCodeChunks: (state) => {
       // Clear all code chunks
-      state.codeChunks = [];
+      // state.codeChunks = []; // 已移除：不再静态存储 code chunks
+      console.warn(
+        "⚠️ clearAllCodeChunks reducer 已废弃，不再静态存储 code chunks",
+      );
     },
     clearAllCodeAwareMappings: (state) => {
       // Clear all CodeAware mappings
@@ -529,29 +531,38 @@ export const codeAwareSessionSlice = createSlice({
       }
     },
     updateCodeChunks: (state, action: PayloadAction<CodeChunk[]>) => {
-      state.codeChunks.push(...action.payload);
+      // state.codeChunks.push(...action.payload); // 已移除：不再静态存储 code chunks
+      console.warn(
+        "⚠️ updateCodeChunks reducer 已废弃，不再静态存储 code chunks",
+      );
     },
     // 更新代码块的范围
     updateCodeChunkRange: (
       state,
       action: PayloadAction<{ codeChunkId: string; range: [number, number] }>,
     ) => {
-      const { codeChunkId, range } = action.payload;
-      const chunk = state.codeChunks.find((c) => c.id === codeChunkId);
-      if (chunk) {
-        chunk.range = range;
-      }
+      // const { codeChunkId, range } = action.payload;
+      // const chunk = state.codeChunks.find((c) => c.id === codeChunkId);
+      // if (chunk) {
+      //   chunk.range = range;
+      // } // 已移除：不再静态存储 code chunks
+      console.warn(
+        "⚠️ updateCodeChunkRange reducer 已废弃，不再静态存储 code chunks",
+      );
     },
     // 设置代码块的禁用状态
     setCodeChunkDisabled: (
       state,
       action: PayloadAction<{ codeChunkId: string; disabled: boolean }>,
     ) => {
-      const { codeChunkId, disabled } = action.payload;
-      const chunk = state.codeChunks.find((c) => c.id === codeChunkId);
-      if (chunk) {
-        chunk.disabled = disabled;
-      }
+      // const { codeChunkId, disabled } = action.payload;
+      // const chunk = state.codeChunks.find((c) => c.id === codeChunkId);
+      // if (chunk) {
+      //   chunk.disabled = disabled;
+      // } // 已移除：不再静态存储 code chunks
+      console.warn(
+        "⚠️ setCodeChunkDisabled reducer 已废弃，不再静态存储 code chunks",
+      );
     },
     updateCodeAwareMappings: (
       state,
@@ -872,16 +883,10 @@ export const codeAwareSessionSlice = createSlice({
         filePath: string;
       }>,
     ) => {
-      const { completionText, range, filePath } = action.payload;
-      const newCodeChunk: CodeChunk = {
-        id: `c-${state.codeChunks.length + 1}`,
-        content: completionText,
-        range: range,
-        isHighlighted: false,
-        disabled: false,
-        filePath: filePath,
-      };
-      state.codeChunks.push(newCodeChunk);
+      // 已移除：不再静态存储 code chunks
+      console.warn(
+        "⚠️ addCodeChunkFromCompletion reducer 已废弃，不再静态存储 code chunks",
+      );
     },
     // 创建或获取代码块（用于知识卡片映射）
     createOrGetCodeChunk: (
@@ -893,30 +898,33 @@ export const codeAwareSessionSlice = createSlice({
         id?: string; // 可选的预设ID
       }>,
     ) => {
-      const { content, range, filePath, id: presetId } = action.payload;
+      // const { content, range, filePath, id: presetId } = action.payload;
 
-      // 首先检查是否已经存在类似的代码块
-      const existingChunk = state.codeChunks.find(
-        (chunk) =>
-          chunk.filePath === filePath &&
-          chunk.content === content &&
-          chunk.range[0] === range[0] &&
-          chunk.range[1] === range[1],
+      // // 首先检查是否已经存在类似的代码块
+      // const existingChunk = state.codeChunks.find(
+      //   (chunk) =>
+      //     chunk.filePath === filePath &&
+      //     chunk.content === content &&
+      //     chunk.range[0] === range[0] &&
+      //     chunk.range[1] === range[1],
+      // );
+
+      // if (!existingChunk) {
+      //   // 如果不存在，创建新的代码块
+      //   const newCodeChunk: CodeChunk = {
+      //     id: presetId || `c-${state.codeChunks.length + 1}`, // 使用预设ID或基于长度的ID
+      //     content,
+      //     range,
+      //     isHighlighted: false,
+      //     disabled: false,
+      //     filePath,
+      //   };
+
+      //   state.codeChunks.push(newCodeChunk);
+      // } // 已移除：不再静态存储 code chunks
+      console.warn(
+        "⚠️ createOrGetCodeChunk reducer 已废弃，不再静态存储 code chunks",
       );
-
-      if (!existingChunk) {
-        // 如果不存在，创建新的代码块
-        const newCodeChunk: CodeChunk = {
-          id: presetId || `c-${state.codeChunks.length + 1}`, // 使用预设ID或基于长度的ID
-          content,
-          range,
-          isHighlighted: false,
-          disabled: false,
-          filePath,
-        };
-
-        state.codeChunks.push(newCodeChunk);
-      }
     },
     // 创建新的知识卡片（不包含content和tests）
     createKnowledgeCard: (
@@ -985,7 +993,7 @@ export const codeAwareSessionSlice = createSlice({
       // Reset everything except userRequirement and currentSessionId
       state.highLevelSteps = [];
       state.steps = [];
-      state.codeChunks = [];
+      // state.codeChunks = []; // 已移除：不再静态存储 code chunks
       state.codeAwareMappings = [];
       state.shouldClearIdeHighlights = false;
       state.codeChunksToHighlightInIde = [];
@@ -1015,9 +1023,15 @@ export const codeAwareSessionSlice = createSlice({
       }>,
     ) => {
       action.payload.updates.forEach((update) => {
-        const chunk = state.codeChunks.find((c) => c.id === update.chunkId);
-        if (chunk) {
-          chunk.range = update.newRange;
+        const mapping = state.codeAwareMappings.find(
+          (m) => m.codeChunkId === update.chunkId,
+        );
+        // 注意：CodeAwareMapping 不存储 range 信息，range 是 code chunk 的属性
+        // 现在 code chunk 不再静态存储，这个逻辑已经无效
+        if (mapping) {
+          console.warn(
+            "⚠️ updateCodeChunkRanges reducer 已部分废弃，不再静态存储 code chunks",
+          );
         }
       });
     },
@@ -1078,7 +1092,7 @@ export const codeAwareSessionSlice = createSlice({
     // Clear all code-related data and mappings
     clearAllCodeAndMappings: (state) => {
       // Clear all code chunks
-      state.codeChunks = [];
+      // state.codeChunks = []; // 已移除：不再静态存储 code chunks
 
       // Clear all code-related mappings (keep highLevelStep-only mappings)
       state.codeAwareMappings = state.codeAwareMappings.filter(
@@ -1155,7 +1169,11 @@ export const codeAwareSessionSlice = createSlice({
   selectors: {
     //CATODO: write all the selectors to fetch the data
     selectCodeChunks: (state: CodeAwareSessionState) => {
-      return state.codeChunks;
+      // return state.codeChunks; // 已移除：不再静态存储 code chunks
+      console.warn(
+        "⚠️ selectCodeChunks selector 已废弃，不再静态存储 code chunks",
+      );
+      return [];
     },
     selectCodeAwareSessionState: (state: CodeAwareSessionState) => {
       return state;

@@ -50,9 +50,9 @@ import {
   rerunStep,
 } from "../../redux/thunks/codeAwareGeneration";
 import {
-  lookupCodeToSemantic,
-  lookupSemanticToCode,
-} from "../../redux/thunks/mappingLookup";
+  establishCodeToSemanticMapping,
+  establishSemanticToCodeMapping,
+} from "../../redux/thunks/mappingLookup"; // 新的接口
 import { useCodeAwareLogger } from "../../util/codeAwareWebViewLogger";
 import "./CodeAware.css";
 import GlobalQuestionModal from "./components/QuestionPopup/GlobalQuestionModal";
@@ -61,73 +61,6 @@ import RequirementDisplayHorizontal from "./components/Requirements/RequirementD
 import RequirementEditor from "./components/Requirements/RequirementEditor"; // Import RequirementEditor
 import Step from "./components/Steps/Step"; // Import Step
 import { NavigationButtons } from "./components/ToolBar/NavigationButtons"; // Import NavigationButtons
-
-// Helper function to find the most relevant step for a given code selection
-const findMostRelevantStepForSelection = (
-  filePath: string,
-  selectedLines: [number, number],
-  allMappings: any[],
-  codeChunks: any[],
-  steps: any[],
-): string | null => {
-  // Find code chunks that overlap with the selected range
-  const overlappingChunks = codeChunks.filter((chunk) => {
-    if (chunk.filePath !== filePath || chunk.disabled) {
-      return false;
-    }
-
-    // Check if the chunk's range overlaps with the selected range
-    const [chunkStart, chunkEnd] = chunk.range;
-    const [selectionStart, selectionEnd] = selectedLines;
-
-    // There's an overlap if selection start is before chunk end AND selection end is after chunk start
-    return selectionStart <= chunkEnd && selectionEnd >= chunkStart;
-  });
-
-  if (overlappingChunks.length === 0) {
-    return null;
-  }
-
-  // Find mappings for these overlapping chunks
-  const relevantMappings = allMappings.filter((mapping) =>
-    overlappingChunks.some((chunk) => chunk.id === mapping.codeChunkId),
-  );
-
-  if (relevantMappings.length === 0) {
-    return null;
-  }
-
-  // Count occurrences of each step in the mappings
-  const stepCounts: Record<string, number> = {};
-  relevantMappings.forEach((mapping) => {
-    if (mapping.stepId) {
-      stepCounts[mapping.stepId] = (stepCounts[mapping.stepId] || 0) + 1;
-    }
-  });
-
-  // Find the step with the most mappings (most relevant)
-  let mostRelevantStepId: string | null = null;
-  let maxCount = 0;
-
-  for (const [stepId, count] of Object.entries(stepCounts)) {
-    if (count > maxCount) {
-      maxCount = count;
-      mostRelevantStepId = stepId;
-    }
-  }
-
-  // Verify the step still exists
-  if (
-    mostRelevantStepId &&
-    steps.some((step) => step.id === mostRelevantStepId)
-  ) {
-    return mostRelevantStepId;
-  }
-
-  return null;
-};
-
-// 全局样式：
 const CodeAwareDiv = styled.div`
   position: relative;
   background-color: transparent;
@@ -288,10 +221,7 @@ export const CodeAware = () => {
 
   const steps = useAppSelector((state) => state.codeAwareSession.steps); // Get steps data
 
-  // Get code chunks and high level steps for navigation
-  const codeChunks = useAppSelector(
-    (state) => state.codeAwareSession.codeChunks,
-  );
+  // Get high level steps for navigation
   const highLevelSteps = useAppSelector(
     (state) => state.codeAwareSession.highLevelSteps,
   );
@@ -530,62 +460,38 @@ export const CodeAware = () => {
         return;
       }
 
-      // 2. 查找选中区域对应的代码块
-      const matchingChunk = codeChunks.find((chunk) => {
-        if (chunk.filePath !== currentCodeSelection.filePath) return false;
+      console.log("✅ 当前代码选择:", currentCodeSelection);
 
-        const [chunkStart, chunkEnd] = chunk.range;
-        const [selectionStart, selectionEnd] =
-          currentCodeSelection.selectedLines;
-
-        // 计算重叠
-        const overlapStart = Math.max(chunkStart, selectionStart);
-        const overlapEnd = Math.min(chunkEnd, selectionEnd);
-        const overlapLines = overlapEnd - overlapStart + 1;
-
-        if (overlapLines <= 0) return false;
-
-        // 至少50%重叠
-        const chunkLines = chunkEnd - chunkStart + 1;
-        return overlapLines / chunkLines >= 0.5;
-      });
-
-      if (!matchingChunk) {
-        console.warn("⚠️ 未找到匹配的代码块");
-        await logger.addLogEntry("user_click_jump_to_semantic_no_match", {
-          selection: currentCodeSelection,
-          timestamp: new Date().toISOString(),
-        });
-        return;
-      }
-
-      console.log("✅ 找到匹配的代码块:", matchingChunk.id);
-
-      // 3. 使用 LLM 查找语义元素
+      // 2. 使用新的通用接口查找语义元素（支持实时读取和缓存验证）
       const result = await dispatch(
-        lookupCodeToSemantic({
-          codeChunkId: matchingChunk.id,
-          useCache: true,
+        establishCodeToSemanticMapping({
+          codeSelection: {
+            filePath: currentCodeSelection.filePath,
+            startLine: currentCodeSelection.selectedLines[0],
+            endLine: currentCodeSelection.selectedLines[1],
+          },
+          forceRefresh: false, // 使用缓存
+          strategy: "smart", // 使用智能策略
         }),
       ).unwrap();
 
-      if (result.length === 0) {
+      if (!result || result.mappings.length === 0) {
         console.warn("⚠️ 未找到对应的语义元素");
         await logger.addLogEntry("user_click_jump_to_semantic_no_result", {
-          codeChunkId: matchingChunk.id,
+          codeSelection: currentCodeSelection,
           timestamp: new Date().toISOString(),
         });
         return;
       }
 
-      // 4. 选择置信度最高的结果
-      const bestMatch = result.reduce((prev, current) =>
+      // 3. 选择置信度最高的结果
+      const bestMatch = result.mappings.reduce((prev, current) =>
         (current.confidence || 0) > (prev.confidence || 0) ? current : prev,
       );
 
       console.log("✅ 找到语义元素:", bestMatch);
 
-      // 5. 高亮语义元素
+      // 4. 高亮语义元素
       dispatch(
         updateHighlight([
           {
@@ -595,7 +501,7 @@ export const CodeAware = () => {
         ]),
       );
 
-      // 6. 滚动到语义元素
+      // 5. 滚动到语义元素
       const element = document.querySelector(
         `[data-${bestMatch.semanticElementType}-id="${bestMatch.semanticElementId}"]`,
       );
@@ -604,7 +510,7 @@ export const CodeAware = () => {
       }
 
       await logger.addLogEntry("user_click_jump_to_semantic_success", {
-        codeChunkId: matchingChunk.id,
+        codeChunkId: result.chunk.id,
         semanticElementId: bestMatch.semanticElementId,
         semanticElementType: bestMatch.semanticElementType,
         confidence: bestMatch.confidence,
@@ -619,7 +525,7 @@ export const CodeAware = () => {
     } finally {
       setIsMappingLookupInProgress(false);
     }
-  }, [currentCodeSelection, codeChunks, dispatch, logger]);
+  }, [currentCodeSelection, dispatch, logger]);
 
   const handleJumpToCode = useCallback(async () => {
     console.log("🚀 [跳转] 语义 → 代码");
@@ -670,16 +576,17 @@ export const CodeAware = () => {
 
       console.log("✅ 找到高亮的语义元素:", focusedElement);
 
-      // 2. 使用 LLM 查找代码块
+      // 2. 使用新的通用接口查找代码块（支持实时读取和缓存验证）
       const result = await dispatch(
-        lookupSemanticToCode({
+        establishSemanticToCodeMapping({
           semanticElementId: focusedElement.id,
           semanticElementType: focusedElement.type,
-          useCache: true,
+          forceRefresh: false, // 使用缓存
+          strategy: "smart", // 使用智能策略
         }),
       ).unwrap();
 
-      if (result.length === 0) {
+      if (!result || result.mappings.length === 0) {
         console.warn("⚠️ 未找到对应的代码块");
         await logger.addLogEntry("user_click_jump_to_code_no_result", {
           semanticElementId: focusedElement.id,
@@ -690,14 +597,14 @@ export const CodeAware = () => {
       }
 
       // 3. 选择置信度最高的结果
-      const bestMatch = result.reduce((prev, current) =>
+      const bestMatch = result.mappings.reduce((prev, current) =>
         (current.confidence || 0) > (prev.confidence || 0) ? current : prev,
       );
 
       console.log("✅ 找到代码块:", bestMatch);
 
-      // 4. 找到对应的代码块详细信息
-      const codeChunk = codeChunks.find(
+      // 4. 从返回的 chunks 中找到对应的代码块详细信息
+      const codeChunk = result.chunks.find(
         (chunk) => chunk.id === bestMatch.codeChunkId,
       );
 
@@ -736,7 +643,7 @@ export const CodeAware = () => {
     } finally {
       setIsMappingLookupInProgress(false);
     }
-  }, [highLevelSteps, steps, codeChunks, dispatch, ideMessenger, logger]);
+  }, [highLevelSteps, steps, dispatch, ideMessenger, logger]);
 
   // Track steps that should be force expanded due to code selection questions
   const [forceExpandedSteps, setForceExpandedSteps] = useState<Set<string>>(
@@ -1233,50 +1140,34 @@ export const CodeAware = () => {
       // 如果没有提供代码上下文，从mapping中获取和cardId绑定的code chunk的内容
       let contextToUse = codeContext;
       if (!contextToUse) {
-        // 从mapping中查找与cardId绑定的code chunk
-        const cardMappings = allMappings.filter(
-          (mapping) =>
-            mapping.semanticElementId === cardId &&
-            mapping.semanticElementType === "knowledgeCard",
-        );
-        console.log(
-          `Found ${cardMappings.length} mappings for card ${cardId}:`,
-          cardMappings,
-        );
+        // Knowledge card 现在通过其父 step 映射到代码
+        // 使用新的接口实时获取代码
+        console.log(`查找 knowledge card ${cardId} 的父 step ${stepId} 的代码`);
 
-        if (cardMappings.length > 0) {
-          // 获取所有相关的code chunk内容
-          const codeChunkContents: string[] = [];
+        try {
+          const result = await dispatch(
+            establishSemanticToCodeMapping({
+              semanticElementId: stepId,
+              semanticElementType: "step",
+              forceRefresh: false,
+              strategy: "smart",
+            }),
+          ).unwrap();
 
-          cardMappings.forEach((mapping) => {
-            if (mapping.codeChunkId) {
-              const codeChunk = codeChunks.find(
-                (chunk) => chunk.id === mapping.codeChunkId,
-              );
-              if (codeChunk && !codeChunk.disabled) {
-                codeChunkContents.push(codeChunk.content);
-              }
-            }
-          });
-
-          // 合并所有相关的代码块内容作为上下文
-          if (codeChunkContents.length > 0) {
-            contextToUse = codeChunkContents.join(
-              "\n\n// --- Related Code Chunk ---\n\n",
-            );
+          if (result && result.chunks.length > 0) {
+            // 使用找到的代码块作为上下文
+            contextToUse = result.chunks
+              .map((c) => c.content)
+              .join("\n\n// --- Related Code Chunk ---\n\n");
             console.log(
-              `Using code context from ${codeChunkContents.length} code chunks for card ${cardId}`,
+              `使用来自父 step ${stepId} 的 ${result.chunks.length} 个代码块作为上下文`,
             );
           } else {
-            console.warn(
-              `No valid code chunks found for card ${cardId}, using empty context`,
-            );
+            console.warn(`父 step ${stepId} 没有找到代码块，使用空上下文`);
             contextToUse = "";
           }
-        } else {
-          console.warn(
-            `No mappings found for card ${cardId}, using empty context`,
-          );
+        } catch (error) {
+          console.error(`查找代码失败:`, error);
           contextToUse = "";
         }
       }
@@ -1291,7 +1182,7 @@ export const CodeAware = () => {
         }),
       );
     },
-    [dispatch, allMappings, codeChunks, logger],
+    [dispatch, logger],
   );
 
   // 处理生成知识卡片测试题
@@ -1324,50 +1215,34 @@ export const CodeAware = () => {
       // 如果没有提供代码上下文，从mapping中获取和cardId绑定的code chunk的内容
       let contextToUse = codeContext;
       if (!contextToUse) {
-        // 从mapping中查找与cardId绑定的code chunk
-        const cardMappings = allMappings.filter(
-          (mapping) =>
-            mapping.semanticElementId === cardId &&
-            mapping.semanticElementType === "knowledgeCard",
-        );
-        console.log(
-          `Found ${cardMappings.length} mappings for card ${cardId}:`,
-          cardMappings,
-        );
+        // Knowledge card 现在通过其父 step 映射到代码
+        // 使用新的接口实时获取代码
+        console.log(`查找 knowledge card ${cardId} 的父 step ${stepId} 的代码`);
 
-        if (cardMappings.length > 0) {
-          // 获取所有相关的code chunk内容
-          const codeChunkContents: string[] = [];
+        try {
+          const result = await dispatch(
+            establishSemanticToCodeMapping({
+              semanticElementId: stepId,
+              semanticElementType: "step",
+              forceRefresh: false,
+              strategy: "smart",
+            }),
+          ).unwrap();
 
-          cardMappings.forEach((mapping) => {
-            if (mapping.codeChunkId) {
-              const codeChunk = codeChunks.find(
-                (chunk) => chunk.id === mapping.codeChunkId,
-              );
-              if (codeChunk && !codeChunk.disabled) {
-                codeChunkContents.push(codeChunk.content);
-              }
-            }
-          });
-
-          // 合并所有相关的代码块内容作为上下文
-          if (codeChunkContents.length > 0) {
-            contextToUse = codeChunkContents.join(
-              "\n\n// --- Related Code Chunk ---\n\n",
-            );
+          if (result && result.chunks.length > 0) {
+            // 使用找到的代码块作为上下文
+            contextToUse = result.chunks
+              .map((c) => c.content)
+              .join("\n\n// --- Related Code Chunk ---\n\n");
             console.log(
-              `Using code context from ${codeChunkContents.length} code chunks for card ${cardId}`,
+              `使用来自父 step ${stepId} 的 ${result.chunks.length} 个代码块作为上下文`,
             );
           } else {
-            console.warn(
-              `No valid code chunks found for card ${cardId}, using empty context`,
-            );
+            console.warn(`父 step ${stepId} 没有找到代码块，使用空上下文`);
             contextToUse = "";
           }
-        } else {
-          console.warn(
-            `No mappings found for card ${cardId}, using empty context`,
-          );
+        } catch (error) {
+          console.error(`查找代码失败:`, error);
           contextToUse = "";
         }
       }
@@ -1384,7 +1259,7 @@ export const CodeAware = () => {
         }),
       );
     },
-    [dispatch, allMappings, codeChunks, logger],
+    [dispatch, logger],
   );
 
   // 处理生成知识卡片主题列表
@@ -1487,7 +1362,7 @@ export const CodeAware = () => {
         );
       }
     },
-    [dispatch, allMappings, codeChunks, logger],
+    [dispatch, logger],
   );
 
   const removeHighlightEvent = useCallback(async () => {
@@ -1613,7 +1488,6 @@ export const CodeAware = () => {
             const correspondingCode = await getStepCorrespondingCode(
               step.id,
               allMappings,
-              codeChunks,
               ideMessenger,
             );
 
@@ -1701,7 +1575,7 @@ export const CodeAware = () => {
         ]);
       }
     },
-    [steps, ideMessenger, dispatch, allMappings, codeChunks, logger],
+    [steps, ideMessenger, dispatch, allMappings, logger],
   );
 
   // Handle rerun step when step is dirty
@@ -2170,13 +2044,41 @@ export const CodeAware = () => {
         }
 
         // 根据选中范围和mapping找到最直接对应的step
-        const targetStepId = findMostRelevantStepForSelection(
-          data.filePath,
-          data.selectedLines,
-          allMappings,
-          codeChunks,
-          steps,
-        );
+        let targetStepId: string | null = null;
+        try {
+          const result = await dispatch(
+            establishCodeToSemanticMapping({
+              codeSelection: {
+                filePath: data.filePath,
+                startLine: data.selectedLines[0],
+                endLine: data.selectedLines[1],
+              },
+              strategy: "smart",
+            }),
+          );
+          if (
+            result.payload &&
+            typeof result.payload === "object" &&
+            "mappings" in result.payload
+          ) {
+            const mappings = (result.payload as any).mappings as any[];
+            // 优先选择 step 类型的 mapping
+            const stepMapping = mappings.find(
+              (m: any) => m.semanticElementType === "step",
+            );
+            if (stepMapping) {
+              targetStepId = stepMapping.semanticElementId;
+            } else if (mappings.length > 0) {
+              // 如果没有 step，使用第一个 mapping
+              targetStepId = mappings[0].semanticElementId;
+            }
+          }
+        } catch (error) {
+          console.error(
+            "❌ [CodeAware] Error finding step for code selection:",
+            error,
+          );
+        }
 
         let stepIdToUse: string;
         if (!targetStepId) {
@@ -2249,7 +2151,6 @@ export const CodeAware = () => {
     [
       steps,
       allMappings,
-      codeChunks,
       handleQuestionSubmit,
       ideMessenger,
       dispatch,

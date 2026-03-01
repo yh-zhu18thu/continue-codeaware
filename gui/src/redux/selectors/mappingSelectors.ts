@@ -99,3 +99,46 @@ export const selectMappingsBySource = createSelector(
     return stats;
   },
 );
+
+/**
+ * 根据 knowledge card ID 查找其父 step 的代码映射
+ * 因为 mapping 只保存到 step 级别，knowledge card 需要通过其父 step 间接映射
+ *
+ * @param state Redux state
+ * @param knowledgeCardId knowledge card ID
+ * @returns 父 step 的代码映射
+ */
+export const selectCodeChunksByKnowledgeCardId = createSelector(
+  [
+    (state: RootState) => state.codeAwareSession.steps,
+    (state: RootState) => state.codeAwareSession.codeAwareMappings,
+    (_: RootState, knowledgeCardId: string) => knowledgeCardId,
+  ],
+  (steps, mappings, knowledgeCardId): CodeAwareMapping[] => {
+    // 1. 找到 knowledge card 所属的 step
+    let parentStepId: string | null = null;
+    for (const step of steps) {
+      const card = step.knowledgeCards?.find((c) => c.id === knowledgeCardId);
+      if (card) {
+        parentStepId = step.id;
+        break;
+      }
+    }
+
+    if (!parentStepId) {
+      console.warn(`⚠️ Knowledge card ${knowledgeCardId} 不属于任何 step`);
+      return [];
+    }
+
+    // 2. 返回父 step 的代码映射
+    const parentMappings = mappings.filter(
+      (m) => m.semanticElementId === parentStepId,
+    );
+
+    console.log(
+      `📋 Knowledge card ${knowledgeCardId} 通过父 step ${parentStepId} 找到 ${parentMappings.length} 个代码映射`,
+    );
+
+    return parentMappings;
+  },
+);

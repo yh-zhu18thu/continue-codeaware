@@ -629,10 +629,11 @@ export interface SelfTestItem {
 }
 
 //CODEAWARE: 代码块与语义元素之间的映射关系（作为缓存使用）
+// 注意：只映射到 step 级别，knowledgeCard 通过其父 step 间接映射
 export interface CodeAwareMapping {
   codeChunkId: string;
   semanticElementId: string;
-  semanticElementType: "highLevelStep" | "step" | "knowledgeCard";
+  semanticElementType: "highLevelStep" | "step"; // 移除了 "knowledgeCard"
 
   // 缓存元数据
   createdAt: number;

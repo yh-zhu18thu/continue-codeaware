@@ -1,3 +1,14 @@
+/**
+ * ⚠️ DEPRECATED: 此文件已废弃
+ *
+ * 原因：不再静态存储 code chunks，改为实时从 IDE 读取代码并动态分割
+ *
+ * 请使用 gui/src/utils/codeChunkUtils.ts 中的工具函数代替
+ * 请使用 gui/src/redux/thunks/mappingLookup.ts 中的新接口代替
+ *
+ * @deprecated
+ */
+
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import { CodeChunk } from "core";
 import { createOrGetCodeChunk } from "../slices/codeAwareSlice";
@@ -46,14 +57,16 @@ export const createCodeChunksFromFile = createAsyncThunk<
       );
 
       const state = getState();
-      const createdChunk = state.codeAwareSession.codeChunks.find(
-        (c) => c.id === chunkId,
-      );
+      // const createdChunk = state.codeAwareSession.codeChunks.find(
+      //   (c) => c.id === chunkId,
+      // ); // 已移除：不再静态存储 code chunks
 
-      if (createdChunk) {
-        chunks.push(createdChunk);
-        console.log(`✅ 创建单个代码块: ${chunkId} (1-${totalLines}行)`);
-      }
+      // if (createdChunk) {
+      //   chunks.push(createdChunk);
+      console.log(
+        `⚠️ createCodeChunksFromFile 已废弃: 创建单个代码块: ${chunkId} (1-${totalLines}行)`,
+      );
+      // }
 
       return chunks;
     }
@@ -77,16 +90,16 @@ export const createCodeChunksFromFile = createAsyncThunk<
       );
 
       const state = getState();
-      const createdChunk = state.codeAwareSession.codeChunks.find(
-        (c) => c.id === chunkId,
-      );
+      // const createdChunk = state.codeAwareSession.codeChunks.find(
+      //   (c) => c.id === chunkId,
+      // ); // 已移除：不再静态存储 code chunks
 
-      if (createdChunk) {
-        chunks.push(createdChunk);
-        console.log(
-          `✅ 创建代码块: ${chunkId} (${startLine}-${endLine}行, ${chunkContent.length}字符)`,
-        );
-      }
+      // if (createdChunk) {
+      //   chunks.push(createdChunk);
+      console.log(
+        `⚠️ createCodeChunksFromFile 已废弃: 创建代码块: ${chunkId} (${startLine}-${endLine}行, ${chunkContent.length}字符)`,
+      );
+      // }
 
       chunkIndex++;
     }

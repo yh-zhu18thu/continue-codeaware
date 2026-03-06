@@ -15,13 +15,13 @@
 
 - 用户需要逐步确认每个步骤的代码生成，流程冗长
 - 步骤、代码、映射关系分散在多个操作中创建，数据一致性难以保证
-- 知识点提取和语义分析被延后，无法在初始阶段建立完整的知识图谱
+- 知识点提取和语义分析被延后，无法在初始阶段建立完整的
 
 **重构目标**：
 
 - ✨ 用户确认需求后，系统自动完成：任务分解 → 代码生成 → 代码映射 → 语义分析 → 知识提取
 - 🚀 提供清晰的进度反馈，用户只需等待而无需频繁交互
-- 📊 在生成结束时即可呈现完整的知识图谱和代码结构
+- 📊 在生成结束时即可获得完整的知识图谱和代码结构
 - 💾 支持会话保存和恢复，便于后续编辑和学习
 
 通过这次重构，CodeAware将成为一个更加智能和高效的编程学习辅助工具。
@@ -58,7 +58,7 @@
 export interface CodeChunkRelation {
   fromChunkId: string;
   toChunkId: string;
-  similarity: number; // 余弦相似度，0-1
+  similarity: number; // 原始语义相似度，0-1（非认知概率）
   createdAt: number;
 }
 
@@ -76,9 +76,17 @@ export interface KnowledgePoint {
 export interface KnowledgeRelation {
   fromKnowledgeId: string;
   toKnowledgeId: string;
-  similarity: number; // 余弦相似度，0-1
+  similarity: number; // 原始语义相似度，0-1（非认知概率）
   relationType?: "prerequisite" | "related"; // 关系类型
   createdAt: number;
+}
+
+// CODEAWARE: 节点掌握度（本阶段仅提供存储基础设施，不做推断更新）
+export interface NodeMasteryScore {
+  nodeId: string;
+  nodeType: "high-level-step" | "step" | "code-chunk" | "knowledge-point";
+  score: number; // 用户掌握度估计，0-1
+  updatedAt: number;
 }
 
 // CODEAWARE: 初始生成流程的状态
@@ -115,6 +123,74 @@ export interface InitialGenerationState {
 - 参考现有的 `CodeChunk`, `CodeAwareMapping` 等类型定义（`core/index.d.ts:529-650`）
 - 保持命名风格一致
 
+### 📋 任务 1.1B（补充）：定义统一 Node 连接关系类型
+
+> 本任务补充 `INIT_GENERATION_FIRST_PLAN.md` 中“统一表征元素之间的连接”的内容，覆盖**结构内部关系**（如 step -> high-level-step）与**结构之间关系**（如 knowledge -> code chunk）。
+
+**文件位置**: `core/index.d.ts`
+
+**在任务 1.1 的类型定义后继续添加**:
+
+```typescript
+// CODEAWARE: 统一节点类型（用于关系图视图，不替代现有实体类型）
+export type CodeAwareNodeType =
+  | "high-level-step"
+  | "step"
+  | "code-chunk"
+  | "knowledge-point";
+
+// CODEAWARE: 认知关联边类型（所有关系都显式区分正向/逆向）
+export type CodeAwareCognitiveEdgeType =
+  | "hierarchical-forward"
+  | "hierarchical-reverse"
+  | "semantic-forward"
+  | "semantic-reverse"
+  | "code-similarity-forward"
+  | "code-similarity-reverse"
+  | "knowledge-similarity-forward"
+  | "knowledge-similarity-reverse"
+  | "knowledge-to-step-forward"
+  | "knowledge-to-step-reverse"
+  | "knowledge-to-code-chunk-forward"
+  | "knowledge-to-code-chunk-reverse";
+
+// CODEAWARE: 统一认知关联边（仅此结构维护掌握条件概率）
+export interface CodeAwareCognitiveEdge {
+  id: string;
+  type: CodeAwareCognitiveEdgeType;
+  fromNodeId: string;
+  fromNodeType: CodeAwareNodeType;
+  toNodeId: string;
+  toNodeType: CodeAwareNodeType;
+  conditionalMasteryProbability: number; // P(掌握to | 掌握from)
+  createdAt: number;
+  metadata?: Record<string, any>;
+}
+
+// CODEAWARE: 知识点到步骤关系（显式化，便于认知推断）
+export interface KnowledgeToStepRelation {
+  knowledgeId: string;
+  stepId: string;
+  createdAt: number;
+}
+
+// CODEAWARE: 知识点到代码块关系（由 knowledge->step 与 code->step 推导）
+export interface KnowledgeToCodeChunkRelation {
+  knowledgeId: string;
+  codeChunkId: string;
+  viaStepId?: string;
+  createdAt: number;
+}
+```
+
+**设计说明（当前迭代）**:
+
+- 保持现有 `HighLevelStepItem`/`StepItem`/`CodeChunk`/`KnowledgePoint` 不变
+- `CodeAwareCognitiveEdge` 作为统一认知关联边视图（可按需构建，不强制全量持久化）
+- `KnowledgeToStepRelation` 与 `KnowledgeToCodeChunkRelation` 作为 Phase 5 的新增产物，供后续认知状态推断使用
+- `conditionalMasteryProbability` 仅存在于 `CodeAwareCognitiveEdge`，不写入原始关系结构
+- 本阶段仅建立 `NodeMasteryScore` 与有向条件概率边的存储基础设施，不实现认知状态传播算法
+
 ### 📋 任务 1.2：更新Redux Slice
 
 **文件位置**: `gui/src/redux/slices/codeAwareSlice.ts`
@@ -134,6 +210,15 @@ export type CodeAwareSessionState = {
   // 新增：知识点关系图
   knowledgeRelations: KnowledgeRelation[];
 
+  // 新增：知识点 -> 步骤关系
+  knowledgeToStepRelations: KnowledgeToStepRelation[];
+
+  // 新增：知识点 -> 代码块关系
+  knowledgeToCodeChunkRelations: KnowledgeToCodeChunkRelation[];
+
+  // 新增：节点掌握度存储（本阶段仅存储，不自动推断）
+  nodeMasteryScores: NodeMasteryScore[];
+
   // 新增：初始生成流程状态
   initialGeneration: InitialGenerationState;
 
@@ -151,6 +236,9 @@ const initialCodeAwareState: CodeAwareSessionState = {
   codeChunkRelations: [],
   knowledgePoints: [],
   knowledgeRelations: [],
+  knowledgeToStepRelations: [],
+  knowledgeToCodeChunkRelations: [],
+  nodeMasteryScores: [],
   codeChunks: [],
   initialGeneration: {
     status: "idle",
@@ -209,6 +297,39 @@ addKnowledgeRelation: (state, action: PayloadAction<KnowledgeRelation>) => {
   state.knowledgeRelations.push(action.payload);
 },
 
+// 知识点 -> 步骤关系
+setKnowledgeToStepRelations: (
+  state,
+  action: PayloadAction<KnowledgeToStepRelation[]>,
+) => {
+  state.knowledgeToStepRelations = action.payload;
+},
+
+// 知识点 -> 代码块关系
+setKnowledgeToCodeChunkRelations: (
+  state,
+  action: PayloadAction<KnowledgeToCodeChunkRelation[]>,
+) => {
+  state.knowledgeToCodeChunkRelations = action.payload;
+},
+
+// 节点掌握度
+setNodeMasteryScores: (state, action: PayloadAction<NodeMasteryScore[]>) => {
+  state.nodeMasteryScores = action.payload;
+},
+upsertNodeMasteryScore: (state, action: PayloadAction<NodeMasteryScore>) => {
+  const idx = state.nodeMasteryScores.findIndex(
+    (item) =>
+      item.nodeId === action.payload.nodeId &&
+      item.nodeType === action.payload.nodeType,
+  );
+  if (idx >= 0) {
+    state.nodeMasteryScores[idx] = action.payload;
+  } else {
+    state.nodeMasteryScores.push(action.payload);
+  }
+},
+
 // 初始生成状态管理
 updateInitialGenerationStatus: (
   state,
@@ -245,6 +366,10 @@ export const {
   addKnowledgePoint,
   setKnowledgeRelations,
   addKnowledgeRelation,
+  setKnowledgeToStepRelations,
+  setKnowledgeToCodeChunkRelations,
+  setNodeMasteryScores,
+  upsertNodeMasteryScore,
   updateInitialGenerationStatus,
   resetInitialGenerationStatus,
   addInitialGenerationError,
@@ -255,6 +380,12 @@ export const {
 
 - 参考现有的 `setGeneratedSteps`, `setHighLevelSteps` 等 actions（`codeAwareSlice.ts:127-189`）
 - 复用类似的 reducer 模式
+
+**补充建议**:
+
+- `knowledgeToStepRelations`/`knowledgeToCodeChunkRelations` 使用 `set*` 覆盖写入（避免重复 push）
+- 如需增量更新，再补充 `add*` action，并在 reducer 中做去重（`knowledgeId + stepId` / `knowledgeId + codeChunkId`）
+- `nodeMasteryScores` 初始可按节点置为 `0` 或 `null`（建议从 `0` 开始，避免空值分支）
 
 ### 📋 任务 1.3：创建持久化工具
 
@@ -276,6 +407,7 @@ interface PersistedCodeAwareSession {
     steps: any[];
     codeChunks: any[];
     knowledgePoints: any[];
+    nodeMasteryScores: any[];
   };
 
   // 关系数据
@@ -284,6 +416,8 @@ interface PersistedCodeAwareSession {
     codeToSemantic: any[];
     codeChunkRelations: any[];
     knowledgeRelations: any[];
+    knowledgeToStep: any[];
+    knowledgeToCodeChunk: any[];
   };
 
   // 元数据
@@ -310,6 +444,7 @@ export function serializeSessionState(
       steps: state.steps,
       codeChunks: state.codeChunks,
       knowledgePoints: state.knowledgePoints,
+      nodeMasteryScores: state.nodeMasteryScores,
     },
 
     relations: {
@@ -317,6 +452,8 @@ export function serializeSessionState(
       codeToSemantic: state.codeAwareMappings,
       codeChunkRelations: state.codeChunkRelations,
       knowledgeRelations: state.knowledgeRelations,
+      knowledgeToStep: state.knowledgeToStepRelations,
+      knowledgeToCodeChunk: state.knowledgeToCodeChunkRelations,
     },
 
     metadata: {
@@ -342,11 +479,15 @@ export function deserializeSessionState(
     steps: persisted.nodes.steps,
     codeChunks: persisted.nodes.codeChunks,
     knowledgePoints: persisted.nodes.knowledgePoints,
+    nodeMasteryScores: persisted.nodes.nodeMasteryScores || [],
 
     stepToHighLevelMappings: persisted.relations.stepToHighLevel,
     codeAwareMappings: persisted.relations.codeToSemantic,
     codeChunkRelations: persisted.relations.codeChunkRelations,
     knowledgeRelations: persisted.relations.knowledgeRelations,
+    knowledgeToStepRelations: persisted.relations.knowledgeToStep || [],
+    knowledgeToCodeChunkRelations:
+      persisted.relations.knowledgeToCodeChunk || [],
 
     userRequirement: persisted.metadata.userRequirement
       ? {
@@ -433,6 +574,206 @@ export async function listAvailableSessions(
 - 参考现有的 `ideMessenger.request` 调用方式（`codeAwareGeneration.ts` 中随处可见）
 - JSON 序列化/反序列化的标准模式
 
+### 📋 任务 1.4（补充）：新增统一关系图视图构建工具
+
+**文件位置**: `gui/src/utils/codeAwareRelationGraph.ts`（新建文件）
+
+```typescript
+import type { CodeAwareSessionState } from "../redux/slices/codeAwareSlice";
+import type { CodeAwareCognitiveEdge } from "core";
+
+const COGNITIVE_EDGE_PRIORS: Record<string, number> = {
+  "hierarchical-forward": 0.86,
+  "hierarchical-reverse": 0.7,
+  "semantic-forward": 0.88,
+  "semantic-reverse": 0.74,
+  "code-similarity-forward": 0.68,
+  "code-similarity-reverse": 0.66,
+  "knowledge-similarity-forward": 0.72,
+  "knowledge-similarity-reverse": 0.7,
+  "knowledge-to-step-forward": 0.9,
+  "knowledge-to-step-reverse": 0.6,
+  "knowledge-to-code-chunk-forward": 0.84,
+  "knowledge-to-code-chunk-reverse": 0.58,
+};
+
+export function buildCodeAwareCognitiveEdges(
+  state: CodeAwareSessionState,
+): CodeAwareCognitiveEdge[] {
+  const now = Date.now();
+  const edges: CodeAwareCognitiveEdge[] = [];
+
+  state.stepToHighLevelMappings.forEach((m) => {
+    edges.push({
+      id: `hier-fwd-${m.stepId}-${m.highLevelStepId}`,
+      type: "hierarchical-forward",
+      fromNodeId: m.stepId,
+      fromNodeType: "step",
+      toNodeId: m.highLevelStepId,
+      toNodeType: "high-level-step",
+      conditionalMasteryProbability:
+        COGNITIVE_EDGE_PRIORS["hierarchical-forward"],
+      createdAt: now,
+    });
+
+    edges.push({
+      id: `hier-rev-${m.highLevelStepId}-${m.stepId}`,
+      type: "hierarchical-reverse",
+      fromNodeId: m.highLevelStepId,
+      fromNodeType: "high-level-step",
+      toNodeId: m.stepId,
+      toNodeType: "step",
+      conditionalMasteryProbability:
+        COGNITIVE_EDGE_PRIORS["hierarchical-reverse"],
+      createdAt: now,
+    });
+  });
+
+  state.codeAwareMappings.forEach((m, idx) => {
+    edges.push({
+      id: `sem-fwd-${m.codeChunkId}-${m.semanticElementId}-${idx}`,
+      type: "semantic-forward",
+      fromNodeId: m.codeChunkId,
+      fromNodeType: "code-chunk",
+      toNodeId: m.semanticElementId,
+      toNodeType:
+        m.semanticElementType === "highLevelStep" ? "high-level-step" : "step",
+      conditionalMasteryProbability: COGNITIVE_EDGE_PRIORS["semantic-forward"],
+      createdAt: m.createdAt,
+    });
+
+    edges.push({
+      id: `sem-rev-${m.semanticElementId}-${m.codeChunkId}-${idx}`,
+      type: "semantic-reverse",
+      fromNodeId: m.semanticElementId,
+      fromNodeType:
+        m.semanticElementType === "highLevelStep" ? "high-level-step" : "step",
+      toNodeId: m.codeChunkId,
+      toNodeType: "code-chunk",
+      conditionalMasteryProbability: COGNITIVE_EDGE_PRIORS["semantic-reverse"],
+      createdAt: m.createdAt,
+    });
+  });
+
+  state.codeChunkRelations.forEach((r) => {
+    edges.push({
+      id: `cc-fwd-${r.fromChunkId}-${r.toChunkId}`,
+      type: "code-similarity-forward",
+      fromNodeId: r.fromChunkId,
+      fromNodeType: "code-chunk",
+      toNodeId: r.toChunkId,
+      toNodeType: "code-chunk",
+      conditionalMasteryProbability:
+        COGNITIVE_EDGE_PRIORS["code-similarity-forward"],
+      createdAt: r.createdAt,
+    });
+
+    edges.push({
+      id: `cc-rev-${r.toChunkId}-${r.fromChunkId}`,
+      type: "code-similarity-reverse",
+      fromNodeId: r.toChunkId,
+      fromNodeType: "code-chunk",
+      toNodeId: r.fromChunkId,
+      toNodeType: "code-chunk",
+      conditionalMasteryProbability:
+        COGNITIVE_EDGE_PRIORS["code-similarity-reverse"],
+      createdAt: r.createdAt,
+    });
+  });
+
+  state.knowledgeRelations.forEach((r) => {
+    edges.push({
+      id: `kk-fwd-${r.fromKnowledgeId}-${r.toKnowledgeId}`,
+      type: "knowledge-similarity-forward",
+      fromNodeId: r.fromKnowledgeId,
+      fromNodeType: "knowledge-point",
+      toNodeId: r.toKnowledgeId,
+      toNodeType: "knowledge-point",
+      conditionalMasteryProbability:
+        COGNITIVE_EDGE_PRIORS["knowledge-similarity-forward"],
+      createdAt: r.createdAt,
+      metadata: { relationType: r.relationType },
+    });
+
+    edges.push({
+      id: `kk-rev-${r.toKnowledgeId}-${r.fromKnowledgeId}`,
+      type: "knowledge-similarity-reverse",
+      fromNodeId: r.toKnowledgeId,
+      fromNodeType: "knowledge-point",
+      toNodeId: r.fromKnowledgeId,
+      toNodeType: "knowledge-point",
+      conditionalMasteryProbability:
+        COGNITIVE_EDGE_PRIORS["knowledge-similarity-reverse"],
+      createdAt: r.createdAt,
+      metadata: { relationType: r.relationType },
+    });
+  });
+
+  state.knowledgeToStepRelations.forEach((r) => {
+    edges.push({
+      id: `ks-fwd-${r.knowledgeId}-${r.stepId}`,
+      type: "knowledge-to-step-forward",
+      fromNodeId: r.knowledgeId,
+      fromNodeType: "knowledge-point",
+      toNodeId: r.stepId,
+      toNodeType: "step",
+      conditionalMasteryProbability:
+        COGNITIVE_EDGE_PRIORS["knowledge-to-step-forward"],
+      createdAt: r.createdAt,
+    });
+
+    edges.push({
+      id: `ks-rev-${r.stepId}-${r.knowledgeId}`,
+      type: "knowledge-to-step-reverse",
+      fromNodeId: r.stepId,
+      fromNodeType: "step",
+      toNodeId: r.knowledgeId,
+      toNodeType: "knowledge-point",
+      conditionalMasteryProbability:
+        COGNITIVE_EDGE_PRIORS["knowledge-to-step-reverse"],
+      createdAt: r.createdAt,
+    });
+  });
+
+  state.knowledgeToCodeChunkRelations.forEach((r) => {
+    edges.push({
+      id: `kc-fwd-${r.knowledgeId}-${r.codeChunkId}`,
+      type: "knowledge-to-code-chunk-forward",
+      fromNodeId: r.knowledgeId,
+      fromNodeType: "knowledge-point",
+      toNodeId: r.codeChunkId,
+      toNodeType: "code-chunk",
+      conditionalMasteryProbability:
+        COGNITIVE_EDGE_PRIORS["knowledge-to-code-chunk-forward"],
+      createdAt: r.createdAt,
+      metadata: { viaStepId: r.viaStepId },
+    });
+
+    edges.push({
+      id: `kc-rev-${r.codeChunkId}-${r.knowledgeId}`,
+      type: "knowledge-to-code-chunk-reverse",
+      fromNodeId: r.codeChunkId,
+      fromNodeType: "code-chunk",
+      toNodeId: r.knowledgeId,
+      toNodeType: "knowledge-point",
+      conditionalMasteryProbability:
+        COGNITIVE_EDGE_PRIORS["knowledge-to-code-chunk-reverse"],
+      createdAt: r.createdAt,
+      metadata: { viaStepId: r.viaStepId },
+    });
+  });
+
+  return edges;
+}
+```
+
+**说明**:
+
+- 该工具用于统一查询与后续认知推断，不替换现有业务结构
+- `conditionalMasteryProbability` 仅在该认知边视图中维护
+- 当前阶段采用“边类型固定常数”方案估计条件概率，不要求 LLM 输出概率
+- 可在 selector 层缓存构图结果（`reselect`）避免重复计算
+
 ### 🧪 阶段一验证测试
 
 完成上述所有任务后，进行以下验证：
@@ -468,8 +809,12 @@ npx tsc --noEmit
    - ✅ `codeChunkRelations: []`
    - ✅ `knowledgePoints: []`
    - ✅ `knowledgeRelations: []`
-   - ✅ `codeChunks: []`
-   - ✅ `initialGeneration: { status: 'idle', ... }`
+
+- ✅ `knowledgeToStepRelations: []`
+- ✅ `knowledgeToCodeChunkRelations: []`
+- ✅ `nodeMasteryScores: []`
+- ✅ `codeChunks: []`
+- ✅ `initialGeneration: { status: 'idle', ... }`
 
 #### 测试 1.3：Actions 可用性测试
 
@@ -525,6 +870,8 @@ console.log("Deserialized:", deserialized);
 - [ ] Redux store 包含所有新字段
 - [ ] 所有新 actions 可以正常 dispatch
 - [ ] 持久化工具函数语法正确，可以导入
+- [ ] 统一关系图工具可根据 state 正确构建关系边
+- [ ] 节点掌握度字段已可被读写（仅基础设施，不含推断逻辑）
 
 ---
 
@@ -884,7 +1231,7 @@ ${codeContext || '(该步骤暂无对应代码)'}
 
 **📚 代码参考**:
 
-- 参考现有的知识卡片生成 prompt（如果有）
+- 参考现有的步骤语义解析 prompt 风格（不生成知识卡片，仅枚举背景知识点）
 - 保持 prompt 清晰、具体、有示例
 
 ### 📋 任务 2.4：优化现有的步骤生成Prompt
@@ -1813,7 +2160,6 @@ async function mapCodeChunksToSteps(
           semanticElementId: mapping.step_id,
           semanticElementType: "step",
           createdAt: Date.now(),
-          source: "llm",
           confidence: mapping.confidence || 0.9,
         });
       });
@@ -1838,11 +2184,18 @@ async function mapCodeChunksToSteps(
 
 在 `initialGeneration.ts` 中继续添加：
 
+**Phase 4 具体方案（必做）**:
+
+1. 使用统一 embedding 通道批量获取代码块向量
+2. 计算任意两块代码的语义相似度（余弦）
+3. 生成基础关系 `CodeChunkRelation[]`（仅存原始相似度）
+4. 在统一认知边视图中按边类型常数生成 `conditionalMasteryProbability`
+
+> 本阶段不要求 LLM 估计条件掌握概率。
+
 ```typescript
 /**
- * Phase 4: 分析代码块之间的语义关联
- *
- * 使用 embedding 计算代码块之间的余弦相似度
+ * Phase 4: 建立代码块基础语义关系（非认知概率）
  */
 export const analyzeCodeChunkRelations = createAsyncThunk<
   void,
@@ -1863,28 +2216,20 @@ export const analyzeCodeChunkRelations = createAsyncThunk<
 
     console.log(`📊 开始计算 ${codeChunks.length} 个代码块的 embeddings...`);
 
-    // Step 4.1: 获取所有代码块的 embeddings
-    const embeddings = await Promise.all(
-      codeChunks.map(async (chunk) => {
-        try {
-          const result = await extra.ideMessenger.request("llm/embed", {
-            text: chunk.content,
-            model: "text-embedding-3-small", // 或从配置获取
-          });
-
-          return {
-            chunkId: chunk.id,
-            embedding: result.embedding as number[],
-          };
-        } catch (error) {
-          console.warn(`⚠️ 获取 embedding 失败 (${chunk.id}):`, error);
-          return null;
-        }
-      }),
+    // Step 4.1: 批量获取代码块 embeddings（走 Core 已选 embed 模型）
+    const vectors = await embedTexts(
+      codeChunks.map((chunk) => chunk.content),
+      extra,
     );
 
-    // 过滤掉失败的
-    const validEmbeddings = embeddings.filter((e) => e !== null) as Array<{
+    const validEmbeddings = vectors
+      .map((embedding, idx) => ({
+        chunkId: codeChunks[idx]?.id,
+        embedding,
+      }))
+      .filter(
+        (item) => !!item.chunkId && Array.isArray(item.embedding),
+      ) as Array<{
       chunkId: string;
       embedding: number[];
     }>;
@@ -1898,11 +2243,13 @@ export const analyzeCodeChunkRelations = createAsyncThunk<
       return;
     }
 
-    // Step 4.2: 计算两两之间的余弦相似度
+    // Step 4.2: 计算基础语义关系（相似度）
     const relations: CodeChunkRelation[] = [];
-    const SIMILARITY_THRESHOLD = 0.7; // 相似度阈值
+    const SIMILARITY_THRESHOLD = 0.6;
 
-    console.log(`🔢 开始计算相似度（阈值: ${SIMILARITY_THRESHOLD}）...`);
+    console.log(
+      `🔢 开始计算语义相似度关系（阈值: ${SIMILARITY_THRESHOLD}）...`,
+    );
 
     for (let i = 0; i < validEmbeddings.length; i++) {
       for (let j = i + 1; j < validEmbeddings.length; j++) {
@@ -1912,7 +2259,7 @@ export const analyzeCodeChunkRelations = createAsyncThunk<
         );
 
         if (similarity >= SIMILARITY_THRESHOLD) {
-          // 双向关系
+          // 基础关系可双向保存，认知概率由后续认知边构建器注入
           relations.push({
             fromChunkId: validEmbeddings[i].chunkId,
             toChunkId: validEmbeddings[j].chunkId,
@@ -1981,7 +2328,7 @@ function cosineSimilarity(vec1: number[], vec2: number[]): number {
 **📚 代码参考**:
 
 - Embedding调用：需要在IDE协议中实现（见阶段五）
-- 余弦相似度：标准数学公式
+- 余弦相似度：标准数学公式（用于估计条件概率的初值）
 
 **注意**: 如果embedding API不支持，这个阶段可以暂时跳过或使用mock数据。
 
@@ -1989,15 +2336,24 @@ function cosineSimilarity(vec1: number[], vec2: number[]): number {
 
 最后一个阶段，在 `initialGeneration.ts` 中添加：
 
+**Phase 5 具体方案（必做）**:
+
+1. 逐步骤提取“背景知识点枚举”（非知识卡片，不生成教学内容）
+2. 基于 `knowledge -> step` 显式建立有向边
+3. 基于 `step -> codeChunk` 投影生成 `knowledge -> codeChunk` 有向边
+4. 对知识点做 embedding，建立 `knowledge -> knowledge` 基础关系
+5. 将 Phase 5 产物统一写入 Redux，供后续认知追踪模块消费
+
 ```typescript
 /**
- * Phase 5: 提取和关联知识点
+ * Phase 5: 枚举背景知识并建立基础关系
  *
  * 步骤：
- * 5.1 逐个步骤提取知识点
+ * 5.1 逐个步骤提取背景知识点（仅枚举，不生成知识卡片）
  * 5.2 去重和合并相似知识点
- * 5.3 计算知识点 embeddings
- * 5.4 建立知识点关联关系
+ * 5.3 建立 knowledge -> step 与 knowledge -> codeChunk 关系
+ * 5.4 计算知识点 embeddings
+ * 5.5 建立 knowledge -> knowledge 基础关系
  */
 export const extractAndLinkKnowledge = createAsyncThunk<
   void,
@@ -2038,7 +2394,7 @@ export const extractAndLinkKnowledge = createAsyncThunk<
         .map((c) => c!.content)
         .join("\n\n");
 
-      // 调用 LLM 提取知识点
+      // 调用 LLM 提取背景知识点（仅枚举）
       try {
         const prompt = constructExtractKnowledgePointsPrompt(
           {
@@ -2090,32 +2446,80 @@ export const extractAndLinkKnowledge = createAsyncThunk<
       return;
     }
 
-    // Step 5.3: 计算知识点的 embeddings
-    console.log("🔍 开始计算知识点 embeddings...");
+    // Step 5.3: 建立 knowledge -> step 与 knowledge -> codeChunk 关系
+    const knowledgeToStepRelations: KnowledgeToStepRelation[] = [];
+    const knowledgeToCodeChunkRelations: KnowledgeToCodeChunkRelation[] = [];
 
-    const knowledgeEmbeddings = await Promise.all(
-      uniqueKnowledgePoints.map(async (kp) => {
-        try {
-          const text = `${kp.title}\n${kp.content}`;
+    // 先建立 step -> codeChunk 索引（用于知识点投影到代码块）
+    const stepToChunkIds = new Map<string, string[]>();
+    mappings
+      .filter((m) => m.semanticElementType === "step")
+      .forEach((m) => {
+        const list = stepToChunkIds.get(m.semanticElementId) || [];
+        list.push(m.codeChunkId);
+        stepToChunkIds.set(m.semanticElementId, Array.from(new Set(list)));
+      });
 
-          const result = await extra.ideMessenger.request("llm/embed", {
-            text,
-            model: "text-embedding-3-small",
-          });
+    uniqueKnowledgePoints.forEach((kp) => {
+      kp.relatedStepIds.forEach((stepId) => {
+        knowledgeToStepRelations.push({
+          knowledgeId: kp.id,
+          stepId,
+          createdAt: Date.now(),
+        });
 
-          return {
+        const chunkIds = stepToChunkIds.get(stepId) || [];
+        chunkIds.forEach((chunkId) => {
+          // 继承映射置信度（若有）
+          const relatedMap = mappings.find(
+            (m) =>
+              m.semanticElementType === "step" &&
+              m.semanticElementId === stepId &&
+              m.codeChunkId === chunkId,
+          );
+
+          knowledgeToCodeChunkRelations.push({
             knowledgeId: kp.id,
-            embedding: result.embedding as number[],
-          };
-        } catch (error) {
-          console.warn(`⚠️ 获取 embedding 失败 (${kp.id}):`, error);
-          return null;
-        }
-      })
+            codeChunkId: chunkId,
+            viaStepId: stepId,
+            createdAt: Date.now(),
+          });
+        });
+      });
+    });
+
+    // 去重
+    const dedupKnowledgeToStep = Array.from(
+      new Map(
+        knowledgeToStepRelations.map((r) => [`${r.knowledgeId}-${r.stepId}`, r]),
+      ).values(),
     );
 
-    const validKnowledgeEmbeddings = knowledgeEmbeddings.filter(
-      (e) => e !== null
+    const dedupKnowledgeToCodeChunk = Array.from(
+      new Map(
+        knowledgeToCodeChunkRelations.map((r) => [
+          `${r.knowledgeId}-${r.codeChunkId}`,
+          r,
+        ]),
+      ).values(),
+    );
+
+    dispatch(setKnowledgeToStepRelations(dedupKnowledgeToStep));
+    dispatch(setKnowledgeToCodeChunkRelations(dedupKnowledgeToCodeChunk));
+
+    // Step 5.4: 计算知识点的 embeddings
+    console.log("🔍 开始计算知识点 embeddings...");
+
+    const knowledgeVectors = await embedTexts(
+      uniqueKnowledgePoints.map((kp) => `${kp.title}\n${kp.content}`),
+      extra,
+    );
+
+    const validKnowledgeEmbeddings = knowledgeVectors.map(
+      (embedding, idx) => ({
+        knowledgeId: uniqueKnowledgePoints[idx].id,
+        embedding,
+      }),
     ) as Array<{
       knowledgeId: string;
       embedding: number[];
@@ -2123,11 +2527,11 @@ export const extractAndLinkKnowledge = createAsyncThunk<
 
     console.log(`✅ 成功获取 ${validKnowledgeEmbeddings.length}/${uniqueKnowledgePoints.length} 个 embeddings`);
 
-    // Step 5.4: 计算知识点之间的相似度
+    // Step 5.5: 建立 knowledge -> knowledge 基础关系
     const knowledgeRelations: KnowledgeRelation[] = [];
-    const KNOWLEDGE_SIMILARITY_THRESHOLD = 0.75;
+    const SIMILARITY_THRESHOLD = 0.65;
 
-    console.log(`🔢 开始计算知识点相似度（阈值: ${KNOWLEDGE_SIMILARITY_THRESHOLD}）...`);
+    console.log(`🔢 开始计算知识点语义相似关系（阈值: ${SIMILARITY_THRESHOLD}）...`);
 
     for (let i = 0; i < validKnowledgeEmbeddings.length; i++) {
       for (let j = i + 1; j < validKnowledgeEmbeddings.length; j++) {
@@ -2136,7 +2540,7 @@ export const extractAndLinkKnowledge = createAsyncThunk<
           validKnowledgeEmbeddings[j].embedding
         );
 
-        if (similarity >= KNOWLEDGE_SIMILARITY_THRESHOLD) {
+        if (similarity >= SIMILARITY_THRESHOLD) {
           // 推断关系类型
           const kp1 = uniqueKnowledgePoints.find(
             (k) => k.id === validKnowledgeEmbeddings[i].knowledgeId
@@ -2147,7 +2551,7 @@ export const extractAndLinkKnowledge = createAsyncThunk<
 
           const relationType = inferRelationType(kp1!, kp2!, similarity);
 
-          // 双向关系
+          // 基础关系可双向保存，认知概率由后续认知边构建器注入
           knowledgeRelations.push({
             fromKnowledgeId: validKnowledgeEmbeddings[i].knowledgeId,
             toKnowledgeId: validKnowledgeEmbeddings[j].knowledgeId,
@@ -2229,8 +2633,37 @@ function inferRelationType(
 
 **📚 代码参考**:
 
-- 知识卡片生成：参考 `generateKnowledgeCardDetail`（`codeAwareGeneration.ts:1136`）
+- 背景知识枚举：参考步骤文本分析与结构化抽取的既有模式
 - 批量处理模式：参考Phase 3和4的实现
+
+### 📋 任务 3.7（补充）：统一 Node 关系图在流程末尾构建
+
+**目标**: 在 Phase 5 完成后，产出可直接用于认知推断的统一关系边视图。
+
+**实现方式**:
+
+```typescript
+import { buildCodeAwareCognitiveEdges } from "../../utils/codeAwareRelationGraph";
+
+// 在 executeInitialGeneration 的最后（completed 之前）
+const finalState = getState().codeAwareSession;
+const unifiedEdges = buildCodeAwareCognitiveEdges(finalState);
+
+console.log(`🕸️ 统一关系图边数量: ${unifiedEdges.length}`);
+
+await extra.ideMessenger.request("addCodeAwareLogEntry", {
+  eventType: "initial_generation_unified_graph_built",
+  payload: {
+    edgesCount: unifiedEdges.length,
+    timestamp: new Date().toISOString(),
+  },
+});
+```
+
+**说明**:
+
+- 当前迭代可只在内存中构建；若要持久化，可在 `codeAwareStorage.ts` 增加 `graph.edges` 字段
+- 统一关系图建议作为 selector 或工具函数产物，避免 Redux 状态冗余
 
 ### 🧪 阶段三验证测试
 
@@ -2320,6 +2753,11 @@ describe("Initial Generation Phases", () => {
    console.log("Code Chunk Relations:", state.codeChunkRelations.length);
    console.log("Knowledge Points:", state.knowledgePoints.length);
    console.log("Knowledge Relations:", state.knowledgeRelations.length);
+   console.log("Knowledge -> Step:", state.knowledgeToStepRelations.length);
+   console.log(
+     "Knowledge -> CodeChunk:",
+     state.knowledgeToCodeChunkRelations.length,
+   );
    ```
 
    **预期结果**:
@@ -2331,6 +2769,9 @@ describe("Initial Generation Phases", () => {
    - ✅ codeChunkRelations: 0个或更多（取决于相似度）
    - ✅ knowledgePoints: 0-20个
    - ✅ knowledgeRelations: 0个或更多
+
+- ✅ knowledgeToStepRelations: 通常 >= knowledgePoints（知识点至少关联一个步骤）
+- ✅ knowledgeToCodeChunkRelations: 0个或更多（取决于步骤是否有代码映射）
 
 4. **检查生成的代码文件**:
 
@@ -2395,6 +2836,114 @@ git commit -m "feat: implement initial generation orchestrator with all 5 phases
 - **阶段七**: 文档和清理
 
 每个阶段完成后都应该进行充分的测试验证，确保质量后再继续下一个阶段。
+
+---
+
+## 阶段五补充：Embedding实现落地方案（对齐现有代码）
+
+> 本节补充“如何按当前仓库已存在方式实现 embedding”，避免在 GUI 端硬编码模型名（如 `text-embedding-3-small`）。
+
+### 5.1 设计原则（与现有实现保持一致）
+
+1. **统一使用已选 embedding 模型**：从 `config.selectedModelByRole.embed` 获取，不在业务逻辑中写死模型
+2. **统一走 `ILLM.embed(chunks)`**：复用 `BaseLLM.embed` 的批处理 + 重试能力
+3. **GUI 不直接管 provider 细节**：GUI 只传文本数组，Core 负责调用 provider
+
+### 5.2 代码参考（现有仓库）
+
+- `core/indexing/CodebaseIndexer.ts`
+  - 通过 `config.selectedModelByRole.embed` 获取 embedding 模型
+- `core/indexing/LanceDbIndex.ts`
+  - 通过 `embeddingsProvider.embed(chunks.map(c => c.content))` 生成向量
+- `core/indexing/docs/DocsService.ts`
+  - `getEmbeddingsProvider()` 实现“配置模型优先，transformers.js 回退”
+- `core/llm/index.ts`
+  - `BaseLLM.embed()` 已实现分批（`maxEmbeddingBatchSize`）与退避重试
+
+### 5.3 协议扩展（建议）
+
+**文件**: `core/protocol/core.ts`
+
+```typescript
+"llm/embed": [
+  {
+    texts: string[];
+    title?: string;
+  },
+  {
+    embeddings: number[][];
+    embeddingId: string;
+  },
+];
+```
+
+**文件**: `core/protocol/passThrough.ts`
+
+在 `WEBVIEW_TO_CORE_PASS_THROUGH` 中加入：
+
+```typescript
+"llm/embed",
+```
+
+### 5.4 Core处理器实现（关键）
+
+**文件**: `core/core.ts`
+
+在 `on("llm/complete", ...)` 附近增加：
+
+```typescript
+on("llm/embed", async (msg) => {
+  const { config } = await this.configHandler.loadConfig();
+  const model = config?.selectedModelByRole.embed;
+
+  if (!model) {
+    throw new Error("No embedding model selected");
+  }
+
+  const embeddings = await model.embed(msg.data.texts);
+
+  return {
+    embeddings,
+    embeddingId: model.embeddingId,
+  };
+});
+```
+
+### 5.5 GUI调用方式（替换当前示例中的 `llm/embed` 单条调用）
+
+**文件**: `gui/src/redux/thunks/initialGeneration.ts`
+
+```typescript
+async function embedTexts(texts: string[], extra: any): Promise<number[][]> {
+  if (texts.length === 0) return [];
+
+  const resp = await extra.ideMessenger.request("llm/embed", {
+    texts,
+  });
+
+  return resp.embeddings || [];
+}
+```
+
+在 Phase 4 与 Phase 5 中改为批量：
+
+```typescript
+const vectors = await embedTexts(
+  codeChunks.map((c) => c.content),
+  extra,
+);
+const kpVectors = await embedTexts(
+  uniqueKnowledgePoints.map((kp) => `${kp.title}\n${kp.content}`),
+  extra,
+);
+```
+
+### 5.6 这样做的收益
+
+- 与索引/文档系统保持同一 embedding 基础设施
+- 自动继承 provider 的批处理、重试、限流行为
+- 避免业务层模型切换引发的兼容问题
+- 后续可直接复用 `embeddingId` 做缓存键（向量缓存、多 session 复用）
 
 ---
 

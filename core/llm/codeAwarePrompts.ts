@@ -1,12 +1,11 @@
 //CODEAWARE：所有的prompts和chat messages的组合在这里进行
 import { ProgramRequirement } from "..";
 
-
 export function constructParaphraseUserIntentPrompt(
-    programRequirement: ProgramRequirement,
+  programRequirement: ProgramRequirement,
 ): string {
-    const requirementText = programRequirement.requirementDescription;
-    return `{
+  const requirementText = programRequirement.requirementDescription;
+  return `{
         "task": "You are given a brief description of a coding project. Provide a clear implementation plan and learning goals.",
         "requirements": [
             "For the implementation plan: list the basic approach and key steps needed to complete the project. Use simple terms, no code or technical jargon except those users themselves have mentioned.",
@@ -20,39 +19,386 @@ export function constructParaphraseUserIntentPrompt(
     }`;
 }
 
+export function constructGenerateStepsPrompt(userRequirement: string): string {
+  return `你是一个专业的软件架构师和任务分解专家。请将用户需求分解为清晰的两级任务结构。
 
-export function constructGenerateStepsPrompt(
-    userRequirement: string,
-): string {
-    return `{
-        "task": "You are given a description of a coding project (will be written in a single file, all sources and data are ready, necessary packages has been installed). First, provide a high-level breakdown of the project into major tasks, then provide detailed steps for each task.",
-        "requirements": [
-            "First, identify 4-8 major high-level tasks that represent the overall workflow of the project（in reasonable implementation order）. These should be conceptual phases like 'Setup and Configuration', 'Data Processing', 'User Interface Development', etc.",
-            "IMPORTANT: If the project requires importing packages or involves specific frameworks (such as PyGame, Flask, etc.), include a high-level task at the beginning for 'Project Setup' or similar. This task should cover importing necessary packages and setting up any framework-specific boilerplate code (e.g. game loop for pygame) that every project using that framework requires.",
-            "Then, for each major task, generate fine-grained steps. The steps should be atomic - if the title of a step is 'A and B', divide it into two steps 'A' and 'B'.",
-            "IMPORTANT: For core steps which are too hard to be understood by beginners, you can break them down into multiple steps to make them easier to understand and implement.",
-            "Keep the title brief and readable. You must not put any code in the title.",
-            "Generate an abstract for each step that is designed for learners to understand. The abstract can contain Markdown formatting. The abstract should clearly explain all actions the code should implement in this step using beginner-friendly language. Describe the necessary programming concepts for the current step, using analogies and simple terms to make them understandable for learners. End the abstract with the practical outcome that will be achieved when finishing this step (e.g. what feature will be supported, how this creates the foundation for future steps, what phenomenon can be seen). The abstract should be mostly in natural language with minimal code examples, prioritizing clarity and educational value for students.",
-            "IMPORTANT: Remember that the high-level tasks and steps must describe the complete workflow to finish the project, while being presented in a clear, learner-friendly manner that helps students understand both what to do and why they're doing it.",
-            "Each step must correspond to exactly one of the major tasks",
-            "Multiple steps can belong to the same task - this is encouraged to break down complex tasks into manageable pieces",
-            "You must follow this JSON format in your response: {"title": "(title of the project)", "high_level_steps": ["(high-level task 1)", "(high-level task 2)", ...], "learning_goal": "(exactly the same learning goals cut out from the input description)", "steps": [{"title": "(title of the step)", "abstract": "(description of the step, can contain Markdown)", "task_corresponding_high_level_task": "(the exact text from high_level_steps array that this step belongs to)"]}]}.",
-            "Respond in the same language as the content in \"description\" section, EXCEPT FOR THE JSON FIELD NAMES, which must be in English.",
-            "IMPORTANT: Properly escape all special characters in JSON strings. Use \\n for newlines, \\\\ for backslashes, \\\" for quotes, \\t for tabs, etc. Ensure the JSON is valid and parseable.",
-            "Please do not use invalid \`\`\`json character to envelope the JSON response, just return the JSON object directly.",
-        ],
-        "project_description": "${userRequirement}"
-    }`;
+## 用户需求
+
+${userRequirement}
+
+## 任务目标
+
+将上述需求分解为：
+1. **高级步骤** (high-level steps): 3-6个主要的子目标或阶段
+2. **详细步骤** (steps): 每个高级步骤下的具体实施步骤，总共8-15个
+
+### 分解原则
+
+**高级步骤应该**:
+- 代表需求的主要组成部分或实现阶段
+- 清晰表达"做什么"而非"怎么做"
+- 用户阅读后能快速理解需求的结构
+- 示例：❌ "编写代码" → ✅ "实现用户认证功能"
+
+**详细步骤应该**:
+- 是具体的、可执行的任务
+- 每个步骤对应一段代码的实现
+- Abstract 只说明"做什么"，1-2句话，**不要包含实现细节**
+- 示例：
+    - ❌ "使用 bcrypt 库对密码进行哈希，添加 salt，存储到数据库的 users 表的 password_hash 字段"
+    - ✅ "对用户密码进行安全加密并存储"
+
+### 输出格式
+
+\`\`\`json
+{
+    "title": "<为整个需求起一个标题，5-10字>",
+    "learning_goal": "<学习目标，说明用户通过实现这个需求能学到什么，30-80字>",
+    "high_level_steps": [
+        "<高级步骤1的描述，8-15字>",
+        "<高级步骤2的描述，8-15字>",
+        ...
+    ],
+    "steps": [
+        {
+            "title": "<步骤标题，简短动词短语，5-15字>",
+            "abstract": "<步骤说明，描述做什么，避免实现细节，20-50字>",
+            "task_corresponding_high_level_task": <对应的高级步骤序号，1-based>
+        },
+        ...
+    ]
+}
+\`\`\`
+
+现在请开始分解任务。`;
 }
 
+/**
+ * 构造代码块语义分割的 prompt
+ * 将代码分割成语义独立的代码块
+ */
+export function constructSplitCodeIntoChunksPrompt(
+  code: string,
+  startLine: number,
+  steps: Array<{ id: string; title: string; abstract: string }>,
+): string {
+  return `你是一个代码分析专家。请将以下代码分割成语义独立的代码块（code chunks）。
+
+## 背景信息
+
+这段代码实现了以下步骤：
+${steps.map((s, idx) => `${idx + 1}. [${s.id}] ${s.title}\n   描述: ${s.abstract}`).join("\n\n")}
+
+## 代码内容
+
+文件从第 ${startLine} 行开始：
+
+\`\`\`
+${code}
+\`\`\`
+
+## 任务要求
+
+请将上述代码分割成**原子语义块**，每个块应该满足：
+
+### 分割原则
+1. **语义独立且完整**：每个代码块是一个完整的语义单元
+     - ✅ 一个完整的函数定义
+     - ✅ 一个完整的类定义
+     - ✅ 一段完整的初始化逻辑
+     - ✅ 一组相关的变量声明和赋值
+     - ❌ 函数的一部分
+     - ❌ 不完整的代码片段
+
+2. **覆盖完整**：所有代码行都必须被分配到某个代码块中，不能有遗漏
+
+3. **不重叠**：代码块之间不能有行号重叠
+
+4. **合理粒度**：
+     - 如果一个函数很长（>50行），可以考虑按照内部的逻辑段落分割
+     - 如果多个小函数功能相似，可以合并为一个代码块
+     - 目标：每个代码块 10-50 行左右
+
+### 输出格式
+
+返回严格的 JSON 格式：
+\`\`\`json
+{
+    "code_chunks": [
+        {
+            "start_line": <起始行号，整数，基于 ${startLine}>,
+            "end_line": <结束行号，整数，包含此行>,
+            "semantic_description": "<该代码块的语义描述，10-30字>"
+        }
+    ]
+}
+\`\`\`
+
+### 注意事项
+- 起始行号从 ${startLine} 开始计数
+- start_line 和 end_line 都是包含的（inclusive）
+- 按行号顺序排列所有代码块
+- 确保没有间隙：块1的 end_line + 1 应该等于块2的 start_line
+- semantic_description 应该简洁描述代码块的功能，**不要包含实现细节**
+
+### 示例
+如果代码是：
+\`\`\`python
+def calculate_sum(a, b):
+        return a + b
+
+def main():
+        result = calculate_sum(3, 5)
+        print(result)
+\`\`\`
+
+则输出应该是：
+\`\`\`json
+{
+    "code_chunks": [
+        {
+            "start_line": 1,
+            "end_line": 2,
+            "semantic_description": "定义求和函数"
+        },
+        {
+            "start_line": 4,
+            "end_line": 6,
+            "semantic_description": "主函数：调用求和并打印结果"
+        }
+    ]
+}
+\`\`\`
+
+现在请为上述代码生成分割结果。`;
+}
+
+/**
+ * 构造代码块到步骤映射的 prompt
+ * 将已分割的代码块映射到对应的实现步骤
+ */
+export function constructMapCodeChunksToStepsPrompt(
+  codeChunks: Array<{ id: string; description: string; codePreview: string }>,
+  steps: Array<{ id: string; title: string; abstract: string }>,
+): string {
+  return `你是一个代码分析专家。请将代码块映射到对应的实现步骤。
+
+## 任务目标
+
+我们有一组实现步骤和一组代码块，请建立它们之间的一对一映射关系。
+
+## 实现步骤列表
+
+${steps
+  .map(
+    (s, idx) => `### 步骤 ${idx + 1}: [${s.id}] ${s.title}
+**描述**: ${s.abstract}
+`,
+  )
+  .join("\n")}
+
+## 代码块列表
+
+${codeChunks
+  .map(
+    (c, idx) => `### 代码块 ${idx + 1}: [${c.id}]
+**语义描述**: ${c.description}
+**代码预览**:
+\`\`\`
+${c.codePreview}${c.codePreview.length > 150 ? "\n...(更多代码)" : ""}
+\`\`\`
+`,
+  )
+  .join("\n")}
+
+## 映射要求
+
+请为**每个代码块**找到**最匹配**的步骤ID，遵循以下原则：
+
+### 映射规则
+1. **一对一映射**：每个代码块必须且只能对应一个步骤
+2. **语义匹配**：根据代码块的功能和步骤的描述，选择最相关的步骤
+3. **置信度评估**：给出 0-1 的置信度分数，表示映射的确定程度
+     - 0.9-1.0: 非常确定，代码块明确实现了该步骤
+     - 0.7-0.9: 比较确定，代码块主要实现了该步骤
+     - 0.5-0.7: 一般确定，代码块部分实现了该步骤
+     - <0.5: 不太确定，没有更好的选择
+
+### 输出格式
+
+返回严格的 JSON 格式：
+\`\`\`json
+{
+    "mappings": [
+        {
+            "code_chunk_id": "<代码块ID>",
+            "step_id": "<步骤ID>",
+            "confidence": <置信度，0-1的浮点数>,
+            "reason": "<简短说明映射理由，10-30字>"
+        }
+    ]
+}
+\`\`\`
+
+### 注意事项
+- 必须为所有 ${codeChunks.length} 个代码块都提供映射
+- step_id 必须来自上述步骤列表中
+- 如果某个步骤没有对应的代码块，这是正常的（可能该步骤还未实现）
+- 如果某个代码块很难映射，选择最接近的步骤并给出较低的置信度
+
+### 示例
+\`\`\`json
+{
+    "mappings": [
+        {
+            "code_chunk_id": "c-1",
+            "step_id": "s-2",
+            "confidence": 0.95,
+            "reason": "代码块实现了数据验证功能，完全对应步骤2"
+        },
+        {
+            "code_chunk_id": "c-2",
+            "step_id": "s-3",
+            "confidence": 0.8,
+            "reason": "代码块实现了数据库查询，是步骤3的主要部分"
+        }
+    ]
+}
+\`\`\`
+
+现在请为上述代码块生成映射结果。`;
+}
+
+/**
+ * 构造知识点提取的 prompt
+ * 从步骤和代码中提取理解所需的背景知识
+ */
+export function constructExtractKnowledgePointsPrompt(
+  step: { id: string; title: string; abstract: string },
+  codeContext: string,
+): string {
+  return `你是一个编程教育专家。请提取理解以下步骤所需的**前置背景知识点**。
+
+## 步骤信息
+
+**ID**: ${step.id}
+**标题**: ${step.title}
+**描述**: ${step.abstract}
+
+## 相关代码实现
+
+\`\`\`
+${codeContext || "(该步骤暂无对应代码)"}
+\`\`\`
+
+## 任务要求
+
+请识别理解这个步骤及其代码所需的**前置背景知识点**。
+
+### 知识点类型
+
+包括但不限于：
+
+1. **编程语法知识** (category: "syntax")
+     - 语言特性：如 Python 的列表推导式、JavaScript 的解构赋值
+     - 特殊语法：如装饰器、泛型、异步函数
+     - 示例：\`{ title: "Python 装饰器", category: "syntax" }\`
+
+2. **算法和数据结构** (category: "algorithm")
+     - 算法：如二分查找、动态规划、深度优先搜索
+     - 数据结构：如哈希表、栈、队列、树
+     - 示例：\`{ title: "哈希表原理", category: "algorithm" }\`
+
+3. **框架/库知识** (category: "framework")
+     - 框架概念：如 React Hooks、Django ORM
+     - API 使用：如 fetch API、axios 库
+     - 示例：\`{ title: "React useEffect Hook", category: "framework" }\`
+
+4. **领域概念知识** (category: "concept")
+     - 软件工程：如 REST API、CORS、认证授权
+     - 领域特定：如机器学习中的损失函数、Web 中的会话管理
+     - 示例：\`{ title: "JWT 令牌机制", category: "concept" }\`
+
+### 知识点标准
+
+提取的知识点应该：
+
+✅ **独立可学**: 是一个可以单独学习的概念或技术
+✅ **有学习价值**: 不是显而易见的常识（如"变量赋值"）
+✅ **与步骤相关**: 确实是理解该步骤所必需的
+✅ **粒度适中**: 不要太宽泛（❌"Python 基础"）也不要太具体（❌"第5行代码的作用"）
+
+❌ **避免提取**:
+- 过于基础的概念（如"for 循环"，除非有特殊用法）
+- 过于宽泛的主题（如"面向对象编程"）
+- 代码实现细节（应该在代码注释中说明）
+
+### 难度级别
+
+- **easy**: 初学者应该掌握的基础知识
+- **medium**: 需要一定经验才能理解的知识
+- **hard**: 高级概念或复杂技术
+
+### 输出格式
+
+返回严格的 JSON 格式：
+\`\`\`json
+{
+    "knowledge_points": [
+        {
+            "title": "<知识点标题，5-10字>",
+            "description": "<详细描述，说明这个知识点是什么、为什么需要它，50-150字>",
+            "category": "syntax|algorithm|framework|concept",
+            "difficulty": "easy|medium|hard"
+        }
+    ]
+}
+\`\`\`
+
+### 数量要求
+- 如果步骤简单且无特殊知识点：返回 0-1 个
+- 一般情况：返回 2-4 个
+- 如果步骤复杂涉及多个技术：最多返回 5 个
+
+### 示例
+
+假设步骤是 "实现用户认证中间件"，代码使用了 JWT 和 bcrypt，则可能提取：
+
+\`\`\`json
+{
+    "knowledge_points": [
+        {
+            "title": "JWT 令牌机制",
+            "description": "JSON Web Token 是一种用于在客户端和服务器之间安全传输信息的标准。它由头部、载荷和签名三部分组成，可以验证令牌的真实性和完整性。在认证场景中，服务器生成 JWT 返回给客户端，客户端在后续请求中携带 JWT 进行身份验证。",
+            "category": "concept",
+            "difficulty": "medium"
+        },
+        {
+            "title": "密码哈希与加salt",
+            "description": "为了安全存储用户密码，需要使用单向哈希函数（如 bcrypt）将明文密码转换为哈希值。加 salt（随机字符串）可以防止彩虹表攻击。bcrypt 还提供了可调节的计算成本，增加破解难度。",
+            "category": "concept",
+            "difficulty": "medium"
+        },
+        {
+            "title": "Express 中间件机制",
+            "description": "Express 中间件是一些函数，它们可以访问请求对象、响应对象和下一个中间件函数。中间件可以执行代码、修改请求和响应对象、结束请求-响应循环或调用下一个中间件。认证中间件通常在路由处理之前验证用户身份。",
+            "category": "framework",
+            "difficulty": "easy"
+        }
+    ]
+}
+\`\`\`
+
+现在请为上述步骤提取知识点。`;
+}
 
 export function constructGenerateKnowledgeCardDetailPrompt(
-    knowledgeCardTheme: string,
-    learningGoal: string,
-    codeContext: string,
-    taskDescription?: string
+  knowledgeCardTheme: string,
+  learningGoal: string,
+  codeContext: string,
+  taskDescription?: string,
 ): string {
-    return `{
+  return `{
         "task": "A user is working on a coding project and needs to acquire knowledge about a specific theme to better understand the concepts, implementation and logic. Based on the knowledge theme, project context, related code, and learning objectives, generate a clear but concise educational explanation.",
         "knowledge_theme": "${knowledgeCardTheme}",
         "learning_objectives": "${learningGoal}",
@@ -74,14 +420,14 @@ export function constructGenerateKnowledgeCardDetailPrompt(
 
 // 构建生成知识卡片测试题的prompt
 export function constructGenerateKnowledgeCardTestsPrompt(
-    knowledgeCardTitle: string,
-    knowledgeCardContent: string,
-    knowledgeCardTheme: string,
-    learningGoal: string,
-    codeContext: string,
-    taskDescription?: string
+  knowledgeCardTitle: string,
+  knowledgeCardContent: string,
+  knowledgeCardTheme: string,
+  learningGoal: string,
+  codeContext: string,
+  taskDescription?: string,
 ): string {
-    return `{
+  return `{
         "task": "A student has learned about a specific knowledge theme and wants to verify whether they understand the core concepts or logic of this topic. Generate 1 to 3 test questions that can help the student assess their comprehension, incorporating the current task context and code context while aligning with their learning objectives.",
         "knowledge_card_title": "${knowledgeCardTitle}",
         "knowledge_card_content": "${knowledgeCardContent}",
@@ -104,16 +450,20 @@ export function constructGenerateKnowledgeCardTestsPrompt(
     }`;
 }
 
-
 export function constructAnalyzeCompletionStepPrompt(
-    prefixCode: string,
-    newCode: string,
-    steps: Array<{id: string, title: string, abstract: string}>,
-    learningGoal: string
+  prefixCode: string,
+  newCode: string,
+  steps: Array<{ id: string; title: string; abstract: string }>,
+  learningGoal: string,
 ): string {
-    const stepsText = steps.map((step, index) => `${index + 1}. ID: ${step.id}, Title: ${step.title}, Abstract: ${step.abstract}`).join("\n");
-    
-    return `{
+  const stepsText = steps
+    .map(
+      (step, index) =>
+        `${index + 1}. ID: ${step.id}, Title: ${step.title}, Abstract: ${step.abstract}`,
+    )
+    .join("\n");
+
+  return `{
         "task": "You are given a code snippet and new code that was just generated. You need to analyze which step this new code belongs to from the provided step list, and determine if this step is now complete. Then provide knowledge card themes based on the new code and learning goals.",
         "requirements": [
             "Analyze the new code and determine which step from the step list it belongs to",
@@ -131,46 +481,61 @@ export function constructAnalyzeCompletionStepPrompt(
     }`;
 }
 
-
 // 第一步：专注于代码生成的 prompt
 export function constructGenerateCodePrompt(
-    existingCode: string,
-    newStepsToImplement: Array<{
-        id: string;
-        title: string;
-        abstract: string;
-    }>,
-    previouslyGeneratedSteps?: Array<{
-        id: string;
-        title: string;
-        abstract: string;
-    }>,
-    taskDescription?: string,
-    isLastStep?: boolean
+  existingCode: string,
+  newStepsToImplement: Array<{
+    id: string;
+    title: string;
+    abstract: string;
+  }>,
+  previouslyGeneratedSteps?: Array<{
+    id: string;
+    title: string;
+    abstract: string;
+  }>,
+  taskDescription?: string,
+  isLastStep?: boolean,
 ): string {
-    const newStepsText = newStepsToImplement.map(step => 
-        `{"id": "${step.id}", "title": "${step.title}", "abstract": "${step.abstract}"}`
-    ).join(",\n        ");
-    
-    const previousStepsText = previouslyGeneratedSteps ? previouslyGeneratedSteps.map(step => 
-        `{"id": "${step.id}", "title": "${step.title}", "abstract": "${step.abstract}"}`
-    ).join(",\n        ") : "";
-    
-    const rule1Text = isLastStep 
-        ? "You MUST ensure the complete project functionality is implemented. This is the final step, so make sure all features work together to create a fully functional project."
-        : "You MUST implement ONLY the steps listed in 'new_steps_to_implement'. Do NOT generate code for future steps or complete the entire project at once.";
-    
-    return `{
+  const newStepsText = newStepsToImplement
+    .map(
+      (step) =>
+        `{"id": "${step.id}", "title": "${step.title}", "abstract": "${step.abstract}"}`,
+    )
+    .join(",\n        ");
+
+  const previousStepsText = previouslyGeneratedSteps
+    ? previouslyGeneratedSteps
+        .map(
+          (step) =>
+            `{"id": "${step.id}", "title": "${step.title}", "abstract": "${step.abstract}"}`,
+        )
+        .join(",\n        ")
+    : "";
+
+  const rule1Text = isLastStep
+    ? "You MUST ensure the complete project functionality is implemented. This is the final step, so make sure all features work together to create a fully functional project."
+    : "You MUST implement ONLY the steps listed in 'new_steps_to_implement'. Do NOT generate code for future steps or complete the entire project at once.";
+
+  return `{
         "task": "You are on the way to implement a project incrementally. You are given existing code and a list of new steps to implement. Your ONLY job is to generate clean, complete code that implements the new steps while maintaining the existing code structure.",
-        ${taskDescription ? `,
-        "project_description": "${taskDescription}"` : ""},
+        ${
+          taskDescription
+            ? `,
+        "project_description": "${taskDescription}"`
+            : ""
+        },
         "existing_code": "${existingCode}",
         "new_steps_to_implement": [
         ${newStepsText}
-        ]${previousStepsText ? `,
+        ]${
+          previousStepsText
+            ? `,
         "previously_generated_steps_context": [
         ${previousStepsText}
-        ]` : ""}
+        ]`
+            : ""
+        }
         "requirements": [
             "STRICT RULE 1: ${rule1Text}",
             "STRICT RULE 2: Generated code must be clean with concise, clear comments that explain what each part does.",
@@ -193,21 +558,24 @@ export function constructGenerateCodePrompt(
 
 // 第二步：专注于代码映射的 prompt - 将代码块映射到相关步骤（只输出行号范围）
 export function constructMapCodeToStepsPrompt(
-    completeCode: string,
-    allSteps: Array<{
-        id: string;
-        title: string;
-        abstract: string;
-    }>
+  completeCode: string,
+  allSteps: Array<{
+    id: string;
+    title: string;
+    abstract: string;
+  }>,
 ): string {
-    const stepsText = allSteps.map(step => 
-        `{"step_id": "${step.id}", "title": "${step.title}", "abstract": "${step.abstract}"}`
-    ).join(",\n        ");
-    
-    // 计算代码总行数
-    const totalLines = completeCode.split("\n").length;
-    
-    return `{
+  const stepsText = allSteps
+    .map(
+      (step) =>
+        `{"step_id": "${step.id}", "title": "${step.title}", "abstract": "${step.abstract}"}`,
+    )
+    .join(",\n        ");
+
+  // 计算代码总行数
+  const totalLines = completeCode.split("\n").length;
+
+  return `{
         "task": "You are given complete code and a list of implementation steps. Your job is to analyze the code structure, group consecutive lines that belong to the same semantic unit, and map each semantic code chunk to the relevant steps. You only need to output the line number ranges for each chunk.",
         "complete_code": "${completeCode}",
         "total_lines": ${totalLines},
@@ -245,28 +613,31 @@ export function constructMapCodeToStepsPrompt(
     }`;
 }
 
-
 export function constructGenerateKnowledgeCardThemesPrompt(
-    taskDescription: string,
-    currentStep: { title: string, abstract: string },
-    learningGoal: string,
-    currentCode?: string
+  taskDescription: string,
+  currentStep: { title: string; abstract: string },
+  learningGoal: string,
+  currentCode?: string,
 ): string {
-    const codeContext = currentCode ? `
-        "current_code": "${currentCode}",` : "";
-    
-    const codeRequirements = currentCode ? [
+  const codeContext = currentCode
+    ? `
+        "current_code": "${currentCode}",`
+    : "";
+
+  const codeRequirements = currentCode
+    ? [
         "For each theme, identify if there is corresponding code in the current_code that relates to this theme",
         "If corresponding code exists, extract the most precise and relevant code snippets that relate to the knowledge card's theme. Focus on the specific lines that directly demonstrate the concept rather than including large code blocks",
         "A knowledge card can have multiple code snippets if different parts of the code relate to the same theme",
         "If a theme has no corresponding code, leave the corresponding_code_snippets array empty",
-        "Code snippets should be precise and focused - include lines that directly relate to the theme's specific educational purpose"
-    ] : [
-        "Since no code is available for this step yet, focus only on generating relevant themes"
-    ];
-    
-    if (currentCode) {
-        return `{
+        "Code snippets should be precise and focused - include lines that directly relate to the theme's specific educational purpose",
+      ]
+    : [
+        "Since no code is available for this step yet, focus only on generating relevant themes",
+      ];
+
+  if (currentCode) {
+    return `{
             "task": "You are given a programming task, information about the current step, and learning goals. Generate a list of potential knowledge card themes that would be helpful for the user to understand this step better.",
             "task_description": "${taskDescription}",${codeContext}
             "current_step": {
@@ -279,15 +650,15 @@ export function constructGenerateKnowledgeCardThemesPrompt(
                 "The themes should cover concepts, techniques, or common questions and issues that learners might have when working on this step",
                 "The themes should align with the learning goals provided. But you can include more general topics in addition to ones directly relevant to the project at hand. You can also add topics that might interest the user.",
                 "Each theme should be a concise phrase or question (no more than 10-15 words)",
-                ${codeRequirements.map(req => `"${req}"`).join(",\n                ")},
+                ${codeRequirements.map((req) => `"${req}"`).join(",\n                ")},
                 "Respond in the same language as the task_description",
                 "You must follow this JSON format in your response: [{\\"theme\\": \\"(theme title)\\", \\"corresponding_code_snippets\\": [\\"(relevant code snippet 1)\\", \\"(relevant code snippet 2)\\", ...]}]",
                 "IMPORTANT: Properly escape all special characters in JSON strings. Ensure the JSON is valid and parseable.",
                 "Please do not use invalid \`\`\`json character to envelope the JSON response, just return the JSON array directly."
             ]
         }`;
-    } else {
-        return `{
+  } else {
+    return `{
             "task": "You are given a programming task, information about the current step, and learning goals. Generate a list of potential knowledge card themes that would be helpful for the user to understand this step better.",
             "task_description": "${taskDescription}",
             "current_step": {
@@ -307,22 +678,22 @@ export function constructGenerateKnowledgeCardThemesPrompt(
                 "Please do not use invalid \`\`\`json character to envelope the JSON response, just return the JSON array directly."
             ]
         }`;
-    }
+  }
 }
 
 export function constructGenerateKnowledgeCardThemesFromQueryPrompt(
-    queryContext: {
-        selectedCode: string;
-        selectedText: string;
-        query: string;
-    },
-    currentStep: { title: string, abstract: string },
-    currentCode: string,
-    existingThemes: string[],
-    learningGoal: string,
-    task: string
+  queryContext: {
+    selectedCode: string;
+    selectedText: string;
+    query: string;
+  },
+  currentStep: { title: string; abstract: string },
+  currentCode: string,
+  existingThemes: string[],
+  learningGoal: string,
+  task: string,
 ): string {
-    return `{
+  return `{
         "task": "You are given a user query in the context of a programming learning session. Based on the query, current step information, current code, existing knowledge card themes, and learning goals, generate new knowledge card themes that address the user's question and complement existing ones.",
         "query_context": {
             "selected_code": "${queryContext.selectedCode}",
@@ -334,7 +705,7 @@ export function constructGenerateKnowledgeCardThemesFromQueryPrompt(
             "abstract": "${currentStep.abstract}"
         },
         "current_code": "${currentCode}",
-        "existing_themes": [${existingThemes.map(theme => `"${theme}"`).join(", ")}],
+        "existing_themes": [${existingThemes.map((theme) => `"${theme}"`).join(", ")}],
         "learning_goal": "${learningGoal}",
         "task": "${task}",
         "requirements": [
@@ -355,27 +726,30 @@ export function constructGenerateKnowledgeCardThemesFromQueryPrompt(
 }
 
 export function constructRerunStepPrompt(
-    existingCode: string,
-    previousStep: {
-        id: string;
-        title: string;
-        abstract: string;
-    },
-    changedStepAbstract: string,
-    currentStepCodeChunks?: {
-        stepCode: string;
-    }
+  existingCode: string,
+  previousStep: {
+    id: string;
+    title: string;
+    abstract: string;
+  },
+  changedStepAbstract: string,
+  currentStepCodeChunks?: {
+    stepCode: string;
+  },
 ): string {
-    // 构建当前代码映射信息的文本
-    const currentCodeMappingText = currentStepCodeChunks ? `
+  // 构建当前代码映射信息的文本
+  const currentCodeMappingText = currentStepCodeChunks
+    ? `
         "current_code_mappings": {
             "step_code": "${currentStepCodeChunks.stepCode}"
-        },` : "";
-    
-    const currentCodeMappingRequirement = currentStepCodeChunks ? 
-        "Use the current_code_mappings as a reference to understand which parts of the code currently correspond to this step. This will help you identify the relevant code sections more accurately.," : "";
-    
-    return `{
+        },`
+    : "";
+
+  const currentCodeMappingRequirement = currentStepCodeChunks
+    ? "Use the current_code_mappings as a reference to understand which parts of the code currently correspond to this step. This will help you identify the relevant code sections more accurately.,"
+    : "";
+
+  return `{
         "task": "You are given existing code and a step whose abstract has been modified. You also have information about which code parts currently correspond to this step. Analyze the changes and update the code minimally to match the new abstract, then determine the correspondence between the updated code and the step.",
         "existing_code": "${existingCode}",${currentCodeMappingText}
         "previous_step": {
@@ -399,24 +773,27 @@ export function constructRerunStepPrompt(
 
 // 构建处理代码变更的prompt
 export function constructProcessCodeChangesPrompt(
-    previousCode: string,
-    currentCode: string,
-    codeDiff: string,
-    relevantSteps: Array<{
-        id: string;
-        title: string;
-        abstract: string;
-    }>
+  previousCode: string,
+  currentCode: string,
+  codeDiff: string,
+  relevantSteps: Array<{
+    id: string;
+    title: string;
+    abstract: string;
+  }>,
 ): string {
-    const stepsText = relevantSteps.map(step => 
+  const stepsText = relevantSteps
+    .map(
+      (step) =>
         `{
             "id": "${step.id}",
             "title": "${step.title}",
             "abstract": "${step.abstract}"
-        }`
-    ).join(", ");
-    
-    return `{
+        }`,
+    )
+    .join(", ");
+
+  return `{
         "task": "You are given the previous code, current code after changes, a code diff for reference, and a list of relevant steps that were affected by these code changes. Analyze whether these changes require updates to the step abstracts and determine if any steps have become functionally incomplete and need regeneration.",
         "previous_code": "${previousCode}",
         "current_code": "${currentCode}",
@@ -442,15 +819,15 @@ export function constructProcessCodeChangesPrompt(
 
 // 构建评估SAQ答案的prompt
 export function constructEvaluateSaqAnswerPrompt(
-    question: string,
-    standardAnswer: string,
-    userAnswer: string
+  question: string,
+  standardAnswer: string,
+  userAnswer: string,
 ): string {
-    return `{
+  return `{
         "task": "You are evaluating a student's short answer response to a programming-related question. Compare the user's answer with the standard answer and determine if it covers all key points correctly.",
-        "question": "${question.replace(/"/g, "\"")}",
-        "standard_answer": "${standardAnswer.replace(/"/g, "\"")}",
-        "user_answer": "${userAnswer.replace(/"/g, "\"")}"
+        "question": "${question.replace(/"/g, '"')}",
+        "standard_answer": "${standardAnswer.replace(/"/g, '"')}",
+        "user_answer": "${userAnswer.replace(/"/g, '"')}"
         "requirements": [
             "Analyze whether the user's answer demonstrates understanding of the core concepts",
             "Be lenient with minor wording differences - focus on conceptual understanding",
@@ -470,22 +847,25 @@ export function constructEvaluateSaqAnswerPrompt(
 
 // 针对 rerunStep 场景第一步：某个步骤的 abstract 发生变化，要求 LLM 只做必要的最小修改
 export function constructRerunStepCodeUpdatePrompt(
-    existingCode: string,
-    allSteps: Array<{
-        id: string;
-        title: string;
-        abstract: string;
-    }>,
-    stepId: string,
-    oldAbstract: string,
-    newAbstract: string,
-    taskDescription?: string
+  existingCode: string,
+  allSteps: Array<{
+    id: string;
+    title: string;
+    abstract: string;
+  }>,
+  stepId: string,
+  oldAbstract: string,
+  newAbstract: string,
+  taskDescription?: string,
 ): string {
-    const stepsText = allSteps.map(step =>
-        `{"id": "${step.id}", "title": "${step.title}", "abstract": "${step.abstract}"}`
-    ).join(",\n        ");
-    
-    return `{
+  const stepsText = allSteps
+    .map(
+      (step) =>
+        `{"id": "${step.id}", "title": "${step.title}", "abstract": "${step.abstract}"}`,
+    )
+    .join(",\n        ");
+
+  return `{
         "task": "You are given existing code and information about a specific step whose abstract has changed. Update the code minimally to reflect the new abstract while preserving all unrelated functionality.",
         ${taskDescription ? `"task_description": "${taskDescription}",` : ""}
         "existing_code": "${existingCode}",
@@ -518,21 +898,24 @@ export function constructRerunStepCodeUpdatePrompt(
 
 // 构建全局提问的prompt - 根据问题选择最相关的步骤并生成知识卡片主题
 export function constructGlobalQuestionPrompt(
-    question: string,
-    allSteps: Array<{
-        id: string;
-        title: string;
-        abstract: string;
-    }>,
-    taskDescription: string
+  question: string,
+  allSteps: Array<{
+    id: string;
+    title: string;
+    abstract: string;
+  }>,
+  taskDescription: string,
 ): string {
-    // 确保 allSteps 是数组，如果不是则返回空数组
-    const stepsArray = Array.isArray(allSteps) ? allSteps : [];
-    const stepsText = stepsArray.map(step =>
-        `{"id": "${step.id}", "title": "${step.title}", "abstract": "${step.abstract}"}`
-    ).join(",\n        ");
+  // 确保 allSteps 是数组，如果不是则返回空数组
+  const stepsArray = Array.isArray(allSteps) ? allSteps : [];
+  const stepsText = stepsArray
+    .map(
+      (step) =>
+        `{"id": "${step.id}", "title": "${step.title}", "abstract": "${step.abstract}"}`,
+    )
+    .join(",\n        ");
 
-    return `{
+  return `{
         "task": "You are given a question about a coding project and all available steps. Choose the most relevant step that the question relates to, and generate knowledge card themes that would help answer the question.",
         "question": "${question}",
         "all_steps": [
@@ -556,18 +939,18 @@ export function constructGlobalQuestionPrompt(
 
 // 构建检查知识卡片代码映射的prompt
 export function constructMapKnowledgeCardsToCodePrompt(
-    stepCode: string[],
-    knowledgeCardTitles: string[]
+  stepCode: string[],
+  knowledgeCardTitles: string[],
 ): string {
-    const codeLines = stepCode.map(line => 
-        JSON.stringify(line)
-    ).join(",\n        ");
-    
-    const knowledgeCardTitlesText = knowledgeCardTitles.map(title => 
-        JSON.stringify(title)
-    ).join(",\n        ");
-    
-    return `{
+  const codeLines = stepCode
+    .map((line) => JSON.stringify(line))
+    .join(",\n        ");
+
+  const knowledgeCardTitlesText = knowledgeCardTitles
+    .map((title) => JSON.stringify(title))
+    .join(",\n        ");
+
+  return `{
         "task": "You are given code lines for a specific step and knowledge card titles that don't have code mappings yet. Your job is to create precise mappings between complete code lines and knowledge card titles based on their themes.",
         "code_lines": [
         ${codeLines}
@@ -596,19 +979,19 @@ export function constructMapKnowledgeCardsToCodePrompt(
 
 // 新增：从完整代码中找到与特定步骤相关的代码行
 export function constructFindStepRelatedCodeLinesPrompt(
-    completeCode: string,
-    stepTitle: string,
-    stepAbstract: string
+  completeCode: string,
+  stepTitle: string,
+  stepAbstract: string,
 ): string {
-    const codeLines = completeCode.split("\n");
-    const totalLines = codeLines.length;
-    
-    // 生成带行号的代码内容，便于分析
-    const numberedCodeLines = codeLines.map((line, index) => 
-        `${index + 1}: ${line}`
-    ).join("\n");
-    
-    return `{
+  const codeLines = completeCode.split("\n");
+  const totalLines = codeLines.length;
+
+  // 生成带行号的代码内容，便于分析
+  const numberedCodeLines = codeLines
+    .map((line, index) => `${index + 1}: ${line}`)
+    .join("\n");
+
+  return `{
         "task": "You are given complete code and information about a specific implementation step. Your job is to identify and return ALL code lines that are related to implementing this specific step. Return the exact line content (without line numbers) for each relevant line.",
         "complete_code_with_line_numbers": "${numberedCodeLines}",
         "total_lines": ${totalLines},

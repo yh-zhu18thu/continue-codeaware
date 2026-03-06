@@ -612,6 +612,23 @@ export class Core {
       );
       return completion;
     });
+
+    on("llm/embed", async (msg) => {
+      const { config } = await this.configHandler.loadConfig();
+      const model = config?.selectedModelByRole.embed;
+
+      if (!model) {
+        throw new Error("No embedding model selected");
+      }
+
+      const embeddings = await model.embed(msg.data.texts);
+
+      return {
+        embeddings,
+        embeddingId: model.embeddingId,
+      };
+    });
+
     on("llm/listModels", this.handleListModels.bind(this));
 
     on("llm/compileChat", async (msg) => {

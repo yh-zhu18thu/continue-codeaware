@@ -223,6 +223,16 @@ export type ToCoreFromIdeOrWebviewProtocol = {
     },
     string,
   ];
+  "llm/embed": [
+    {
+      texts: string[];
+      title?: string;
+    },
+    {
+      embeddings: number[][];
+      embeddingId?: string;
+    },
+  ];
   "llm/listModels": [{ title: string }, string[] | undefined];
   "llm/streamChat": [
     {

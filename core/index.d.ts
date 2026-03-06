@@ -641,6 +641,117 @@ export interface CodeAwareMapping {
   confidence?: number;
 }
 
+// CODEAWARE: 代码块之间的语义关联关系
+export interface CodeChunkRelation {
+  fromChunkId: string;
+  toChunkId: string;
+  similarity: number; // 原始语义相似度，0-1（非认知概率）
+  createdAt: number;
+}
+
+// CODEAWARE: 知识点（从步骤和代码中提取的背景知识）
+export interface KnowledgePoint {
+  id: string; // 格式: k-{stepId}-{index}，例如 k-s-1-1
+  title: string; // 知识点标题，5-10字
+  content: string; // 详细描述，1-2句话
+  relatedStepIds: string[]; // 关联的步骤ID列表
+  category?: "syntax" | "algorithm" | "framework" | "concept"; // 知识类型
+  difficulty?: "easy" | "medium" | "hard"; // 难度级别
+}
+
+// CODEAWARE: 知识点之间的关联关系
+export interface KnowledgeRelation {
+  fromKnowledgeId: string;
+  toKnowledgeId: string;
+  similarity: number; // 原始语义相似度，0-1（非认知概率）
+  relationType?: "prerequisite" | "related"; // 关系类型
+  createdAt: number;
+}
+
+// CODEAWARE: 节点掌握度（本阶段仅提供存储基础设施，不做推断更新）
+export interface NodeMasteryScore {
+  nodeId: string;
+  nodeType: "high-level-step" | "step" | "code-chunk" | "knowledge-point";
+  score: number; // 用户掌握度估计，0-1
+  updatedAt: number;
+}
+
+// CODEAWARE: 初始生成流程的状态
+export type InitialGenerationStatus =
+  | "idle"
+  | "generating-structure"
+  | "generating-code"
+  | "mapping-code"
+  | "analyzing-chunks"
+  | "extracting-knowledge"
+  | "completed"
+  | "error";
+
+// CODEAWARE: 初始生成流程的详细状态
+export interface InitialGenerationState {
+  status: InitialGenerationStatus;
+  currentPhase: string; // 当前阶段的中文描述
+  progress: number; // 0-100
+  errors: string[]; // 错误信息列表
+  phases?: {
+    taskDecomposition: "pending" | "running" | "completed" | "failed";
+    codeGeneration: "pending" | "running" | "completed" | "failed";
+    codeMapping: "pending" | "running" | "completed" | "failed";
+    chunkAnalysis: "pending" | "running" | "completed" | "failed";
+    knowledgeExtraction: "pending" | "running" | "completed" | "failed";
+  };
+}
+
+// CODEAWARE: 统一节点类型（用于关系图视图，不替代现有实体类型）
+export type CodeAwareNodeType =
+  | "high-level-step"
+  | "step"
+  | "code-chunk"
+  | "knowledge-point";
+
+// CODEAWARE: 认知关联边类型（所有关系都显式区分正向/逆向）
+export type CodeAwareCognitiveEdgeType =
+  | "hierarchical-forward"
+  | "hierarchical-reverse"
+  | "semantic-forward"
+  | "semantic-reverse"
+  | "code-similarity-forward"
+  | "code-similarity-reverse"
+  | "knowledge-similarity-forward"
+  | "knowledge-similarity-reverse"
+  | "knowledge-to-step-forward"
+  | "knowledge-to-step-reverse"
+  | "knowledge-to-code-chunk-forward"
+  | "knowledge-to-code-chunk-reverse";
+
+// CODEAWARE: 统一认知关联边（仅此结构维护掌握条件概率）
+export interface CodeAwareCognitiveEdge {
+  id: string;
+  type: CodeAwareCognitiveEdgeType;
+  fromNodeId: string;
+  fromNodeType: CodeAwareNodeType;
+  toNodeId: string;
+  toNodeType: CodeAwareNodeType;
+  conditionalMasteryProbability: number; // P(掌握to | 掌握from)
+  createdAt: number;
+  metadata?: Record<string, any>;
+}
+
+// CODEAWARE: 知识点到步骤关系（显式化，便于认知推断）
+export interface KnowledgeToStepRelation {
+  knowledgeId: string;
+  stepId: string;
+  createdAt: number;
+}
+
+// CODEAWARE: 知识点到代码块关系（由 knowledge->step 与 code->step 推导）
+export interface KnowledgeToCodeChunkRelation {
+  knowledgeId: string;
+  codeChunkId: string;
+  viaStepId?: string;
+  createdAt: number;
+}
+
 export interface HighlightEvent {
   sourceType: "code" | "highLevelStep" | "step" | "knowledgeCard";
   identifier: string;

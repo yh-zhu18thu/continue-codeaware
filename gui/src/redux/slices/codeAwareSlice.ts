@@ -3,11 +3,18 @@ import { createSelector, createSlice, PayloadAction } from "@reduxjs/toolkit";
 import {
   CodeAwareMapping,
   CodeChunk,
+  CodeChunkRelation,
   CollaborationStatus,
   HighLevelStepItem,
   HighlightEvent,
+  InitialGenerationState,
   KnowledgeCardGenerationStatus,
   KnowledgeCardItem,
+  KnowledgePoint,
+  KnowledgeRelation,
+  KnowledgeToCodeChunkRelation,
+  KnowledgeToStepRelation,
+  NodeMasteryScore,
   ProgramRequirement,
   StepItem,
   StepStatus,
@@ -51,6 +58,22 @@ export type CodeAwareSessionState = {
   steps: StepItem[];
   //存储code与语义元素的映射关系（用于LLM查找缓存）
   codeAwareMappings: CodeAwareMapping[];
+  // 存储所有代码块
+  codeChunks: CodeChunk[];
+  // 代码块关系图
+  codeChunkRelations: CodeChunkRelation[];
+  // 知识点列表
+  knowledgePoints: KnowledgePoint[];
+  // 知识点关系图
+  knowledgeRelations: KnowledgeRelation[];
+  // 知识点 -> 步骤关系
+  knowledgeToStepRelations: KnowledgeToStepRelation[];
+  // 知识点 -> 代码块关系
+  knowledgeToCodeChunkRelations: KnowledgeToCodeChunkRelation[];
+  // 节点掌握度
+  nodeMasteryScores: NodeMasteryScore[];
+  // 初始生成状态
+  initialGeneration: InitialGenerationState;
   // 映射查找状态
   mappingLookup: {
     isLoading: boolean;
@@ -93,6 +116,19 @@ const initialCodeAwareState: CodeAwareSessionState = {
   stepToHighLevelMappings: [],
   steps: [],
   codeAwareMappings: [],
+  codeChunks: [],
+  codeChunkRelations: [],
+  knowledgePoints: [],
+  knowledgeRelations: [],
+  knowledgeToStepRelations: [],
+  knowledgeToCodeChunkRelations: [],
+  nodeMasteryScores: [],
+  initialGeneration: {
+    status: "idle",
+    currentPhase: "",
+    progress: 0,
+    errors: [],
+  },
   mappingLookup: {
     isLoading: false,
     lastQuery: undefined,
@@ -264,7 +300,19 @@ export const codeAwareSessionSlice = createSlice({
       state.stepToHighLevelMappings = [];
       state.steps = [];
       state.codeAwareMappings = [];
-      // state.codeChunks = []; // 已移除：不再静态存储 code chunks
+      state.codeChunks = [];
+      state.codeChunkRelations = [];
+      state.knowledgePoints = [];
+      state.knowledgeRelations = [];
+      state.knowledgeToStepRelations = [];
+      state.knowledgeToCodeChunkRelations = [];
+      state.nodeMasteryScores = [];
+      state.initialGeneration = {
+        status: "idle",
+        currentPhase: "",
+        progress: 0,
+        errors: [],
+      };
       state.shouldClearIdeHighlights = false;
       state.codeChunksToHighlightInIde = [];
     },
@@ -642,6 +690,105 @@ export const codeAwareSessionSlice = createSlice({
       });
 
       state.codeAwareMappings.push(...newMappings);
+    },
+    // 设置全部代码块
+    setCodeChunks: (state, action: PayloadAction<CodeChunk[]>) => {
+      state.codeChunks = action.payload;
+    },
+    // 添加或更新单个代码块
+    addCodeChunk: (state, action: PayloadAction<CodeChunk>) => {
+      const existingIndex = state.codeChunks.findIndex(
+        (chunk) => chunk.id === action.payload.id,
+      );
+      if (existingIndex >= 0) {
+        state.codeChunks[existingIndex] = action.payload;
+      } else {
+        state.codeChunks.push(action.payload);
+      }
+    },
+    // 代码块关系
+    setCodeChunkRelations: (
+      state,
+      action: PayloadAction<CodeChunkRelation[]>,
+    ) => {
+      state.codeChunkRelations = action.payload;
+    },
+    addCodeChunkRelation: (state, action: PayloadAction<CodeChunkRelation>) => {
+      state.codeChunkRelations.push(action.payload);
+    },
+    // 知识点
+    setKnowledgePoints: (state, action: PayloadAction<KnowledgePoint[]>) => {
+      state.knowledgePoints = action.payload;
+    },
+    addKnowledgePoint: (state, action: PayloadAction<KnowledgePoint>) => {
+      state.knowledgePoints.push(action.payload);
+    },
+    // 知识关系
+    setKnowledgeRelations: (
+      state,
+      action: PayloadAction<KnowledgeRelation[]>,
+    ) => {
+      state.knowledgeRelations = action.payload;
+    },
+    addKnowledgeRelation: (state, action: PayloadAction<KnowledgeRelation>) => {
+      state.knowledgeRelations.push(action.payload);
+    },
+    // 知识点 -> 步骤关系
+    setKnowledgeToStepRelations: (
+      state,
+      action: PayloadAction<KnowledgeToStepRelation[]>,
+    ) => {
+      state.knowledgeToStepRelations = action.payload;
+    },
+    // 知识点 -> 代码块关系
+    setKnowledgeToCodeChunkRelations: (
+      state,
+      action: PayloadAction<KnowledgeToCodeChunkRelation[]>,
+    ) => {
+      state.knowledgeToCodeChunkRelations = action.payload;
+    },
+    // 节点掌握度
+    setNodeMasteryScores: (
+      state,
+      action: PayloadAction<NodeMasteryScore[]>,
+    ) => {
+      state.nodeMasteryScores = action.payload;
+    },
+    upsertNodeMasteryScore: (
+      state,
+      action: PayloadAction<NodeMasteryScore>,
+    ) => {
+      const idx = state.nodeMasteryScores.findIndex(
+        (item) =>
+          item.nodeId === action.payload.nodeId &&
+          item.nodeType === action.payload.nodeType,
+      );
+      if (idx >= 0) {
+        state.nodeMasteryScores[idx] = action.payload;
+      } else {
+        state.nodeMasteryScores.push(action.payload);
+      }
+    },
+    // 初始生成状态管理
+    updateInitialGenerationStatus: (
+      state,
+      action: PayloadAction<Partial<InitialGenerationState>>,
+    ) => {
+      state.initialGeneration = {
+        ...state.initialGeneration,
+        ...action.payload,
+      };
+    },
+    resetInitialGenerationStatus: (state) => {
+      state.initialGeneration = {
+        status: "idle",
+        currentPhase: "",
+        progress: 0,
+        errors: [],
+      };
+    },
+    addInitialGenerationError: (state, action: PayloadAction<string>) => {
+      state.initialGeneration.errors.push(action.payload);
     },
     // 添加单个映射到缓存
     addMappingToCache: (state, action: PayloadAction<CodeAwareMapping>) => {
@@ -1052,8 +1199,20 @@ export const codeAwareSessionSlice = createSlice({
       // Reset everything except userRequirement and currentSessionId
       state.highLevelSteps = [];
       state.steps = [];
-      // state.codeChunks = []; // 已移除：不再静态存储 code chunks
+      state.codeChunks = [];
       state.codeAwareMappings = [];
+      state.codeChunkRelations = [];
+      state.knowledgePoints = [];
+      state.knowledgeRelations = [];
+      state.knowledgeToStepRelations = [];
+      state.knowledgeToCodeChunkRelations = [];
+      state.nodeMasteryScores = [];
+      state.initialGeneration = {
+        status: "idle",
+        currentPhase: "",
+        progress: 0,
+        errors: [],
+      };
       state.shouldClearIdeHighlights = false;
       state.codeChunksToHighlightInIde = [];
     },
@@ -1151,7 +1310,7 @@ export const codeAwareSessionSlice = createSlice({
     // Clear all code-related data and mappings
     clearAllCodeAndMappings: (state) => {
       // Clear all code chunks
-      // state.codeChunks = []; // 已移除：不再静态存储 code chunks
+      state.codeChunks = [];
 
       // Clear all code-related mappings (keep highLevelStep-only mappings)
       state.codeAwareMappings = state.codeAwareMappings.filter(
@@ -1160,6 +1319,9 @@ export const codeAwareSessionSlice = createSlice({
           mapping.semanticElementType === "highLevelStep" &&
           !mapping.codeChunkId,
       );
+
+      state.codeChunkRelations = [];
+      state.knowledgeToCodeChunkRelations = [];
 
       // Clear code chunks to highlight in IDE
       state.codeChunksToHighlightInIde = [];
@@ -1228,11 +1390,7 @@ export const codeAwareSessionSlice = createSlice({
   selectors: {
     //CATODO: write all the selectors to fetch the data
     selectCodeChunks: (state: CodeAwareSessionState) => {
-      // return state.codeChunks; // 已移除：不再静态存储 code chunks
-      console.warn(
-        "⚠️ selectCodeChunks selector 已废弃，不再静态存储 code chunks",
-      );
-      return [];
+      return state.codeChunks;
     },
     selectCodeAwareSessionState: (state: CodeAwareSessionState) => {
       return state;
@@ -1330,6 +1488,21 @@ export const {
   updateCodeChunkRange,
   setCodeChunkDisabled,
   updateCodeAwareMappings,
+  setCodeChunks,
+  addCodeChunk,
+  setCodeChunkRelations,
+  addCodeChunkRelation,
+  setKnowledgePoints,
+  addKnowledgePoint,
+  setKnowledgeRelations,
+  addKnowledgeRelation,
+  setKnowledgeToStepRelations,
+  setKnowledgeToCodeChunkRelations,
+  setNodeMasteryScores,
+  upsertNodeMasteryScore,
+  updateInitialGenerationStatus,
+  resetInitialGenerationStatus,
+  addInitialGenerationError,
   addMappingToCache,
   addMappingsToBatch,
   cleanupExpiredMappings,

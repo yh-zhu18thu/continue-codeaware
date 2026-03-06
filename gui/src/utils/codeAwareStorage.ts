@@ -9,12 +9,15 @@ interface PersistedCodeAwareSession {
     steps: unknown[];
     codeChunks: unknown[];
     knowledgePoints: unknown[];
+    nodeMasteryScores: unknown[];
   };
   relations: {
     stepToHighLevel: unknown[];
     codeToSemantic: unknown[];
     codeChunkRelations: unknown[];
     knowledgeRelations: unknown[];
+    knowledgeToStep: unknown[];
+    knowledgeToCodeChunk: unknown[];
   };
   metadata: {
     userRequirement: string;
@@ -35,12 +38,15 @@ export function serializeSessionState(
       steps: state.steps,
       codeChunks: state.codeChunks,
       knowledgePoints: state.knowledgePoints,
+      nodeMasteryScores: state.nodeMasteryScores,
     },
     relations: {
       stepToHighLevel: state.stepToHighLevelMappings,
       codeToSemantic: state.codeAwareMappings,
       codeChunkRelations: state.codeChunkRelations,
       knowledgeRelations: state.knowledgeRelations,
+      knowledgeToStep: state.knowledgeToStepRelations,
+      knowledgeToCodeChunk: state.knowledgeToCodeChunkRelations,
     },
     metadata: {
       userRequirement: state.userRequirement?.requirementDescription || "",
@@ -64,6 +70,9 @@ export function deserializeSessionState(
       .codeChunks as CodeAwareSessionState["codeChunks"],
     knowledgePoints: persisted.nodes
       .knowledgePoints as CodeAwareSessionState["knowledgePoints"],
+    nodeMasteryScores:
+      (persisted.nodes
+        .nodeMasteryScores as CodeAwareSessionState["nodeMasteryScores"]) || [],
     stepToHighLevelMappings: persisted.relations
       .stepToHighLevel as CodeAwareSessionState["stepToHighLevelMappings"],
     codeAwareMappings: persisted.relations
@@ -72,6 +81,14 @@ export function deserializeSessionState(
       .codeChunkRelations as CodeAwareSessionState["codeChunkRelations"],
     knowledgeRelations: persisted.relations
       .knowledgeRelations as CodeAwareSessionState["knowledgeRelations"],
+    knowledgeToStepRelations:
+      (persisted.relations
+        .knowledgeToStep as CodeAwareSessionState["knowledgeToStepRelations"]) ||
+      [],
+    knowledgeToCodeChunkRelations:
+      (persisted.relations
+        .knowledgeToCodeChunk as CodeAwareSessionState["knowledgeToCodeChunkRelations"]) ||
+      [],
     userRequirement: persisted.metadata.userRequirement
       ? {
           requirementDescription: persisted.metadata.userRequirement,

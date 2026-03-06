@@ -43,12 +43,12 @@ import {
   generateKnowledgeCardTests, // 新增：导入测试题生成thunk
   generateKnowledgeCardThemes,
   generateKnowledgeCardThemesFromQuery,
-  generateStepsFromRequirement,
   getStepCorrespondingCode,
   processGlobalQuestion,
   processSaqSubmission,
   rerunStep,
 } from "../../redux/thunks/codeAwareGeneration";
+import { executeInitialGeneration } from "../../redux/thunks/initialGeneration";
 import {
   establishCodeToSemanticMapping,
   establishSemanticToCodeMapping,
@@ -130,6 +130,74 @@ const LoadingOverlay = styled.div`
   justify-content: center;
   align-items: center;
   z-index: 1000;
+`;
+
+const LoadingCard = styled.div`
+  min-width: 360px;
+  max-width: 560px;
+  background: var(--vscode-editor-background);
+  border: 1px solid var(--vscode-editorWidget-border);
+  border-radius: 10px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+`;
+
+const LoadingTitle = styled.div`
+  color: var(--vscode-editor-foreground);
+  font-size: 14px;
+  font-weight: 600;
+`;
+
+const LoadingPhase = styled.div`
+  color: var(--vscode-descriptionForeground);
+  font-size: 12px;
+`;
+
+const LoadingErrorBox = styled.div`
+  max-height: 160px;
+  overflow-y: auto;
+  border: 1px solid var(--vscode-editorWidget-border);
+  border-radius: 6px;
+  padding: 8px;
+  background: var(--vscode-inputValidation-errorBackground);
+  color: var(--vscode-errorForeground);
+  font-size: 12px;
+`;
+
+const LoadingActions = styled.div`
+  display: flex;
+  justify-content: flex-end;
+`;
+
+const RetryButton = styled.button`
+  border: 1px solid var(--vscode-button-border);
+  background: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 12px;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--vscode-button-hoverBackground);
+  }
+`;
+
+const ProgressTrack = styled.div`
+  width: 100%;
+  height: 8px;
+  background: var(--vscode-editor-inactiveSelectionBackground);
+  border-radius: 999px;
+  overflow: hidden;
+`;
+
+const ProgressFill = styled.div<{ $progress: number }>`
+  height: 100%;
+  width: ${(props) => `${Math.max(0, Math.min(100, props.$progress))}%`};
+  background: var(--vscode-progressBar-background);
+  transition: width 240ms ease;
 `;
 
 const ScrollableContent = styled.div`
@@ -411,6 +479,47 @@ export const CodeAware = () => {
   const hasCodeDirtySteps = steps.some(
     (step) => step.stepStatus === "code_dirty",
   );
+
+  const initialGeneration = useAppSelector(
+    (state) => state.codeAwareSession.initialGeneration,
+  );
+  const isInitialGenerationError = initialGeneration.status === "error";
+  const isInitialGenerationRunning =
+    initialGeneration.status !== "idle" &&
+    initialGeneration.status !== "completed" &&
+    initialGeneration.status !== "error";
+  const showLoadingOverlay =
+    isInitialGenerationError ||
+    isInitialGenerationRunning ||
+    isGeneratingSteps ||
+    hasGeneratingSteps ||
+    hasCodeDirtySteps;
+
+  const handleRetryInitialGeneration = useCallback(() => {
+    const requirement = userRequirement?.requirementDescription?.trim() || "";
+    if (!requirement) {
+      return;
+    }
+
+    void logger.addLogEntry("user_retry_initial_generation", {
+      requirement:
+        requirement.length > 300
+          ? `${requirement.substring(0, 300)}...`
+          : requirement,
+      timestamp: new Date().toISOString(),
+    });
+
+    dispatch(resetSessionExceptRequirement());
+    dispatch(setUserRequirementStatus("confirmed"));
+    void dispatch(executeInitialGeneration({ userRequirement: requirement }))
+      .unwrap()
+      .catch(async (error) => {
+        await logger.addLogEntry("user_retry_initial_generation_failed", {
+          error: error instanceof Error ? error.message : String(error),
+          timestamp: new Date().toISOString(),
+        });
+      });
+  }, [dispatch, logger, userRequirement]);
 
   // log all the data for debugging
   useEffect(() => {
@@ -918,14 +1027,21 @@ export const CodeAware = () => {
       // Reset session except requirement first to ensure clean state
       dispatch(resetSessionExceptRequirement());
       dispatch(setUserRequirementStatus("confirmed"));
-      dispatch(
-        generateStepsFromRequirement({ userRequirement: requirement }),
-      ).then(async () => {
-        console.log("Steps generated from requirement");
-        await logger.addLogEntry("user_regenerate_steps_completed", {
-          requirement: requirement.trim(),
+      void dispatch(executeInitialGeneration({ userRequirement: requirement }))
+        .unwrap()
+        .then(async () => {
+          console.log("Initial generation flow completed");
+          await logger.addLogEntry("user_regenerate_steps_completed", {
+            requirement: requirement.trim(),
+          });
+        })
+        .catch(async (error) => {
+          console.error("Initial generation flow failed", error);
+          await logger.addLogEntry("user_regenerate_steps_failed", {
+            requirement: requirement.trim(),
+            error: error instanceof Error ? error.message : String(error),
+          });
         });
-      });
     },
     [dispatch, userRequirement, logger],
   );
@@ -2443,9 +2559,52 @@ export const CodeAware = () => {
       </ScrollableContent>
 
       {/* Loading Overlay */}
-      {(isGeneratingSteps || hasGeneratingSteps || hasCodeDirtySteps) && (
+      {showLoadingOverlay && (
         <LoadingOverlay>
-          <SpinnerIcon />
+          <LoadingCard>
+            <LoadingTitle>
+              {isInitialGenerationError
+                ? "初始化失败"
+                : isInitialGenerationRunning
+                  ? "正在初始化项目"
+                  : "正在处理请求"}
+            </LoadingTitle>
+
+            <div className="flex items-center gap-2">
+              <SpinnerIcon />
+              <LoadingPhase>
+                {isInitialGenerationError
+                  ? "初始化过程中出现错误，请查看详情并重试。"
+                  : isInitialGenerationRunning
+                    ? initialGeneration.currentPhase || "正在准备..."
+                    : "正在执行中，请稍候..."}
+              </LoadingPhase>
+            </div>
+
+            {isInitialGenerationRunning && (
+              <>
+                <ProgressTrack>
+                  <ProgressFill $progress={initialGeneration.progress} />
+                </ProgressTrack>
+                <LoadingPhase>{`${initialGeneration.progress}%`}</LoadingPhase>
+              </>
+            )}
+
+            {isInitialGenerationError && (
+              <>
+                <LoadingErrorBox>
+                  {(initialGeneration.errors || []).length > 0
+                    ? initialGeneration.errors.join("\n")
+                    : "未知错误"}
+                </LoadingErrorBox>
+                <LoadingActions>
+                  <RetryButton onClick={handleRetryInitialGeneration}>
+                    重新尝试初始化
+                  </RetryButton>
+                </LoadingActions>
+              </>
+            )}
+          </LoadingCard>
         </LoadingOverlay>
       )}
 

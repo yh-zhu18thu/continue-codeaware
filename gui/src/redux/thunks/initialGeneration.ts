@@ -20,6 +20,7 @@ import {
 import { buildCodeAwareCognitiveEdges } from "../../utils/codeAwareRelationGraph";
 import {
   addInitialGenerationError,
+  clearAllCodeAwareMappings,
   resetInitialGenerationStatus,
   setCodeAwareTitle,
   setCodeChunkRelations,
@@ -57,6 +58,46 @@ type EmbeddingResult = {
   };
   error?: string;
 };
+
+type CurrentFileResult = {
+  status: "success" | "error";
+  content?: {
+    path?: string;
+    contents?: string;
+  };
+  error?: string;
+};
+
+type ReadFileResult = {
+  status: "success" | "error";
+  content?: string;
+  error?: string;
+};
+
+async function getCurrentFileSnapshot(
+  extra: ThunkApiType["extra"],
+): Promise<{ path: string; contents: string } | null> {
+  try {
+    const currentFileResponse = (await extra.ideMessenger.request(
+      "getCurrentFile",
+      undefined,
+    )) as CurrentFileResult;
+
+    if (
+      currentFileResponse.status === "success" &&
+      currentFileResponse.content?.path
+    ) {
+      return {
+        path: currentFileResponse.content.path,
+        contents: currentFileResponse.content.contents || "",
+      };
+    }
+  } catch (error) {
+    console.warn("⚠️ 读取当前文件快照失败", error);
+  }
+
+  return null;
+}
 
 function getPreferredModelTitle(state: RootState): string {
   const selectedModel =
@@ -198,6 +239,41 @@ function deduplicateKnowledgePoints(
   });
 
   return Array.from(uniqueMap.values());
+}
+
+async function getLatestFileContent(
+  filePath: string,
+  extra: ThunkApiType["extra"],
+): Promise<string> {
+  try {
+    const currentFileResponse = (await extra.ideMessenger.request(
+      "getCurrentFile",
+      undefined,
+    )) as CurrentFileResult;
+
+    if (
+      currentFileResponse.status === "success" &&
+      currentFileResponse.content?.path === filePath &&
+      typeof currentFileResponse.content.contents === "string"
+    ) {
+      console.log(
+        `📖 [Phase 3] 使用编辑器缓冲区内容 (${currentFileResponse.content.contents.length} chars)`,
+      );
+      return currentFileResponse.content.contents;
+    }
+  } catch (error) {
+    console.warn("⚠️ [Phase 3] 读取当前编辑器内容失败，回退到 readFile", error);
+  }
+
+  const fileResponse = (await extra.ideMessenger.request("readFile", {
+    filepath: filePath,
+  })) as ReadFileResult;
+
+  if (fileResponse.status !== "success") {
+    throw new Error(fileResponse.error || `读取文件失败: ${filePath}`);
+  }
+
+  return fileResponse.content || "";
 }
 
 async function splitCodeIntoSemanticChunks(
@@ -500,21 +576,19 @@ export const generateCompleteCode = createAsyncThunk<
     }
 
     let filepath = targetFilePath;
+    const beforeApplyStateCount =
+      state.session.codeBlockApplyStates.states.length;
+
     if (!filepath) {
-      const currentFile = await extra.ideMessenger.request(
-        "getCurrentFile",
-        undefined,
-      );
-      if (
-        currentFile.status === "success" &&
-        currentFile.content?.path &&
-        currentFile.content?.path !== ""
-      ) {
-        filepath = currentFile.content.path;
+      const currentFile = await getCurrentFileSnapshot(extra);
+      if (currentFile?.path) {
+        filepath = currentFile.path;
       } else {
-        filepath = "generated_code.py";
+        filepath = "main.py";
       }
     }
+
+    console.log(`📁 [Phase 2] 请求生成目标文件: ${filepath}`);
 
     await dispatch(
       generateCodeFromSteps({
@@ -528,6 +602,28 @@ export const generateCompleteCode = createAsyncThunk<
         previouslyGeneratedSteps: [],
       }),
     ).unwrap();
+
+    const postState = getState();
+    const newApplyStates = postState.session.codeBlockApplyStates.states.slice(
+      beforeApplyStateCount,
+    );
+
+    const appliedFilePath = [...newApplyStates]
+      .reverse()
+      .find((state) => state.status === "done" && !!state.filepath)?.filepath;
+
+    if (appliedFilePath) {
+      filepath = appliedFilePath;
+      console.log(`✅ [Phase 2] 检测到实际写入文件: ${filepath}`);
+    } else {
+      const latestCurrentFile = await getCurrentFileSnapshot(extra);
+      if (latestCurrentFile?.path) {
+        filepath = latestCurrentFile.path;
+        console.log(`ℹ️ [Phase 2] 回退使用当前活动文件: ${filepath}`);
+      } else {
+        console.warn(`⚠️ [Phase 2] 未检测到真实写入文件，沿用: ${filepath}`);
+      }
+    }
 
     await extra.ideMessenger.request("addCodeAwareLogEntry", {
       eventType: "initial_generation_phase2_completed",
@@ -549,26 +645,50 @@ export const createCodeToStepMappings = createAsyncThunk<
 >(
   "codeAware/createCodeToStepMappings",
   async ({ filePath }, { dispatch, getState, extra }) => {
+    let effectiveFilePath = filePath;
+    console.log(`🗺️ [Phase 3] 开始建立映射，目标文件: ${effectiveFilePath}`);
+
     const state = getState();
     const steps = state.codeAwareSession.steps;
 
     if (steps.length === 0) {
+      console.warn("⚠️ [Phase 3] 没有步骤，跳过映射");
       return;
     }
 
     const modelTitle = getPreferredModelTitle(state);
-    const fileResponse = await extra.ideMessenger.request("readFile", {
-      filepath: filePath,
-    });
+    dispatch(
+      updateInitialGenerationStatus({
+        currentPhase: "正在读取生成代码并分割语义块...",
+        progress: 63,
+      }),
+    );
 
-    if (fileResponse.status !== "success") {
-      throw new Error(`读取文件失败: ${filePath}`);
+    let generatedCode = await getLatestFileContent(effectiveFilePath, extra);
+    console.log(`📄 [Phase 3] 读取代码长度: ${generatedCode.length} chars`);
+
+    if (!generatedCode.trim()) {
+      const currentFile = await getCurrentFileSnapshot(extra);
+      if (currentFile?.contents?.trim()) {
+        effectiveFilePath = currentFile.path;
+        generatedCode = currentFile.contents;
+        console.warn(
+          `⚠️ [Phase 3] 原目标文件为空，回退使用当前文件: ${effectiveFilePath}`,
+        );
+      }
     }
 
-    const generatedCode = fileResponse.content || "";
     if (!generatedCode.trim()) {
+      console.warn("⚠️ [Phase 3] 代码为空，无法建立映射");
       dispatch(setCodeChunks([]));
-      dispatch(updateCodeAwareMappings([]));
+      dispatch(clearAllCodeAwareMappings());
+      await extra.ideMessenger.request("addCodeAwareLogEntry", {
+        eventType: "initial_generation_phase3_skipped_empty_code",
+        payload: {
+          filePath: effectiveFilePath,
+          timestamp: new Date().toISOString(),
+        },
+      });
       return;
     }
 
@@ -585,10 +705,18 @@ export const createCodeToStepMappings = createAsyncThunk<
       range: chunk.range,
       isHighlighted: false,
       disabled: false,
-      filePath,
+      filePath: effectiveFilePath,
     }));
 
     dispatch(setCodeChunks(codeChunks));
+    console.log(`📦 [Phase 3] 代码块数量: ${codeChunks.length}`);
+
+    dispatch(
+      updateInitialGenerationStatus({
+        currentPhase: "正在将代码块映射到步骤...",
+        progress: 70,
+      }),
+    );
 
     const mappings = await mapCodeChunksToSteps(
       chunks,
@@ -596,16 +724,21 @@ export const createCodeToStepMappings = createAsyncThunk<
       modelTitle,
       extra,
     );
+    dispatch(clearAllCodeAwareMappings());
     dispatch(updateCodeAwareMappings(mappings));
+    console.log(`🔗 [Phase 3] 映射数量: ${mappings.length}`);
 
     await extra.ideMessenger.request("addCodeAwareLogEntry", {
       eventType: "initial_generation_phase3_completed",
       payload: {
+        filePath: effectiveFilePath,
         codeChunksCount: codeChunks.length,
         mappingsCount: mappings.length,
         timestamp: new Date().toISOString(),
       },
     });
+
+    console.log("✅ [Phase 3] 映射建立完成");
   },
 );
 
@@ -616,18 +749,39 @@ export const analyzeCodeChunkRelations = createAsyncThunk<
 >(
   "codeAware/analyzeCodeChunkRelations",
   async (_, { dispatch, getState, extra }) => {
+    console.log("🔍 [Phase 4] 开始分析代码块关系");
+
     const state = getState();
     const codeChunks = state.codeAwareSession.codeChunks;
 
     if (codeChunks.length < 2) {
+      console.log(
+        `ℹ️ [Phase 4] 代码块数量不足 (${codeChunks.length})，跳过关系分析`,
+      );
       dispatch(setCodeChunkRelations([]));
+      await extra.ideMessenger.request("addCodeAwareLogEntry", {
+        eventType: "initial_generation_phase4_skipped",
+        payload: {
+          reason: "insufficient_code_chunks",
+          codeChunksCount: codeChunks.length,
+          timestamp: new Date().toISOString(),
+        },
+      });
       return;
     }
+
+    dispatch(
+      updateInitialGenerationStatus({
+        currentPhase: "正在计算代码块向量与相似度...",
+        progress: 80,
+      }),
+    );
 
     const vectors = await embedTexts(
       codeChunks.map((chunk) => chunk.content),
       extra,
     );
+    console.log(`🧠 [Phase 4] 获取 embeddings: ${vectors.length}`);
 
     const validEmbeddings = vectors
       .map((embedding, index) => ({
@@ -667,6 +821,7 @@ export const analyzeCodeChunkRelations = createAsyncThunk<
     }
 
     dispatch(setCodeChunkRelations(relations));
+    console.log(`🔗 [Phase 4] 关系数量: ${relations.length}`);
 
     await extra.ideMessenger.request("addCodeAwareLogEntry", {
       eventType: "initial_generation_phase4_completed",
@@ -676,6 +831,8 @@ export const analyzeCodeChunkRelations = createAsyncThunk<
         timestamp: new Date().toISOString(),
       },
     });
+
+    console.log("✅ [Phase 4] 关系分析完成");
   },
 );
 
@@ -892,6 +1049,8 @@ export const executeInitialGeneration = createAsyncThunk<
     { dispatch, getState, extra },
   ) => {
     try {
+      console.log("🚀 [Initial Generation] 启动完整初始化流程");
+
       dispatch(resetInitialGenerationStatus());
 
       dispatch(
@@ -901,7 +1060,9 @@ export const executeInitialGeneration = createAsyncThunk<
           progress: 10,
         }),
       );
+      console.log("🧩 [Initial Generation] Phase 1: 任务分解");
       await dispatch(generateTaskDecomposition({ userRequirement })).unwrap();
+      console.log("✅ [Initial Generation] Phase 1 完成");
 
       dispatch(
         updateInitialGenerationStatus({
@@ -910,9 +1071,11 @@ export const executeInitialGeneration = createAsyncThunk<
           progress: 30,
         }),
       );
+      console.log("💻 [Initial Generation] Phase 2: 代码生成");
       const filePath = await dispatch(
         generateCompleteCode({ targetFilePath }),
       ).unwrap();
+      console.log("✅ [Initial Generation] Phase 2 完成");
 
       dispatch(
         updateInitialGenerationStatus({
@@ -921,7 +1084,9 @@ export const executeInitialGeneration = createAsyncThunk<
           progress: 60,
         }),
       );
+      console.log("🗺️ [Initial Generation] Phase 3: 代码-步骤映射");
       await dispatch(createCodeToStepMappings({ filePath })).unwrap();
+      console.log("✅ [Initial Generation] Phase 3 完成");
 
       dispatch(
         updateInitialGenerationStatus({
@@ -930,7 +1095,9 @@ export const executeInitialGeneration = createAsyncThunk<
           progress: 75,
         }),
       );
+      console.log("🔍 [Initial Generation] Phase 4: 代码块关系分析");
       await dispatch(analyzeCodeChunkRelations()).unwrap();
+      console.log("✅ [Initial Generation] Phase 4 完成");
 
       dispatch(
         updateInitialGenerationStatus({
@@ -939,7 +1106,9 @@ export const executeInitialGeneration = createAsyncThunk<
           progress: 90,
         }),
       );
+      console.log("📚 [Initial Generation] Phase 5: 知识提取与关联");
       await dispatch(extractAndLinkKnowledge()).unwrap();
+      console.log("✅ [Initial Generation] Phase 5 完成");
 
       const finalState = getState().codeAwareSession;
       const unifiedEdges = buildCodeAwareCognitiveEdges(finalState);
@@ -958,8 +1127,11 @@ export const executeInitialGeneration = createAsyncThunk<
           progress: 100,
         }),
       );
+
+      console.log("🎉 [Initial Generation] 全部阶段完成");
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
+      console.error("❌ [Initial Generation] 流程失败:", message);
       dispatch(addInitialGenerationError(message));
       dispatch(
         updateInitialGenerationStatus({

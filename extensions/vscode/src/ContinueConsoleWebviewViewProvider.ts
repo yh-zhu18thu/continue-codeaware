@@ -152,6 +152,17 @@ export class ContinueConsoleWebviewViewProvider
     page: string | undefined = undefined,
   ): string {
     const extensionUri = getExtensionUri();
+    const devServerBaseUrl = (
+      process.env.CONTINUE_GUI_DEV_SERVER_URL || "http://localhost:5173"
+    ).replace(/\/$/, "");
+    const devServerPort = (() => {
+      try {
+        const url = new URL(devServerBaseUrl);
+        return Number(url.port || (url.protocol === "https:" ? 443 : 80));
+      } catch {
+        return 5173;
+      }
+    })();
     let scriptUri: string;
     let styleMainUri: string;
 
@@ -169,8 +180,8 @@ export class ContinueConsoleWebviewViewProvider
         )
         .toString();
     } else {
-      scriptUri = "http://localhost:5173/src/console.tsx";
-      styleMainUri = "http://localhost:5173/src/indexConsole.css";
+      scriptUri = `${devServerBaseUrl}/src/console.tsx`;
+      styleMainUri = `${devServerBaseUrl}/src/indexConsole.css`;
     }
 
     panel.webview.options = {
@@ -181,6 +192,10 @@ export class ContinueConsoleWebviewViewProvider
       ],
       enableCommandUris: true,
       portMapping: [
+        {
+          webviewPort: devServerPort,
+          extensionHostPort: devServerPort,
+        },
         {
           webviewPort: 65433,
           extensionHostPort: 65433,
@@ -206,7 +221,7 @@ export class ContinueConsoleWebviewViewProvider
         ${
           inDevelopmentMode
             ? `<script type="module">
-          import RefreshRuntime from "http://localhost:5173/@react-refresh"
+          import RefreshRuntime from "${devServerBaseUrl}/@react-refresh"
           RefreshRuntime.injectIntoGlobalHook(window)
           window.$RefreshReg$ = () => {}
           window.$RefreshSig$ = () => (type) => type

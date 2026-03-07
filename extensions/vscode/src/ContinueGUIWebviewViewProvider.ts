@@ -72,6 +72,17 @@ export class ContinueGUIWebviewViewProvider
     isFullScreen = false,
   ): string {
     const extensionUri = getExtensionUri();
+    const devServerBaseUrl = (
+      process.env.CONTINUE_GUI_DEV_SERVER_URL || "http://localhost:5173"
+    ).replace(/\/$/, "");
+    const devServerPort = (() => {
+      try {
+        const url = new URL(devServerBaseUrl);
+        return Number(url.port || (url.protocol === "https:" ? 443 : 80));
+      } catch {
+        return 5173;
+      }
+    })();
     let scriptUri: string;
     let styleMainUri: string;
     const vscMediaUrl: string = panel.webview
@@ -91,11 +102,12 @@ export class ContinueGUIWebviewViewProvider
       console.log("scriptUri:", scriptUri);
       console.log("styleMainUri:", styleMainUri);
     } else {
-      scriptUri = "http://localhost:5173/src/main.tsx";
-      styleMainUri = "http://localhost:5173/src/index.css";
+      scriptUri = `${devServerBaseUrl}/src/main.tsx`;
+      styleMainUri = `${devServerBaseUrl}/src/index.css`;
       console.log(
         "Running in development mode, using local script and style URIs",
       );
+      console.log("devServerBaseUrl:", devServerBaseUrl);
       console.log("scriptUri:", scriptUri);
       console.log("styleMainUri:", styleMainUri);
     }
@@ -108,6 +120,10 @@ export class ContinueGUIWebviewViewProvider
       ],
       enableCommandUris: true,
       portMapping: [
+        {
+          webviewPort: devServerPort,
+          extensionHostPort: devServerPort,
+        },
         {
           webviewPort: 65433,
           extensionHostPort: 65433,
@@ -151,7 +167,7 @@ export class ContinueGUIWebviewViewProvider
         ${
           inDevelopmentMode
             ? `<script type="module">
-          import RefreshRuntime from "http://localhost:5173/@react-refresh"
+          import RefreshRuntime from "${devServerBaseUrl}/@react-refresh"
           RefreshRuntime.injectIntoGlobalHook(window)
           window.$RefreshReg$ = () => {}
           window.$RefreshSig$ = () => (type) => type

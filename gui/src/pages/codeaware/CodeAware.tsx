@@ -593,36 +593,45 @@ export const CodeAware = () => {
         return;
       }
 
-      // 3. 选择置信度最高的结果
-      const bestMatch = result.mappings.reduce((prev, current) =>
-        (current.confidence || 0) > (prev.confidence || 0) ? current : prev,
+      const uniqueSemanticMappings = Array.from(
+        new Map(
+          result.mappings.map((mapping) => [
+            `${mapping.semanticElementType}-${mapping.semanticElementId}`,
+            mapping,
+          ]),
+        ).values(),
       );
 
-      console.log("✅ 找到语义元素:", bestMatch);
+      console.log("✅ 找到语义元素:", uniqueSemanticMappings);
 
-      // 4. 高亮语义元素
+      // 4. 同时高亮所有关联语义元素
       dispatch(
-        updateHighlight([
-          {
-            sourceType: bestMatch.semanticElementType,
-            identifier: bestMatch.semanticElementId,
-          },
-        ]),
+        updateHighlight(
+          uniqueSemanticMappings.map((mapping) => ({
+            sourceType: mapping.semanticElementType,
+            identifier: mapping.semanticElementId,
+          })),
+        ),
       );
 
-      // 5. 滚动到语义元素
-      const element = document.querySelector(
-        `[data-${bestMatch.semanticElementType}-id="${bestMatch.semanticElementId}"]`,
-      );
+      // 5. 滚动到首个语义元素
+      const firstMatch = uniqueSemanticMappings[0];
+      const element = firstMatch
+        ? document.querySelector(
+            `[data-${firstMatch.semanticElementType}-id="${firstMatch.semanticElementId}"]`,
+          )
+        : null;
       if (element) {
         element.scrollIntoView({ behavior: "smooth", block: "center" });
       }
 
       await logger.addLogEntry("user_click_jump_to_semantic_success", {
         codeChunkId: result.chunk.id,
-        semanticElementId: bestMatch.semanticElementId,
-        semanticElementType: bestMatch.semanticElementType,
-        confidence: bestMatch.confidence,
+        semanticElementIds: uniqueSemanticMappings.map(
+          (mapping) =>
+            `${mapping.semanticElementType}:${mapping.semanticElementId}`,
+        ),
+        matchedCount: uniqueSemanticMappings.length,
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
@@ -705,42 +714,40 @@ export const CodeAware = () => {
         return;
       }
 
-      // 3. 选择置信度最高的结果
-      const bestMatch = result.mappings.reduce((prev, current) =>
-        (current.confidence || 0) > (prev.confidence || 0) ? current : prev,
+      const mappingChunkIds = Array.from(
+        new Set(result.mappings.map((mapping) => mapping.codeChunkId)),
       );
 
-      console.log("✅ 找到代码块:", bestMatch);
-
-      // 4. 从返回的 chunks 中找到对应的代码块详细信息
-      const codeChunk = result.chunks.find(
-        (chunk) => chunk.id === bestMatch.codeChunkId,
+      const matchedChunks = result.chunks.filter((chunk) =>
+        mappingChunkIds.includes(chunk.id),
       );
 
-      if (!codeChunk) {
-        console.warn("⚠️ 代码块不存在:", bestMatch.codeChunkId);
+      if (matchedChunks.length === 0) {
+        console.warn("⚠️ 未找到可高亮的代码块", mappingChunkIds);
         return;
       }
 
-      // 5. 通知 IDE 高亮代码
-      await ideMessenger?.post("highlightCodeChunks", [codeChunk]);
+      console.log("✅ 找到代码块:", matchedChunks);
 
-      // 6. 高亮代码块（在界面上）
+      // 5. 通知 IDE 高亮代码
+      await ideMessenger?.post("highlightCodeChunks", matchedChunks);
+
+      // 6. 高亮所有关联代码块（在界面上）
       dispatch(
-        updateHighlight([
-          {
+        updateHighlight(
+          matchedChunks.map((chunk) => ({
             sourceType: "code",
-            identifier: codeChunk.id,
-            additionalInfo: codeChunk,
-          },
-        ]),
+            identifier: chunk.id,
+            additionalInfo: chunk,
+          })),
+        ),
       );
 
       await logger.addLogEntry("user_click_jump_to_code_success", {
         semanticElementId: focusedElement.id,
         semanticElementType: focusedElement.type,
-        codeChunkId: codeChunk.id,
-        confidence: bestMatch.confidence,
+        codeChunkIds: matchedChunks.map((chunk) => chunk.id),
+        matchedCount: matchedChunks.length,
         timestamp: new Date().toISOString(),
       });
     } catch (error) {

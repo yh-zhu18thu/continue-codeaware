@@ -14,10 +14,9 @@ import type {
 import {
   constructExtractKnowledgePointsPrompt,
   constructGenerateStepsPrompt,
-  constructMapCodeChunksToStepsPrompt,
-  constructSplitCodeIntoChunksPrompt,
 } from "core/llm/codeAwarePrompts";
 import { buildCodeAwareCognitiveEdges } from "../../utils/codeAwareRelationGraph";
+import { generateCodeChunks } from "../../utils/codeChunkUtils";
 import {
   addInitialGenerationError,
   clearAllCodeAwareMappings,
@@ -278,9 +277,8 @@ async function getLatestFileContent(
 
 async function splitCodeIntoSemanticChunks(
   code: string,
+  filePath: string,
   steps: StepItem[],
-  modelTitle: string,
-  extra: ThunkApiType["extra"],
 ): Promise<
   Array<{
     id: string;
@@ -289,171 +287,124 @@ async function splitCodeIntoSemanticChunks(
     semanticDescription: string;
   }>
 > {
-  const codeLines = code.split("\n");
-  const totalLines = codeLines.length;
-  const CHUNK_SIZE = 500;
+  const atomicChunks = generateCodeChunks(code, filePath, "atomic-line");
 
-  const allCodeChunks: Array<{
-    start_line: number;
-    end_line: number;
-    semantic_description?: string;
-  }> = [];
-
-  for (let start = 0; start < totalLines; start += CHUNK_SIZE) {
-    const batchLines = codeLines.slice(
-      start,
-      Math.min(start + CHUNK_SIZE, totalLines),
-    );
-    const batchCode = batchLines.join("\n");
-    const startLine = start + 1;
-
-    const prompt = constructSplitCodeIntoChunksPrompt(
-      batchCode,
-      startLine,
-      steps.map((s) => ({ id: s.id, title: s.title, abstract: s.abstract })),
-    );
-
-    try {
-      const llmContent = await completeJson(prompt, modelTitle, extra);
-      const parsed = parseJsonFromLlm<{
-        code_chunks?: Array<{
-          start_line: number;
-          end_line: number;
-          semantic_description?: string;
-        }>;
-      }>(llmContent);
-
-      (parsed.code_chunks || []).forEach((chunk) => {
-        if (
-          Number.isInteger(chunk.start_line) &&
-          Number.isInteger(chunk.end_line) &&
-          chunk.start_line >= startLine &&
-          chunk.end_line >= chunk.start_line
-        ) {
-          allCodeChunks.push(chunk);
-        }
-      });
-    } catch (error) {
-      console.warn("⚠️ 代码块分割失败，使用降级策略", error);
-    }
+  if (atomicChunks.length === 0) {
+    return [];
   }
 
-  const sorted = allCodeChunks
-    .sort((a, b) => a.start_line - b.start_line)
-    .filter((chunk) => chunk.start_line <= totalLines)
-    .map((chunk) => ({
-      ...chunk,
-      end_line: Math.min(chunk.end_line, totalLines),
-    }));
-
-  if (sorted.length === 0) {
-    return [
-      {
-        id: "c-1",
-        content: code,
-        range: [1, totalLines],
-        semanticDescription: "完整代码实现",
-      },
-    ];
-  }
-
-  return sorted.map((chunk, index) => {
-    const content = codeLines
-      .slice(chunk.start_line - 1, chunk.end_line)
-      .join("\n");
+  return atomicChunks.map((chunk) => {
+    const semanticDescription =
+      chunk.content.trim().slice(0, 50) ||
+      `步骤相关代码 (${steps.length} steps)`;
 
     return {
-      id: `c-${index + 1}`,
-      content,
-      range: [chunk.start_line, chunk.end_line] as [number, number],
-      semanticDescription: chunk.semantic_description || "代码逻辑片段",
+      id: chunk.id,
+      content: chunk.content,
+      range: chunk.range,
+      semanticDescription,
     };
   });
 }
 
 async function mapCodeChunksToSteps(
+  fullCode: string,
   codeChunks: Array<{
     id: string;
     content: string;
+    range: [number, number];
     semanticDescription: string;
   }>,
   steps: StepItem[],
   modelTitle: string,
   extra: ThunkApiType["extra"],
 ): Promise<CodeAwareMapping[]> {
-  const BATCH_SIZE = 20;
+  const numberedCode = fullCode
+    .split("\n")
+    .map((line, index) => `${index + 1}: ${line}`)
+    .join("\n");
+
+  const lineToChunkId = new Map<number, string>();
+  codeChunks.forEach((chunk) => {
+    const [start, end] = chunk.range;
+    for (let line = start; line <= end; line++) {
+      lineToChunkId.set(line, chunk.id);
+    }
+  });
+
   const mappings: CodeAwareMapping[] = [];
 
-  for (let i = 0; i < codeChunks.length; i += BATCH_SIZE) {
-    const batch = codeChunks.slice(i, i + BATCH_SIZE);
-    const prompt = constructMapCodeChunksToStepsPrompt(
-      batch.map((chunk) => ({
-        id: chunk.id,
-        description: chunk.semanticDescription,
-        codePreview: chunk.content.slice(0, 220),
-      })),
-      steps.map((step) => ({
-        id: step.id,
-        title: step.title,
-        abstract: step.abstract,
-      })),
-    );
+  for (const step of steps) {
+    const prompt = `你是代码映射助手。请针对“步骤”在完整代码中圈出直接实现该步骤的代码行。\n\n步骤信息：\n- ID: ${step.id}\n- 标题: ${step.title}\n- 描述: ${step.abstract}\n\n完整代码（含行号）：\n${numberedCode}\n\n要求：\n1. 只选择直接实现该步骤的代码，不要包含仅依赖/上下文/样板代码。\n2. 可返回连续区间 + 零星单行。\n3. 若步骤尚未实现，返回空集合。\n\n返回严格 JSON：\n{\n  "line_ranges": [{ "start_line": 1, "end_line": 3 }],\n  "single_lines": [8, 12],\n  "confidence": 0.0\n}`;
 
     try {
       const llmContent = await completeJson(prompt, modelTitle, extra);
       const parsed = parseJsonFromLlm<{
-        mappings?: Array<{
-          code_chunk_id: string;
-          step_id: string;
-          confidence?: number;
-        }>;
+        line_ranges?: Array<{ start_line?: number; end_line?: number }>;
+        single_lines?: number[];
+        confidence?: number;
       }>(llmContent);
 
-      (parsed.mappings || []).forEach((mapping) => {
-        const hasChunk = batch.some(
-          (chunk) => chunk.id === mapping.code_chunk_id,
-        );
-        const hasStep = steps.some((step) => step.id === mapping.step_id);
-        if (!hasChunk || !hasStep) {
-          return;
+      const lineSet = new Set<number>();
+
+      (parsed.line_ranges || []).forEach((range) => {
+        const startLine = Number(range.start_line);
+        const endLine = Number(range.end_line);
+        if (
+          Number.isInteger(startLine) &&
+          Number.isInteger(endLine) &&
+          startLine > 0 &&
+          endLine >= startLine
+        ) {
+          for (let line = startLine; line <= endLine; line++) {
+            lineSet.add(line);
+          }
         }
-
-        mappings.push({
-          codeChunkId: mapping.code_chunk_id,
-          semanticElementId: mapping.step_id,
-          semanticElementType: "step",
-          createdAt: Date.now(),
-          source: "initial",
-          confidence: mapping.confidence ?? 0.7,
-        });
       });
+
+      (parsed.single_lines || []).forEach((line) => {
+        if (Number.isInteger(line) && line > 0) {
+          lineSet.add(line);
+        }
+      });
+
+      Array.from(lineSet)
+        .sort((a, b) => a - b)
+        .forEach((line) => {
+          const chunkId = lineToChunkId.get(line);
+          if (!chunkId) {
+            return;
+          }
+
+          mappings.push({
+            codeChunkId: chunkId,
+            semanticElementId: step.id,
+            semanticElementType: "step",
+            createdAt: Date.now(),
+            source: "initial",
+            confidence: parsed.confidence ?? 0.8,
+          });
+        });
     } catch (error) {
-      console.warn("⚠️ 代码块映射失败，使用降级映射", error);
-
-      batch.forEach((chunk, idx) => {
-        const fallbackStep = steps[(i + idx) % steps.length];
-        mappings.push({
-          codeChunkId: chunk.id,
-          semanticElementId: fallbackStep.id,
-          semanticElementType: "step",
-          createdAt: Date.now(),
-          source: "initial",
-          confidence: 0.45,
-        });
-      });
+      console.warn("⚠️ 步骤到代码行映射失败", { stepId: step.id, error });
     }
   }
 
-  if (mappings.length === 0) {
-    codeChunks.forEach((chunk, idx) => {
-      const step = steps[idx % steps.length];
+  if (mappings.length === 0 && codeChunks.length > 0 && steps.length > 0) {
+    steps.forEach((step, idx) => {
+      const chunk =
+        codeChunks[Math.floor((idx * codeChunks.length) / steps.length)];
+      if (!chunk) {
+        return;
+      }
+
       mappings.push({
         codeChunkId: chunk.id,
         semanticElementId: step.id,
         semanticElementType: "step",
         createdAt: Date.now(),
         source: "initial",
-        confidence: 0.4,
+        confidence: 0.35,
       });
     });
   }
@@ -694,9 +645,8 @@ export const createCodeToStepMappings = createAsyncThunk<
 
     const chunks = await splitCodeIntoSemanticChunks(
       generatedCode,
+      effectiveFilePath,
       steps,
-      modelTitle,
-      extra,
     );
 
     const codeChunks: CodeChunk[] = chunks.map((chunk) => ({
@@ -719,6 +669,7 @@ export const createCodeToStepMappings = createAsyncThunk<
     );
 
     const mappings = await mapCodeChunksToSteps(
+      generatedCode,
       chunks,
       steps,
       modelTitle,

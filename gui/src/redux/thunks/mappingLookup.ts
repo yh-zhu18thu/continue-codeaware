@@ -12,6 +12,7 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import { CodeAwareMapping, CodeChunk } from "core";
 import {
+  findSimilarChunk,
   generateCodeChunks,
   isChunkStillValid,
 } from "../../utils/codeChunkUtils";
@@ -74,7 +75,11 @@ function normalizeFilePath(path: string): string {
  */
 async function fetchAndSplitCurrentFile(
   ideMessenger: any,
-): Promise<{ filePath: string; chunks: CodeChunk[] } | null> {
+): Promise<{
+  filePath: string;
+  fileContent: string;
+  chunks: CodeChunk[];
+} | null> {
   try {
     // 使用正确的方式获取当前文件（与 CodeAware.tsx 中的实现一致）
     const currentFileResponse = await ideMessenger.request(
@@ -98,7 +103,11 @@ async function fetchAndSplitCurrentFile(
       throw new Error("无法读取当前文件");
     }
 
-    const chunks = generateCodeChunks(currentFile.contents, currentFile.path);
+    const chunks = generateCodeChunks(
+      currentFile.contents,
+      currentFile.path,
+      "atomic-line",
+    );
 
     console.log(
       `📁 读取文件 ${currentFile.path}，分割为 ${chunks.length} 个 chunks`,
@@ -106,12 +115,155 @@ async function fetchAndSplitCurrentFile(
 
     return {
       filePath: currentFile.path,
+      fileContent: currentFile.contents,
       chunks,
     };
   } catch (error) {
     console.error("❌ 读取文件失败:", error);
     throw error;
   }
+}
+
+function sanitizeJsonText(content: string): string {
+  let text = content.trim();
+
+  if (text.startsWith("```json")) {
+    text = text.replace(/^```json\s*/, "").replace(/\s*```$/, "");
+  } else if (text.startsWith("```")) {
+    text = text.replace(/^```\s*/, "").replace(/\s*```$/, "");
+  }
+
+  const jsonStart = text.indexOf("{");
+  const jsonEnd = text.lastIndexOf("}") + 1;
+  if (jsonStart !== -1 && jsonEnd > jsonStart) {
+    text = text.slice(jsonStart, jsonEnd);
+  }
+
+  return text;
+}
+
+function buildNumberedCode(code: string): string {
+  return code
+    .split("\n")
+    .map((line, idx) => `${idx + 1}: ${line}`)
+    .join("\n");
+}
+
+function constructStepToCodeLinesPrompt(
+  step: {
+    id: string;
+    title: string;
+    abstract: string;
+  },
+  numberedCode: string,
+): string {
+  return `你是代码映射助手。请针对“步骤”在完整代码中圈出直接实现该步骤的代码行。\n\n步骤信息：\n- ID: ${step.id}\n- 标题: ${step.title}\n- 描述: ${step.abstract}\n\n完整代码（已带行号）：\n${numberedCode}\n\n要求：\n1. 仅选择“直接实现该步骤”的代码，不要选择仅依赖、上下文、框架样板代码。\n2. 允许返回多个连续区间和零星单行。\n3. 行号必须来自上面的代码行号。\n4. 若该步骤暂无直接实现，返回空集合。\n\n返回严格 JSON：\n{\n  "line_ranges": [{ "start_line": 1, "end_line": 3 }],\n  "single_lines": [8, 12],\n  "confidence": 0.0,\n  "reason": "简短说明"\n}`;
+}
+
+function buildLineToChunkMap(chunks: CodeChunk[]): Map<number, string> {
+  const lineToChunk = new Map<number, string>();
+  chunks.forEach((chunk) => {
+    const [start, end] = chunk.range;
+    for (let line = start; line <= end; line++) {
+      lineToChunk.set(line, chunk.id);
+    }
+  });
+  return lineToChunk;
+}
+
+async function generateStepLineMappings(params: {
+  stepIds: string[];
+  state: RootState;
+  fileContent: string;
+  chunks: CodeChunk[];
+  ideMessenger: any;
+  source: "llm" | "initial";
+}): Promise<CodeAwareMapping[]> {
+  const { stepIds, state, fileContent, chunks, ideMessenger, source } = params;
+  const numberedCode = buildNumberedCode(fileContent);
+  const lineToChunk = buildLineToChunkMap(chunks);
+
+  const mappings: CodeAwareMapping[] = [];
+
+  for (const stepId of stepIds) {
+    const step = state.codeAwareSession.steps.find(
+      (item) => item.id === stepId,
+    );
+    if (!step) {
+      continue;
+    }
+
+    const prompt = constructStepToCodeLinesPrompt(
+      { id: step.id, title: step.title, abstract: step.abstract },
+      numberedCode,
+    );
+
+    try {
+      const response = await ideMessenger.request("llm/complete", {
+        prompt,
+        completionOptions: {
+          temperature: 0.1,
+          maxTokens: 1500,
+        },
+        title: "Step → Code Line Mapping",
+      });
+
+      if (response.status !== "success" || !response.content) {
+        continue;
+      }
+
+      const parsed = JSON.parse(sanitizeJsonText(response.content)) as {
+        line_ranges?: Array<{ start_line?: number; end_line?: number }>;
+        single_lines?: number[];
+        confidence?: number;
+      };
+
+      const lineSet = new Set<number>();
+
+      (parsed.line_ranges || []).forEach((range) => {
+        const startLine = Number(range.start_line);
+        const endLine = Number(range.end_line);
+        if (
+          Number.isInteger(startLine) &&
+          Number.isInteger(endLine) &&
+          startLine > 0 &&
+          endLine >= startLine
+        ) {
+          for (let line = startLine; line <= endLine; line++) {
+            lineSet.add(line);
+          }
+        }
+      });
+
+      (parsed.single_lines || []).forEach((line) => {
+        if (Number.isInteger(line) && line > 0) {
+          lineSet.add(line);
+        }
+      });
+
+      Array.from(lineSet)
+        .sort((a, b) => a - b)
+        .forEach((line) => {
+          const chunkId = lineToChunk.get(line);
+          if (!chunkId) {
+            return;
+          }
+
+          mappings.push({
+            codeChunkId: chunkId,
+            semanticElementId: step.id,
+            semanticElementType: "step",
+            createdAt: Date.now(),
+            source,
+            confidence: parsed.confidence ?? 0.8,
+          });
+        });
+    } catch (error) {
+      console.warn(`⚠️ 步骤行映射失败: ${step.id}`, error);
+    }
+  }
+
+  return mappings;
 }
 
 /**
@@ -134,9 +286,14 @@ async function fetchAndSplitCurrentFile(
 function validateCachedMappings(
   cachedMappings: CodeAwareMapping[],
   currentChunks: CodeChunk[],
+  previousChunks: CodeChunk[] = [],
 ): { valid: CodeAwareMapping[]; invalid: CodeAwareMapping[] } {
   const valid: CodeAwareMapping[] = [];
   const invalid: CodeAwareMapping[] = [];
+
+  const previousChunkMap = new Map(
+    previousChunks.map((chunk) => [chunk.id, chunk]),
+  );
 
   for (const mapping of cachedMappings) {
     // 检查 chunk 是否仍然存在
@@ -145,7 +302,30 @@ function validateCachedMappings(
     if (isValid) {
       valid.push(mapping);
     } else {
-      invalid.push(mapping);
+      const previousChunk = previousChunkMap.get(mapping.codeChunkId);
+      if (!previousChunk) {
+        invalid.push(mapping);
+        continue;
+      }
+
+      const exactMatch = currentChunks.find(
+        (chunk) =>
+          chunk.filePath === previousChunk.filePath &&
+          chunk.content.trim() === previousChunk.content.trim(),
+      );
+
+      const similarMatch =
+        exactMatch || findSimilarChunk(previousChunk, currentChunks, 0.95);
+
+      if (similarMatch) {
+        valid.push({
+          ...mapping,
+          codeChunkId: similarMatch.id,
+          createdAt: Date.now(),
+        });
+      } else {
+        invalid.push(mapping);
+      }
     }
   }
 
@@ -163,283 +343,9 @@ function validateCachedMappings(
 
 /**
  * ===============================
- * LLM 查找逻辑
+ * 行级映射主流程
  * ===============================
  */
-
-/**
- * 构造 Semantic → Code 的 LLM prompt
- */
-function constructSemanticToCodePrompt(
-  semanticElement: {
-    id: string;
-    type: "highLevelStep" | "step";
-    content: string;
-  },
-  codeChunks: Array<{ id: string; content: string }>,
-): string {
-  const elementType =
-    semanticElement.type === "highLevelStep" ? "高级步骤" : "步骤";
-
-  return `你是一个代码分析助手。请帮我找出以下${elementType}对应的代码块。
-
-${elementType}内容：
-${semanticElement.content}
-
-可选的代码块（每个块之间用 --- 分隔）：
-${codeChunks
-  .map(
-    (chunk, idx) => `
-代码块 ${idx + 1} (ID: ${chunk.id}):
-\`\`\`
-${chunk.content}
-\`\`\`
----`,
-  )
-  .join("\n")}
-
-请分析${elementType}与每个代码块的关联程度，返回最相关的代码块ID列表和置信度。
-
-返回格式（JSON）：
-{
-  "matches": [
-    {
-      "chunkId": "代码块ID",
-      "confidence": 0.9,
-      "reason": "匹配原因"
-    }
-  ]
-}
-
-注意：
-1. 只返回高度相关的代码块（confidence >= 0.7）
-2. 可以返回多个代码块
-3. 如果没有相关的代码块，返回空数组`;
-}
-
-/**
- * 构造 Code → Semantic 的 LLM prompt
- */
-function constructCodeToSemanticPrompt(
-  codeChunk: CodeChunk,
-  semanticElements: Array<{
-    id: string;
-    type: "highLevelStep" | "step";
-    content: string;
-  }>,
-): string {
-  return `你是一个代码分析助手。请帮我找出以下代码块对应的步骤。
-
-代码块内容：
-\`\`\`
-${codeChunk.content}
-\`\`\`
-
-可选的步骤：
-${semanticElements
-  .map(
-    (elem, idx) => `
-步骤 ${idx + 1} (ID: ${elem.id}, 类型: ${elem.type}):
-${elem.content}
----`,
-  )
-  .join("\n")}
-
-请分析代码块与每个步骤的关联程度，返回最相关的步骤ID列表和置信度。
-
-返回格式（JSON）：
-{
-  "matches": [
-    {
-      "elementId": "步骤ID",
-      "elementType": "highLevelStep 或 step",
-      "confidence": 0.9,
-      "reason": "匹配原因"
-    }
-  ]
-}
-
-注意：
-1. 只返回高度相关的步骤（confidence >= 0.7）
-2. 可以返回多个步骤
-3. 如果没有相关的步骤，返回空数组`;
-}
-
-/**
- * 调用 LLM 进行 Semantic → Code 查找
- */
-async function performLLMSemanticToCode(
-  semanticElement: {
-    id: string;
-    type: "highLevelStep" | "step";
-    content: string;
-  },
-  codeChunks: CodeChunk[],
-  ideMessenger: any,
-): Promise<CodeAwareMapping[]> {
-  const prompt = constructSemanticToCodePrompt(
-    semanticElement,
-    codeChunks.map((c) => ({ id: c.id, content: c.content })),
-  );
-
-  try {
-    const response = await ideMessenger.request("llm/complete", {
-      prompt,
-      completionOptions: {
-        temperature: 0.1,
-        maxTokens: 1000,
-      },
-      title: "Semantic → Code Mapping",
-    });
-
-    if (response.status !== "success" || !response.content) {
-      throw new Error("LLM 请求失败");
-    }
-
-    // 解析 LLM 响应
-    const jsonMatch = response.content.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      throw new Error("LLM 响应格式错误");
-    }
-
-    const result = JSON.parse(jsonMatch[0]);
-    const mappings: CodeAwareMapping[] = [];
-
-    for (const match of result.matches || []) {
-      if (match.confidence >= 0.7) {
-        mappings.push({
-          codeChunkId: match.chunkId,
-          semanticElementId: semanticElement.id,
-          semanticElementType: semanticElement.type,
-          createdAt: Date.now(),
-          source: "llm",
-          confidence: match.confidence,
-        });
-      }
-    }
-
-    console.log(`🤖 LLM 查找完成，找到 ${mappings.length} 个匹配`, mappings);
-
-    return mappings;
-  } catch (error) {
-    console.error("❌ LLM 查找失败:", error);
-    return [];
-  }
-}
-
-/**
- * 调用 LLM 进行 Code → Semantic 查找
- */
-async function performLLMCodeToSemantic(
-  codeChunk: CodeChunk,
-  semanticElements: Array<{
-    id: string;
-    type: "highLevelStep" | "step";
-    content: string;
-  }>,
-  ideMessenger: any,
-): Promise<CodeAwareMapping[]> {
-  const prompt = constructCodeToSemanticPrompt(codeChunk, semanticElements);
-
-  try {
-    const response = await ideMessenger.request("llm/complete", {
-      prompt,
-      completionOptions: {
-        temperature: 0.1,
-        maxTokens: 1000,
-      },
-      title: "Code → Semantic Mapping",
-    });
-
-    if (response.status !== "success" || !response.content) {
-      throw new Error("LLM 请求失败");
-    }
-
-    // 解析 LLM 响应
-    const jsonMatch = response.content.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      throw new Error("LLM 响应格式错误");
-    }
-
-    const result = JSON.parse(jsonMatch[0]);
-    const mappings: CodeAwareMapping[] = [];
-
-    for (const match of result.matches || []) {
-      if (match.confidence >= 0.7) {
-        mappings.push({
-          codeChunkId: codeChunk.id,
-          semanticElementId: match.elementId,
-          semanticElementType: match.elementType,
-          createdAt: Date.now(),
-          source: "llm",
-          confidence: match.confidence,
-        });
-      }
-    }
-
-    console.log(`🤖 LLM 查找完成，找到 ${mappings.length} 个匹配`, mappings);
-
-    return mappings;
-  } catch (error) {
-    console.error("❌ LLM 查找失败:", error);
-    return [];
-  }
-}
-
-/**
- * ===============================
- * 智能缓存策略
- * ===============================
- */
-
-/**
- * 查找父 HighLevel Step ID（通过 stepToHighLevelMappings）
- */
-function findParentHighLevelStepId(
-  state: RootState,
-  stepId: string,
-): string | null {
-  const mapping = state.codeAwareSession.stepToHighLevelMappings.find(
-    (m) => m.stepId === stepId,
-  );
-  return mapping ? mapping.highLevelStepId : null;
-}
-
-/**
- * 在指定范围内进行 LLM 查找（智能优化）
- *
- * 当查找 step 时，如果其父 highlevel step 有 mapping，
- * 则只在父 highlevel step 对应的代码块范围内查找
- */
-async function performSmartLLMSemanticToCode(
-  semanticElement: {
-    id: string;
-    type: "highLevelStep" | "step";
-    content: string;
-  },
-  allChunks: CodeChunk[],
-  parentChunkIds: string[] | null,
-  ideMessenger: any,
-): Promise<CodeAwareMapping[]> {
-  let targetChunks = allChunks;
-
-  // 如果有父级 chunk 限制，缩小查找范围
-  if (parentChunkIds && parentChunkIds.length > 0) {
-    targetChunks = allChunks.filter((chunk) =>
-      parentChunkIds.includes(chunk.id),
-    );
-
-    console.log(
-      `🎯 智能优化：查找范围缩小到 ${targetChunks.length}/${allChunks.length} 个 chunks`,
-    );
-  }
-
-  return await performLLMSemanticToCode(
-    semanticElement,
-    targetChunks,
-    ideMessenger,
-  );
-}
 
 /**
  * ===============================
@@ -451,7 +357,7 @@ export interface EstablishSemanticToCodeMappingParams {
   semanticElementId: string;
   semanticElementType: "highLevelStep" | "step" | "knowledgeCard";
   forceRefresh?: boolean; // 是否强制刷新缓存
-  strategy?: "smart" | "full"; // 使用智能策略还是全范围查找
+  strategy?: "smart" | "full"; // 兼容字段（当前流程未区分策略）
 }
 
 /**
@@ -478,8 +384,7 @@ export const establishSemanticToCodeMapping = createAsyncThunk<
   async (params, { getState, dispatch, extra }) => {
     const { ideMessenger } = extra;
     const state = getState();
-    const { semanticElementId, semanticElementType, forceRefresh, strategy } =
-      params;
+    const { semanticElementId, semanticElementType, forceRefresh } = params;
 
     dispatch(setMappingLookupLoading(true));
 
@@ -523,102 +428,73 @@ export const establishSemanticToCodeMapping = createAsyncThunk<
         throw new Error("无法读取当前文件");
       }
 
-      const { filePath, chunks } = fileData;
+      const { chunks, fileContent } = fileData;
+      const previousChunks = state.codeAwareSession.codeChunks || [];
 
-      // 2. 检查缓存
-      const cachedMappings = selectCodeChunksBySemanticElementId(
-        state,
-        actualElementId,
-      );
+      const getValidStepMappings = (stepId: string): CodeAwareMapping[] => {
+        const cached = selectCodeChunksBySemanticElementId(
+          state,
+          stepId,
+        ).filter((mapping) => mapping.semanticElementType === "step");
+        return validateCachedMappings(cached, chunks, previousChunks).valid;
+      };
 
-      if (!forceRefresh && cachedMappings.length > 0) {
-        // 验证缓存
-        const { valid, invalid } = validateCachedMappings(
-          cachedMappings,
-          chunks,
-        );
-
-        if (valid.length > 0) {
-          // 缓存有效，直接返回
-          dispatch(setMappingLookupLoading(false));
-          return { mappings: valid, chunks };
-        } else {
-          // 缓存失效，清理
-          console.log(`🗑️ 清理 ${invalid.length} 个失效的 mappings`);
-          // TODO: 添加 removeInvalidMappings action
-        }
-      }
-
-      // 3. 获取语义元素内容
-      let semanticContent = "";
-      if (actualElementType === "highLevelStep") {
-        const hls = state.codeAwareSession.highLevelSteps.find(
-          (h) => h.id === actualElementId,
-        );
-        semanticContent = hls?.content || "";
-      } else {
-        const step = state.codeAwareSession.steps.find(
-          (s) => s.id === actualElementId,
-        );
-        semanticContent = step?.title || "";
-      }
-
-      if (!semanticContent) {
-        throw new Error(`找不到语义元素 ${actualElementId}`);
-      }
-
-      // 4. 决定查找策略
       let mappings: CodeAwareMapping[] = [];
 
-      if (strategy === "smart" && actualElementType === "step") {
-        // 智能策略：利用父 highlevel step 的 mapping 缩小范围
-        const parentHLSId = findParentHighLevelStepId(state, actualElementId);
-
-        if (parentHLSId) {
-          const parentMappings = selectCodeChunksBySemanticElementId(
-            state,
-            parentHLSId,
-          );
-
-          if (parentMappings.length > 0) {
-            // 验证父级 mappings 仍然有效
-            const { valid: validParentMappings } = validateCachedMappings(
-              parentMappings,
-              chunks,
-            );
-
-            if (validParentMappings.length > 0) {
-              console.log(
-                `🎯 使用智能策略：在父 highlevel step ${parentHLSId} 的范围内查找`,
-              );
-
-              mappings = await performSmartLLMSemanticToCode(
-                {
-                  id: actualElementId,
-                  type: actualElementType,
-                  content: semanticContent,
-                },
-                chunks,
-                validParentMappings.map((m) => m.codeChunkId),
-                ideMessenger,
-              );
-            }
-          }
-        }
-      }
-
-      // 降级：全范围查找
-      if (mappings.length === 0) {
-        console.log(`🔍 使用全范围查找策略`);
-        mappings = await performLLMSemanticToCode(
-          {
-            id: actualElementId,
-            type: actualElementType,
-            content: semanticContent,
-          },
-          chunks,
-          ideMessenger,
+      if (actualElementType === "highLevelStep") {
+        const childStepIds = Array.from(
+          new Set(
+            state.codeAwareSession.stepToHighLevelMappings
+              .filter((mapping) => mapping.highLevelStepId === actualElementId)
+              .map((mapping) => mapping.stepId),
+          ),
         );
+
+        if (childStepIds.length === 0) {
+          throw new Error(`HighLevelStep ${actualElementId} 没有关联步骤`);
+        }
+
+        const cachedMappings = forceRefresh
+          ? []
+          : childStepIds.flatMap((stepId) => getValidStepMappings(stepId));
+
+        const coveredStepIds = new Set(
+          cachedMappings.map((mapping) => mapping.semanticElementId),
+        );
+        const missingStepIds = forceRefresh
+          ? childStepIds
+          : childStepIds.filter((stepId) => !coveredStepIds.has(stepId));
+
+        const generatedMappings =
+          missingStepIds.length > 0
+            ? await generateStepLineMappings({
+                stepIds: missingStepIds,
+                state,
+                fileContent,
+                chunks,
+                ideMessenger,
+                source: "llm",
+              })
+            : [];
+
+        mappings = [...cachedMappings, ...generatedMappings];
+      } else {
+        const cachedMappings = forceRefresh
+          ? []
+          : getValidStepMappings(actualElementId);
+
+        if (cachedMappings.length > 0) {
+          mappings = cachedMappings;
+        } else {
+          mappings = await generateStepLineMappings({
+            stepIds: [actualElementId],
+            state,
+            fileContent,
+            chunks,
+            ideMessenger,
+            source: "llm",
+          });
+        }
       }
 
       // 5. 将结果存入缓存
@@ -649,7 +525,7 @@ export interface EstablishCodeToSemanticMappingParams {
     endLine: number;
   };
   forceRefresh?: boolean;
-  strategy?: "smart" | "full";
+  strategy?: "smart" | "full"; // 兼容字段（当前流程未区分策略）
 }
 
 /**
@@ -686,7 +562,7 @@ export const establishCodeToSemanticMapping = createAsyncThunk<
         throw new Error("无法读取当前文件");
       }
 
-      const { filePath, chunks } = fileData;
+      const { filePath, chunks, fileContent } = fileData;
 
       // 验证文件路径是否匹配（标准化路径格式）
       const normalizedCurrentPath = normalizeFilePath(filePath);
@@ -703,8 +579,8 @@ export const establishCodeToSemanticMapping = createAsyncThunk<
         );
       }
 
-      // 2. 根据行号范围找到对应的 code chunk
-      const targetChunk = chunks.find((chunk) => {
+      // 2. 根据行号范围找到对应的 code chunks
+      const targetChunks = chunks.filter((chunk) => {
         const [chunkStart, chunkEnd] = chunk.range;
         const { startLine, endLine } = codeSelection;
 
@@ -712,64 +588,89 @@ export const establishCodeToSemanticMapping = createAsyncThunk<
         return startLine <= chunkEnd && endLine >= chunkStart;
       });
 
-      if (!targetChunk) {
+      if (targetChunks.length === 0) {
         throw new Error(
           `找不到对应的代码块 (行 ${codeSelection.startLine}-${codeSelection.endLine})`,
         );
       }
 
+      const collectMappingsFromChunks = (currentState: RootState) => {
+        const stepMappings = targetChunks.flatMap((chunk) =>
+          selectSemanticElementsByCodeChunkId(currentState, chunk.id).filter(
+            (mapping) => mapping.semanticElementType === "step",
+          ),
+        );
+
+        const dedupStepMappings = Array.from(
+          new Map(
+            stepMappings.map((mapping) => [
+              `${mapping.codeChunkId}-${mapping.semanticElementId}`,
+              mapping,
+            ]),
+          ).values(),
+        );
+
+        const stepToHighLevel = new Map(
+          currentState.codeAwareSession.stepToHighLevelMappings.map(
+            (mapping) => [mapping.stepId, mapping.highLevelStepId],
+          ),
+        );
+
+        const highLevelMap = new Map<string, CodeAwareMapping>();
+        dedupStepMappings.forEach((mapping) => {
+          const highLevelStepId = stepToHighLevel.get(
+            mapping.semanticElementId,
+          );
+          if (!highLevelStepId) {
+            return;
+          }
+
+          const key = `${mapping.codeChunkId}-${highLevelStepId}-highLevelStep`;
+          if (!highLevelMap.has(key)) {
+            highLevelMap.set(key, {
+              ...mapping,
+              semanticElementId: highLevelStepId,
+              semanticElementType: "highLevelStep",
+            });
+          }
+        });
+        const derivedHighLevelMappings = Array.from(highLevelMap.values());
+
+        return [...dedupStepMappings, ...derivedHighLevelMappings];
+      };
+
       // 3. 检查缓存
-      const cachedMappings = selectSemanticElementsByCodeChunkId(
-        state,
-        targetChunk.id,
-      );
+      let cachedMappings = collectMappingsFromChunks(state);
 
       if (!forceRefresh && cachedMappings.length > 0) {
-        // 缓存命中
-        console.log(`✅ 缓存命中 - 代码块 ${targetChunk.id}:`, cachedMappings);
+        console.log(
+          `✅ 缓存命中 - 代码区间 ${targetChunks.length} 个行块`,
+          cachedMappings,
+        );
         dispatch(setMappingLookupLoading(false));
-        return { mappings: cachedMappings, chunk: targetChunk };
+        return { mappings: cachedMappings, chunk: targetChunks[0] };
       }
 
-      // 4. 收集候选语义元素
-      const candidates: Array<{
-        id: string;
-        type: "highLevelStep" | "step";
-        content: string;
-      }> = [];
-
-      // 添加高级步骤
-      state.codeAwareSession.highLevelSteps.forEach((hls) => {
-        candidates.push({
-          id: hls.id,
-          type: "highLevelStep",
-          content: hls.content || "",
-        });
-      });
-
-      // 添加步骤
-      state.codeAwareSession.steps.forEach((step) => {
-        candidates.push({
-          id: step.id,
-          type: "step",
-          content: step.title || "",
-        });
-      });
-
-      // 5. 调用 LLM 查找
-      const mappings = await performLLMCodeToSemantic(
-        targetChunk,
-        candidates,
+      // 4. 缓存不足时，按“步骤 -> 代码行”补齐映射后再反查
+      const allStepIds = state.codeAwareSession.steps.map((step) => step.id);
+      const generatedMappings = await generateStepLineMappings({
+        stepIds: allStepIds,
+        state,
+        fileContent,
+        chunks,
         ideMessenger,
-      );
+        source: "llm",
+      });
 
-      // 6. 将结果存入缓存
-      if (mappings.length > 0) {
-        dispatch(addMappingsToBatch(mappings));
+      if (generatedMappings.length > 0) {
+        dispatch(addMappingsToBatch(generatedMappings));
       }
+
+      const refreshedState = getState();
+      cachedMappings = collectMappingsFromChunks(refreshedState);
 
       dispatch(setMappingLookupLoading(false));
-      return { mappings, chunk: targetChunk };
+      return { mappings: cachedMappings, chunk: targetChunks[0] };
     } catch (error: any) {
       dispatch(setMappingLookupError(error.message || "查找失败"));
       dispatch(setMappingLookupLoading(false));

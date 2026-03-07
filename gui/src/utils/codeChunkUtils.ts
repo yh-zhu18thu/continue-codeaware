@@ -110,6 +110,43 @@ export const splitByLineCount = (
 });
 
 /**
+ * 策略2B: 按原子行分割（极细粒度）
+ *
+ * 规则：
+ * - 每个非空行单独成为一个 chunk
+ * - 空行忽略
+ * - 适合需要精确定位“语义 → 代码”跳转的场景
+ */
+export const splitByAtomicLine: CodeChunkSplitStrategy = {
+  name: "atomic-line",
+  split: (code: string, filePath: string): CodeChunk[] => {
+    const lines = code.split("\n");
+    const chunks: CodeChunk[] = [];
+    let chunkIndex = 0;
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (!line || line.trim() === "") {
+        continue;
+      }
+
+      const lineNo = i + 1;
+      chunks.push({
+        id: `${filePath}-chunk-${chunkIndex}`,
+        content: line,
+        filePath,
+        range: [lineNo, lineNo],
+        isHighlighted: false,
+        disabled: false,
+      });
+      chunkIndex++;
+    }
+
+    return chunks;
+  },
+};
+
+/**
  * 策略3: 按语义块分割（未来扩展）
  *
  * 可以基于：
@@ -152,6 +189,7 @@ export function getStrategyByName(name: string): CodeChunkSplitStrategy {
   const strategies: Record<string, CodeChunkSplitStrategy> = {
     "blank-line": splitByBlankLine,
     "line-count": splitByLineCount(50),
+    "atomic-line": splitByAtomicLine,
     "semantic-block": splitBySemanticBlock,
   };
 

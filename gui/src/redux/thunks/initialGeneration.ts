@@ -73,6 +73,89 @@ type ReadFileResult = {
   error?: string;
 };
 
+function getDirectoryPath(filePath: string): string {
+  const normalized = filePath.replace(/\\/g, "/");
+  const idx = normalized.lastIndexOf("/");
+  if (idx <= 0) {
+    return "";
+  }
+  return normalized.slice(0, idx);
+}
+
+function joinPath(baseDir: string, filename: string): string {
+  if (!baseDir) {
+    return filename;
+  }
+  const normalizedBase = baseDir.replace(/\\/g, "/").replace(/\/+$/, "");
+  return `${normalizedBase}/${filename}`;
+}
+
+async function persistCognitiveTrackingArtifacts(
+  args: {
+    sessionId: string;
+    workspaceDirectory?: string;
+    fallbackFilePath?: string;
+    nodeMasteryScores: RootState["codeAwareSession"]["nodeMasteryScores"];
+    cognitiveEdges: ReturnType<typeof buildCodeAwareCognitiveEdges>;
+  },
+  extra: ThunkApiType["extra"],
+): Promise<{
+  edgesPath: string;
+  nodeMasteryPath: string;
+}> {
+  const baseDir =
+    (args.workspaceDirectory || "").trim() ||
+    (args.fallbackFilePath ? getDirectoryPath(args.fallbackFilePath) : "");
+
+  const edgesPayload = {
+    schemaVersion: 1,
+    sessionId: args.sessionId,
+    generatedAt: new Date().toISOString(),
+    edgeCount: args.cognitiveEdges.length,
+    edges: args.cognitiveEdges,
+  };
+
+  const nodeMasteryPayload = {
+    schemaVersion: 1,
+    sessionId: args.sessionId,
+    generatedAt: new Date().toISOString(),
+    scoreCount: args.nodeMasteryScores.length,
+    nodeMasteryScores: args.nodeMasteryScores,
+  };
+
+  const edgesFilename = `codeaware-cognitive-edges-${args.sessionId}.json`;
+  const nodeMasteryFilename = `codeaware-node-mastery-${args.sessionId}.json`;
+  const latestEdgesFilename = "codeaware-cognitive-edges.latest.json";
+  const latestNodeMasteryFilename = "codeaware-node-mastery.latest.json";
+
+  const edgesPath = joinPath(baseDir, edgesFilename);
+  const nodeMasteryPath = joinPath(baseDir, nodeMasteryFilename);
+  const latestEdgesPath = joinPath(baseDir, latestEdgesFilename);
+  const latestNodeMasteryPath = joinPath(baseDir, latestNodeMasteryFilename);
+
+  await extra.ideMessenger.request("writeFile", {
+    path: edgesPath,
+    contents: JSON.stringify(edgesPayload, null, 2),
+  });
+
+  await extra.ideMessenger.request("writeFile", {
+    path: nodeMasteryPath,
+    contents: JSON.stringify(nodeMasteryPayload, null, 2),
+  });
+
+  await extra.ideMessenger.request("writeFile", {
+    path: latestEdgesPath,
+    contents: JSON.stringify(edgesPayload, null, 2),
+  });
+
+  await extra.ideMessenger.request("writeFile", {
+    path: latestNodeMasteryPath,
+    contents: JSON.stringify(nodeMasteryPayload, null, 2),
+  });
+
+  return { edgesPath, nodeMasteryPath };
+}
+
 async function getCurrentFileSnapshot(
   extra: ThunkApiType["extra"],
 ): Promise<{ path: string; contents: string } | null> {
@@ -1063,10 +1146,24 @@ export const executeInitialGeneration = createAsyncThunk<
 
       const finalState = getState().codeAwareSession;
       const unifiedEdges = buildCodeAwareCognitiveEdges(finalState);
+
+      const persistedFiles = await persistCognitiveTrackingArtifacts(
+        {
+          sessionId: finalState.currentSessionId,
+          workspaceDirectory: finalState.workspaceDirectory,
+          fallbackFilePath: filePath,
+          nodeMasteryScores: finalState.nodeMasteryScores,
+          cognitiveEdges: unifiedEdges,
+        },
+        extra,
+      );
+
       await extra.ideMessenger.request("addCodeAwareLogEntry", {
         eventType: "initial_generation_unified_graph_built",
         payload: {
           edgesCount: unifiedEdges.length,
+          edgesPath: persistedFiles.edgesPath,
+          nodeMasteryPath: persistedFiles.nodeMasteryPath,
           timestamp: new Date().toISOString(),
         },
       });

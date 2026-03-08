@@ -1,150 +1,173 @@
 import numpy as np
 import cv2
-import matplotlib.pyplot as plt
+import sys
+from typing import Tuple
+import argparse
 
 
-def load_image(filename):
+def load_and_preprocess_image(image_path: str) -> np.ndarray:
     """
-    加载输入图像文件
+    Step 1: 加载并预处理输入图像。
+    读取原始图像并转换为float32数组。
     """
-    image = cv2.imread(filename)
-    if image is None:
-        raise FileNotFoundError(f"File {filename} not found")
-    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    return image
+    img = cv2.imread(image_path)
+    if img is None:
+        print(f"无法加载图片: {image_path}")
+        sys.exit(1)
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    img = img.astype(np.float32)
+    return img
 
 
-def preprocess_image(image, target_shape=None):
+def check_and_adjust_target_shape(img: np.ndarray, target_width: int, target_height: int) -> Tuple[int, int, int, int]:
     """
-    预处理图像数据
+    Step 2: 检查与调整图像尺寸参数，确保目标宽高合法。
+    返回原始尺寸和目标需调整的seam数量
     """
-    if target_shape:
-        image = cv2.resize(image, (target_shape[1], target_shape[0]), interpolation=cv2.INTER_LINEAR)
-    return image
+    h, w, _ = img.shape
+    if target_width >= w or target_height >= h:
+        print("目标尺寸须小于原始尺寸（仅支持缩小）")
+        sys.exit(1)
+    remove_w = w - target_width
+    remove_h = h - target_height
+    return w, h, remove_w, remove_h
 
 
-def compute_energy(image):
+def compute_energy(img: np.ndarray) -> np.ndarray:
     """
-    计算每个像素的能量值
+    Step 3: 生成图像能量图，利用Sobel算子。
     """
-    gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
-    # 使用Sobel算子
-    dx = cv2.Sobel(gray, cv2.CV_64F, 1, 0, ksize=3)
-    dy = cv2.Sobel(gray, cv2.CV_64F, 0, 1, ksize=3)
-    energy = np.abs(dx) + np.abs(dy)
+    gray = cv2.cvtColor(img.astype(np.uint8), cv2.COLOR_RGB2GRAY)
+    grad_x = cv2.Sobel(gray, cv2.CV_64F, 1, 0, ksize=3)
+    grad_y = cv2.Sobel(gray, cv2.CV_64F, 0, 1, ksize=3)
+    energy = np.abs(grad_x) + np.abs(grad_y)
     return energy
 
 
-def compute_cumulative_energy_map(energy):
+def cumulative_energy_map(energy: np.ndarray) -> np.ndarray:
     """
-    计算累计能量图（用于寻找最优seam路径）
+    Step 4: 累积计算最小能量路径的累加能量表
     """
-    rows, cols = energy.shape
-    M = energy.copy()
-    backtrack = np.zeros_like(M, dtype=np.int)
-
-    for i in range(1, rows):
-        for j in range(0, cols):
-            # 处理边界
-            left = M[i-1, j-1] if j-1 >= 0 else float('inf')
-            up = M[i-1, j]
-            right = M[i-1, j+1] if j+1 < cols else float('inf')
-
-            min_energy = min(left, up, right)
-            if min_energy == left:
-                backtrack[i, j] = j-1
-            elif min_energy == up:
-                backtrack[i, j] = j
+    h, w = energy.shape
+    M = np.copy(energy)
+    for i in range(1, h):
+        for j in range(w):
+            if j == 0:
+                M[i, j] += min(M[i-1, j], M[i-1, j+1])
+            elif j == w-1:
+                M[i, j] += min(M[i-1, j-1], M[i-1, j])
             else:
-                backtrack[i, j] = j+1
-            M[i, j] += min_energy
-    return M, backtrack
+                M[i, j] += min(M[i-1, j-1], M[i-1, j], M[i-1, j+1])
+    return M
 
 
-def find_vertical_seam(M, backtrack):
+def find_seam(M: np.ndarray) -> np.ndarray:
     """
-    找到能量最小的垂直seam路径
+    Step 5: 回溯查找最优 seam 路径（从下至上）
+    返回 seam 路径的列索引数组
     """
-    rows, cols = M.shape
-    seam = []
-    # 从最后一行最小值开始
-    j = np.argmin(M[-1])
-    for i in range(rows-1, -1, -1):
-        seam.append((i, j))
-        j = backtrack[i, j]
-    seam.reverse()
+    h, w = M.shape
+    seam = np.zeros(h, dtype=np.int32)
+    seam[-1] = np.argmin(M[-1])
+    for i in range(h-2, -1, -1):
+        prev_x = seam[i+1]
+        if prev_x == 0:
+            idx = np.argmin(M[i, :2])
+            seam[i] = idx
+        elif prev_x == w-1:
+            idx = np.argmin(M[i, w-2:w]) + (w-2)
+            seam[i] = idx
+        else:
+            idx = np.argmin(M[i, prev_x-1:prev_x+2]) + (prev_x-1)
+            seam[i] = idx
     return seam
 
 
-def remove_vertical_seam(image, seam):
+def remove_seam(img: np.ndarray, seam: np.ndarray) -> np.ndarray:
     """
-    从图像和能量图中移除对应seam，实现内容感知缩放
+    Step 6: 从图像中删除 seam 路径
+    沿着seam移除列像素
     """
-    rows, cols, _ = image.shape
-    output = np.zeros((rows, cols-1, 3), dtype=image.dtype)
-    for i, j in seam:
-        output[i, :, :] = np.delete(image[i, :, :], j, axis=0)
-    return output
-
-
-def seam_carve(image, num_seams, direction='vertical'):
-    """
-    支持多次seam移除 + 支持垂直和水平Seam
-    """
-    out = image.copy()
-    for _ in range(num_seams):
-        if direction == 'vertical':
-            energy = compute_energy(out)
-            M, backtrack = compute_cumulative_energy_map(energy)
-            seam = find_vertical_seam(M, backtrack)
-            out = remove_vertical_seam(out, seam)
-        elif direction == 'horizontal':
-            # 转置实现横向缩放
-            out = np.rot90(out, 1, (0,1))
-            energy = compute_energy(out)
-            M, backtrack = compute_cumulative_energy_map(energy)
-            seam = find_vertical_seam(M, backtrack)
-            out = remove_vertical_seam(out, seam)
-            out = np.rot90(out, -1, (0,1))
-        else:
-            raise ValueError('direction must be vertical or horizontal')
+    h, w, c = img.shape
+    mask = np.ones((h, w), dtype=bool)
+    mask[np.arange(h), seam] = False
+    out = img[mask].reshape((h, w-1, c))
     return out
 
 
-def save_and_show_images(original, carved, out_path):
+def display_progress(img: np.ndarray, step: int, axis: str):
     """
-    保存并展示处理后图像
+    Step 8: 更新图像显示与进度反馈
     """
-    carved_bgr = cv2.cvtColor(carved, cv2.COLOR_RGB2BGR)
-    cv2.imwrite(out_path, carved_bgr)
-    plt.figure(figsize=(12,6))
-    plt.subplot(1,2,1)
-    plt.title('Original')
-    plt.imshow(original)
-    plt.axis('off')
-    plt.subplot(1,2,2)
-    plt.title('Seam Carved')
-    plt.imshow(carved)
-    plt.axis('off')
-    plt.tight_layout()
-    plt.show()
+    import matplotlib.pyplot as plt
+    plt.clf()
+    plt.title(f"Step {step} Removing {axis} seam")
+    plt.imshow(img.astype(np.uint8))
+    plt.pause(0.001)
+
+
+def seam_carving(img: np.ndarray, target_width: int, target_height: int, show_progress=True) -> np.ndarray:
+    """
+    串联执行多次seam移除（步骤7, 循环步骤3-6）
+    """
+    import matplotlib.pyplot as plt
+    current = img.copy()
+    orig_h, orig_w, _ = img.shape
+    num_seams_vertical = orig_w - target_width
+    num_seams_horizontal = orig_h - target_height
+    if show_progress:
+        plt.ion()
+        plt.figure(figsize=(8, 8))
+    for i in range(num_seams_vertical):
+        energy = compute_energy(current)
+        M = cumulative_energy_map(energy)
+        seam = find_seam(M)
+        current = remove_seam(current, seam)
+        if show_progress and (i % max(1, num_seams_vertical // 30) == 0):
+            display_progress(current, i+1, 'vertical')
+    # 对高度收缩，需要对图像转置，移除seam后再转回
+    current = np.rot90(current, 1, (0, 1))
+    for i in range(num_seams_horizontal):
+        energy = compute_energy(current)
+        M = cumulative_energy_map(energy)
+        seam = find_seam(M)
+        current = remove_seam(current, seam)
+        if show_progress and (i % max(1, num_seams_horizontal // 30) == 0):
+            display_progress(np.rot90(current, -1, (0, 1)), i+1, 'horizontal')
+    current = np.rot90(current, -1, (0, 1))
+    if show_progress:
+        plt.ioff()
+        plt.show()
+    return current
+
+
+def save_image(img: np.ndarray, path: str):
+    """
+    Step 9: 保存处理后的图像结果
+    """
+    out = cv2.cvtColor(img.astype(np.uint8), cv2.COLOR_RGB2BGR)
+    cv2.imwrite(path, out)
+    print(f"保存结果: {path}")
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description='Seam Carving demo')
+    parser.add_argument('input', help='Input image path')
+    parser.add_argument('output', help='Output image path')
+    parser.add_argument('--width', type=int, required=True, help='Target width')
+    parser.add_argument('--height', type=int, required=True, help='Target height')
+    parser.add_argument('--no-progress', action='store_true', help='Disable live progress display')
+    return parser.parse_args()
 
 
 def main():
-    input_image_path = 'input.jpg'  # 输入文件
-    output_image_path = 'output_seam_carved.jpg'
-    num_seams = 50  # 设置要移除多少个垂直 seam
-    num_horz_seams = 0  # 设置要移除多少个水平 seam
+    args = parse_args()
+    img = load_and_preprocess_image(args.input)
+    w, h, remove_w, remove_h = check_and_adjust_target_shape(img, args.width, args.height)
+    print(f"原始尺寸: {w}x{h}, 目标尺寸: {args.width}x{args.height}")
+    result = seam_carving(img, args.width, args.height, show_progress=not args.no_progress)
+    save_image(result, args.output)
 
-    img = load_image(input_image_path)
-    img = preprocess_image(img)
-    result = img.copy()
-    if num_seams > 0:
-        result = seam_carve(result, num_seams, direction='vertical')
-    if num_horz_seams > 0:
-        result = seam_carve(result, num_horz_seams, direction='horizontal')
-
-    save_and_show_images(img, result, output_image_path)
 
 if __name__ == '__main__':
     main()

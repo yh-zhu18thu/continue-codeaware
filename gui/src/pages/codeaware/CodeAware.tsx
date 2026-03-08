@@ -48,7 +48,10 @@ import {
   processSaqSubmission,
   rerunStep,
 } from "../../redux/thunks/codeAwareGeneration";
-import { executeInitialGeneration } from "../../redux/thunks/initialGeneration";
+import {
+  executeInitialGeneration,
+  exportKnowledgeStateArtifacts,
+} from "../../redux/thunks/initialGeneration";
 import {
   establishCodeToSemanticMapping,
   establishSemanticToCodeMapping,
@@ -185,6 +188,25 @@ const RetryButton = styled.button`
   }
 `;
 
+const HeaderActionButton = styled.button`
+  border: 1px solid var(--vscode-button-border);
+  background: var(--vscode-button-secondaryBackground);
+  color: var(--vscode-button-secondaryForeground);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 12px;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--vscode-button-secondaryHoverBackground);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+`;
+
 const ProgressTrack = styled.div`
   width: 100%;
   height: 8px;
@@ -243,6 +265,8 @@ export const CodeAware = () => {
 
   // Dialog state for session info
   const [isSessionDialogOpen, setIsSessionDialogOpen] = useState(false);
+  const [isExportingKnowledgeState, setIsExportingKnowledgeState] =
+    useState(false);
 
   // Navigation buttons state
   const [isMappingLookupInProgress, setIsMappingLookupInProgress] =
@@ -348,11 +372,21 @@ export const CodeAware = () => {
           previousStep.knowledgeCardGenerationStatus === "generating" &&
           currentStep.knowledgeCardGenerationStatus === "ready"
         ) {
-          logger.addLogEntry("system_knowledge_card_themes_generated", {
+          void logger.addLogEntry("system_knowledge_card_themes_generated", {
             stepId: currentStep.id,
             stepTitle: currentStep.title,
             knowledgeCardCount: currentStep.knowledgeCards.length,
             timestamp: new Date().toISOString(),
+          });
+
+          const themeExamples = currentStep.knowledgeCards
+            .slice(0, 3)
+            .map((card) => card.title);
+          console.log("🎯 [CodeAware] Knowledge card themes generated", {
+            stepId: currentStep.id,
+            stepTitle: currentStep.title,
+            count: currentStep.knowledgeCards.length,
+            themesExample: themeExamples,
           });
         }
       }
@@ -370,6 +404,16 @@ export const CodeAware = () => {
           currentCard.content &&
           currentCard.content.trim() !== ""
         ) {
+          console.log("📝 [CodeAware] Knowledge card content generated", {
+            stepId: currentStep.id,
+            stepTitle: currentStep.title,
+            cardId: currentCard.id,
+            cardTitle: currentCard.title,
+            contentExample:
+              currentCard.content.length > 180
+                ? `${currentCard.content.slice(0, 180)}...`
+                : currentCard.content,
+          });
         }
       });
     });
@@ -520,6 +564,32 @@ export const CodeAware = () => {
         });
       });
   }, [dispatch, logger, userRequirement]);
+
+  const handleExportKnowledgeState = useCallback(async () => {
+    try {
+      setIsExportingKnowledgeState(true);
+      const result = await dispatch(exportKnowledgeStateArtifacts()).unwrap();
+
+      ideMessenger?.post("showToast", [
+        "info",
+        "知识状态已导出到 .knowledge_state/ 目录",
+      ]);
+
+      await logger.addLogEntry("user_export_knowledge_state", {
+        edgesPath: result.edgesPath,
+        nodeMasteryPath: result.nodeMasteryPath,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error("❌ [CodeAware] 导出知识状态失败:", error);
+      ideMessenger?.post("showToast", [
+        "warning",
+        "导出知识状态失败，请查看控制台日志。",
+      ]);
+    } finally {
+      setIsExportingKnowledgeState(false);
+    }
+  }, [dispatch, ideMessenger, logger]);
 
   // log all the data for debugging
   useEffect(() => {
@@ -2352,7 +2422,15 @@ export const CodeAware = () => {
         showGlobalQuestionButton={
           userRequirementStatus === "finalized" && steps.length > 0
         }
-        rightContent={null}
+        rightContent={
+          <HeaderActionButton
+            onClick={handleExportKnowledgeState}
+            disabled={isExportingKnowledgeState}
+            title="导出/更新认知状态文件到 .knowledge_state/"
+          >
+            {isExportingKnowledgeState ? "导出中..." : "导出知识状态"}
+          </HeaderActionButton>
+        }
       />
 
       {/* RequirementSummary - 只在 RequirementDisplay 不可见且不在编辑模式且需求已确认时显示 */}

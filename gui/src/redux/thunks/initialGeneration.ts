@@ -31,6 +31,7 @@ import {
   setKnowledgeToCodeChunkRelations,
   setKnowledgeToStepRelations,
   setLearningGoal,
+  setNodeMasteryScores,
   setStepToHighLevelMappings,
   setUserRequirementStatus,
   updateCodeAwareMappings,
@@ -106,6 +107,7 @@ async function persistCognitiveTrackingArtifacts(
   const baseDir =
     (args.workspaceDirectory || "").trim() ||
     (args.fallbackFilePath ? getDirectoryPath(args.fallbackFilePath) : "");
+  const knowledgeStateDir = joinPath(baseDir, ".knowledge_state");
 
   const edgesPayload = {
     schemaVersion: 1,
@@ -123,15 +125,14 @@ async function persistCognitiveTrackingArtifacts(
     nodeMasteryScores: args.nodeMasteryScores,
   };
 
-  const edgesFilename = `codeaware-cognitive-edges-${args.sessionId}.json`;
-  const nodeMasteryFilename = `codeaware-node-mastery-${args.sessionId}.json`;
   const latestEdgesFilename = "codeaware-cognitive-edges.latest.json";
   const latestNodeMasteryFilename = "codeaware-node-mastery.latest.json";
 
-  const edgesPath = joinPath(baseDir, edgesFilename);
-  const nodeMasteryPath = joinPath(baseDir, nodeMasteryFilename);
-  const latestEdgesPath = joinPath(baseDir, latestEdgesFilename);
-  const latestNodeMasteryPath = joinPath(baseDir, latestNodeMasteryFilename);
+  const edgesPath = joinPath(knowledgeStateDir, latestEdgesFilename);
+  const nodeMasteryPath = joinPath(
+    knowledgeStateDir,
+    latestNodeMasteryFilename,
+  );
 
   await extra.ideMessenger.request("writeFile", {
     path: edgesPath,
@@ -140,16 +141,6 @@ async function persistCognitiveTrackingArtifacts(
 
   await extra.ideMessenger.request("writeFile", {
     path: nodeMasteryPath,
-    contents: JSON.stringify(nodeMasteryPayload, null, 2),
-  });
-
-  await extra.ideMessenger.request("writeFile", {
-    path: latestEdgesPath,
-    contents: JSON.stringify(edgesPayload, null, 2),
-  });
-
-  await extra.ideMessenger.request("writeFile", {
-    path: latestNodeMasteryPath,
     contents: JSON.stringify(nodeMasteryPayload, null, 2),
   });
 
@@ -322,6 +313,107 @@ function deduplicateKnowledgePoints(
 
   return Array.from(uniqueMap.values());
 }
+
+function buildInitialNodeMasteryScores(
+  state: RootState["codeAwareSession"],
+): RootState["codeAwareSession"]["nodeMasteryScores"] {
+  const now = Date.now();
+  const scores: RootState["codeAwareSession"]["nodeMasteryScores"] = [];
+
+  state.highLevelSteps.forEach((item) => {
+    scores.push({
+      nodeId: item.id,
+      nodeType: "high-level-step",
+      score: 0,
+      updatedAt: now,
+    });
+  });
+
+  state.steps.forEach((item) => {
+    scores.push({
+      nodeId: item.id,
+      nodeType: "step",
+      score: 0,
+      updatedAt: now,
+    });
+  });
+
+  state.codeChunks.forEach((item) => {
+    scores.push({
+      nodeId: item.id,
+      nodeType: "code-chunk",
+      score: 0,
+      updatedAt: now,
+    });
+  });
+
+  state.knowledgePoints.forEach((item) => {
+    scores.push({
+      nodeId: item.id,
+      nodeType: "knowledge-point",
+      score: 0,
+      updatedAt: now,
+    });
+  });
+
+  const deduped = new Map<string, (typeof scores)[number]>();
+  scores.forEach((item) => {
+    const key = `${item.nodeType}:${item.nodeId}`;
+    deduped.set(key, item);
+  });
+
+  return Array.from(deduped.values());
+}
+
+export const exportKnowledgeStateArtifacts = createAsyncThunk<
+  { edgesPath: string; nodeMasteryPath: string },
+  void,
+  ThunkApiType
+>(
+  "codeAware/exportKnowledgeStateArtifacts",
+  async (_, { dispatch, getState, extra }) => {
+    const currentState = getState().codeAwareSession;
+
+    let nodeMasteryScores = currentState.nodeMasteryScores;
+    if (nodeMasteryScores.length === 0) {
+      nodeMasteryScores = buildInitialNodeMasteryScores(currentState);
+      dispatch(setNodeMasteryScores(nodeMasteryScores));
+    }
+
+    const refreshedState: RootState["codeAwareSession"] = {
+      ...currentState,
+      nodeMasteryScores,
+    };
+
+    const unifiedEdges = buildCodeAwareCognitiveEdges(refreshedState);
+
+    const currentFile = await getCurrentFileSnapshot(extra);
+    const persistedFiles = await persistCognitiveTrackingArtifacts(
+      {
+        sessionId: refreshedState.currentSessionId,
+        workspaceDirectory: refreshedState.workspaceDirectory,
+        fallbackFilePath:
+          refreshedState.codeChunks[0]?.filePath || currentFile?.path,
+        nodeMasteryScores,
+        cognitiveEdges: unifiedEdges,
+      },
+      extra,
+    );
+
+    await extra.ideMessenger.request("addCodeAwareLogEntry", {
+      eventType: "knowledge_state_exported",
+      payload: {
+        edgesCount: unifiedEdges.length,
+        nodeMasteryCount: nodeMasteryScores.length,
+        edgesPath: persistedFiles.edgesPath,
+        nodeMasteryPath: persistedFiles.nodeMasteryPath,
+        timestamp: new Date().toISOString(),
+      },
+    });
+
+    return persistedFiles;
+  },
+);
 
 async function getLatestFileContent(
   filePath: string,
@@ -939,6 +1031,25 @@ export const extractAndLinkKnowledge = createAsyncThunk<
       deduplicateKnowledgePoints(allKnowledgePoints);
     dispatch(setKnowledgePoints(uniqueKnowledgePoints));
 
+    const knowledgeExamples = uniqueKnowledgePoints
+      .slice(0, 3)
+      .map((point) => ({
+        id: point.id,
+        title: point.title,
+        contentExample:
+          point.content.length > 180
+            ? `${point.content.slice(0, 180)}...`
+            : point.content,
+        category: point.category,
+        difficulty: point.difficulty,
+        relatedStepIds: point.relatedStepIds,
+      }));
+
+    console.log("📚 [Phase 5] Knowledge points extracted", {
+      count: uniqueKnowledgePoints.length,
+      examples: knowledgeExamples,
+    });
+
     const knowledgeToStepRelations: KnowledgeToStepRelation[] = [];
     const knowledgeToCodeChunkRelations: KnowledgeToCodeChunkRelation[] = [];
 
@@ -1144,26 +1255,21 @@ export const executeInitialGeneration = createAsyncThunk<
       await dispatch(extractAndLinkKnowledge()).unwrap();
       console.log("✅ [Initial Generation] Phase 5 完成");
 
+      const masteryBaseline = buildInitialNodeMasteryScores(
+        getState().codeAwareSession,
+      );
+      dispatch(setNodeMasteryScores(masteryBaseline));
+      console.log(
+        `🧠 [Initial Generation] 初始化 node mastery scores: ${masteryBaseline.length} 个节点置为 0`,
+      );
+
       const finalState = getState().codeAwareSession;
       const unifiedEdges = buildCodeAwareCognitiveEdges(finalState);
-
-      const persistedFiles = await persistCognitiveTrackingArtifacts(
-        {
-          sessionId: finalState.currentSessionId,
-          workspaceDirectory: finalState.workspaceDirectory,
-          fallbackFilePath: filePath,
-          nodeMasteryScores: finalState.nodeMasteryScores,
-          cognitiveEdges: unifiedEdges,
-        },
-        extra,
-      );
 
       await extra.ideMessenger.request("addCodeAwareLogEntry", {
         eventType: "initial_generation_unified_graph_built",
         payload: {
           edgesCount: unifiedEdges.length,
-          edgesPath: persistedFiles.edgesPath,
-          nodeMasteryPath: persistedFiles.nodeMasteryPath,
           timestamp: new Date().toISOString(),
         },
       });

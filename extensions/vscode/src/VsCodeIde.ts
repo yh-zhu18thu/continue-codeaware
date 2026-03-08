@@ -304,10 +304,15 @@ class VsCodeIde implements IDE {
   }
 
   async writeFile(fileUri: string, contents: string): Promise<void> {
-    await vscode.workspace.fs.writeFile(
-      vscode.Uri.parse(fileUri),
-      Buffer.from(contents),
-    );
+    const targetUri = vscode.Uri.parse(fileUri);
+    const parentPath = targetUri.path.slice(0, targetUri.path.lastIndexOf("/"));
+
+    if (parentPath) {
+      const parentUri = targetUri.with({ path: parentPath });
+      await vscode.workspace.fs.createDirectory(parentUri);
+    }
+
+    await vscode.workspace.fs.writeFile(targetUri, Buffer.from(contents));
   }
 
   async showVirtualFile(title: string, contents: string): Promise<void> {

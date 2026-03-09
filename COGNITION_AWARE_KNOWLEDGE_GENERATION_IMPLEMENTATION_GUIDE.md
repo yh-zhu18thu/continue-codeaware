@@ -176,7 +176,7 @@
 
 落地要求：
 
-- 老的 `generateKnowledgeCardThemes*` 不直接删除，先转为兼容 wrapper，内部转调新 thunk。
+- 将老的 `generateKnowledgeCardThemes*` 废除，内部转调新 thunk。
 
 ---
 

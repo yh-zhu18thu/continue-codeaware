@@ -23,35 +23,52 @@ export function routeCognitiveTrigger(args: {
     stepVisitStats,
   });
 
+  let decision: TriggerRouteDecision;
+
   switch (currentEvent.type) {
     case "step_expand":
-      return {
+      decision = {
         shouldGenerateCards: true,
         maxCards: 2,
         intent,
       };
+      break;
 
     case "step_to_code":
     case "code_to_step":
-      return {
+      decision = {
         shouldGenerateCards: true,
         maxCards: 1,
         intent,
       };
+      break;
 
     case "question_submit_step":
     case "question_submit_global":
-      return {
+      decision = {
         shouldGenerateCards: true,
         maxCards: 3,
         intent,
       };
+      break;
 
     default:
-      return {
+      decision = {
         shouldGenerateCards: false,
         maxCards: 0,
         intent,
       };
+      break;
   }
+
+  console.info("[CognitiveTrace][TriggerRouter]", {
+    eventType: currentEvent.type,
+    eventIsoTime: new Date(currentEvent.timestamp).toISOString(),
+    targetStepId: intent.targetStepId,
+    intentReason: intent.reason,
+    shouldGenerateCards: decision.shouldGenerateCards,
+    maxCards: decision.maxCards,
+  });
+
+  return decision;
 }

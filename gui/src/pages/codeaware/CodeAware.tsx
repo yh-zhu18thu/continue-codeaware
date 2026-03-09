@@ -341,19 +341,42 @@ export const CodeAware = () => {
 
   const recordCognitiveInteraction = useCallback(
     (event: Omit<CognitiveInteractionEvent, "id" | "timestamp">) => {
-      dispatch(recordCognitiveEvent(event));
-
+      const now = Date.now();
       const eventWithTimestamp: CognitiveInteractionEvent = {
         ...event,
-        id: `local-${Date.now()}`,
-        timestamp: Date.now(),
+        id: `cog-ui-${now}-${Math.random().toString(36).slice(2, 8)}`,
+        timestamp: now,
       };
 
+      dispatch(recordCognitiveEvent(eventWithTimestamp));
+
       const recentEvents = cognitiveTrace.events.slice(-30);
+      const nextRecentEvents = [...recentEvents, eventWithTimestamp].slice(-30);
       const decision = routeCognitiveTrigger({
         currentEvent: eventWithTimestamp,
-        recentEvents,
+        recentEvents: nextRecentEvents,
         stepVisitStats: cognitiveTrace.stepVisitStats,
+      });
+
+      console.info("[CognitiveTrace][Event]", {
+        id: eventWithTimestamp.id,
+        type: eventWithTimestamp.type,
+        stepId: eventWithTimestamp.stepId,
+        knowledgeCardId: eventWithTimestamp.knowledgeCardId,
+        timestamp: eventWithTimestamp.timestamp,
+        isoTime: new Date(eventWithTimestamp.timestamp).toISOString(),
+        localTime: new Date(eventWithTimestamp.timestamp).toLocaleString(),
+        recentWindowSize: nextRecentEvents.length,
+      });
+
+      console.info("[CognitiveTrace][Decision]", {
+        eventType: eventWithTimestamp.type,
+        targetStepId: decision.intent.targetStepId,
+        reason: decision.intent.reason,
+        intentTypes: decision.intent.intentTypes,
+        preferredInitialView: decision.intent.preferredInitialView,
+        shouldGenerateCards: decision.shouldGenerateCards,
+        maxCards: decision.maxCards,
       });
 
       dispatch(
@@ -782,18 +805,14 @@ export const CodeAware = () => {
         type: "highLevelStep" | "step";
       } | null = null;
 
-      // 检查高级步骤
+      const highlightedStep = steps.find((step) => step.isHighlighted);
       const highlightedHls = highLevelSteps.find((hls) => hls.isHighlighted);
-      if (highlightedHls) {
-        focusedElement = { id: highlightedHls.id, type: "highLevelStep" };
-      }
 
-      // 检查步骤
-      if (!focusedElement) {
-        const highlightedStep = steps.find((step) => step.isHighlighted);
-        if (highlightedStep) {
-          focusedElement = { id: highlightedStep.id, type: "step" };
-        }
+      // 优先选择 step，避免 highLevelStep 抢占导致 step_to_code 事件漏记
+      if (highlightedStep) {
+        focusedElement = { id: highlightedStep.id, type: "step" };
+      } else if (highlightedHls) {
+        focusedElement = { id: highlightedHls.id, type: "highLevelStep" };
       }
 
       if (!focusedElement) {
@@ -814,6 +833,34 @@ export const CodeAware = () => {
             source: "jump_to_code",
           },
         });
+      } else {
+        const mappedStep = stepToHighLevelMappings.find(
+          (mapping) => mapping.highLevelStepId === focusedElement.id,
+        );
+
+        if (mappedStep?.stepId) {
+          recordCognitiveInteraction({
+            type: "step_to_code",
+            stepId: mappedStep.stepId,
+            payload: {
+              source: "jump_to_code",
+              derivedFrom: "highLevelStep",
+              highLevelStepId: focusedElement.id,
+            },
+          });
+
+          console.info("[CognitiveTrace][JumpToCode] derived step_to_code", {
+            highLevelStepId: focusedElement.id,
+            derivedStepId: mappedStep.stepId,
+          });
+        } else {
+          console.warn(
+            "[CognitiveTrace][JumpToCode] no mapped step found for highlighted highLevelStep",
+            {
+              highLevelStepId: focusedElement.id,
+            },
+          );
+        }
       }
 
       // 2. 使用新的通用接口查找代码块（支持实时读取和缓存验证）
@@ -884,6 +931,7 @@ export const CodeAware = () => {
   }, [
     highLevelSteps,
     steps,
+    stepToHighLevelMappings,
     dispatch,
     ideMessenger,
     logger,

@@ -102,6 +102,19 @@ export function inferIntentFromEvents(args: {
       break;
   }
 
+  console.info("[CognitiveTrace][IntentInference]", {
+    eventType: currentEvent.type,
+    eventStepId: currentEvent.stepId,
+    targetStepId,
+    eventIsoTime: new Date(currentEvent.timestamp).toISOString(),
+    recentEventCount: recentEvents.length,
+    stepViewCount: stepStat?.viewCount ?? 0,
+    isReviewScene,
+    matchedRule: reason,
+    intentTypes,
+    preferredInitialView,
+  });
+
   return {
     targetStepId,
     intentTypes: uniqIntentTypes(intentTypes),

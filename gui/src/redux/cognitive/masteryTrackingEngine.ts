@@ -308,15 +308,40 @@ export function emitMasteryUpdateLogs(args: {
   linkedKnowledgeNodeIds: string[];
   changedNodeIds: string[];
   debug: MasteryTrackingDebugInfo;
+  knowledgeNodeTitleById?: Record<string, string>;
 }): void {
   if (args.changedNodeIds.length === 0) {
     return;
   }
 
-  console.info("[MasteryTracking] Applied interaction", {
+  const abbreviate = (value?: string): string => {
+    if (!value) {
+      return "N/A";
+    }
+    const trimmed = value.trim();
+    if (trimmed.length <= 32) {
+      return trimmed;
+    }
+    return `${trimmed.slice(0, 29)}...`;
+  };
+
+  const linkedNodeDebug = args.linkedKnowledgeNodeIds.map((nodeId) => ({
+    nodeId,
+    nodeTitleShort: abbreviate(args.knowledgeNodeTitleById?.[nodeId]),
+  }));
+
+  const changedNodeDebug = args.changedNodeIds.map((nodeId) => ({
+    nodeId,
+    nodeTitleShort: abbreviate(args.knowledgeNodeTitleById?.[nodeId]),
+  }));
+
+  console.info("[CodeAware][PhaseG][MasteryUpdate]", {
+    tag: "CA_PHASE_G_MASTERY",
     interaction: args.interaction,
     linkedKnowledgeNodeIds: args.linkedKnowledgeNodeIds,
+    linkedNodeDebug,
     changedNodeIds: args.changedNodeIds,
+    changedNodeDebug,
     directUpdates: args.debug.directLogs,
     propagationUpdates: args.debug.propagationLogs,
     propagationTargets: args.debug.propagationLogs.map((item) => item.nodeId),

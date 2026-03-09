@@ -349,6 +349,14 @@ export const CodeAware = () => {
   }, [stepToHighLevelMappings]);
 
   const cognitiveTrace = useAppSelector(selectCognitiveTrace);
+  const knowledgeNodeTitleById = useMemo(() => {
+    return Object.fromEntries(
+      codeAwareSessionState.knowledgePoints.map((point) => [
+        point.id,
+        point.title,
+      ]),
+    );
+  }, [codeAwareSessionState.knowledgePoints]);
 
   const recordCognitiveInteraction = useCallback(
     (event: Omit<CognitiveInteractionEvent, "id" | "timestamp">) => {
@@ -385,6 +393,18 @@ export const CodeAware = () => {
         targetStepId: decision.intent.targetStepId,
         reason: decision.intent.reason,
         intentTypes: decision.intent.intentTypes,
+        preferredInitialView: decision.intent.preferredInitialView,
+        shouldGenerateCards: decision.shouldGenerateCards,
+        maxCards: decision.maxCards,
+      });
+
+      console.info("[CodeAware][PhaseG][IntentRoute]", {
+        tag: "CA_PHASE_G_INTENT_ROUTE",
+        eventType: eventWithTimestamp.type,
+        sourceStepId: eventWithTimestamp.stepId,
+        routedStepId: decision.intent.targetStepId,
+        intentTypes: decision.intent.intentTypes,
+        reason: decision.intent.reason,
         preferredInitialView: decision.intent.preferredInitialView,
         shouldGenerateCards: decision.shouldGenerateCards,
         maxCards: decision.maxCards,
@@ -2084,11 +2104,17 @@ export const CodeAware = () => {
             linkedKnowledgeNodeIds,
             changedNodeIds: result.changedNodeIds,
             debug: result.debug,
+            knowledgeNodeTitleById,
           });
         }
       }
     },
-    [codeAwareSessionState, dispatch, recordCognitiveInteraction],
+    [
+      codeAwareSessionState,
+      dispatch,
+      knowledgeNodeTitleById,
+      recordCognitiveInteraction,
+    ],
   );
 
   const handleKnowledgeCardFeedback = useCallback(
@@ -2133,17 +2159,23 @@ export const CodeAware = () => {
           linkedKnowledgeNodeIds,
           changedNodeIds: result.changedNodeIds,
           debug: result.debug,
+          knowledgeNodeTitleById,
         });
       }
     },
-    [codeAwareSessionState, dispatch, recordCognitiveInteraction],
+    [
+      codeAwareSessionState,
+      dispatch,
+      knowledgeNodeTitleById,
+      recordCognitiveInteraction,
+    ],
   );
 
   const handleQuestionSubmit = useCallback(
     async (stepId: string, selectedText: string, question: string) => {
       console.log("处理步骤问题提交:", { stepId, selectedText, question });
 
-      recordCognitiveInteraction({
+      const decision = recordCognitiveInteraction({
         type: "question_submit_step",
         stepId,
         payload: {
@@ -2193,6 +2225,7 @@ export const CodeAware = () => {
             existingThemes,
             learningGoal: learningGoal || "",
             task: taskDescription,
+            intentOverride: decision.intent,
           }),
         );
 
@@ -2291,6 +2324,7 @@ export const CodeAware = () => {
           processGlobalQuestion({
             question,
             currentCode,
+            intentOverride: decision.intent,
           }),
         );
 
@@ -2882,6 +2916,7 @@ export const CodeAware = () => {
                                   linkedKnowledgeNodeIds,
                                   changedNodeIds: result.changedNodeIds,
                                   debug: result.debug,
+                                  knowledgeNodeTitleById,
                                 });
                               }
                             })

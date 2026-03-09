@@ -218,6 +218,21 @@ export function planKnowledgeCards(args: {
   maxCards: number;
   previouslyLinkedKnowledgeNodeIds?: string[];
 }): CardPlanItem[] {
+  const abbreviate = (value?: string): string => {
+    if (!value) {
+      return "N/A";
+    }
+    const trimmed = value.trim();
+    if (trimmed.length <= 32) {
+      return trimmed;
+    }
+    return `${trimmed.slice(0, 29)}...`;
+  };
+
+  const knowledgeById = new Map(
+    args.knowledgeGraph.knowledgePoints.map((item) => [item.id, item]),
+  );
+
   const candidates = buildCandidates({
     intent: args.intent,
     targetStepId: args.targetStepId,
@@ -270,7 +285,7 @@ export function planKnowledgeCards(args: {
     selected.push(candidates[0]);
   }
 
-  return selected.map((candidate) => {
+  const plans = selected.map((candidate) => {
     const supportNodes = buildSupportNodes({
       primaryNodeId: candidate.nodeId,
       allCandidates: candidates,
@@ -289,4 +304,32 @@ export function planKnowledgeCards(args: {
       intentTypes: [...candidate.covers],
     };
   });
+
+  console.info("[CodeAware][PhaseG][PlannerSelection]", {
+    tag: "CA_PHASE_G_PLANNER_SELECTION",
+    targetStepId: args.targetStepId,
+    intentTypes: args.intent.intentTypes,
+    preferredInitialView: args.intent.preferredInitialView,
+    maxCards,
+    candidateCount: candidates.length,
+    topCandidates: candidates.slice(0, 6).map((candidate) => ({
+      nodeId: candidate.nodeId,
+      nodeTitleShort: abbreviate(knowledgeById.get(candidate.nodeId)?.title),
+      priority: Number(candidate.priority.toFixed(3)),
+      mastery: Number(candidate.mastery.toFixed(3)),
+      covers: [...candidate.covers],
+    })),
+    selectedPlans: plans.map((plan, index) => ({
+      index,
+      linkedNodes: plan.linkedKnowledgeNodeIds.map((nodeId) => ({
+        nodeId,
+        nodeTitleShort: abbreviate(knowledgeById.get(nodeId)?.title),
+        mastery: Number((args.masteryMap[nodeId] ?? 0.5).toFixed(3)),
+      })),
+      assumedMasteredNodeIds: plan.assumedMasteredNodeIds,
+      intentTypes: plan.intentTypes,
+    })),
+  });
+
+  return plans;
 }

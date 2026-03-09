@@ -17,11 +17,11 @@ import {
   constructParaphraseUserIntentPrompt,
   constructProcessCodeChangesPrompt,
 } from "../../../../core/llm/codeAwarePrompts";
+import { IntentResolution } from "../cognitive/types";
 import {
   clearAllCodeAwareMappings,
   clearAllCodeChunks,
   clearKnowledgeCardCodeMappings,
-  createKnowledgeCard,
   createOrGetCodeChunk,
   resetKnowledgeCardContent,
   selectTestByTestId,
@@ -1619,12 +1619,21 @@ export const generateKnowledgeCardThemesFromQuery = createAsyncThunk<
     existingThemes: string[];
     learningGoal: string;
     task: string;
+    intentOverride?: IntentResolution;
   },
   ThunkApiType
 >(
   "codeAware/generateKnowledgeCardThemesFromQuery",
   async (
-    { stepId, queryContext, currentStep, existingThemes, learningGoal, task },
+    {
+      stepId,
+      queryContext,
+      currentStep,
+      existingThemes,
+      learningGoal,
+      task,
+      intentOverride,
+    },
     { dispatch, extra, getState },
   ) => {
     try {
@@ -1656,16 +1665,18 @@ export const generateKnowledgeCardThemesFromQuery = createAsyncThunk<
           maxCards: 3,
           taskDescription: task,
           existingThemes,
-          intentOverride: {
-            targetStepId: stepId,
-            intentTypes: [
-              "function-mapping",
-              "code-understanding",
-              "prerequisite",
-            ],
-            preferredInitialView: "self-test",
-            reason: "question_submit_step",
-          },
+          intentOverride:
+            intentOverride ||
+            ({
+              targetStepId: stepId,
+              intentTypes: [
+                "function-mapping",
+                "code-understanding",
+                "prerequisite",
+              ],
+              preferredInitialView: "self-test",
+              reason: "question_submit_step",
+            } as IntentResolution),
         }),
       );
 
@@ -3101,11 +3112,15 @@ export const processGlobalQuestion = createAsyncThunk<
   {
     question: string;
     currentCode: string;
+    intentOverride?: IntentResolution;
   },
   ThunkApiType
 >(
   "codeAware/processGlobalQuestion",
-  async ({ question, currentCode }, { getState, dispatch, extra }) => {
+  async (
+    { question, currentCode, intentOverride },
+    { getState, dispatch, extra },
+  ) => {
     const maxRetries = 3; // 最大重试次数
     let lastError: Error | null = null;
 
@@ -3260,64 +3275,71 @@ export const processGlobalQuestion = createAsyncThunk<
         knowledge_card_themes,
       );
 
-      // 为选择的步骤创建知识卡片
-      const createdCardIds: string[] = [];
-      const currentState = getState();
-      const selectedStepForCards = currentState.codeAwareSession.steps.find(
-        (s) => s.id === selected_step_id,
+      const preGenerationStep = steps.find(
+        (step) => step.id === selected_step_id,
       );
-      const existingCardCount =
-        selectedStepForCards?.knowledgeCards?.length || 0;
+      const preGenerationCardIdSet = new Set(
+        preGenerationStep?.knowledgeCards.map((card) => card.id) || [],
+      );
+      const existingThemes =
+        preGenerationStep?.knowledgeCards.map((card) => card.title) || [];
 
-      for (let index = 0; index < knowledge_card_themes.length; index++) {
-        const theme = knowledge_card_themes[index];
-        const cardId = `${selected_step_id}-kc-${existingCardCount + index + 1}`;
-        createdCardIds.push(cardId);
-
-        dispatch(
-          createKnowledgeCard({
-            stepId: selected_step_id,
-            cardId,
-            theme,
-          }),
-        );
-
-        // TODO: [映射重构] 需要重新实现知识卡片映射查找和创建逻辑
-        // 查找该步骤对应的requirement chunk ID
-        // const stepRequirementMapping =
-        //   currentState.codeAwareSession.codeAwareMappings.find(
-        //     (mapping) =>
-        //       mapping.stepId === selected_step_id &&
-        //       mapping.highLevelStepId &&
-        //       !mapping.codeChunkId &&
-        //       !mapping.knowledgeCardId,
-        //   );
-
-        // // 创建知识卡片与步骤的映射关系
-        // dispatch(
-        //   createCodeAwareMapping({
-        //     stepId: selected_step_id,
-        //     knowledgeCardId: cardId,
-        //     highLevelStepId: stepRequirementMapping?.highLevelStepId,
-        //     isHighlighted: false,
-        //   }),
-        // );
-
-        // console.log(`🔗 创建全局问题知识卡片映射: ${cardId}`, {
-        //   stepId: selected_step_id,
-        //   knowledgeCardId: cardId,
-        //   highLevelStepId: stepRequirementMapping?.highLevelStepId,
-        // });
-        console.warn("[映射重构] 全局问题知识卡片映射创建功能暂时禁用");
-      }
-
-      // 设置知识卡片生成状态为checked
-      dispatch(
-        setKnowledgeCardGenerationStatus({
+      const generationResult = await dispatch(
+        generateCognitiveKnowledgeCards({
           stepId: selected_step_id,
-          status: "ready",
+          stepTitle: preGenerationStep?.title || selectedStep.title,
+          stepAbstract: preGenerationStep?.abstract || selectedStep.abstract,
+          learningGoal,
+          maxCards: Math.max(1, Math.min(3, knowledge_card_themes.length || 3)),
+          taskDescription,
+          existingThemes,
+          intentOverride: {
+            targetStepId: selected_step_id,
+            intentTypes: intentOverride?.intentTypes || [
+              "function-mapping",
+              "code-understanding",
+              "prerequisite",
+            ],
+            preferredInitialView:
+              intentOverride?.preferredInitialView || "self-test",
+            reason: intentOverride?.reason || "question_submit_global",
+          },
         }),
       );
+
+      if (generateCognitiveKnowledgeCards.rejected.match(generationResult)) {
+        throw new Error(
+          generationResult.error.message ||
+            "global-question cognitive card generation failed",
+        );
+      }
+
+      const postGenerationStep = getState().codeAwareSession.steps.find(
+        (step) => step.id === selected_step_id,
+      );
+      const createdCardIds =
+        postGenerationStep?.knowledgeCards
+          .filter((card) => !preGenerationCardIdSet.has(card.id))
+          .map((card) => card.id) || [];
+      const createdThemes =
+        postGenerationStep?.knowledgeCards
+          .filter((card) => createdCardIds.includes(card.id))
+          .map((card) => card.title) || [];
+
+      console.info("[CodeAware][PhaseG][GlobalQuestionToCards]", {
+        tag: "CA_PHASE_G_GLOBAL_Q_GENERATION",
+        questionPreview: question.slice(0, 120),
+        selectedStepId: selected_step_id,
+        selectedStepTitle: selectedStep.title,
+        llmSuggestedThemes: knowledge_card_themes,
+        createdCardIds,
+        createdThemes,
+        intentTypes: intentOverride?.intentTypes || [
+          "function-mapping",
+          "code-understanding",
+          "prerequisite",
+        ],
+      });
 
       console.log("✅ [CodeAware] Global question processed successfully");
 
@@ -3327,7 +3349,9 @@ export const processGlobalQuestion = createAsyncThunk<
         payload: {
           question,
           selectedStepId: selected_step_id,
-          themesCount: knowledge_card_themes.length,
+          themesCount: createdThemes.length,
+          llmSuggestedThemes: knowledge_card_themes,
+          createdThemes,
           knowledgeCardIds: createdCardIds,
           timestamp: new Date().toISOString(),
         },
@@ -3349,43 +3373,20 @@ export const processGlobalQuestion = createAsyncThunk<
         // 不抛出错误，让全局提问处理继续完成
       }
 
-      // 触发高亮事件：展开对应的步骤并高亮所有新生成的知识卡片
-      const finalState = getState();
-      const targetStep = finalState.codeAwareSession.steps.find(
-        (s) => s.id === selected_step_id,
+      dispatch(
+        updateHighlight({
+          sourceType: "step",
+          identifier: selected_step_id,
+        }),
       );
-      if (targetStep) {
-        // 构建高亮事件列表：包括步骤本身和所有新生成的知识卡片
-        const highlightEvents = [
-          // 首先高亮步骤以展开它
-          {
-            sourceType: "step" as const,
-            identifier: selected_step_id,
-            additionalInfo: targetStep,
-          },
-          // 然后高亮所有新生成的知识卡片
-          ...createdCardIds.map((cardId) => {
-            const knowledgeCard = targetStep.knowledgeCards.find(
-              (kc) => kc.id === cardId,
-            );
-            return {
-              sourceType: "knowledgeCard" as const,
-              identifier: cardId,
-              additionalInfo: knowledgeCard,
-            };
-          }),
-        ];
-
-        dispatch(updateHighlight(highlightEvents));
-        console.log(
-          `✨ 全局问题处理：触发了步骤 ${selected_step_id} 和 ${createdCardIds.length} 个新知识卡片的高亮事件`,
-        );
-      }
+      console.log(
+        `✨ 全局问题处理：仅高亮步骤 ${selected_step_id}，知识卡片高亮已禁用`,
+      );
 
       // 返回选择的步骤ID和创建的知识卡片ID，用于高亮和展开
       return {
         selectedStepId: selected_step_id,
-        themes: knowledge_card_themes,
+        themes: createdThemes,
         knowledgeCardIds: createdCardIds,
       };
     } catch (error) {

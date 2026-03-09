@@ -36,6 +36,17 @@ function sanitizeNodeIds(value: unknown): string[] {
     .filter(Boolean);
 }
 
+function abbreviateTitle(value: string | undefined): string {
+  const text = (value || "").trim();
+  if (!text) {
+    return "N/A";
+  }
+  if (text.length <= 36) {
+    return text;
+  }
+  return `${text.slice(0, 33)}...`;
+}
+
 function buildIntentFallback(stepId: string): IntentResolution {
   return {
     targetStepId: stepId,
@@ -165,6 +176,31 @@ export const generateCognitiveKnowledgeCards = createAsyncThunk<
         previouslyLinkedKnowledgeNodeIds: existingLinkedNodeIds,
       });
 
+      const nodeDebugByPlan = plans.map((plan, index) => ({
+        index,
+        linkedNodes: plan.linkedKnowledgeNodeIds.map((nodeId) => ({
+          nodeId,
+          nodeTitleShort: abbreviateTitle(
+            state.codeAwareSession.knowledgePoints.find((p) => p.id === nodeId)
+              ?.title,
+          ),
+          mastery: Number((masteryMap[nodeId] ?? 0.5).toFixed(3)),
+        })),
+        assumedMasteredNodeIds: plan.assumedMasteredNodeIds,
+        intentTypes: plan.intentTypes,
+      }));
+
+      console.info("[CodeAware][PhaseG][CardPlanner]", {
+        tag: "CA_PHASE_G_CARD_PLAN",
+        stepId,
+        stepTitle,
+        intentTypes: intent.intentTypes,
+        preferredInitialView: intent.preferredInitialView,
+        maxCards,
+        plannedCards: plans.length,
+        nodeDebugByPlan,
+      });
+
       if (plans.length === 0) {
         dispatch(setKnowledgeCardGenerationStatus({ stepId, status: "ready" }));
         return { createdCount: 0, plannedCount: 0 };
@@ -291,6 +327,30 @@ export const generateCognitiveKnowledgeCards = createAsyncThunk<
         existingTitleSet.add(generated.title);
         createdCount += 1;
       }
+
+      const createdCards = getState()
+        .codeAwareSession.steps.find((step) => step.id === stepId)
+        ?.knowledgeCards.slice(-(createdCount || 0))
+        .map((card) => ({
+          cardId: card.id,
+          title: card.title,
+          viewMode: card.viewMode,
+          linkedNodes: (card.linkedKnowledgeNodeIds || []).map((nodeId) => ({
+            nodeId,
+            nodeTitleShort: abbreviateTitle(knowledgeById.get(nodeId)?.title),
+            mastery: Number((masteryMap[nodeId] ?? 0.5).toFixed(3)),
+          })),
+        }));
+
+      console.info("[CodeAware][PhaseG][CardGeneration]", {
+        tag: "CA_PHASE_G_CARD_CREATED",
+        stepId,
+        createdCount,
+        plannedCount: plans.length,
+        intentTypes: intent.intentTypes,
+        preferredInitialView: intent.preferredInitialView,
+        createdCards,
+      });
 
       dispatch(setKnowledgeCardGenerationStatus({ stepId, status: "ready" }));
 

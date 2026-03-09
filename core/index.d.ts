@@ -589,6 +589,11 @@ export interface StepItem {
 export interface KnowledgeCardItem {
   id: string;
   title: string;
+  question?: string;
+  viewMode?: "read" | "self-test" | "answer";
+  feedback?: "understood" | "uncertain";
+  linkedKnowledgeNodeIds?: string[];
+  assumedMasteredNodeIds?: string[];
   content?: string;
   tests?: SelfTestItem[]; //维护该知识卡片下的自测题目
   isHighlighted: boolean;

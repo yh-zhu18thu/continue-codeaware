@@ -1104,14 +1104,27 @@ export const codeAwareSessionSlice = createSlice({
         stepId: string;
         cardId: string;
         theme: string;
+        question?: string;
+        linkedKnowledgeNodeIds?: string[];
+        assumedMasteredNodeIds?: string[];
       }>,
     ) => {
-      const { stepId, cardId, theme } = action.payload;
+      const {
+        stepId,
+        cardId,
+        theme,
+        question,
+        linkedKnowledgeNodeIds,
+        assumedMasteredNodeIds,
+      } = action.payload;
       const step = state.steps.find((s) => s.id === stepId);
       if (step) {
         const newCard: KnowledgeCardItem = {
           id: cardId,
           title: theme,
+          question,
+          linkedKnowledgeNodeIds,
+          assumedMasteredNodeIds,
           content: "",
           tests: [],
           isHighlighted: false,

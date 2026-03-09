@@ -143,12 +143,6 @@ interface StepProps {
   onRerunStep?: (stepId: string) => void; // Callback for rerun step
   onStepEdit?: (stepId: string, newContent: string) => void; // Callback for step edit
   onStepStatusChange?: (stepId: string, newStatus: StepStatus) => void; // Callback for status change
-  onGenerateKnowledgeCardThemes?: (
-    stepId: string,
-    stepTitle: string,
-    stepAbstract: string,
-    learningGoal: string,
-  ) => void; // Callback for generating knowledge card themes
   onDisableKnowledgeCard?: (stepId: string, cardId: string) => void; // Callback for disabling knowledge card
   onQuestionSubmit?: (
     stepId: string,
@@ -189,7 +183,6 @@ const Step: React.FC<StepProps> = ({
   onRerunStep,
   onStepEdit,
   onStepStatusChange,
-  onGenerateKnowledgeCardThemes,
   onDisableKnowledgeCard,
   onQuestionSubmit,
   onRegisterRef,
@@ -446,23 +439,8 @@ const Step: React.FC<StepProps> = ({
       }
     }
 
-    // Trigger knowledge card theme generation when expanding for the first time
-    // and knowledge card generation status is "empty"
-    // BUT NOT when the expansion is forced (e.g., from code selection question)
-    if (
-      willBeExpanded &&
-      !wasExpanded &&
-      knowledgeCardGenerationStatus === "empty" &&
-      knowledgeCards.length === 0 &&
-      !forceExpanded && // Don't auto-generate when force expanded
-      stepId &&
-      onGenerateKnowledgeCardThemes
-    ) {
-      // Use setTimeout to ensure UI update happens first
-      setTimeout(() => {
-        onGenerateKnowledgeCardThemes(stepId, title, description, ""); // learningGoal will be passed from parent
-      }, 100);
-    }
+    // Knowledge card generation is routed by cognitive intent in parent (CodeAware.tsx).
+    // Keep Step focused on local expand/collapse UI behavior.
   };
 
   const handleExecuteUntilStep = () => {

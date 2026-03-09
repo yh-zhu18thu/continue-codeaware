@@ -1562,37 +1562,6 @@ export const CodeAware = () => {
     [dispatch, logger],
   );
 
-  // 处理生成知识卡片主题列表
-  const handleGenerateKnowledgeCardThemes = useCallback(
-    (
-      stepId: string,
-      stepTitle: string,
-      stepAbstract: string,
-      learningGoalFromProps: string,
-    ) => {
-      // 使用 Redux state 中的学习目标，如果提供了参数则使用参数
-      const learningGoalToUse =
-        learningGoalFromProps || learningGoal || "提升编程技能和理解相关概念";
-
-      console.log("Generating knowledge card themes for:", {
-        stepId,
-        stepTitle,
-        stepAbstract,
-        learningGoalToUse,
-      });
-
-      dispatch(
-        generateKnowledgeCardThemes({
-          stepId,
-          stepTitle,
-          stepAbstract,
-          learningGoal: learningGoalToUse,
-        }),
-      );
-    },
-    [dispatch, learningGoal],
-  );
-
   // 处理禁用知识卡片
   const handleDisableKnowledgeCard = useCallback(
     (stepId: string, cardId: string) => {
@@ -1968,7 +1937,7 @@ export const CodeAware = () => {
     async (stepId: string, isExpanded: boolean) => {
       console.log(`Step ${stepId} expansion changed to: ${isExpanded}`);
 
-      recordCognitiveInteraction({
+      const decision = recordCognitiveInteraction({
         type: isExpanded ? "step_expand" : "step_collapse",
         stepId,
         payload: {
@@ -1980,6 +1949,27 @@ export const CodeAware = () => {
         // When a step is expanded, immediately set it as the currently expanded step
         // This ensures the step stays expanded while other steps are collapsed
         setCurrentlyExpandedStepId(stepId);
+
+        // Phase D intent-aware generation gate:
+        // only generate when router resolves this expanded step as the intent target.
+        const expandedStep = steps.find((step) => step.id === stepId);
+        const canGenerateFromIntent =
+          decision.shouldGenerateCards &&
+          decision.intent.targetStepId === stepId &&
+          decision.intent.intentTypes.length > 0;
+        const isGenerationIdle =
+          expandedStep?.knowledgeCardGenerationStatus !== "generating";
+
+        if (expandedStep && canGenerateFromIntent && isGenerationIdle) {
+          await dispatch(
+            generateKnowledgeCardThemes({
+              stepId,
+              stepTitle: expandedStep.title,
+              stepAbstract: expandedStep.abstract,
+              learningGoal: learningGoal || "提升编程技能和理解相关概念",
+            }),
+          );
+        }
 
         // 检查知识卡片是否有代码映射，如果没有则生成映射
         try {
@@ -2010,6 +2000,8 @@ export const CodeAware = () => {
       dispatch,
       logger,
       recordCognitiveInteraction,
+      steps,
+      learningGoal,
       setCurrentlyExpandedStepId,
       setForceExpandedSteps,
       setGlobalQuestionExpandedSteps,
@@ -2663,9 +2655,6 @@ export const CodeAware = () => {
                   onKnowledgeCardViewModeChange={
                     handleKnowledgeCardViewModeChange
                   }
-                  onGenerateKnowledgeCardThemes={
-                    handleGenerateKnowledgeCardThemes
-                  } // Pass knowledge card themes generation function
                   onDisableKnowledgeCard={handleDisableKnowledgeCard} // Pass knowledge card disable function
                   onQuestionSubmit={handleQuestionSubmit} // Pass question submit function
                   onRegisterRef={registerStepRef} // Pass step ref registration function

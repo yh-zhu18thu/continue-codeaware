@@ -161,6 +161,11 @@ interface StepProps {
     cardId: string,
     viewMode: "read" | "self-test" | "answer",
   ) => void;
+  onKnowledgeCardFeedback?: (
+    stepId: string,
+    cardId: string,
+    feedback: "understood" | "uncertain",
+  ) => void;
   disabled?: boolean; // Optional disabled state for code edit mode
 }
 
@@ -189,6 +194,7 @@ const Step: React.FC<StepProps> = ({
   onStepExpansionChange,
   onKnowledgeCardExpansionChange,
   onKnowledgeCardViewModeChange,
+  onKnowledgeCardFeedback,
   disabled = false,
 }) => {
   const logger = useCodeAwareLogger();
@@ -622,6 +628,11 @@ const Step: React.FC<StepProps> = ({
                     onViewModeChange={(cardId, viewMode) => {
                       if (stepId && onKnowledgeCardViewModeChange) {
                         onKnowledgeCardViewModeChange(stepId, cardId, viewMode);
+                      }
+                    }}
+                    onFeedback={(cardId, feedback) => {
+                      if (stepId && onKnowledgeCardFeedback) {
+                        onKnowledgeCardFeedback(stepId, cardId, feedback);
                       }
                     }}
                   />

@@ -32,7 +32,9 @@ import {
   selectTask,
   selectTitle,
   setKnowledgeCardDisabled,
+  setKnowledgeCardFeedback,
   setKnowledgeCardGenerationStatus,
+  setKnowledgeCardViewMode,
   setLatestIntentForStep,
   setStepAbstract,
   setStepStatus,
@@ -2032,6 +2034,14 @@ export const CodeAware = () => {
       cardId: string,
       viewMode: "read" | "self-test" | "answer",
     ) => {
+      dispatch(
+        setKnowledgeCardViewMode({
+          stepId,
+          cardId,
+          viewMode,
+        }),
+      );
+
       recordCognitiveInteraction({
         type: "knowledge_card_view_mode_change",
         stepId,
@@ -2041,7 +2051,29 @@ export const CodeAware = () => {
         },
       });
     },
-    [recordCognitiveInteraction],
+    [dispatch, recordCognitiveInteraction],
+  );
+
+  const handleKnowledgeCardFeedback = useCallback(
+    (stepId: string, cardId: string, feedback: "understood" | "uncertain") => {
+      dispatch(
+        setKnowledgeCardFeedback({
+          stepId,
+          cardId,
+          feedback,
+        }),
+      );
+
+      recordCognitiveInteraction({
+        type: "knowledge_card_feedback",
+        stepId,
+        knowledgeCardId: cardId,
+        payload: {
+          feedback,
+        },
+      });
+    },
+    [dispatch, recordCognitiveInteraction],
   );
 
   const handleQuestionSubmit = useCallback(
@@ -2655,6 +2687,7 @@ export const CodeAware = () => {
                   onKnowledgeCardViewModeChange={
                     handleKnowledgeCardViewModeChange
                   }
+                  onKnowledgeCardFeedback={handleKnowledgeCardFeedback}
                   onDisableKnowledgeCard={handleDisableKnowledgeCard} // Pass knowledge card disable function
                   onQuestionSubmit={handleQuestionSubmit} // Pass question submit function
                   onRegisterRef={registerStepRef} // Pass step ref registration function
@@ -2706,6 +2739,9 @@ export const CodeAware = () => {
 
                       return {
                         title: kc.title,
+                        question: kc.question,
+                        viewMode: kc.viewMode,
+                        feedback: kc.feedback,
                         markdownContent: kc.content || "", // 提供默认空字符串
                         testItems: testItems, // 传递所有测试项目
 
@@ -2751,9 +2787,9 @@ export const CodeAware = () => {
                           );
                         },
 
-                        // Default states - 只有title时默认折叠
-                        defaultTestMode: false,
-                        defaultExpanded: Boolean(kc.content), // 有内容时展开，只有title时折叠
+                        // Default states - 由 viewMode 控制初始视图
+                        defaultTestMode: kc.viewMode === "answer",
+                        defaultExpanded: Boolean(kc.content || kc.question), // 有内容或问题时展开
 
                         // Lazy loading props
                         stepId: step.id,

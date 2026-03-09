@@ -1105,6 +1105,7 @@ export const codeAwareSessionSlice = createSlice({
         cardId: string;
         theme: string;
         question?: string;
+        viewMode?: "read" | "self-test" | "answer";
         linkedKnowledgeNodeIds?: string[];
         assumedMasteredNodeIds?: string[];
       }>,
@@ -1114,6 +1115,7 @@ export const codeAwareSessionSlice = createSlice({
         cardId,
         theme,
         question,
+        viewMode,
         linkedKnowledgeNodeIds,
         assumedMasteredNodeIds,
       } = action.payload;
@@ -1123,6 +1125,7 @@ export const codeAwareSessionSlice = createSlice({
           id: cardId,
           title: theme,
           question,
+          viewMode: viewMode || "read",
           linkedKnowledgeNodeIds,
           assumedMasteredNodeIds,
           content: "",
@@ -1131,6 +1134,44 @@ export const codeAwareSessionSlice = createSlice({
           disabled: false,
         };
         step.knowledgeCards.push(newCard);
+      }
+    },
+    setKnowledgeCardViewMode: (
+      state,
+      action: PayloadAction<{
+        stepId: string;
+        cardId: string;
+        viewMode: "read" | "self-test" | "answer";
+      }>,
+    ) => {
+      const { stepId, cardId, viewMode } = action.payload;
+      const step = state.steps.find((s) => s.id === stepId);
+      if (!step) {
+        return;
+      }
+
+      const card = step.knowledgeCards.find((c) => c.id === cardId);
+      if (card) {
+        card.viewMode = viewMode;
+      }
+    },
+    setKnowledgeCardFeedback: (
+      state,
+      action: PayloadAction<{
+        stepId: string;
+        cardId: string;
+        feedback: "understood" | "uncertain";
+      }>,
+    ) => {
+      const { stepId, cardId, feedback } = action.payload;
+      const step = state.steps.find((s) => s.id === stepId);
+      if (!step) {
+        return;
+      }
+
+      const card = step.knowledgeCards.find((c) => c.id === cardId);
+      if (card) {
+        card.feedback = feedback;
       }
     },
     // 创建新的mapping
@@ -1542,6 +1583,8 @@ export const {
   setKnowledgeCardError,
   resetKnowledgeCardContent,
   setKnowledgeCardDisabled,
+  setKnowledgeCardViewMode,
+  setKnowledgeCardFeedback,
   addCodeChunkFromCompletion,
   createOrGetCodeChunk,
   createKnowledgeCard,

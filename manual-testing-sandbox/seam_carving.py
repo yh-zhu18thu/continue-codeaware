@@ -1,99 +1,139 @@
+import argparse
+import sys
+import os
 import numpy as np
-from PIL import Image
+import cv2
+from matplotlib import pyplot as plt
 
+def load_image(image_path):
+    if not os.path.isfile(image_path):
+        raise FileNotFoundError(f"Image file not found: {image_path}")
+    image = cv2.imread(image_path)
+    if image is None:
+        raise ValueError("Failed to load image. Unsupported format or corrupted file.")
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    return image
 
-def load_image(path):
-    """加载输入图像，返回PIL图像对象和原始数据的np数组"""
-    img = Image.open(path).convert('RGB')
-    arr = np.array(img)
-    return img, arr
+def save_image(image, file_path):
+    image_bgr = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+    cv2.imwrite(file_path, image_bgr)
 
+def show_comparison(original, carved):
+    plt.figure(figsize=(10,5))
+    plt.subplot(1,2,1)
+    plt.title("Original")
+    plt.axis('off')
+    plt.imshow(original)
+    plt.subplot(1,2,2)
+    plt.title("Seam Carved")
+    plt.axis('off')
+    plt.imshow(carved)
+    plt.show()
 
-def preprocess_image(img):
-    """将PIL图像转换为float类型的np数组"""
-    return np.array(img).astype(np.float64)
-
-
-def energy_map(img_arr):
-    """能量图计算: 使用Sobel算子计算每个像素的能量"""
-    from scipy.ndimage import sobel
-    gray = np.dot(img_arr[..., :3], [0.299, 0.587, 0.114])
-    dx = sobel(gray, axis=1)
-    dy = sobel(gray, axis=0)
-    energy = np.hypot(dx, dy)
+def compute_energy(image):
+    gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+    sobelx = cv2.Sobel(gray, cv2.CV_64F, 1, 0, ksize=3)
+    sobely = cv2.Sobel(gray, cv2.CV_64F, 0, 1, ksize=3)
+    energy = np.hypot(sobelx, sobely)
+    energy = energy / np.max(energy)
     return energy
 
-
 def find_seam(energy):
-    """查找能量最小的竖直缝隙路径"""
     h, w = energy.shape
-    cost = np.copy(energy)
+    seam = np.zeros((h,), dtype=np.int32)
+    cost = energy.copy()
     backtrack = np.zeros_like(cost, dtype=np.int32)
     for i in range(1, h):
         for j in range(0, w):
-            if j == 0:
-                idx = np.argmin(cost[i-1, j:j+2])
-                backtrack[i, j] = idx + j
-                min_energy = cost[i-1, idx + j]
-            else:
-                idx = np.argmin(cost[i-1, max(j-1,0):min(j+2,w)])
-                backtrack[i, j] = idx + j - 1 if j > 0 else idx + j
-                min_energy = cost[i-1, max(j-1, 0) + idx]
-            cost[i, j] += min_energy
-    seam = []
-    j = np.argmin(cost[-1])
-    seam.append(j)
-    for i in range(h-1, 0, -1):
-        j = backtrack[i, j]
-        seam.append(j)
-    seam.reverse()
+            min_pre = cost[i-1, j]
+            idx = j
+            if j > 0 and cost[i-1, j-1] < min_pre:
+                min_pre = cost[i-1, j-1]
+                idx = j-1
+            if j < w-1 and cost[i-1, j+1] < min_pre:
+                min_pre = cost[i-1, j+1]
+                idx = j+1
+            cost[i, j] += min_pre
+            backtrack[i, j] = idx
+    seam[-1] = np.argmin(cost[-1])
+    for i in range(h-2, -1, -1):
+        seam[i] = backtrack[i+1, seam[i+1]]
     return seam
 
-
-def remove_seam(img_arr, seam):
-    """移除指定竖直缝隙"""
-    h, w, c = img_arr.shape
-    mask = np.ones((h, w), dtype=np.bool_)
+def remove_seam(image, seam):
+    h, w, c = image.shape
+    output = np.zeros((h, w-1, c), dtype=image.dtype)
     for i in range(h):
-        mask[i, seam[i]] = False
-    new_img = img_arr[mask].reshape((h, w-1, c))
-    return new_img
+        output[i,:, :] = np.delete(image[i, :, :], seam[i], axis=0)
+    return output
 
-
-def seam_carve(img_arr, num_seams):
-    """循环多次移除竖直缝隙"""
-    current_img = img_arr.copy()
-    for _ in range(num_seams):
-        energy = energy_map(current_img)
+def carve_column(image, num_remove):
+    carved = image.copy()
+    for _ in range(num_remove):
+        energy = compute_energy(carved)
         seam = find_seam(energy)
-        current_img = remove_seam(current_img, seam)
-    return current_img
+        carved = remove_seam(carved, seam)
+    return carved
 
+def transpose_image(image):
+    return np.transpose(image, (1,0,2))
 
-def save_image(img_arr, path):
-    """保存输出结果"""
-    img = Image.fromarray(np.clip(img_arr, 0, 255).astype(np.uint8))
-    img.save(path)
+def carve_row(image, num_remove):
+    """Remove horizontal seams (rows) by transposing image, removing columns, then transposing back."""
+    transposed = transpose_image(image)
+    carved = carve_column(transposed, num_remove)
+    return transpose_image(carved)
 
+def carve_image(image, new_width, new_height):
+    h, w, _ = image.shape
+    assert new_width <= w and new_height <= h
+    carved = image
+    if new_width < w:
+        num = w - new_width
+        carved = carve_column(carved, num)
+    if new_height < h:
+        num = h - new_height
+        carved = carve_row(carved, num)
+    return carved
+
+def valid_image_path(path):
+    ext = os.path.splitext(path)[1].lower()
+    if ext not in ['.jpg', '.jpeg', '.png', '.bmp']:
+        raise argparse.ArgumentTypeError('Unsupported image format.')
+    return path
 
 def main():
-    import argparse
-    parser = argparse.ArgumentParser(description='Seam Carving 图像缩放')
-    parser.add_argument('input', type=str, help='输入图片文件路径')
-    parser.add_argument('output', type=str, help='输出图片文件路径')
-    parser.add_argument('--seams', type=int, default=50, help='移除的竖直缝隙数(默认50)')
+    parser = argparse.ArgumentParser(description="Seam Carving (内容感知缩放) 工具")
+    parser.add_argument("-i", "--input", type=valid_image_path, required=True, help="输入图片路径")
+    parser.add_argument("-o", "--output", type=str, required=True, help="输出图片保存路径")
+    parser.add_argument("-W", "--width", type=int, help="目标宽度（像素）")
+    parser.add_argument("-H", "--height", type=int, help="目标高度（像素）")
+    parser.add_argument("-d", "--display", action="store_true", help="是否显示图片对比图")
     args = parser.parse_args()
+    try:
+        image = load_image(args.input)
+    except Exception as e:
+        print(f"加载图像失败: {e}")
+        sys.exit(1)
+    h, w, _ = image.shape
+    new_width = args.width if args.width else w
+    new_height = args.height if args.height else h
+    if new_width > w or new_height > h or new_width <= 0 or new_height <= 0:
+        print("目标尺寸无效，需小于等于原始尺寸且大于0.")
+        sys.exit(1)
+    try:
+        carved = carve_image(image, new_width, new_height)
+    except Exception as e:
+        print(f"缩放处理失败: {e}")
+        sys.exit(1)
+    try:
+        save_image(carved, args.output)
+    except Exception as e:
+        print(f"保存图片失败: {e}")
+        sys.exit(1)
+    if args.display:
+        show_comparison(image, carved)
+    print(f"处理完成，输出图片保存在: {args.output}")
 
-    # 步骤1,2 加载和预处理
-    img, arr = load_image(args.input)
-    img_arr = preprocess_image(img)
-
-    # 步骤3~7 能量计算+缝隙查找+多步裁剪
-    out_arr = seam_carve(img_arr, args.seams)
-
-    # 步骤8 保存
-    save_image(out_arr, args.output)
-    print(f"完成: 缩放后图片保存为 {args.output}")
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

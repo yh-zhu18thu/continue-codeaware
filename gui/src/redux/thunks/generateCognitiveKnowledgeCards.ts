@@ -282,6 +282,7 @@ export const generateCognitiveKnowledgeCards = createAsyncThunk<
             cardId,
             theme: generated.title,
             question: generated.question,
+            viewMode: intent.preferredInitialView,
             linkedKnowledgeNodeIds: generated.linkedKnowledgeNodeIds,
             assumedMasteredNodeIds: generated.assumedMasteredNodeIds,
           }),

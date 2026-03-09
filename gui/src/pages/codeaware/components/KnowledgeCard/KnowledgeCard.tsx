@@ -50,6 +50,93 @@ const ContentArea = styled.div<{ isVisible: boolean }>`
   box-sizing: border-box;
 `;
 
+const InteractionBar = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px 6px;
+  border-bottom: 1px solid ${lightGray}22;
+  flex-wrap: wrap;
+`;
+
+const ViewModeGroup = styled.div`
+  display: inline-flex;
+  border: 1px solid ${lightGray}44;
+  border-radius: 6px;
+  overflow: hidden;
+`;
+
+const ViewModeButton = styled.button<{ active: boolean }>`
+  border: none;
+  background: ${({ active }) => (active ? "#202a1f" : "#121212")};
+  color: ${({ active }) => (active ? "#7de58b" : vscForeground)};
+  padding: 4px 10px;
+  font-size: 11px;
+  cursor: pointer;
+
+  &:not(:last-child) {
+    border-right: 1px solid ${lightGray}33;
+  }
+`;
+
+const FeedbackGroup = styled.div`
+  display: inline-flex;
+  gap: 6px;
+`;
+
+const FeedbackButton = styled.button<{
+  active: boolean;
+  tone: "good" | "warn";
+}>`
+  border: 1px solid
+    ${({ active, tone }) => {
+      if (tone === "good") {
+        return active ? "#3fb950" : `${lightGray}44`;
+      }
+      return active ? "#d29922" : `${lightGray}44`;
+    }};
+  background: ${({ active, tone }) => {
+    if (!active) {
+      return "#121212";
+    }
+    return tone === "good" ? "#1d3b20" : "#3a2d10";
+  }};
+  color: ${vscForeground};
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 11px;
+  cursor: pointer;
+`;
+
+const QuestionPanel = styled.div`
+  margin: 8px;
+  border: 1px solid ${lightGray}33;
+  border-radius: 8px;
+  background: #111111;
+  padding: 12px;
+`;
+
+const QuestionTitle = styled.div`
+  font-size: 11px;
+  color: #c6c6c6;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+`;
+
+const QuestionText = styled.div`
+  font-size: 13px;
+  line-height: 1.5;
+  color: ${vscForeground};
+`;
+
+const QuestionHint = styled.div`
+  margin-top: 10px;
+  font-size: 11px;
+  color: #9b9b9b;
+`;
+
 const TestContainer = styled.div`
   position: relative;
   margin-top: 16px;
@@ -129,6 +216,9 @@ export interface KnowledgeCardProps {
 
   // Content props
   markdownContent?: string; // 内容现在是可选的
+  question?: string;
+  viewMode?: "read" | "self-test" | "answer";
+  feedback?: "understood" | "uncertain";
 
   // Multiple test items support
   testItems: TestItem[]; // Array of test items, ordered from newest to oldest
@@ -164,6 +254,7 @@ export interface KnowledgeCardProps {
     cardId: string,
     viewMode: "read" | "self-test" | "answer",
   ) => void;
+  onFeedback?: (cardId: string, feedback: "understood" | "uncertain") => void;
 
   // Lazy loading props
   stepId?: string;
@@ -188,6 +279,9 @@ export interface KnowledgeCardProps {
 const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
   title,
   markdownContent = "", // 为markdownContent提供默认空字符串
+  question,
+  viewMode,
+  feedback,
   onChatClick,
   onAddToCollectionClick,
   testItems = [],
@@ -200,6 +294,7 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
   cardId,
   onExpansionChange,
   onViewModeChange,
+  onFeedback,
   stepId,
   learningGoal = "",
   codeContext = "",
@@ -210,9 +305,24 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
 }) => {
   const logger = useCodeAwareLogger();
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
-  const [isTestMode, setIsTestMode] = useState(defaultTestMode);
+  const [currentViewMode, setCurrentViewMode] = useState<
+    "read" | "self-test" | "answer"
+  >(viewMode || (defaultTestMode ? "answer" : "read"));
+  const [currentFeedback, setCurrentFeedback] = useState<
+    "understood" | "uncertain" | undefined
+  >(feedback);
   const [currentTestIndex, setCurrentTestIndex] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
+
+  useEffect(() => {
+    if (viewMode && viewMode !== currentViewMode) {
+      setCurrentViewMode(viewMode);
+    }
+  }, [viewMode, currentViewMode]);
+
+  useEffect(() => {
+    setCurrentFeedback(feedback);
+  }, [feedback]);
 
   // 新增：保存每个测试题的用户输入状态（不持久存储，仅在内存中）
   const [testInputStates, setTestInputStates] = useState<{
@@ -342,88 +452,51 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
     }
   };
 
-  const onQuestionMarkClick = async () => {
-    const wasInTestMode = isTestMode;
-
-    // 如果当前不在测试模式，切换到测试模式
-    if (!wasInTestMode) {
-      // 如果没有测试项目，尝试生成测试题
-      if (testItems.length === 0) {
-        // 检查是否有知识卡片内容，如果有则生成测试题
-        if (markdownContent && onGenerateTests && stepId && cardId) {
-          console.log("Generating tests for knowledge card:", cardId);
-          onGenerateTests(
-            stepId,
-            cardId,
-            title,
-            markdownContent,
-            title,
-            learningGoal,
-            codeContext,
-          );
-        } else {
-          console.log("Cannot generate tests: missing content or callbacks");
-          return;
-        }
-      }
-      setIsTestMode(true);
-      if (cardId && onViewModeChange) {
-        onViewModeChange(cardId, "self-test");
-      }
-
-      // Log user switching to test mode
-      await logger.addLogEntry("user_switch_to_knowledge_card_test_mode", {
-        cardTitle: title,
-        cardContent: markdownContent
-          ? markdownContent.length > 200
-            ? markdownContent.substring(0, 200) + "..."
-            : markdownContent
-          : "",
-        testItemsCount: testItems.length,
-        currentTestPreview:
-          testItems.length > 0
-            ? {
-                questionType: testItems[currentTestIndex]?.questionType,
-                question:
-                  testItems[currentTestIndex]?.questionType === "multipleChoice"
-                    ? testItems[currentTestIndex]?.mcqQuestion
-                    : testItems[currentTestIndex]?.saqQuestion,
-              }
-            : null,
-        timestamp: new Date().toISOString(),
-      });
-    } else {
-      // 如果当前在测试模式，切换回知识卡片模式
-      setIsTestMode(false);
-      if (cardId && onViewModeChange) {
-        onViewModeChange(cardId, "read");
-      }
-
-      // Log user switching to content mode
-      await logger.addLogEntry("user_switch_to_knowledge_card_content_mode", {
-        cardTitle: title,
-        cardContent: markdownContent
-          ? markdownContent.length > 200
-            ? markdownContent.substring(0, 200) + "..."
-            : markdownContent
-          : "",
-        testItemsCount: testItems.length,
-        lastViewedTestPreview:
-          testItems.length > 0
-            ? {
-                questionType: testItems[currentTestIndex]?.questionType,
-                question:
-                  testItems[currentTestIndex]?.questionType === "multipleChoice"
-                    ? testItems[currentTestIndex]?.mcqQuestion
-                    : testItems[currentTestIndex]?.saqQuestion,
-              }
-            : null,
-        timestamp: new Date().toISOString(),
-      });
+  const switchViewMode = async (nextMode: "read" | "self-test" | "answer") => {
+    if (nextMode === currentViewMode) {
+      return;
     }
 
-    //print all the test items in the console
-    console.log("Test Items:", testItems);
+    if (nextMode === "answer" && testItems.length === 0) {
+      if (markdownContent && onGenerateTests && stepId && cardId) {
+        onGenerateTests(
+          stepId,
+          cardId,
+          title,
+          markdownContent,
+          title,
+          learningGoal,
+          codeContext,
+        );
+      }
+    }
+
+    setCurrentViewMode(nextMode);
+    if (cardId && onViewModeChange) {
+      onViewModeChange(cardId, nextMode);
+    }
+
+    await logger.addLogEntry("user_switch_knowledge_card_view_mode", {
+      cardTitle: title,
+      viewMode: nextMode,
+      timestamp: new Date().toISOString(),
+    });
+  };
+
+  const onQuestionMarkClick = async () => {
+    await switchViewMode(currentViewMode === "answer" ? "read" : "answer");
+  };
+
+  const handleFeedback = async (value: "understood" | "uncertain") => {
+    setCurrentFeedback(value);
+    if (cardId && onFeedback) {
+      onFeedback(cardId, value);
+    }
+    await logger.addLogEntry("user_knowledge_card_feedback", {
+      cardTitle: title,
+      feedback: value,
+      timestamp: new Date().toISOString(),
+    });
   };
 
   const handlePreviousTest = async () => {
@@ -530,15 +603,55 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
         } // 只有在有知识卡片内容时才能生成测试题
         isHighlighted={false}
         isFlickering={false}
-        isTestMode={isTestMode} // 传递测试模式状态
+        isTestMode={currentViewMode === "answer"} // 传递答题模式状态
         hasCorrectAnswer={hasCorrectAnswer} // 传递正确答案状态
       />
       <ContentArea isVisible={isExpanded}>
-        {!isTestMode && markdownContent === "::LOADING::" && (
+        <InteractionBar>
+          <ViewModeGroup>
+            <ViewModeButton
+              active={currentViewMode === "read"}
+              onClick={() => void switchViewMode("read")}
+            >
+              查阅
+            </ViewModeButton>
+            <ViewModeButton
+              active={currentViewMode === "self-test"}
+              onClick={() => void switchViewMode("self-test")}
+            >
+              自测
+            </ViewModeButton>
+            <ViewModeButton
+              active={currentViewMode === "answer"}
+              onClick={() => void switchViewMode("answer")}
+            >
+              答题
+            </ViewModeButton>
+          </ViewModeGroup>
+
+          <FeedbackGroup>
+            <FeedbackButton
+              active={currentFeedback === "understood"}
+              tone="good"
+              onClick={() => void handleFeedback("understood")}
+            >
+              懂了
+            </FeedbackButton>
+            <FeedbackButton
+              active={currentFeedback === "uncertain"}
+              tone="warn"
+              onClick={() => void handleFeedback("uncertain")}
+            >
+              存疑
+            </FeedbackButton>
+          </FeedbackGroup>
+        </InteractionBar>
+
+        {currentViewMode === "read" && markdownContent === "::LOADING::" && (
           <KnowledgeCardLoader text="Generating knowledge card contents" />
         )}
 
-        {!isTestMode &&
+        {currentViewMode === "read" &&
           markdownContent &&
           markdownContent !== "::LOADING::" &&
           !markdownContent.startsWith("加载失败:") &&
@@ -550,7 +663,7 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
             />
           )}
 
-        {!isTestMode &&
+        {currentViewMode === "read" &&
           markdownContent &&
           (markdownContent.startsWith("加载失败:") ||
             markdownContent.startsWith("生成失败")) && (
@@ -597,7 +710,7 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
             </div>
           )}
 
-        {!isTestMode && !markdownContent && (
+        {currentViewMode === "read" && !markdownContent && (
           <div
             style={{
               padding: "12px",
@@ -611,109 +724,125 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
           </div>
         )}
 
-        {isTestMode && testItems.length === 0 && isTestsLoading && (
-          <KnowledgeCardLoader text="Generating self-test questions" />
+        {currentViewMode === "self-test" && (
+          <QuestionPanel>
+            <QuestionTitle>Self-check Prompt</QuestionTitle>
+            <QuestionText>
+              {question || "暂无问题，可切换到答题视图生成并完成自测。"}
+            </QuestionText>
+            <QuestionHint>先尝试口头作答，再进入答题视图验证。</QuestionHint>
+          </QuestionPanel>
         )}
 
-        {isTestMode && testItems.length === 0 && !isTestsLoading && (
-          <div
-            style={{
-              padding: "12px",
-              color: "#888",
-              fontSize: "14px",
-              fontStyle: "italic",
-              textAlign: "center",
-            }}
-          >
-            暂无测试题
-          </div>
-        )}
+        {currentViewMode === "answer" &&
+          testItems.length === 0 &&
+          isTestsLoading && (
+            <KnowledgeCardLoader text="Generating self-test questions" />
+          )}
 
-        {isTestMode && testItems.length > 0 && currentTest && (
-          <TestContainer>
-            {/* Test navigation controls */}
-            {testItems.length > 1 && (
-              <TestNavigationContainer>
-                <TestNavigationButton
-                  onClick={handlePreviousTest}
-                  disabled={
-                    currentTestIndex <= 0
-                  } /* 修正：在第一题时禁用向前按钮 */
-                  title="上一题"
-                >
-                  <ChevronLeftIcon width={14} height={14} />
-                </TestNavigationButton>
-                <TestCounter>
-                  {currentTestIndex + 1}/{testItems.length}
-                </TestCounter>
-                <TestNavigationButton
-                  onClick={handleNextTest}
-                  disabled={
-                    currentTestIndex >= testItems.length - 1
-                  } /* 修正：在最后一题时禁用向后按钮 */
-                  title="下一题"
-                >
-                  <ChevronRightIcon width={14} height={14} />
-                </TestNavigationButton>
-              </TestNavigationContainer>
-            )}
+        {currentViewMode === "answer" &&
+          testItems.length === 0 &&
+          !isTestsLoading && (
+            <div
+              style={{
+                padding: "12px",
+                color: "#888",
+                fontSize: "14px",
+                fontStyle: "italic",
+                textAlign: "center",
+              }}
+            >
+              暂无测试题
+            </div>
+          )}
 
-            {/* Render current test */}
-            {currentTest.questionType === "multipleChoice" &&
-              onMcqSubmit &&
-              currentTest.mcqQuestion &&
-              currentTest.mcqOptions &&
-              currentTest.mcqCorrectAnswer && (
-                <KnowledgeCardMCQ
-                  question={currentTest.mcqQuestion}
-                  options={currentTest.mcqOptions}
-                  correctAnswer={currentTest.mcqCorrectAnswer}
-                  onSubmit={(isCorrect, selectedOption) =>
-                    onMcqSubmit(currentTest.id, isCorrect, selectedOption)
-                  }
-                  // 传递保存的状态
-                  initialSelectedOption={
-                    testInputStates[currentTest.id]?.mcqSelectedOption
-                  }
-                  initialSubmitted={
-                    testInputStates[currentTest.id]?.mcqSubmitted || false
-                  }
-                  // 传递状态更新回调
-                  onSelectionChange={(selectedOption) =>
-                    updateMcqSelection(currentTest.id, selectedOption)
-                  }
-                  onSubmitStateChange={(submitted) =>
-                    updateMcqSubmitState(currentTest.id, submitted)
-                  }
-                />
+        {currentViewMode === "answer" &&
+          testItems.length > 0 &&
+          currentTest && (
+            <TestContainer>
+              {/* Test navigation controls */}
+              {testItems.length > 1 && (
+                <TestNavigationContainer>
+                  <TestNavigationButton
+                    onClick={handlePreviousTest}
+                    disabled={
+                      currentTestIndex <= 0
+                    } /* 修正：在第一题时禁用向前按钮 */
+                    title="上一题"
+                  >
+                    <ChevronLeftIcon width={14} height={14} />
+                  </TestNavigationButton>
+                  <TestCounter>
+                    {currentTestIndex + 1}/{testItems.length}
+                  </TestCounter>
+                  <TestNavigationButton
+                    onClick={handleNextTest}
+                    disabled={
+                      currentTestIndex >= testItems.length - 1
+                    } /* 修正：在最后一题时禁用向后按钮 */
+                    title="下一题"
+                  >
+                    <ChevronRightIcon width={14} height={14} />
+                  </TestNavigationButton>
+                </TestNavigationContainer>
               )}
 
-            {currentTest.questionType === "shortAnswer" &&
-              onSaqSubmit &&
-              currentTest.saqQuestion && (
-                <KnowledgeCardSAQ
-                  question={currentTest.saqQuestion}
-                  onSubmitAnswer={(answer) =>
-                    onSaqSubmit(currentTest.id, answer)
-                  }
-                  isLoading={currentTest.isLoading}
-                  result={currentTest.result}
-                  // 传递保存的状态
-                  initialContent={testInputStates[currentTest.id]?.saqContent}
-                  initialIsRetrying={
-                    testInputStates[currentTest.id]?.saqIsRetrying || false
-                  }
-                  // 传递状态更新回调
-                  onContentChange={(content) =>
-                    updateSaqContent(currentTest.id, content)
-                  }
-                  onRetryStateChange={(isRetrying) =>
-                    updateSaqRetryState(currentTest.id, isRetrying)
-                  }
-                />
-              )}
-          </TestContainer>
-        )}
+              {/* Render current test */}
+              {currentTest.questionType === "multipleChoice" &&
+                onMcqSubmit &&
+                currentTest.mcqQuestion &&
+                currentTest.mcqOptions &&
+                currentTest.mcqCorrectAnswer && (
+                  <KnowledgeCardMCQ
+                    question={currentTest.mcqQuestion}
+                    options={currentTest.mcqOptions}
+                    correctAnswer={currentTest.mcqCorrectAnswer}
+                    onSubmit={(isCorrect, selectedOption) =>
+                      onMcqSubmit(currentTest.id, isCorrect, selectedOption)
+                    }
+                    // 传递保存的状态
+                    initialSelectedOption={
+                      testInputStates[currentTest.id]?.mcqSelectedOption
+                    }
+                    initialSubmitted={
+                      testInputStates[currentTest.id]?.mcqSubmitted || false
+                    }
+                    // 传递状态更新回调
+                    onSelectionChange={(selectedOption) =>
+                      updateMcqSelection(currentTest.id, selectedOption)
+                    }
+                    onSubmitStateChange={(submitted) =>
+                      updateMcqSubmitState(currentTest.id, submitted)
+                    }
+                  />
+                )}
+
+              {currentTest.questionType === "shortAnswer" &&
+                onSaqSubmit &&
+                currentTest.saqQuestion && (
+                  <KnowledgeCardSAQ
+                    question={currentTest.saqQuestion}
+                    onSubmitAnswer={(answer) =>
+                      onSaqSubmit(currentTest.id, answer)
+                    }
+                    isLoading={currentTest.isLoading}
+                    result={currentTest.result}
+                    // 传递保存的状态
+                    initialContent={testInputStates[currentTest.id]?.saqContent}
+                    initialIsRetrying={
+                      testInputStates[currentTest.id]?.saqIsRetrying || false
+                    }
+                    // 传递状态更新回调
+                    onContentChange={(content) =>
+                      updateSaqContent(currentTest.id, content)
+                    }
+                    onRetryStateChange={(isRetrying) =>
+                      updateSaqRetryState(currentTest.id, isRetrying)
+                    }
+                  />
+                )}
+            </TestContainer>
+          )}
       </ContentArea>
     </KnowledgeCardContainer>
   );

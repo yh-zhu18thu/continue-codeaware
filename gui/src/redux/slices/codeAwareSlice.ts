@@ -335,11 +335,7 @@ export const codeAwareSessionSlice = createSlice({
           ...step,
           isHighlighted: false,
           highlightType: undefined,
-          knowledgeCards: step.knowledgeCards.map((card) => ({
-            ...card,
-            isHighlighted: false,
-            highlightType: undefined,
-          })),
+          knowledgeCards: step.knowledgeCards,
         };
       });
 
@@ -376,24 +372,8 @@ export const codeAwareSessionSlice = createSlice({
           };
         }
       } else if (type === "knowledgeCard") {
-        for (let i = 0; i < state.steps.length; i++) {
-          const cardIndex = state.steps[i].knowledgeCards.findIndex(
-            (kc) => kc.id === id,
-          );
-          if (cardIndex !== -1) {
-            const updatedCards = [...state.steps[i].knowledgeCards];
-            updatedCards[cardIndex] = {
-              ...updatedCards[cardIndex],
-              isHighlighted: false,
-              highlightType: undefined,
-            };
-            state.steps[i] = {
-              ...state.steps[i],
-              knowledgeCards: updatedCards,
-            };
-            break;
-          }
-        }
+        // KnowledgeCard has been removed from the highlight ecosystem.
+        console.log(`ℹ️ Ignored clearElementHighlight for knowledgeCard ${id}`);
       }
 
       console.log(`🧹 Cleared highlight for ${type} ${id}`);
@@ -431,11 +411,7 @@ export const codeAwareSessionSlice = createSlice({
         ...step,
         isHighlighted: false,
         highlightType: undefined,
-        knowledgeCards: step.knowledgeCards.map((card) => ({
-          ...card,
-          isHighlighted: false,
-          highlightType: undefined,
-        })),
+        knowledgeCards: step.knowledgeCards,
       }));
 
       // 设置新的高亮元素（带双向关联）
@@ -503,24 +479,8 @@ export const codeAwareSessionSlice = createSlice({
           }
         }
       } else if (type === "knowledgeCard") {
-        for (let i = 0; i < state.steps.length; i++) {
-          const cardIndex = state.steps[i].knowledgeCards.findIndex(
-            (kc) => kc.id === id,
-          );
-          if (cardIndex !== -1) {
-            const updatedCards = [...state.steps[i].knowledgeCards];
-            updatedCards[cardIndex] = {
-              ...updatedCards[cardIndex],
-              isHighlighted: true,
-              highlightType: "primary", // 主要高亮
-            };
-            state.steps[i] = {
-              ...state.steps[i],
-              knowledgeCards: updatedCards,
-            };
-            break;
-          }
-        }
+        // KnowledgeCard has been removed from the highlight ecosystem.
+        console.log(`ℹ️ Ignored setHighlightedElement for knowledgeCard ${id}`);
       }
     },
     clearAllCodeChunks: (state) => {
@@ -585,18 +545,10 @@ export const codeAwareSessionSlice = createSlice({
             break;
 
           case "knowledgeCard":
-            // 高亮 knowledge card
-            for (const step of state.steps) {
-              const card = step.knowledgeCards.find(
-                (c) => c.id === event.identifier,
-              );
-              if (card) {
-                card.isHighlighted = true;
-                card.highlightType = "primary";
-                console.log(`  ✅ 高亮 knowledgeCard: ${event.identifier}`);
-                break;
-              }
-            }
+            // KnowledgeCard has been removed from the highlight ecosystem.
+            console.log(
+              `  ℹ️ 忽略 knowledgeCard 高亮事件: ${event.identifier}`,
+            );
             break;
         }
       }

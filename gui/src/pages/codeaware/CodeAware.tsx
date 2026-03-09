@@ -724,7 +724,7 @@ export const CodeAware = () => {
       // 1. 获取当前高亮的语义元素
       let focusedElement: {
         id: string;
-        type: "highLevelStep" | "step" | "knowledgeCard";
+        type: "highLevelStep" | "step";
       } | null = null;
 
       // 检查高级步骤
@@ -738,19 +738,6 @@ export const CodeAware = () => {
         const highlightedStep = steps.find((step) => step.isHighlighted);
         if (highlightedStep) {
           focusedElement = { id: highlightedStep.id, type: "step" };
-        }
-      }
-
-      // 检查知识卡片
-      if (!focusedElement) {
-        for (const step of steps) {
-          const highlightedCard = step.knowledgeCards?.find(
-            (card) => card.isHighlighted,
-          );
-          if (highlightedCard) {
-            focusedElement = { id: highlightedCard.id, type: "knowledgeCard" };
-            break;
-          }
         }
       }
 
@@ -1497,46 +1484,6 @@ export const CodeAware = () => {
 
   const handleHighlightEvent = useCallback(
     async (e: HighlightEvent) => {
-      // Special handling for knowledge card highlight events
-      if (e.sourceType === "knowledgeCard") {
-        // For knowledge cards, we want to highlight related elements but NOT trigger auto-scroll
-        // We'll use the normal highlight logic but with a flag to prevent auto-scroll
-        console.log(
-          "📝 [CodeAware] Handling knowledge card highlight event:",
-          e.identifier,
-        );
-
-        // Temporarily disable auto-scroll for knowledge card highlights
-        setIsAutoScrollDisabled(true);
-        isAutoScrollDisabledRef.current = true; // Immediate disable
-
-        // Clear any existing timeout
-        if (autoScrollDisableTimeoutRef.current) {
-          clearTimeout(autoScrollDisableTimeoutRef.current);
-        }
-
-        // Use normal highlight logic
-        dispatch(
-          updateHighlight({
-            sourceType: e.sourceType,
-            identifier: e.identifier,
-            additionalInfo: e.additionalInfo,
-          }),
-        );
-
-        // Keep auto-scroll disabled longer for knowledge cards to completely prevent scrolling
-        autoScrollDisableTimeoutRef.current = setTimeout(() => {
-          setIsAutoScrollDisabled(false);
-          isAutoScrollDisabledRef.current = false; // Re-enable immediate ref
-          autoScrollDisableTimeoutRef.current = null;
-          console.log(
-            "📝 [CodeAware] Re-enabled auto-scroll after knowledge card highlight",
-          );
-        }, 3000); // Even longer delay to ensure no auto-scroll occurs
-
-        return;
-      }
-
       // Normal highlight logic for other types
       if (!e.additionalInfo) {
         dispatch(
@@ -2106,19 +2053,6 @@ export const CodeAware = () => {
           ); // Mark as global question expanded
           setCurrentlyExpandedStepId(selectedStepId);
 
-          // 高亮生成的知识卡片
-          // 给知识卡片一些时间被创建，然后高亮它们
-          setTimeout(() => {
-            knowledgeCardIds.forEach((cardId) => {
-              dispatch(
-                updateHighlight({
-                  sourceType: "knowledgeCard",
-                  identifier: cardId,
-                }),
-              );
-            });
-          }, 100);
-
           // 显示成功消息
           ideMessenger?.post("showToast", [
             "info",
@@ -2586,8 +2520,6 @@ export const CodeAware = () => {
                         markdownContent: kc.content || "", // 提供默认空字符串
                         testItems: testItems, // 传递所有测试项目
 
-                        // Highlight props
-                        isHighlighted: kc.isHighlighted,
                         cardId: kc.id || `${step.id}-card-${kcIndex}`,
 
                         // Disabled state

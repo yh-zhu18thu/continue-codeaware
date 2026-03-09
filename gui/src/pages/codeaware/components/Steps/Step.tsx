@@ -623,8 +623,6 @@ const Step: React.FC<StepProps> = ({
                     {...cardProps}
                     cardId={cardId}
                     shouldCollapse={shouldCollapseThisCard} // Pass collapse signal with auto-collapse logic
-                    onHighlightEvent={onHighlightEvent}
-                    onClearHighlight={onClearHighlight}
                     onDisable={onDisableKnowledgeCard}
                     onExpansionChange={handleKnowledgeCardExpansionChange} // Pass expansion change handler
                   />

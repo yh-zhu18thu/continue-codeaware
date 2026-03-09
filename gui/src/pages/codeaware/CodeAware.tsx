@@ -14,6 +14,11 @@ import { SessionInfoDialog } from "../../components/dialogs/SessionInfoDialog";
 import { PageHeader } from "../../components/PageHeader";
 import { IdeMessengerContext } from "../../context/IdeMessenger";
 import { useWebviewListener } from "../../hooks/useWebviewListener";
+import {
+  applyKnowledgeCardInteraction,
+  emitMasteryUpdateLogs,
+  KnowledgeCardInteraction,
+} from "../../redux/cognitive/masteryTrackingEngine";
 import { routeCognitiveTrigger } from "../../redux/cognitive/triggerRouter";
 import { CognitiveInteractionEvent } from "../../redux/cognitive/types";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks";
@@ -24,6 +29,7 @@ import {
   recordCognitiveEvent,
   resetIdeCommFlags,
   resetSessionExceptRequirement,
+  selectCodeAwareSessionState,
   selectCognitiveTrace,
   selectCurrentSessionId,
   selectIsRequirementInEditMode,
@@ -36,6 +42,7 @@ import {
   setKnowledgeCardGenerationStatus,
   setKnowledgeCardViewMode,
   setLatestIntentForStep,
+  setNodeMasteryScores,
   setStepAbstract,
   setStepStatus,
   setUserRequirementStatus,
@@ -64,6 +71,7 @@ import {
   establishSemanticToCodeMapping,
 } from "../../redux/thunks/mappingLookup"; // 新的接口
 import { useCodeAwareLogger } from "../../util/codeAwareWebViewLogger";
+import { buildCodeAwareCognitiveEdges } from "../../utils/codeAwareRelationGraph";
 import "./CodeAware.css";
 import GlobalQuestionModal from "./components/QuestionPopup/GlobalQuestionModal";
 import RequirementDisplay from "./components/Requirements/RequirementDisplay"; // Import RequirementDisplay
@@ -319,6 +327,7 @@ export const CodeAware = () => {
     userRequirementStatus === "finalized" ? sessionTitle : "CodeAware";
 
   const steps = useAppSelector((state) => state.codeAwareSession.steps); // Get steps data
+  const codeAwareSessionState = useAppSelector(selectCodeAwareSessionState);
 
   // Get high level steps for navigation
   const highLevelSteps = useAppSelector(
@@ -2050,8 +2059,36 @@ export const CodeAware = () => {
           viewMode,
         },
       });
+
+      if (viewMode === "read" || viewMode === "self-test") {
+        const step = codeAwareSessionState.steps.find((s) => s.id === stepId);
+        const card = step?.knowledgeCards.find((k) => k.id === cardId);
+        const linkedKnowledgeNodeIds = card?.linkedKnowledgeNodeIds || [];
+
+        const interaction: KnowledgeCardInteraction = {
+          type: "view-major",
+          value: viewMode,
+        };
+
+        const result = applyKnowledgeCardInteraction({
+          linkedKnowledgeNodeIds,
+          interaction,
+          nodeMasteryScores: codeAwareSessionState.nodeMasteryScores,
+          cognitiveEdges: buildCodeAwareCognitiveEdges(codeAwareSessionState),
+        });
+
+        if (result.changedNodeIds.length > 0) {
+          dispatch(setNodeMasteryScores(result.updatedScores));
+          emitMasteryUpdateLogs({
+            interaction,
+            linkedKnowledgeNodeIds,
+            changedNodeIds: result.changedNodeIds,
+            debug: result.debug,
+          });
+        }
+      }
     },
-    [dispatch, recordCognitiveInteraction],
+    [codeAwareSessionState, dispatch, recordCognitiveInteraction],
   );
 
   const handleKnowledgeCardFeedback = useCallback(
@@ -2072,8 +2109,34 @@ export const CodeAware = () => {
           feedback,
         },
       });
+
+      const step = codeAwareSessionState.steps.find((s) => s.id === stepId);
+      const card = step?.knowledgeCards.find((k) => k.id === cardId);
+      const linkedKnowledgeNodeIds = card?.linkedKnowledgeNodeIds || [];
+
+      const interaction: KnowledgeCardInteraction = {
+        type: "feedback",
+        value: feedback,
+      };
+
+      const result = applyKnowledgeCardInteraction({
+        linkedKnowledgeNodeIds,
+        interaction,
+        nodeMasteryScores: codeAwareSessionState.nodeMasteryScores,
+        cognitiveEdges: buildCodeAwareCognitiveEdges(codeAwareSessionState),
+      });
+
+      if (result.changedNodeIds.length > 0) {
+        dispatch(setNodeMasteryScores(result.updatedScores));
+        emitMasteryUpdateLogs({
+          interaction,
+          linkedKnowledgeNodeIds,
+          changedNodeIds: result.changedNodeIds,
+          debug: result.debug,
+        });
+      }
     },
-    [dispatch, recordCognitiveInteraction],
+    [codeAwareSessionState, dispatch, recordCognitiveInteraction],
   );
 
   const handleQuestionSubmit = useCallback(
@@ -2769,22 +2832,65 @@ export const CodeAware = () => {
                           console.log(
                             `SAQ Answer for ${kc.title} (Test ${testId}): ${answer}`,
                           );
-                          recordCognitiveInteraction({
-                            type: "knowledge_card_answer_result",
-                            stepId: step.id,
-                            knowledgeCardId: kc.id,
-                            payload: {
-                              testId,
-                              answerLength: answer.length,
-                            },
-                          });
                           // 调用处理SAQ提交的thunk
                           void dispatch(
                             processSaqSubmission({
                               testId,
                               userAnswer: answer,
                             }),
-                          );
+                          )
+                            .unwrap()
+                            .then((submission) => {
+                              if (!submission) {
+                                return;
+                              }
+
+                              recordCognitiveInteraction({
+                                type: "knowledge_card_answer_result",
+                                stepId: submission.stepId,
+                                knowledgeCardId: submission.knowledgeCardId,
+                                payload: {
+                                  testId,
+                                  answerLength: answer.length,
+                                  correctness: submission.correctness,
+                                },
+                              });
+
+                              const linkedKnowledgeNodeIds =
+                                kc.linkedKnowledgeNodeIds || [];
+                              const interaction: KnowledgeCardInteraction = {
+                                type: "answer",
+                                correctness: submission.correctness,
+                              };
+
+                              const result = applyKnowledgeCardInteraction({
+                                linkedKnowledgeNodeIds,
+                                interaction,
+                                nodeMasteryScores:
+                                  codeAwareSessionState.nodeMasteryScores,
+                                cognitiveEdges: buildCodeAwareCognitiveEdges(
+                                  codeAwareSessionState,
+                                ),
+                              });
+
+                              if (result.changedNodeIds.length > 0) {
+                                dispatch(
+                                  setNodeMasteryScores(result.updatedScores),
+                                );
+                                emitMasteryUpdateLogs({
+                                  interaction,
+                                  linkedKnowledgeNodeIds,
+                                  changedNodeIds: result.changedNodeIds,
+                                  debug: result.debug,
+                                });
+                              }
+                            })
+                            .catch((error) => {
+                              console.error(
+                                "[MasteryTracking] SAQ submission handling failed",
+                                error,
+                              );
+                            });
                         },
 
                         // Default states - 由 viewMode 控制初始视图

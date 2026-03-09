@@ -2857,7 +2857,13 @@ export const processCodeUpdates = createAsyncThunk<
 
 // Process SAQ submission - evaluate user answer using LLM
 export const processSaqSubmission = createAsyncThunk<
-  void,
+  {
+    stepId: string;
+    knowledgeCardId: string;
+    testId: string;
+    isCorrect: boolean;
+    correctness: number;
+  } | null,
   {
     testId: string;
     userAnswer: string;
@@ -2891,7 +2897,7 @@ export const processSaqSubmission = createAsyncThunk<
       const testInfo = selectTestByTestId(state, testId);
       if (!testInfo || !testInfo.test) {
         console.error("❌ [CodeAware] Test not found for testId:", testId);
-        return;
+        return null;
       }
 
       const { stepId, knowledgeCardId, test } = testInfo;
@@ -2901,8 +2907,10 @@ export const processSaqSubmission = createAsyncThunk<
           "❌ [CodeAware] Test is not a short answer question:",
           testId,
         );
-        return;
+        return null;
       }
+
+      let finalIsCorrect = false;
 
       // Set loading state
       dispatch(
@@ -2964,6 +2972,7 @@ export const processSaqSubmission = createAsyncThunk<
                 remarks: evaluationResult.remarks,
               }),
             );
+            finalIsCorrect = evaluationResult.isCorrect;
 
             // Log: 简答题评估完成
             await extra.ideMessenger.request("addCodeAwareLogEntry", {
@@ -3006,6 +3015,7 @@ export const processSaqSubmission = createAsyncThunk<
                   remarks: `无法评估答案（已重试${maxRetries}次），请稍后重试。`,
                 }),
               );
+              finalIsCorrect = false;
               break;
             } else {
               // 继续重试
@@ -3037,6 +3047,7 @@ export const processSaqSubmission = createAsyncThunk<
                 remarks: `评估失败（已重试${maxRetries}次）: ${lastError.message}`,
               }),
             );
+            finalIsCorrect = false;
             break;
           }
 
@@ -3054,6 +3065,14 @@ export const processSaqSubmission = createAsyncThunk<
           isLoading: false,
         }),
       );
+
+      return {
+        stepId,
+        knowledgeCardId,
+        testId,
+        isCorrect: finalIsCorrect,
+        correctness: finalIsCorrect ? 1 : 0,
+      };
     } catch (error) {
       console.error("❌ [CodeAware] processSaqSubmission failed:", error);
 

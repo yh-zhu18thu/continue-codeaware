@@ -160,6 +160,10 @@ export interface KnowledgeCardProps {
   cardId?: string;
   onClearHighlight?: () => void;
   onExpansionChange?: (cardId: string, isExpanded: boolean) => void; // Callback for expansion state change
+  onViewModeChange?: (
+    cardId: string,
+    viewMode: "read" | "self-test" | "answer",
+  ) => void;
 
   // Lazy loading props
   stepId?: string;
@@ -195,6 +199,7 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
   shouldCollapse = false, // External collapse signal
   cardId,
   onExpansionChange,
+  onViewModeChange,
   stepId,
   learningGoal = "",
   codeContext = "",
@@ -362,6 +367,9 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
         }
       }
       setIsTestMode(true);
+      if (cardId && onViewModeChange) {
+        onViewModeChange(cardId, "self-test");
+      }
 
       // Log user switching to test mode
       await logger.addLogEntry("user_switch_to_knowledge_card_test_mode", {
@@ -387,6 +395,9 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
     } else {
       // 如果当前在测试模式，切换回知识卡片模式
       setIsTestMode(false);
+      if (cardId && onViewModeChange) {
+        onViewModeChange(cardId, "read");
+      }
 
       // Log user switching to content mode
       await logger.addLogEntry("user_switch_to_knowledge_card_content_mode", {

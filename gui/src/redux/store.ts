@@ -84,6 +84,7 @@ const saveSubsetFilters = [
     "knowledgeToStepRelations",
     "knowledgeToCodeChunkRelations",
     "nodeMasteryScores",
+    "cognitiveTrace",
     "initialGeneration",
     // Note: shouldClearIdeHighlights and codeChunksToHighlightInIde are intentionally not persisted
     // as they are temporary IDE communication flags that should reset on reload

@@ -157,6 +157,16 @@ interface StepProps {
   ) => void; // Callback for question submission
   onRegisterRef?: (stepId: string, element: HTMLDivElement | null) => void; // Callback for registering step ref
   onStepExpansionChange?: (stepId: string, isExpanded: boolean) => void; // Callback for step expansion state change
+  onKnowledgeCardExpansionChange?: (
+    stepId: string,
+    cardId: string,
+    isExpanded: boolean,
+  ) => void;
+  onKnowledgeCardViewModeChange?: (
+    stepId: string,
+    cardId: string,
+    viewMode: "read" | "self-test" | "answer",
+  ) => void;
   disabled?: boolean; // Optional disabled state for code edit mode
 }
 
@@ -184,6 +194,8 @@ const Step: React.FC<StepProps> = ({
   onQuestionSubmit,
   onRegisterRef,
   onStepExpansionChange,
+  onKnowledgeCardExpansionChange,
+  onKnowledgeCardViewModeChange,
   disabled = false,
 }) => {
   const logger = useCodeAwareLogger();
@@ -550,6 +562,10 @@ const Step: React.FC<StepProps> = ({
       // When a knowledge card is collapsed, clear the currently expanded card if it's this one
       setCurrentlyExpandedCardId((prev) => (prev === cardId ? null : prev));
     }
+
+    if (stepId && onKnowledgeCardExpansionChange) {
+      onKnowledgeCardExpansionChange(stepId, cardId, isExpanded);
+    }
   };
 
   return (
@@ -625,6 +641,11 @@ const Step: React.FC<StepProps> = ({
                     shouldCollapse={shouldCollapseThisCard} // Pass collapse signal with auto-collapse logic
                     onDisable={onDisableKnowledgeCard}
                     onExpansionChange={handleKnowledgeCardExpansionChange} // Pass expansion change handler
+                    onViewModeChange={(cardId, viewMode) => {
+                      if (stepId && onKnowledgeCardViewModeChange) {
+                        onKnowledgeCardViewModeChange(stepId, cardId, viewMode);
+                      }
+                    }}
                   />
                 );
               })}

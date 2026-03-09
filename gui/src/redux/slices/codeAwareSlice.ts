@@ -21,6 +21,16 @@ import {
   StepToHighLevelMapping,
 } from "core";
 import { v4 as uuidv4 } from "uuid";
+import {
+  appendEventWithLimit,
+  createEmptyCognitiveTrace,
+  updateStepVisitStats,
+} from "../cognitive/eventBuffer";
+import {
+  CognitiveInteractionEvent,
+  CognitiveTraceState,
+  IntentSummary,
+} from "../cognitive/types";
 
 // Import RootState for proper typing
 import type { RootState } from "../store";
@@ -101,6 +111,7 @@ export type CodeAwareSessionState = {
     error?: string;
   };
   codeGenerationDebugLogs: string[];
+  cognitiveTrace: CognitiveTraceState;
 };
 
 const initialCodeAwareState: CodeAwareSessionState = {
@@ -144,6 +155,7 @@ const initialCodeAwareState: CodeAwareSessionState = {
     error: undefined,
   },
   codeGenerationDebugLogs: [],
+  cognitiveTrace: createEmptyCognitiveTrace(),
 };
 
 export const codeAwareSessionSlice = createSlice({
@@ -307,6 +319,7 @@ export const codeAwareSessionSlice = createSlice({
       state.knowledgeToStepRelations = [];
       state.knowledgeToCodeChunkRelations = [];
       state.nodeMasteryScores = [];
+      state.cognitiveTrace = createEmptyCognitiveTrace();
       state.initialGeneration = {
         status: "idle",
         currentPhase: "",
@@ -1159,6 +1172,7 @@ export const codeAwareSessionSlice = createSlice({
       state.knowledgeToStepRelations = [];
       state.knowledgeToCodeChunkRelations = [];
       state.nodeMasteryScores = [];
+      state.cognitiveTrace = createEmptyCognitiveTrace();
       state.initialGeneration = {
         status: "idle",
         currentPhase: "",
@@ -1338,6 +1352,44 @@ export const codeAwareSessionSlice = createSlice({
     clearCodeGenerationDebugLogs: (state) => {
       state.codeGenerationDebugLogs = [];
     },
+    recordCognitiveEvent: {
+      reducer: (state, action: PayloadAction<CognitiveInteractionEvent>) => {
+        const event = action.payload;
+
+        state.cognitiveTrace.events = appendEventWithLimit(
+          state.cognitiveTrace.events,
+          event,
+        );
+        state.cognitiveTrace.stepVisitStats = updateStepVisitStats(
+          state.cognitiveTrace.stepVisitStats,
+          event,
+        );
+      },
+      prepare: (
+        event: Omit<CognitiveInteractionEvent, "id" | "timestamp"> & {
+          id?: string;
+          timestamp?: number;
+        },
+      ) => ({
+        payload: {
+          ...event,
+          id:
+            event.id ||
+            `cog-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          timestamp: event.timestamp ?? Date.now(),
+        },
+      }),
+    },
+    setLatestIntentForStep: (
+      state,
+      action: PayloadAction<{ stepId: string; summary: IntentSummary }>,
+    ) => {
+      const { stepId, summary } = action.payload;
+      state.cognitiveTrace.latestIntentByStep[stepId] = summary;
+    },
+    clearCognitiveTrace: (state) => {
+      state.cognitiveTrace = createEmptyCognitiveTrace();
+    },
   },
   selectors: {
     //CATODO: write all the selectors to fetch the data
@@ -1404,6 +1456,9 @@ export const codeAwareSessionSlice = createSlice({
     },
     selectTitle: (state: CodeAwareSessionState) => {
       return state.title;
+    },
+    selectCognitiveTrace: (state: CodeAwareSessionState) => {
+      return state.cognitiveTrace;
     },
   },
 });
@@ -1496,6 +1551,9 @@ export const {
   resetCodeGenerationState,
   appendCodeGenerationDebugLog,
   clearCodeGenerationDebugLogs,
+  recordCognitiveEvent,
+  setLatestIntentForStep,
+  clearCognitiveTrace,
 } = codeAwareSessionSlice.actions;
 
 export const {
@@ -1508,6 +1566,7 @@ export const {
   selectTask,
   selectCanExecuteUntilStep,
   selectTitle,
+  selectCognitiveTrace,
 } = codeAwareSessionSlice.selectors;
 
 // Selector to get test information by testId

@@ -1,80 +1,62 @@
 {
   "schemaVersion": 1,
-  "sessionId": "b3cd9e67-e46a-4aae-ab2f-c6bbe11e9c59",
-  "generatedAt": "2026-03-10T05:53:45.354Z",
-  "nodeCount": 143,
+  "sessionId": "720a2f03-7aa1-4a09-9027-6f461df76e13",
+  "generatedAt": "2026-03-10T09:02:01.615Z",
+  "nodeCount": 135,
   "nodes": [
     {
       "id": "r-1",
-      "nodeType": "high-level-step",
-      "title": "提取图像像素能量特征",
+      "nodeType": "step",
+      "title": "[Framework] 评估图像内容重要性",
       "abstract": ""
     },
     {
       "id": "r-2",
-      "nodeType": "high-level-step",
-      "title": "识别最优纵向可移除缝隙",
+      "nodeType": "step",
+      "title": "[Framework] 确定可移除路径（Seam）",
       "abstract": ""
     },
     {
       "id": "r-3",
-      "nodeType": "high-level-step",
-      "title": "移除缝隙实现尺寸缩减",
+      "nodeType": "step",
+      "title": "[Framework] 移除路径缩小图像",
       "abstract": ""
     },
     {
       "id": "r-4",
-      "nodeType": "high-level-step",
-      "title": "重复缩减直到达到目标尺寸",
+      "nodeType": "step",
+      "title": "[Framework] 循环缩减实现目标尺寸",
       "abstract": ""
     },
     {
       "id": "s-1",
       "nodeType": "step",
       "title": "计算每个像素能量值",
-      "abstract": "实现图像内容分析，提取每个像素的重要性指标，为后续优先移除低能量区域提供依据。"
+      "abstract": "分析图像像素的重要性，生成能量图以识别信息密集与稀疏区域，保障核心内容不被无意删除。"
     },
     {
       "id": "s-2",
       "nodeType": "step",
-      "title": "生成全图能量矩阵",
-      "abstract": "构建完整能量分布视图，使动态规划可以高效遍历和比较所有可能缝隙方案。"
+      "title": "构建动态规划能量表",
+      "abstract": "利用能量值按动态规划方法，记录每个像素到边界最低能量路径的累计值，为后续路径选择提供高效检索。"
     },
     {
       "id": "s-3",
       "nodeType": "step",
-      "title": "用动态规划寻找最小能量缝隙",
-      "abstract": "利用动态规划算法高效识别一条像素能量之和最小、最不影响整体内容的连续路径（缝隙）。"
+      "title": "寻找最优无损缩减路径",
+      "abstract": "在能量表中回溯出一条累计能量最小的像素路径（Seam），明确哪些像素构成最适合移除的不连续线。"
     },
     {
       "id": "s-4",
       "nodeType": "step",
-      "title": "记录和展示最优缝隙路径",
-      "abstract": "为用户或后续处理明确展示将被移除的像素序列，实现路径可视化与逻辑确认。"
+      "title": "从图像中移除路径",
+      "abstract": "根据最优Seam路径，有序删除对应像素，实现图像局部缩减且最大程度保留主要信息。"
     },
     {
       "id": "s-5",
       "nodeType": "step",
-      "title": "移除缝隙后的像素重排",
-      "abstract": "对图像数据进行局部重组，去除一条缝隙并保持图像整体连贯，实现一次有效缩减。"
-    },
-    {
-      "id": "s-6",
-      "nodeType": "step",
-      "title": "更新图像尺寸与能量分布",
-      "abstract": "针对缩减后的图像重新计算尺寸与能量，为连续多轮缝隙移除提供数据基础。"
-    },
-    {
-      "id": "s-7",
-      "nodeType": "step",
-      "title": "自动循环缩小步骤直到达标",
-      "abstract": "根据用户需求自动迭代缝隙寻找与移除流程，直至达到设定的目标尺寸。"
-    },
-    {
-      "id": "s-8",
-      "nodeType": "step",
-      "title": "输出缩小后的图像结果",
-      "abstract": "将多轮处理后获得的内容敏感缩小图像保存或展示，完成图像无损缩减的全过程。"
+      "title": "重复路径查找与移除",
+      "abstract": "不断循环查找并移除新的最优路径，直到图像缩减到目标尺寸，实现自适应内容敏感缩小。"
     },
     {
       "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-0",
@@ -86,781 +68,751 @@
       "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-1",
       "nodeType": "code-chunk",
       "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:2-2",
-      "abstract": "from PIL import Image, ImageDraw"
+      "abstract": "from PIL import Image"
     },
     {
       "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-2",
       "nodeType": "code-chunk",
       "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:5-5",
-      "abstract": "def compute_energy(image):"
+      "abstract": "def compute_energy(img):"
     },
     {
       "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-3",
       "nodeType": "code-chunk",
       "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:6-6",
-      "abstract": "'''"
+      "abstract": "gray = np.asarray(img.convert('L'), dtype=np.float64)"
     },
     {
       "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-4",
       "nodeType": "code-chunk",
       "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:7-7",
-      "abstract": "计算每个像素能量值（步骤1）"
+      "abstract": "dy = np.abs(np.roll(gray, -1, axis=0) - np.roll(gray, 1, axis=0))"
     },
     {
       "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-5",
       "nodeType": "code-chunk",
       "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:8-8",
-      "abstract": "能量=周边像素灰度的梯度和"
+      "abstract": "dx = np.abs(np.roll(gray, -1, axis=1) - np.roll(gray, 1, axis=1))"
     },
     {
       "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-6",
       "nodeType": "code-chunk",
       "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:9-9",
-      "abstract": "'''"
+      "abstract": "energy = dx + dy"
     },
     {
       "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-7",
       "nodeType": "code-chunk",
       "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:10-10",
-      "abstract": "gray = np.asarray(image.convert(\"L\"), dtype=np.float32)"
+      "abstract": "return energy"
     },
     {
       "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-8",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:11-11",
-      "abstract": "h, w = gray.shape"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:13-13",
+      "abstract": "def compute_cumulative_energy(energy):"
     },
     {
       "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-9",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:12-12",
-      "abstract": "energy = np.zeros((h, w), dtype=np.float32)"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:14-14",
+      "abstract": "h, w = energy.shape"
     },
     {
       "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-10",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:13-13",
-      "abstract": "dx = np.zeros_like(gray)"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:15-15",
+      "abstract": "m = energy.copy()"
     },
     {
       "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-11",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:14-14",
-      "abstract": "dy = np.zeros_like(gray)"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:16-16",
+      "abstract": "backtrack = np.zeros_like(m, dtype=np.int32)"
     },
     {
       "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-12",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:15-15",
-      "abstract": "dx[:, 1:-1] = gray[:, :-2] - gray[:, 2:]"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:17-17",
+      "abstract": "for i in range(1, h):"
     },
     {
       "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-13",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:16-16",
-      "abstract": "dy[1:-1, :] = gray[:-2, :] - gray[2:, :]"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:18-18",
+      "abstract": "for j in range(w):"
     },
     {
       "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-14",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:17-17",
-      "abstract": "energy = np.abs(dx) + np.abs(dy)"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:19-19",
+      "abstract": "if j == 0:"
     },
     {
       "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-15",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:18-18",
-      "abstract": "energy[0, :] = energy[1, :]"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:20-20",
+      "abstract": "idx = np.argmin(m[i-1, j:j+2])"
     },
     {
       "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-16",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:19-19",
-      "abstract": "energy[-1, :] = energy[-2, :]"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:21-21",
+      "abstract": "backtrack[i, j] = idx + j"
     },
     {
       "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-17",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:20-20",
-      "abstract": "energy[:, 0] = energy[:, 1]"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:22-22",
+      "abstract": "min_energy = m[i-1, idx + j]"
     },
     {
       "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-18",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:21-21",
-      "abstract": "energy[:, -1] = energy[:, -2]"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:23-23",
+      "abstract": "else:"
     },
     {
       "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-19",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:22-22",
-      "abstract": "return energy"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:24-24",
+      "abstract": "idx = np.argmin(m[i-1, max(j-1,0):min(j+2,w)])"
     },
     {
       "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-20",
       "nodeType": "code-chunk",
       "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:25-25",
-      "abstract": "def compute_cumulative_energy(energy):"
+      "abstract": "backtrack[i, j] = idx + j - 1"
     },
     {
       "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-21",
       "nodeType": "code-chunk",
       "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:26-26",
-      "abstract": "'''"
+      "abstract": "min_energy = m[i-1, idx + j - 1]"
     },
     {
       "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-22",
       "nodeType": "code-chunk",
       "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:27-27",
-      "abstract": "生成全图能量矩阵（步骤2）"
+      "abstract": "m[i, j] += min_energy"
     },
     {
       "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-23",
       "nodeType": "code-chunk",
       "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:28-28",
-      "abstract": "通过动态规划找最小路径（步骤3）"
+      "abstract": "return m, backtrack"
     },
     {
       "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-24",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:29-29",
-      "abstract": "'''"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:31-31",
+      "abstract": "def find_seam(m, backtrack):"
     },
     {
       "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-25",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:30-30",
-      "abstract": "h, w = energy.shape"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:32-32",
+      "abstract": "h, w = m.shape"
     },
     {
       "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-26",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:31-31",
-      "abstract": "M = energy.copy()"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:33-33",
+      "abstract": "seam = []"
     },
     {
       "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-27",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:32-32",
-      "abstract": "backtrack = np.zeros_like(M, dtype=np.int32)"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:34-34",
+      "abstract": "j = np.argmin(m[-1])"
     },
     {
       "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-28",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:33-33",
-      "abstract": "for i in range(1, h):"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:35-35",
+      "abstract": "for i in reversed(range(h)):"
     },
     {
       "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-29",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:34-34",
-      "abstract": "for j in range(w):"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:36-36",
+      "abstract": "seam.append((i, j))"
     },
     {
       "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-30",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:35-35",
-      "abstract": "idx = j"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:37-37",
+      "abstract": "j = backtrack[i, j]"
     },
     {
       "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-31",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:36-36",
-      "abstract": "min_energy = M[i - 1, j]"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:38-38",
+      "abstract": "seam.reverse()"
     },
     {
       "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-32",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:37-37",
-      "abstract": "if j > 0 and M[i - 1, j - 1] < min_energy:"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:39-39",
+      "abstract": "return seam"
     },
     {
       "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-33",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:38-38",
-      "abstract": "min_energy = M[i - 1, j - 1]"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:42-42",
+      "abstract": "def remove_seam(img, seam):"
     },
     {
       "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-34",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:39-39",
-      "abstract": "idx = j - 1"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:43-43",
+      "abstract": "arr = np.array(img)"
     },
     {
       "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-35",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:40-40",
-      "abstract": "if j < w - 1 and M[i - 1, j + 1] < min_energy:"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:44-44",
+      "abstract": "mask = np.ones((arr.shape[0], arr.shape[1]), dtype=np.bool_)"
     },
     {
       "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-36",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:41-41",
-      "abstract": "min_energy = M[i - 1, j + 1]"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:45-45",
+      "abstract": "for i, j in seam:"
     },
     {
       "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-37",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:42-42",
-      "abstract": "idx = j + 1"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:46-46",
+      "abstract": "mask[i, j] = False"
     },
     {
       "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-38",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:43-43",
-      "abstract": "M[i, j] += min_energy"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:47-47",
+      "abstract": "if arr.ndim == 3:"
     },
     {
       "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-39",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:44-44",
-      "abstract": "backtrack[i, j] = idx"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:48-48",
+      "abstract": "arr_reduced = arr[mask].reshape((arr.shape[0], arr.shape[1]-1, arr.shape[2]))"
     },
     {
       "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-40",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:45-45",
-      "abstract": "return M, backtrack"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:49-49",
+      "abstract": "else:"
     },
     {
       "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-41",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:48-48",
-      "abstract": "def find_seam(M, backtrack):"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:50-50",
+      "abstract": "arr_reduced = arr[mask].reshape((arr.shape[0], arr.shape[1]-1))"
     },
     {
       "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-42",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:49-49",
-      "abstract": "'''"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:51-51",
+      "abstract": "return Image.fromarray(arr_reduced.astype(np.uint8))"
     },
     {
       "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-43",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:50-50",
-      "abstract": "用动态规划寻找最小能量缝隙，记录路径（步骤3,4）"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:54-54",
+      "abstract": "def seam_carve(img, num_remove):"
     },
     {
       "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-44",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:51-51",
-      "abstract": "'''"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:55-55",
+      "abstract": "for _ in range(num_remove):"
     },
     {
       "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-45",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:52-52",
-      "abstract": "h, w = M.shape"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:56-56",
+      "abstract": "energy = compute_energy(img)"
     },
     {
       "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-46",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:53-53",
-      "abstract": "seam = np.zeros(h, dtype=np.int32)"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:57-57",
+      "abstract": "m, backtrack = compute_cumulative_energy(energy)"
     },
     {
       "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-47",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:54-54",
-      "abstract": "seam[h - 1] = np.argmin(M[h - 1])"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:58-58",
+      "abstract": "seam = find_seam(m, backtrack)"
     },
     {
       "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-48",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:55-55",
-      "abstract": "for i in range(h - 2, -1, -1):"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:59-59",
+      "abstract": "img = remove_seam(img, seam)"
     },
     {
       "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-49",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:56-56",
-      "abstract": "seam[i] = backtrack[i + 1, seam[i + 1]]"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:60-60",
+      "abstract": "return img"
     },
     {
       "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-50",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:57-57",
-      "abstract": "return seam"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:63-63",
+      "abstract": "def main():"
     },
     {
       "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-51",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:60-60",
-      "abstract": "def show_seam(image, seam, color=(255, 0, 0)):"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:64-64",
+      "abstract": "import argparse"
     },
     {
       "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-52",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:61-61",
-      "abstract": "'''"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:65-65",
+      "abstract": "parser = argparse.ArgumentParser(description='Seam Carving Algorithm using Dynamic Programming')"
     },
     {
       "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-53",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:62-62",
-      "abstract": "展示最优缝隙路径（步骤4）"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:66-66",
+      "abstract": "parser.add_argument('input_image', help='Path to input image')"
     },
     {
       "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-54",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:63-63",
-      "abstract": "'''"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:67-67",
+      "abstract": "parser.add_argument('output_image', help='Path to save resized image')"
     },
     {
       "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-55",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:64-64",
-      "abstract": "imout = image.copy()"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:68-68",
+      "abstract": "parser.add_argument('--reduce_width', type=int, default=50, help='Number of vertical seams to remove')"
     },
     {
       "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-56",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:65-65",
-      "abstract": "draw = ImageDraw.Draw(imout)"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:69-69",
+      "abstract": "args = parser.parse_args()"
     },
     {
       "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-57",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:66-66",
-      "abstract": "for i, col in enumerate(seam):"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:71-71",
+      "abstract": "img = Image.open(args.input_image)"
     },
     {
       "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-58",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:67-67",
-      "abstract": "draw.point((col, i), fill=color)"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:72-72",
+      "abstract": "result = seam_carve(img, args.reduce_width)"
     },
     {
       "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-59",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:68-68",
-      "abstract": "return imout"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:73-73",
+      "abstract": "result.save(args.output_image)"
     },
     {
       "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-60",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:71-71",
-      "abstract": "def remove_seam(image, seam):"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:76-76",
+      "abstract": "if __name__ == \"__main__\":"
     },
     {
       "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-61",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:72-72",
-      "abstract": "'''"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-62",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:73-73",
-      "abstract": "移除缝隙后的像素重排（步骤5）"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-63",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:74-74",
-      "abstract": "'''"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-64",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:75-75",
-      "abstract": "arr = np.asarray(image)"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-65",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:76-76",
-      "abstract": "h, w = arr.shape[0], arr.shape[1]"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-66",
-      "nodeType": "code-chunk",
       "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:77-77",
-      "abstract": "mask = np.ones((h, w), dtype=bool)"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-67",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:78-78",
-      "abstract": "mask[np.arange(h), seam] = False"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-68",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:79-79",
-      "abstract": "arr_reduced = arr[mask].reshape((h, w-1, arr.shape[2])) if arr.ndim==3 else arr[mask].reshape((h, w-1))"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-69",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:80-80",
-      "abstract": "if arr.ndim == 3:"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-70",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:81-81",
-      "abstract": "out = Image.fromarray(arr_reduced.astype(np.uint8))"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-71",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:82-82",
-      "abstract": "else:"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-72",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:83-83",
-      "abstract": "out = Image.fromarray(arr_reduced.astype(np.uint8), 'L')"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-73",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:84-84",
-      "abstract": "return out"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-74",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:87-87",
-      "abstract": "def seam_carve(image, target_width, visualize_seam=False):"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-75",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:88-88",
-      "abstract": "'''"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-76",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:89-89",
-      "abstract": "自动循环缩小步骤直到达标(步骤6,7)，并输出最终图片（步骤8）"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-77",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:90-90",
-      "abstract": "'''"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-78",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:91-91",
-      "abstract": "img = image.copy()"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-79",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:92-92",
-      "abstract": "while img.width > target_width:"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-80",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:93-93",
-      "abstract": "energy = compute_energy(img)"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-81",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:94-94",
-      "abstract": "M, backtrack = compute_cumulative_energy(energy)"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-82",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:95-95",
-      "abstract": "seam = find_seam(M, backtrack)"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-83",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:96-96",
-      "abstract": "if visualize_seam:"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-84",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:97-97",
-      "abstract": "img_with_seam = show_seam(img, seam)"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-85",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:98-98",
-      "abstract": "# 展示每轮路径"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-86",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:99-99",
-      "abstract": "img_with_seam.show()"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-87",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:100-100",
-      "abstract": "img = remove_seam(img, seam)"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-88",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:101-101",
-      "abstract": "return img"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-89",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:104-104",
-      "abstract": "def main():"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-90",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:105-105",
-      "abstract": "import argparse"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-91",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:106-106",
-      "abstract": "parser = argparse.ArgumentParser(description='动态规划 Seam Carving 缩小图像')"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-92",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:107-107",
-      "abstract": "parser.add_argument('input', help='输入图片路径')"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-93",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:108-108",
-      "abstract": "parser.add_argument('output', help='输出图片路径')"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-94",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:109-109",
-      "abstract": "parser.add_argument('--width', type=int, help='目标宽度', required=True)"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-95",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:110-110",
-      "abstract": "parser.add_argument('--show_seam', action='store_true', help='是否展示缝隙路径')"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-96",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:111-111",
-      "abstract": "args = parser.parse_args()"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-97",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:113-113",
-      "abstract": "image = Image.open(args.input).convert('RGB')"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-98",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:114-114",
-      "abstract": "out = seam_carve(image, args.width, visualize_seam=args.show_seam)"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-99",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:115-115",
-      "abstract": "out.save(args.output)"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-100",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:116-116",
-      "abstract": "print(f\"图片已保存至 {args.output}\")"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-101",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:118-118",
-      "abstract": "if __name__ == '__main__':"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-102",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:119-119",
       "abstract": "main()"
     },
     {
       "id": "k-s-1-1",
       "nodeType": "knowledge-point",
-      "title": "NumPy 数组切片与广播",
-      "abstract": "NumPy 的数组切片允许用户高效地访问和操作多维数组的部分内容，广播机制支持不同形状数组之间的计算。在本步骤中，对灰度图像和能量矩阵进行切片和赋值，以及通过广播实现差分和边界处理，这些都是理解代码的基础。"
+      "title": "NumPy 数组操作",
+      "abstract": "NumPy 是 Python 常用的科学计算库，提供高效的多维数组操作。理解 np.asarray、np.roll 以及数组索引与切片对于实现像素级图像运算至关重要。本步骤中多处利用数组操作进行能量计算。"
     },
     {
       "id": "k-s-1-2",
       "nodeType": "knowledge-point",
       "title": "图像灰度化原理",
-      "abstract": "图像灰度化是将彩色图像转换为单通道灰度图，便于后续的像素级处理。理解图像灰度化有助于知道转换为“L”模式后，数组数据如何反映像素亮度变化，从而进行能量值计算。"
+      "abstract": "将彩色图像转换为灰度图像只保留亮度信息，是许多图像算法的前置步骤。灰度化简化数据处理，并突出结构信息。在本代码中，灰度化用于只计算像素明度，从而便于能量求解。"
     },
     {
       "id": "k-s-1-3",
       "nodeType": "knowledge-point",
-      "title": "梯度与像素能量计算",
-      "abstract": "像素能量常通过梯度（像素值的差分）来衡量，反映该像素对图像内容的重要性。该步骤通过水平方向(dx)和垂直方向(dy)的绝对差，将其求和获得像素能量，理解该算法原理对理解像素重要性分析非常关键。"
+      "title": "像素能量计算算法",
+      "abstract": "像素能量衡量图像局部变换或边缘强度，是内容识别和无损图像处理的关键指标。这里通过像素邻域差分（dx, dy）求和得到能量，识别信息密集区域。该算法常用于图像分割、去除等场景。"
     },
     {
       "id": "k-s-1-4",
       "nodeType": "knowledge-point",
-      "title": "边界条件处理",
-      "abstract": "处理二维数组时，边缘像素无法直接计算梯度，因此通常通过复制相邻内层像素的能量值来填补。理解边界处理能够保证能量矩阵无异常值，维护数值稳定性和图像一致性。"
+      "title": "Seam Carving 概念",
+      "abstract": "Seam Carving 是一种基于能量图的图像缩放与内容保护算法，通过能量值决定哪些像素或区域可优先移除。理解能量图的用途及其在内容感知图像处理中的作用，对本步骤背后的核心思想有帮助。"
     },
     {
       "id": "k-s-2-1",
       "nodeType": "knowledge-point",
-      "title": "NumPy 数组操作基础",
-      "abstract": "NumPy 是 Python 进行数值计算的核心库，提供多维数组结构和高效的数组运算。理解 energy.shape 的用法以及数组的拷贝（copy）是处理和生成能量矩阵的基础。不会 NumPy，无法理解代码逻辑和能量矩阵操作。"
+      "title": "动态规划原理",
+      "abstract": "动态规划是一种通过将复杂问题分解为子问题，并保存子问题结果以避免重复计算的算法思想。在能量表累加和最优路径选择中，采用动态规划可显著提高效率，是理解累积能量表计算逻辑的前提。"
     },
     {
       "id": "k-s-2-2",
       "nodeType": "knowledge-point",
-      "title": "动态规划原理",
-      "abstract": "动态规划是一种通过将复杂问题分解为子问题并利用子问题结果避免重复计算的算法思想。能量矩阵用于记录全局最优解的中间能量值，以支持后续无缝路径搜索。不了解动态规划，难以理解为何要先生成全图能量矩阵。"
+      "title": "NumPy 多维数组操作",
+      "abstract": "NumPy 是 Python 科学计算中常用的库，支持高效的多维数组操作。代码中诸如 array.copy()、array.shape、切片及广播等用法，是实现高效像素矩阵处理基础。"
     },
     {
       "id": "k-s-2-3",
       "nodeType": "knowledge-point",
-      "title": "图像能量分布概念",
-      "abstract": "在图像处理任务（如内容感知缩放）中，能量分布用于量化图像中各像素的重要性。生成能量矩阵是将能量视图结构化，便于后续算法处理。这一领域知识帮助理解为何需要能量矩阵以及如何用于缝隙查找。"
+      "title": "最小路径和问题",
+      "abstract": "最小路径和问题指在一个由权重组成的网格中，寻找从起始点到终点、具有最低代价（能量）的路径。此概念是理解能量表中每步累积如何选择最低能量路径的理论依据。"
+    },
+    {
+      "id": "k-s-2-4",
+      "nodeType": "knowledge-point",
+      "title": "图像边界和像素索引处理",
+      "abstract": "图像处理常涉及边界条件判断和像素位置索引，如如何避免访问越界、如何正确选择有效邻接像素。准确理解这些问题有助于掌握实际编程细节和避免索引错误。"
     },
     {
       "id": "k-s-3-1",
       "nodeType": "knowledge-point",
-      "title": "动态规划算法原理",
-      "abstract": "动态规划是一种将复杂问题分解为子问题，通过记录已解决子问题的结果以避免重复计算的算法思想。理解该算法对于分析如何高效寻找最小能量路径至关重要，能够帮助解析该步骤矩阵状态的递推更新逻辑。"
-    },
-    {
-      "id": "k-s-3-2",
-      "nodeType": "knowledge-point",
-      "title": "图像能量函数概念",
-      "abstract": "在无损内容调整中，能量函数用于衡量图像中像素的重要性。理解像素能量的概念有助于明白什么是“最小能量缝隙”以及为何选择能量之和最小的像素路径会最小化对原图内容的影响。"
+      "title": "动态规划回溯法",
+      "abstract": "动态规划回溯法是一种利用记录先前决策（如 backtrack 数组）来还原最优解路径的算法技巧。理解此方法能帮助你明白如何通过能量表回溯出累计能量最小的像素路径，实现 seam carving 的像素移除。"
     },
     {
       "id": "k-s-3-3",
       "nodeType": "knowledge-point",
-      "title": "NumPy 多维数组操作",
-      "abstract": "NumPy 提供高效的多维数组（如矩阵）运算。该实现涉及对二维数组的索引、赋值和最值查找（如 np.argmin），理解这些操作对读懂算法存储和回溯路径至关重要。"
-    },
-    {
-      "id": "k-s-3-4",
-      "nodeType": "knowledge-point",
-      "title": "图像无损缩放（Seam Carving）",
-      "abstract": "Seam Carving 是一种内容感知的图像缩放方法，通过移除对内容影响最小的像素路径，实现无损压缩。掌握这种方法有助于理解本步骤背景和应用意义。"
+      "title": "图像能量表与 Seam Carving",
+      "abstract": "能量表在图像处理中用于表示每个像素的 '重要性'，seam carving 算法依赖于能量表寻找最优像素路径，实现无损缩减。了解能量表和 seam carving 概念有助于理解为何选择某条路径作为最适合移除的像素线。"
     },
     {
       "id": "k-s-4-1",
       "nodeType": "knowledge-point",
-      "title": "Pillow 图像处理库",
-      "abstract": "Pillow（PIL）是 Python 常用的图像处理库，提供了加载、保存、编辑和绘制各种格式图像的功能。理解如何用 Pillow 打开图像、复制图像、使用 ImageDraw 绘制元素（如点或线）是图片可视化操作的前提。"
+      "title": "NumPy数组操作",
+      "abstract": "NumPy 是 Python 的数值计算库，支持高效的多维数组操作。本步骤中，图像被转换为 NumPy 数组以实现像素级别处理，包括掩码筛选和 reshape。理解 NumPy 的基本用法和数组操作对于实现图像处理非常重要。"
     },
     {
       "id": "k-s-4-2",
       "nodeType": "knowledge-point",
-      "title": "图像像素坐标系",
-      "abstract": "图像由像素矩阵组成，坐标系通常以左上角为原点，横轴为列（x），纵轴为行（y）。理解如何用 (x, y) 表示像素点，并将路径上的像素序列正确映射到坐标，对于图像处理与路径可视化至关重要。"
+      "title": "布尔掩码筛选",
+      "abstract": "布尔掩码是一种通过 True/False 值筛选数组元素的方法。在本代码中，掩码数组用于标记需要保留或删除的像素，将 seam 路径上的元素设为 False，实现定向删除操作。掌握布尔掩码对理解图像内像素筛选至关重要。"
     },
     {
       "id": "k-s-4-3",
       "nodeType": "knowledge-point",
-      "title": "缝隙（Seam）路径数据结构",
-      "abstract": "在无损内容调整（如 Seam Carving）中，缝隙路径通常用一组按行列索引排列的像素点表示。理解 seam 作为标记像素位置的列表，便于后续对该路径上像素的可视化标记与逻辑处理。"
+      "title": "图像 seam carving原理",
+      "abstract": "Seam carving 是一种内容感知的图像缩放算法，根据能量图和最优路径来删除或插入像素。理解 seam carving 的理念及其在保留图像主要信息的同时进行局部缩减的应用，有助于把握本步骤的核心目标和原理。"
     },
     {
       "id": "k-s-4-4",
       "nodeType": "knowledge-point",
-      "title": "Python 列表的枚举与解包",
-      "abstract": "使用 enumerate() 可以同时获取列表元素及其索引。在图像处理代码中，将 seam 路径的每一项对应到特定行，需掌握 Python 列表的索引遍历和元素解包用法，以便正确标注路径。"
+      "title": "PIL图像转换与操作",
+      "abstract": "Python Imaging Library（PIL）是用于图像处理的库，支持与 NumPy 集成，转换和操作图像数据。代码最后通过 Image.fromarray 方法将处理后的数组转换回图像对象。理解 PIL 的基本用法对于图像输入输出和类型转换是必需的。"
     },
     {
       "id": "k-s-5-1",
       "nodeType": "knowledge-point",
-      "title": "NumPy 布尔掩码索引",
-      "abstract": "布尔掩码索引是 NumPy 中一种强大的数组操作方式。通过一个与原数组同形状的布尔数组，可以选出需要保留或移除的元素。在本步骤中，使用布尔掩码从图像数组中移除指定像素行，实现无缝重排。"
+      "title": "动态规划思想",
+      "abstract": "动态规划是一种解决优化问题的算法方法，通过将复杂问题分解为子问题并存储中间结果来提高效率。在该步骤中，计算累积能量和回溯路径通常需要使用动态规划，以便高效查找最优路径（seam）。"
     },
     {
       "id": "k-s-5-2",
       "nodeType": "knowledge-point",
-      "title": "多维数组形状变换",
-      "abstract": "理解如何使用 NumPy 的 reshape 方法对数组形状进行调整。例如，将去除部分元素后一维的数组重新变换为期望的多维布局，这对于处理图像数据（如高宽通道顺序）尤为重要。"
+      "title": "图像能量函数",
+      "abstract": "能量函数用于衡量图像每个像素的重要性。内容感知缩放算法通过计算每个像素的能量值，指导哪些像素更适合被移除。理解能量函数的作用和计算方式是实现 seam carving 的基础。"
     },
     {
       "id": "k-s-5-3",
       "nodeType": "knowledge-point",
-      "title": "数字图像的数据结构",
-      "abstract": "数字图像常以多维数组（例如高×宽×通道）存储，不同通道数代表灰度图或彩色图。理解这种数据结构对图像的处理（如像素重排和尺寸变化）是实现有效操作的基础。"
+      "title": "Seam Carving 算法",
+      "abstract": "Seam Carving 是一种内容感知图像缩放技术，它通过反复移除低能量的路径（seam）来改变图像尺寸，同时尽量保留重要内容。该步骤实现了该算法的核心流程，因此需要对此算法的原理和流程有深入理解。"
     },
     {
       "id": "k-s-5-4",
       "nodeType": "knowledge-point",
-      "title": "Image.fromarray 用法",
-      "abstract": "Image.fromarray 是 Pillow 库将 NumPy 数组转换为图像对象的常用方法。选择合适的模式（如灰度'L'或默认RGB）保证结果图像显示正常。需要理解不同数组类型与图像模式的对应关系。"
+      "title": "多维数组操作",
+      "abstract": "图像通常以多维数组（如 NumPy 数组）存储。理解如何对二维或三维数组进行查找、索引、删除列或行，是实现图像 seam 移除的必要条件。"
     },
     {
-      "id": "k-s-6-1",
-      "nodeType": "knowledge-point",
-      "title": "Seam Carving 算法原理",
-      "abstract": "Seam Carving 是一种用于内容感知图像缩放的算法，能保留重要内容的同时减少图像尺寸。理解其通过能量函数确定图像中可移除缝隙（seam），连续多轮找到最低能量路径并逐步缩减尺寸，对理解和实现代码有帮助。"
+      "id": "sit-s-1-file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-2",
+      "nodeType": "situation",
+      "title": "Situation s-1 -> file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-2",
+      "abstract": "Bridge between framework step intent and concrete code context."
     },
     {
-      "id": "k-s-6-2",
-      "nodeType": "knowledge-point",
-      "title": "图像能量函数",
-      "abstract": "能量函数用于衡量图像每个像素的重要性，高能量值区域通常包含较多细节或边缘。了解常用的能量计算方法（如梯度、中值滤波）及其物理意义，有助于正确计算能量图，从而指导 seam carving 的缝隙选择。"
+      "id": "sit-s-1-file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-3",
+      "nodeType": "situation",
+      "title": "Situation s-1 -> file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-3",
+      "abstract": "Bridge between framework step intent and concrete code context."
     },
     {
-      "id": "k-s-6-3",
-      "nodeType": "knowledge-point",
-      "title": "动态规划在图像处理中的应用",
-      "abstract": "动态规划常用于图像处理中的最短路径等问题，如计算缝隙总能量最小的路径。在 seam carving 中，从能量图得到累积能量图（M）并回溯获得最优 seam 需要掌握动态规划思想及其实现方式。"
+      "id": "sit-s-1-file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-4",
+      "nodeType": "situation",
+      "title": "Situation s-1 -> file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-4",
+      "abstract": "Bridge between framework step intent and concrete code context."
     },
     {
-      "id": "k-s-6-4",
-      "nodeType": "knowledge-point",
-      "title": "Pillow 图像库基础",
-      "abstract": "Pillow（PIL）是 Python 常用的图像处理库，支持图像的复制、尺寸获取、显示与像素操作。理解如何使用 Pillow 操作、显示和更新图像对象，是运行和修改所给代码的基础。"
+      "id": "sit-s-1-file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-5",
+      "nodeType": "situation",
+      "title": "Situation s-1 -> file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-5",
+      "abstract": "Bridge between framework step intent and concrete code context."
     },
     {
-      "id": "k-s-7-2",
-      "nodeType": "knowledge-point",
-      "title": "动态规划基本思想",
-      "abstract": "动态规划是一种用于解决最优化问题的算法设计方法，通过记录子问题的解避免重复计算。Seam Carving 中寻找最小能量路径（seam）时需要动态规划思想，理解其原理有助于分析和实现相关代码。"
+      "id": "sit-s-1-file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-6",
+      "nodeType": "situation",
+      "title": "Situation s-1 -> file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-6",
+      "abstract": "Bridge between framework step intent and concrete code context."
     },
     {
-      "id": "k-s-7-4",
-      "nodeType": "knowledge-point",
-      "title": "Python while 循环与条件判断",
-      "abstract": "while 循环用于根据条件反复执行代码块，是实现自动迭代直至满足目标的常见语法结构。本步骤依赖循环根据图像宽度自动缩小，理解 while 循环机制是理解整体流程的基础。"
+      "id": "sit-s-1-file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-7",
+      "nodeType": "situation",
+      "title": "Situation s-1 -> file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-7",
+      "abstract": "Bridge between framework step intent and concrete code context."
     },
     {
-      "id": "k-s-8-1",
-      "nodeType": "knowledge-point",
-      "title": "Pillow 图像保存",
-      "abstract": "Pillow 是 Python 中常用的图像处理库，提供了多种图像操作方法。理解如何使用 Pillow 的 save 方法把处理结果保存为文件，是将处理后的图像永久存储的重要基础。"
+      "id": "sit-s-2-file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-8",
+      "nodeType": "situation",
+      "title": "Situation s-2 -> file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-8",
+      "abstract": "Bridge between framework step intent and concrete code context."
     },
     {
-      "id": "k-s-8-3",
-      "nodeType": "knowledge-point",
-      "title": "命令行参数解析",
-      "abstract": "在 Python 等语言中，常通过 argparse 等模块读取命令行参数，如结果路径或显示方式参数。理解参数解析有助于明白如何灵活控制输出文件名、图像大小等。"
+      "id": "sit-s-2-file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-9",
+      "nodeType": "situation",
+      "title": "Situation s-2 -> file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-9",
+      "abstract": "Bridge between framework step intent and concrete code context."
     },
     {
-      "id": "k-s-8-4",
-      "nodeType": "knowledge-point",
-      "title": "高质量图像处理流程",
-      "abstract": "高质量图像处理需要注意尽量减少图像损失，比如保存时选择合适的格式、参数合理传递等。理解整个流程有助于保障处理后图像的质量和内容。"
+      "id": "sit-s-2-file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-10",
+      "nodeType": "situation",
+      "title": "Situation s-2 -> file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-10",
+      "abstract": "Bridge between framework step intent and concrete code context."
+    },
+    {
+      "id": "sit-s-2-file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-11",
+      "nodeType": "situation",
+      "title": "Situation s-2 -> file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-11",
+      "abstract": "Bridge between framework step intent and concrete code context."
+    },
+    {
+      "id": "sit-s-2-file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-12",
+      "nodeType": "situation",
+      "title": "Situation s-2 -> file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-12",
+      "abstract": "Bridge between framework step intent and concrete code context."
+    },
+    {
+      "id": "sit-s-2-file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-13",
+      "nodeType": "situation",
+      "title": "Situation s-2 -> file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-13",
+      "abstract": "Bridge between framework step intent and concrete code context."
+    },
+    {
+      "id": "sit-s-2-file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-14",
+      "nodeType": "situation",
+      "title": "Situation s-2 -> file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-14",
+      "abstract": "Bridge between framework step intent and concrete code context."
+    },
+    {
+      "id": "sit-s-2-file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-15",
+      "nodeType": "situation",
+      "title": "Situation s-2 -> file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-15",
+      "abstract": "Bridge between framework step intent and concrete code context."
+    },
+    {
+      "id": "sit-s-2-file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-16",
+      "nodeType": "situation",
+      "title": "Situation s-2 -> file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-16",
+      "abstract": "Bridge between framework step intent and concrete code context."
+    },
+    {
+      "id": "sit-s-2-file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-17",
+      "nodeType": "situation",
+      "title": "Situation s-2 -> file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-17",
+      "abstract": "Bridge between framework step intent and concrete code context."
+    },
+    {
+      "id": "sit-s-2-file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-18",
+      "nodeType": "situation",
+      "title": "Situation s-2 -> file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-18",
+      "abstract": "Bridge between framework step intent and concrete code context."
+    },
+    {
+      "id": "sit-s-2-file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-19",
+      "nodeType": "situation",
+      "title": "Situation s-2 -> file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-19",
+      "abstract": "Bridge between framework step intent and concrete code context."
+    },
+    {
+      "id": "sit-s-2-file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-20",
+      "nodeType": "situation",
+      "title": "Situation s-2 -> file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-20",
+      "abstract": "Bridge between framework step intent and concrete code context."
+    },
+    {
+      "id": "sit-s-2-file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-21",
+      "nodeType": "situation",
+      "title": "Situation s-2 -> file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-21",
+      "abstract": "Bridge between framework step intent and concrete code context."
+    },
+    {
+      "id": "sit-s-2-file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-22",
+      "nodeType": "situation",
+      "title": "Situation s-2 -> file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-22",
+      "abstract": "Bridge between framework step intent and concrete code context."
+    },
+    {
+      "id": "sit-s-2-file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-23",
+      "nodeType": "situation",
+      "title": "Situation s-2 -> file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-23",
+      "abstract": "Bridge between framework step intent and concrete code context."
+    },
+    {
+      "id": "sit-s-3-file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-24",
+      "nodeType": "situation",
+      "title": "Situation s-3 -> file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-24",
+      "abstract": "Bridge between framework step intent and concrete code context."
+    },
+    {
+      "id": "sit-s-3-file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-25",
+      "nodeType": "situation",
+      "title": "Situation s-3 -> file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-25",
+      "abstract": "Bridge between framework step intent and concrete code context."
+    },
+    {
+      "id": "sit-s-3-file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-26",
+      "nodeType": "situation",
+      "title": "Situation s-3 -> file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-26",
+      "abstract": "Bridge between framework step intent and concrete code context."
+    },
+    {
+      "id": "sit-s-3-file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-27",
+      "nodeType": "situation",
+      "title": "Situation s-3 -> file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-27",
+      "abstract": "Bridge between framework step intent and concrete code context."
+    },
+    {
+      "id": "sit-s-3-file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-28",
+      "nodeType": "situation",
+      "title": "Situation s-3 -> file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-28",
+      "abstract": "Bridge between framework step intent and concrete code context."
+    },
+    {
+      "id": "sit-s-3-file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-29",
+      "nodeType": "situation",
+      "title": "Situation s-3 -> file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-29",
+      "abstract": "Bridge between framework step intent and concrete code context."
+    },
+    {
+      "id": "sit-s-3-file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-30",
+      "nodeType": "situation",
+      "title": "Situation s-3 -> file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-30",
+      "abstract": "Bridge between framework step intent and concrete code context."
+    },
+    {
+      "id": "sit-s-3-file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-31",
+      "nodeType": "situation",
+      "title": "Situation s-3 -> file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-31",
+      "abstract": "Bridge between framework step intent and concrete code context."
+    },
+    {
+      "id": "sit-s-3-file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-32",
+      "nodeType": "situation",
+      "title": "Situation s-3 -> file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-32",
+      "abstract": "Bridge between framework step intent and concrete code context."
+    },
+    {
+      "id": "sit-s-4-file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-34",
+      "nodeType": "situation",
+      "title": "Situation s-4 -> file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-34",
+      "abstract": "Bridge between framework step intent and concrete code context."
+    },
+    {
+      "id": "sit-s-4-file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-35",
+      "nodeType": "situation",
+      "title": "Situation s-4 -> file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-35",
+      "abstract": "Bridge between framework step intent and concrete code context."
+    },
+    {
+      "id": "sit-s-4-file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-36",
+      "nodeType": "situation",
+      "title": "Situation s-4 -> file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-36",
+      "abstract": "Bridge between framework step intent and concrete code context."
+    },
+    {
+      "id": "sit-s-4-file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-37",
+      "nodeType": "situation",
+      "title": "Situation s-4 -> file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-37",
+      "abstract": "Bridge between framework step intent and concrete code context."
+    },
+    {
+      "id": "sit-s-4-file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-38",
+      "nodeType": "situation",
+      "title": "Situation s-4 -> file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-38",
+      "abstract": "Bridge between framework step intent and concrete code context."
+    },
+    {
+      "id": "sit-s-4-file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-39",
+      "nodeType": "situation",
+      "title": "Situation s-4 -> file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-39",
+      "abstract": "Bridge between framework step intent and concrete code context."
+    },
+    {
+      "id": "sit-s-4-file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-40",
+      "nodeType": "situation",
+      "title": "Situation s-4 -> file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-40",
+      "abstract": "Bridge between framework step intent and concrete code context."
+    },
+    {
+      "id": "sit-s-4-file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-41",
+      "nodeType": "situation",
+      "title": "Situation s-4 -> file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-41",
+      "abstract": "Bridge between framework step intent and concrete code context."
+    },
+    {
+      "id": "sit-s-4-file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-42",
+      "nodeType": "situation",
+      "title": "Situation s-4 -> file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-42",
+      "abstract": "Bridge between framework step intent and concrete code context."
+    },
+    {
+      "id": "sit-s-5-file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-44",
+      "nodeType": "situation",
+      "title": "Situation s-5 -> file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-44",
+      "abstract": "Bridge between framework step intent and concrete code context."
+    },
+    {
+      "id": "sit-s-5-file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-45",
+      "nodeType": "situation",
+      "title": "Situation s-5 -> file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-45",
+      "abstract": "Bridge between framework step intent and concrete code context."
+    },
+    {
+      "id": "sit-s-5-file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-46",
+      "nodeType": "situation",
+      "title": "Situation s-5 -> file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-46",
+      "abstract": "Bridge between framework step intent and concrete code context."
+    },
+    {
+      "id": "sit-s-5-file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-47",
+      "nodeType": "situation",
+      "title": "Situation s-5 -> file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-47",
+      "abstract": "Bridge between framework step intent and concrete code context."
+    },
+    {
+      "id": "sit-s-5-file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-48",
+      "nodeType": "situation",
+      "title": "Situation s-5 -> file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-48",
+      "abstract": "Bridge between framework step intent and concrete code context."
+    },
+    {
+      "id": "sit-s-5-file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-49",
+      "nodeType": "situation",
+      "title": "Situation s-5 -> file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-49",
+      "abstract": "Bridge between framework step intent and concrete code context."
     }
   ]
 }

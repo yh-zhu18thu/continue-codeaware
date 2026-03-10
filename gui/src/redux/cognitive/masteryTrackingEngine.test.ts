@@ -73,7 +73,7 @@ describe("applyKnowledgeCardInteraction", () => {
     const edges: CodeAwareCognitiveEdge[] = [
       {
         id: "e1",
-        type: "knowledge-to-step-forward",
+        type: "dependency-forward",
         fromNodeId: "k-1",
         fromNodeType: "knowledge-point",
         toNodeId: "s-1",
@@ -83,7 +83,7 @@ describe("applyKnowledgeCardInteraction", () => {
       },
       {
         id: "e2",
-        type: "knowledge-to-step-reverse",
+        type: "dependency-reverse",
         fromNodeId: "s-1",
         fromNodeType: "step",
         toNodeId: "k-1",
@@ -139,7 +139,7 @@ describe("applyKnowledgeCardInteraction", () => {
     const edges: CodeAwareCognitiveEdge[] = [
       {
         id: "e1",
-        type: "knowledge-to-step-forward",
+        type: "dependency-forward",
         fromNodeId: "k-1",
         fromNodeType: "knowledge-point",
         toNodeId: "s-1",
@@ -149,7 +149,7 @@ describe("applyKnowledgeCardInteraction", () => {
       },
       {
         id: "e2",
-        type: "knowledge-to-step-forward",
+        type: "dependency-forward",
         fromNodeId: "k-2",
         fromNodeType: "knowledge-point",
         toNodeId: "s-1",

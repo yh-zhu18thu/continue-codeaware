@@ -1,119 +1,77 @@
 import numpy as np
-from PIL import Image, ImageDraw
+from PIL import Image
 
 
-def compute_energy(image):
-    '''
-    计算每个像素能量值（步骤1）
-    能量=周边像素灰度的梯度和
-    '''
-    gray = np.asarray(image.convert("L"), dtype=np.float32)
-    h, w = gray.shape
-    energy = np.zeros((h, w), dtype=np.float32)
-    dx = np.zeros_like(gray)
-    dy = np.zeros_like(gray)
-    dx[:, 1:-1] = gray[:, :-2] - gray[:, 2:]
-    dy[1:-1, :] = gray[:-2, :] - gray[2:, :]
-    energy = np.abs(dx) + np.abs(dy)
-    energy[0, :] = energy[1, :]
-    energy[-1, :] = energy[-2, :]
-    energy[:, 0] = energy[:, 1]
-    energy[:, -1] = energy[:, -2]
+def compute_energy(img):
+    gray = np.asarray(img.convert('L'), dtype=np.float64)
+    dy = np.abs(np.roll(gray, -1, axis=0) - np.roll(gray, 1, axis=0))
+    dx = np.abs(np.roll(gray, -1, axis=1) - np.roll(gray, 1, axis=1))
+    energy = dx + dy
     return energy
 
 
 def compute_cumulative_energy(energy):
-    '''
-    生成全图能量矩阵（步骤2）
-    通过动态规划找最小路径（步骤3）
-    '''
     h, w = energy.shape
-    M = energy.copy()
-    backtrack = np.zeros_like(M, dtype=np.int32)
+    m = energy.copy()
+    backtrack = np.zeros_like(m, dtype=np.int32)
     for i in range(1, h):
         for j in range(w):
-            idx = j
-            min_energy = M[i - 1, j]
-            if j > 0 and M[i - 1, j - 1] < min_energy:
-                min_energy = M[i - 1, j - 1]
-                idx = j - 1
-            if j < w - 1 and M[i - 1, j + 1] < min_energy:
-                min_energy = M[i - 1, j + 1]
-                idx = j + 1
-            M[i, j] += min_energy
-            backtrack[i, j] = idx
-    return M, backtrack
+            if j == 0:
+                idx = np.argmin(m[i-1, j:j+2])
+                backtrack[i, j] = idx + j
+                min_energy = m[i-1, idx + j]
+            else:
+                idx = np.argmin(m[i-1, max(j-1,0):min(j+2,w)])
+                backtrack[i, j] = idx + j - 1
+                min_energy = m[i-1, idx + j - 1]
+            m[i, j] += min_energy
+    return m, backtrack
 
 
-def find_seam(M, backtrack):
-    '''
-    用动态规划寻找最小能量缝隙，记录路径（步骤3,4）
-    '''
-    h, w = M.shape
-    seam = np.zeros(h, dtype=np.int32)
-    seam[h - 1] = np.argmin(M[h - 1])
-    for i in range(h - 2, -1, -1):
-        seam[i] = backtrack[i + 1, seam[i + 1]]
+def find_seam(m, backtrack):
+    h, w = m.shape
+    seam = []
+    j = np.argmin(m[-1])
+    for i in reversed(range(h)):
+        seam.append((i, j))
+        j = backtrack[i, j]
+    seam.reverse()
     return seam
 
 
-def show_seam(image, seam, color=(255, 0, 0)):
-    '''
-    展示最优缝隙路径（步骤4）
-    '''
-    imout = image.copy()
-    draw = ImageDraw.Draw(imout)
-    for i, col in enumerate(seam):
-        draw.point((col, i), fill=color)
-    return imout
-
-
-def remove_seam(image, seam):
-    '''
-    移除缝隙后的像素重排（步骤5）
-    '''
-    arr = np.asarray(image)
-    h, w = arr.shape[0], arr.shape[1]
-    mask = np.ones((h, w), dtype=bool)
-    mask[np.arange(h), seam] = False
-    arr_reduced = arr[mask].reshape((h, w-1, arr.shape[2])) if arr.ndim==3 else arr[mask].reshape((h, w-1))
+def remove_seam(img, seam):
+    arr = np.array(img)
+    mask = np.ones((arr.shape[0], arr.shape[1]), dtype=np.bool_)
+    for i, j in seam:
+        mask[i, j] = False
     if arr.ndim == 3:
-        out = Image.fromarray(arr_reduced.astype(np.uint8))
+        arr_reduced = arr[mask].reshape((arr.shape[0], arr.shape[1]-1, arr.shape[2]))
     else:
-        out = Image.fromarray(arr_reduced.astype(np.uint8), 'L')
-    return out
+        arr_reduced = arr[mask].reshape((arr.shape[0], arr.shape[1]-1))
+    return Image.fromarray(arr_reduced.astype(np.uint8))
 
 
-def seam_carve(image, target_width, visualize_seam=False):
-    '''
-    自动循环缩小步骤直到达标(步骤6,7)，并输出最终图片（步骤8）
-    '''
-    img = image.copy()
-    while img.width > target_width:
+def seam_carve(img, num_remove):
+    for _ in range(num_remove):
         energy = compute_energy(img)
-        M, backtrack = compute_cumulative_energy(energy)
-        seam = find_seam(M, backtrack)
-        if visualize_seam:
-            img_with_seam = show_seam(img, seam)
-            # 展示每轮路径
-            img_with_seam.show()
+        m, backtrack = compute_cumulative_energy(energy)
+        seam = find_seam(m, backtrack)
         img = remove_seam(img, seam)
     return img
 
 
 def main():
     import argparse
-    parser = argparse.ArgumentParser(description='动态规划 Seam Carving 缩小图像')
-    parser.add_argument('input', help='输入图片路径')
-    parser.add_argument('output', help='输出图片路径')
-    parser.add_argument('--width', type=int, help='目标宽度', required=True)
-    parser.add_argument('--show_seam', action='store_true', help='是否展示缝隙路径')
+    parser = argparse.ArgumentParser(description='Seam Carving Algorithm using Dynamic Programming')
+    parser.add_argument('input_image', help='Path to input image')
+    parser.add_argument('output_image', help='Path to save resized image')
+    parser.add_argument('--reduce_width', type=int, default=50, help='Number of vertical seams to remove')
     args = parser.parse_args()
 
-    image = Image.open(args.input).convert('RGB')
-    out = seam_carve(image, args.width, visualize_seam=args.show_seam)
-    out.save(args.output)
-    print(f"图片已保存至 {args.output}")
+    img = Image.open(args.input_image)
+    result = seam_carve(img, args.reduce_width)
+    result.save(args.output_image)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

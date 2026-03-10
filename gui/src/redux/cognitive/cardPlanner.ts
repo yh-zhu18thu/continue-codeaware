@@ -1,6 +1,8 @@
 import {
+  CodeAwareMapping,
   KnowledgePoint,
   KnowledgeRelation,
+  KnowledgeToCodeChunkRelation,
   KnowledgeToStepRelation,
 } from "core";
 import { IntentResolution } from "./types";
@@ -9,15 +11,15 @@ export interface CardPlanItem {
   linkedKnowledgeNodeIds: string[];
   assumedMasteredNodeIds: string[];
   intentTypes: IntentResolution["intentTypes"];
+  primaryUnmasteredNodeId?: string;
+  nodeFocusPath: string[];
 }
 
 interface CandidateNode {
   nodeId: string;
-  baseIntentRelevance: number;
+  source: string;
   mastery: number;
-  novelty: number;
   priority: number;
-  covers: Set<IntentResolution["intentTypes"][number]>;
 }
 
 const WEIGHTS = {
@@ -38,7 +40,7 @@ function buildMasteryMap(raw: Record<string, number>): Record<string, number> {
   return map;
 }
 
-function deriveDirectKnowledgeIds(args: {
+function deriveStepKnowledgeIds(args: {
   targetStepId: string;
   knowledgeToStep: KnowledgeToStepRelation[];
   knowledgePoints: KnowledgePoint[];
@@ -80,40 +82,102 @@ function expandOneHopKnowledgeIds(
   return expanded;
 }
 
-function inferCoverageByIntent(args: {
-  intent: IntentResolution;
-  isDirect: boolean;
-  hasPrerequisiteEdge: boolean;
-}): Set<IntentResolution["intentTypes"][number]> {
-  const covers = new Set<IntentResolution["intentTypes"][number]>();
+function deriveStepChunkIds(args: {
+  targetStepId: string;
+  codeAwareMappings: CodeAwareMapping[];
+}): Set<string> {
+  return new Set(
+    args.codeAwareMappings
+      .filter(
+        (mapping) =>
+          mapping.semanticElementType === "step" &&
+          mapping.semanticElementId === args.targetStepId,
+      )
+      .map((mapping) => mapping.codeChunkId),
+  );
+}
 
-  for (const intentType of args.intent.intentTypes) {
-    if (args.isDirect) {
-      covers.add(intentType);
-      continue;
+function deriveCodeKnowledgeIds(args: {
+  chunkIds: Set<string>;
+  knowledgeToCodeChunk: KnowledgeToCodeChunkRelation[];
+}): Set<string> {
+  const ids = new Set<string>();
+  args.knowledgeToCodeChunk.forEach((relation) => {
+    if (args.chunkIds.has(relation.codeChunkId)) {
+      ids.add(relation.knowledgeId);
     }
+  });
+  return ids;
+}
 
-    if (
-      intentType === "prerequisite" ||
-      intentType === "code-understanding" ||
-      intentType === "function-mapping"
-    ) {
-      covers.add(intentType);
-    }
+function isPrerequisiteKnowledge(
+  nodeId: string,
+  relations: KnowledgeRelation[],
+): boolean {
+  return relations.some(
+    (rel) =>
+      rel.relationType === "prerequisite" &&
+      (rel.fromKnowledgeId === nodeId || rel.toKnowledgeId === nodeId),
+  );
+}
+
+function getFocusPaths(reason: string): string[] {
+  switch (reason) {
+    case "step_direct_expand":
+    case "step_revisit":
+      return [
+        "step_prerequisite_knowledge",
+        "framework_role_in_decomposition",
+        "step_situation_to_code",
+      ];
+    case "highlevel_step_association_navigation":
+      return [
+        "framework_role_in_decomposition",
+        "step_background_knowledge",
+        "step_intent_to_code_mapping",
+      ];
+    case "step_to_code_navigation":
+    case "highlevel_to_step_to_code_navigation":
+      return [
+        "step_situation_to_code",
+        "code_prerequisite_knowledge",
+        "code_syntax_knowledge",
+      ];
+    case "code_to_step_navigation":
+      return [
+        "code_situation_to_step",
+        "code_syntax_knowledge",
+        "code_prerequisite_knowledge",
+      ];
+    default:
+      return [
+        "step_background_knowledge",
+        "step_prerequisite_knowledge",
+        "step_situation_to_code",
+      ];
   }
+}
 
-  if (
-    args.hasPrerequisiteEdge &&
-    args.intent.intentTypes.includes("prerequisite")
-  ) {
-    covers.add("prerequisite");
-  }
+function scoreCandidate(args: {
+  nodeId: string;
+  source: string;
+  intentBoost: number;
+  masteryMap: Record<string, number>;
+  previouslyLinked: Set<string>;
+}): CandidateNode {
+  const mastery = args.masteryMap[args.nodeId] ?? 0.5;
+  const novelty = args.previouslyLinked.has(args.nodeId) ? 0.2 : 1;
+  const gap = 1 - mastery;
 
-  if (covers.size === 0 && args.intent.intentTypes.length > 0) {
-    covers.add(args.intent.intentTypes[0]);
-  }
-
-  return covers;
+  return {
+    nodeId: args.nodeId,
+    source: args.source,
+    mastery,
+    priority:
+      WEIGHTS.intent * clamp(args.intentBoost, 0, 1) +
+      WEIGHTS.gap * gap +
+      WEIGHTS.novelty * novelty,
+  };
 }
 
 function buildCandidates(args: {
@@ -122,6 +186,8 @@ function buildCandidates(args: {
   masteryMap: Record<string, number>;
   knowledgePoints: KnowledgePoint[];
   knowledgeToStep: KnowledgeToStepRelation[];
+  knowledgeToCodeChunk: KnowledgeToCodeChunkRelation[];
+  codeAwareMappings: CodeAwareMapping[];
   knowledgeRelations: KnowledgeRelation[];
   previouslyLinkedKnowledgeNodeIds?: string[];
 }): CandidateNode[] {
@@ -129,81 +195,119 @@ function buildCandidates(args: {
   const previouslyLinked = new Set(args.previouslyLinkedKnowledgeNodeIds ?? []);
   const knowledgeById = new Map(args.knowledgePoints.map((k) => [k.id, k]));
 
-  const directIds = deriveDirectKnowledgeIds({
+  const stepKnowledgeIds = deriveStepKnowledgeIds({
     targetStepId: args.targetStepId,
     knowledgeToStep: args.knowledgeToStep,
     knowledgePoints: args.knowledgePoints,
   });
-  const expandedIds = expandOneHopKnowledgeIds(
-    directIds,
+  const stepChunkIds = deriveStepChunkIds({
+    targetStepId: args.targetStepId,
+    codeAwareMappings: args.codeAwareMappings,
+  });
+  const codeKnowledgeIds = deriveCodeKnowledgeIds({
+    chunkIds: stepChunkIds,
+    knowledgeToCodeChunk: args.knowledgeToCodeChunk,
+  });
+
+  const expandedStepKnowledgeIds = expandOneHopKnowledgeIds(
+    stepKnowledgeIds,
+    args.knowledgeRelations,
+  );
+  const expandedCodeKnowledgeIds = expandOneHopKnowledgeIds(
+    codeKnowledgeIds,
     args.knowledgeRelations,
   );
 
+  const focusBuckets = getFocusPaths(args.intent.reason);
   const candidates: CandidateNode[] = [];
-  for (const nodeId of expandedIds) {
+
+  const pushCandidate = (
+    nodeId: string,
+    source: string,
+    intentBoost: number,
+  ) => {
     if (!knowledgeById.has(nodeId)) {
-      continue;
+      return;
     }
-
-    const isDirect = directIds.has(nodeId);
-    const mastery = masteryMap[nodeId] ?? 0.5;
-    const novelty = previouslyLinked.has(nodeId) ? 0.15 : 1;
-
-    const hasPrerequisiteEdge = args.knowledgeRelations.some(
-      (rel) =>
-        rel.relationType === "prerequisite" &&
-        (rel.fromKnowledgeId === nodeId || rel.toKnowledgeId === nodeId),
-    );
-
-    let intentRelevance = isDirect ? 1 : 0.6;
-    if (
-      hasPrerequisiteEdge &&
-      args.intent.intentTypes.includes("prerequisite")
-    ) {
-      intentRelevance += 0.15;
-    }
-    intentRelevance = clamp(intentRelevance, 0, 1);
-
-    const gap = 1 - mastery;
-    const priority =
-      WEIGHTS.intent * intentRelevance +
-      WEIGHTS.gap * gap +
-      WEIGHTS.novelty * novelty;
-
-    candidates.push({
-      nodeId,
-      baseIntentRelevance: intentRelevance,
-      mastery,
-      novelty,
-      priority,
-      covers: inferCoverageByIntent({
-        intent: args.intent,
-        isDirect,
-        hasPrerequisiteEdge,
+    candidates.push(
+      scoreCandidate({
+        nodeId,
+        source,
+        intentBoost,
+        masteryMap,
+        previouslyLinked,
       }),
-    });
-  }
+    );
+  };
 
-  return candidates.sort((a, b) => b.priority - a.priority);
-}
+  focusBuckets.forEach((focus, bucketIndex) => {
+    const baseBoost = clamp(1 - bucketIndex * 0.18, 0.45, 1);
 
-function buildSupportNodes(args: {
-  primaryNodeId: string;
-  allCandidates: CandidateNode[];
-  maxSupportCount: number;
-}): string[] {
-  const support = args.allCandidates
-    .filter((candidate) => candidate.nodeId !== args.primaryNodeId)
-    .sort((a, b) => {
-      if (a.mastery !== b.mastery) {
-        return a.mastery - b.mastery;
-      }
-      return b.priority - a.priority;
-    })
-    .slice(0, args.maxSupportCount)
-    .map((candidate) => candidate.nodeId);
+    if (focus === "step_prerequisite_knowledge") {
+      expandedStepKnowledgeIds.forEach((nodeId) => {
+        if (isPrerequisiteKnowledge(nodeId, args.knowledgeRelations)) {
+          pushCandidate(nodeId, focus, baseBoost);
+        }
+      });
+      return;
+    }
 
-  return support;
+    if (focus === "framework_role_in_decomposition") {
+      expandedStepKnowledgeIds.forEach((nodeId) => {
+        const point = knowledgeById.get(nodeId);
+        if (point?.category === "framework" || point?.category === "concept") {
+          pushCandidate(nodeId, focus, baseBoost);
+        }
+      });
+      return;
+    }
+
+    if (focus === "step_background_knowledge") {
+      expandedStepKnowledgeIds.forEach((nodeId) => {
+        pushCandidate(nodeId, focus, baseBoost);
+      });
+      return;
+    }
+
+    if (
+      focus === "step_situation_to_code" ||
+      focus === "step_intent_to_code_mapping" ||
+      focus === "code_situation_to_step"
+    ) {
+      expandedCodeKnowledgeIds.forEach((nodeId) => {
+        pushCandidate(nodeId, focus, baseBoost);
+      });
+      return;
+    }
+
+    if (focus === "code_prerequisite_knowledge") {
+      expandedCodeKnowledgeIds.forEach((nodeId) => {
+        if (isPrerequisiteKnowledge(nodeId, args.knowledgeRelations)) {
+          pushCandidate(nodeId, focus, baseBoost);
+        }
+      });
+      return;
+    }
+
+    if (focus === "code_syntax_knowledge") {
+      expandedCodeKnowledgeIds.forEach((nodeId) => {
+        const point = knowledgeById.get(nodeId);
+        if (point?.category === "syntax") {
+          pushCandidate(nodeId, focus, baseBoost);
+        }
+      });
+    }
+  });
+
+  const byNode = new Map<string, CandidateNode>();
+  candidates.forEach((candidate) => {
+    const existing = byNode.get(candidate.nodeId);
+    if (!existing || candidate.priority > existing.priority) {
+      byNode.set(candidate.nodeId, candidate);
+    }
+  });
+
+  return Array.from(byNode.values()).sort((a, b) => b.priority - a.priority);
 }
 
 export function planKnowledgeCards(args: {
@@ -213,6 +317,8 @@ export function planKnowledgeCards(args: {
   knowledgeGraph: {
     knowledgePoints: KnowledgePoint[];
     knowledgeToStep: KnowledgeToStepRelation[];
+    knowledgeToCodeChunk: KnowledgeToCodeChunkRelation[];
+    codeAwareMappings: CodeAwareMapping[];
     knowledgeRelations: KnowledgeRelation[];
   };
   maxCards: number;
@@ -239,6 +345,8 @@ export function planKnowledgeCards(args: {
     masteryMap: args.masteryMap,
     knowledgePoints: args.knowledgeGraph.knowledgePoints,
     knowledgeToStep: args.knowledgeGraph.knowledgeToStep,
+    knowledgeToCodeChunk: args.knowledgeGraph.knowledgeToCodeChunk,
+    codeAwareMappings: args.knowledgeGraph.codeAwareMappings,
     knowledgeRelations: args.knowledgeGraph.knowledgeRelations,
     previouslyLinkedKnowledgeNodeIds: args.previouslyLinkedKnowledgeNodeIds,
   });
@@ -247,61 +355,24 @@ export function planKnowledgeCards(args: {
     return [];
   }
 
-  const unresolvedIntents = new Set(args.intent.intentTypes);
   const maxCards = Math.max(1, Math.min(3, args.maxCards));
-  const selected: CandidateNode[] = [];
-
-  const remaining = [...candidates];
-  while (remaining.length > 0 && selected.length < maxCards) {
-    remaining.sort((a, b) => {
-      const aNewCoverage = [...a.covers].filter((intent) =>
-        unresolvedIntents.has(intent),
-      ).length;
-      const bNewCoverage = [...b.covers].filter((intent) =>
-        unresolvedIntents.has(intent),
-      ).length;
-      if (aNewCoverage !== bNewCoverage) {
-        return bNewCoverage - aNewCoverage;
-      }
-      return b.priority - a.priority;
-    });
-
-    const next = remaining.shift();
-    if (!next) {
-      break;
-    }
-
-    selected.push(next);
-    for (const covered of next.covers) {
-      unresolvedIntents.delete(covered);
-    }
-
-    if (unresolvedIntents.size === 0) {
-      break;
-    }
-  }
-
-  if (selected.length === 0) {
-    selected.push(candidates[0]);
-  }
+  const selected = candidates.slice(0, maxCards);
+  const assumedMasteredPool = candidates
+    .filter((candidate) => candidate.mastery >= 0.75)
+    .map((candidate) => candidate.nodeId);
 
   const plans = selected.map((candidate) => {
-    const supportNodes = buildSupportNodes({
-      primaryNodeId: candidate.nodeId,
-      allCandidates: candidates,
-      maxSupportCount: 1,
-    });
-    const linkedKnowledgeNodeIds = [candidate.nodeId, ...supportNodes];
-
-    const assumedMasteredNodeIds = linkedKnowledgeNodeIds.filter((nodeId) => {
-      const mastery = args.masteryMap[nodeId] ?? 0.5;
-      return mastery >= 0.75;
-    });
+    const primaryUnmasteredNodeId =
+      candidate.mastery < 0.75 ? candidate.nodeId : undefined;
 
     return {
-      linkedKnowledgeNodeIds,
-      assumedMasteredNodeIds,
-      intentTypes: [...candidate.covers],
+      linkedKnowledgeNodeIds: [candidate.nodeId],
+      assumedMasteredNodeIds: assumedMasteredPool.filter(
+        (nodeId) => nodeId !== candidate.nodeId,
+      ),
+      intentTypes: args.intent.intentTypes,
+      primaryUnmasteredNodeId,
+      nodeFocusPath: [candidate.source],
     };
   });
 
@@ -317,7 +388,7 @@ export function planKnowledgeCards(args: {
       nodeTitleShort: abbreviate(knowledgeById.get(candidate.nodeId)?.title),
       priority: Number(candidate.priority.toFixed(3)),
       mastery: Number(candidate.mastery.toFixed(3)),
-      covers: [...candidate.covers],
+      source: candidate.source,
     })),
     selectedPlans: plans.map((plan, index) => ({
       index,
@@ -328,6 +399,8 @@ export function planKnowledgeCards(args: {
       })),
       assumedMasteredNodeIds: plan.assumedMasteredNodeIds,
       intentTypes: plan.intentTypes,
+      primaryUnmasteredNodeId: plan.primaryUnmasteredNodeId,
+      nodeFocusPath: plan.nodeFocusPath,
     })),
   });
 

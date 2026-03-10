@@ -2,19 +2,29 @@ import type { CodeAwareCognitiveEdge } from "core";
 import type { CodeAwareSessionState } from "../redux/slices/codeAwareSlice";
 
 const COGNITIVE_EDGE_PRIORS: Record<string, number> = {
-  "hierarchical-forward": 0.86,
-  "hierarchical-reverse": 0.7,
-  "semantic-forward": 0.88,
-  "semantic-reverse": 0.74,
-  "code-similarity-forward": 0.68,
-  "code-similarity-reverse": 0.66,
-  "knowledge-similarity-forward": 0.72,
-  "knowledge-similarity-reverse": 0.7,
-  "knowledge-to-step-forward": 0.9,
-  "knowledge-to-step-reverse": 0.6,
-  "knowledge-to-code-chunk-forward": 0.84,
-  "knowledge-to-code-chunk-reverse": 0.58,
+  "inference-forward": 0.86,
+  "inference-reverse": 0.72,
+  "dependency-forward": 0.9,
+  "dependency-reverse": 0.6,
 };
+
+function clamp01(value: number): number {
+  return Math.max(0, Math.min(1, value));
+}
+
+function toAssociationProbability(similarity?: number): number {
+  const normalized = clamp01(
+    typeof similarity === "number" && Number.isFinite(similarity)
+      ? similarity
+      : 0.7,
+  );
+  // Keep a minimum floor to avoid overly weak links from noisy embeddings.
+  return clamp01(0.55 + normalized * 0.4);
+}
+
+function toSituationNodeId(stepId: string, codeChunkId: string): string {
+  return `sit-${stepId}-${codeChunkId}`;
+}
 
 export function buildCodeAwareCognitiveEdges(
   state: CodeAwareSessionState,
@@ -24,161 +34,224 @@ export function buildCodeAwareCognitiveEdges(
 
   state.stepToHighLevelMappings.forEach((m) => {
     edges.push({
-      id: `hier-fwd-${m.stepId}-${m.highLevelStepId}`,
-      type: "hierarchical-forward",
+      id: `infer-fwd-step-hls-${m.stepId}-${m.highLevelStepId}`,
+      type: "inference-forward",
       fromNodeId: m.stepId,
       fromNodeType: "step",
       toNodeId: m.highLevelStepId,
-      toNodeType: "high-level-step",
-      conditionalMasteryProbability:
-        COGNITIVE_EDGE_PRIORS["hierarchical-forward"],
+      toNodeType: "step",
+      conditionalMasteryProbability: COGNITIVE_EDGE_PRIORS["inference-forward"],
       createdAt: now,
+      metadata: { source: "step-to-highlevel", relationClass: "inference" },
     });
 
     edges.push({
-      id: `hier-rev-${m.highLevelStepId}-${m.stepId}`,
-      type: "hierarchical-reverse",
+      id: `infer-rev-hls-step-${m.highLevelStepId}-${m.stepId}`,
+      type: "inference-reverse",
       fromNodeId: m.highLevelStepId,
-      fromNodeType: "high-level-step",
+      fromNodeType: "step",
       toNodeId: m.stepId,
       toNodeType: "step",
-      conditionalMasteryProbability:
-        COGNITIVE_EDGE_PRIORS["hierarchical-reverse"],
+      conditionalMasteryProbability: COGNITIVE_EDGE_PRIORS["inference-reverse"],
       createdAt: now,
+      metadata: { source: "highlevel-to-step", relationClass: "inference" },
     });
   });
 
   state.codeAwareMappings.forEach((m, idx) => {
+    if (m.semanticElementType !== "step") {
+      return;
+    }
+
+    const situationNodeId = toSituationNodeId(
+      m.semanticElementId,
+      m.codeChunkId,
+    );
+
     edges.push({
-      id: `sem-fwd-${m.codeChunkId}-${m.semanticElementId}-${idx}`,
-      type: "semantic-forward",
-      fromNodeId: m.codeChunkId,
-      fromNodeType: "code-chunk",
-      toNodeId: m.semanticElementId,
-      toNodeType:
-        m.semanticElementType === "highLevelStep" ? "high-level-step" : "step",
-      conditionalMasteryProbability: COGNITIVE_EDGE_PRIORS["semantic-forward"],
+      id: `infer-fwd-step-sit-${m.semanticElementId}-${m.codeChunkId}-${idx}`,
+      type: "inference-forward",
+      fromNodeId: m.semanticElementId,
+      fromNodeType: "step",
+      toNodeId: situationNodeId,
+      toNodeType: "situation",
+      conditionalMasteryProbability: COGNITIVE_EDGE_PRIORS["inference-forward"],
       createdAt: m.createdAt,
+      metadata: { source: "step-to-situation", relationClass: "inference" },
     });
 
     edges.push({
-      id: `sem-rev-${m.semanticElementId}-${m.codeChunkId}-${idx}`,
-      type: "semantic-reverse",
-      fromNodeId: m.semanticElementId,
-      fromNodeType:
-        m.semanticElementType === "highLevelStep" ? "high-level-step" : "step",
+      id: `infer-rev-sit-step-${m.codeChunkId}-${m.semanticElementId}-${idx}`,
+      type: "inference-reverse",
+      fromNodeId: situationNodeId,
+      fromNodeType: "situation",
+      toNodeId: m.semanticElementId,
+      toNodeType: "step",
+      conditionalMasteryProbability: COGNITIVE_EDGE_PRIORS["inference-reverse"],
+      createdAt: m.createdAt,
+      metadata: { source: "situation-to-step", relationClass: "inference" },
+    });
+
+    edges.push({
+      id: `infer-fwd-sit-code-${m.semanticElementId}-${m.codeChunkId}-${idx}`,
+      type: "inference-forward",
+      fromNodeId: situationNodeId,
+      fromNodeType: "situation",
       toNodeId: m.codeChunkId,
       toNodeType: "code-chunk",
-      conditionalMasteryProbability: COGNITIVE_EDGE_PRIORS["semantic-reverse"],
+      conditionalMasteryProbability: COGNITIVE_EDGE_PRIORS["inference-forward"],
       createdAt: m.createdAt,
+      metadata: { source: "situation-to-code", relationClass: "inference" },
+    });
+
+    edges.push({
+      id: `infer-rev-code-sit-${m.codeChunkId}-${m.semanticElementId}-${idx}`,
+      type: "inference-reverse",
+      fromNodeId: m.codeChunkId,
+      fromNodeType: "code-chunk",
+      toNodeId: situationNodeId,
+      toNodeType: "situation",
+      conditionalMasteryProbability: COGNITIVE_EDGE_PRIORS["inference-reverse"],
+      createdAt: m.createdAt,
+      metadata: { source: "code-to-situation", relationClass: "inference" },
     });
   });
 
   state.codeChunkRelations.forEach((r) => {
+    const association = toAssociationProbability(r.similarity);
     edges.push({
-      id: `cc-fwd-${r.fromChunkId}-${r.toChunkId}`,
-      type: "code-similarity-forward",
+      id: `assoc-fwd-code-${r.fromChunkId}-${r.toChunkId}`,
+      type: "association-forward",
       fromNodeId: r.fromChunkId,
       fromNodeType: "code-chunk",
       toNodeId: r.toChunkId,
       toNodeType: "code-chunk",
-      conditionalMasteryProbability:
-        COGNITIVE_EDGE_PRIORS["code-similarity-forward"],
+      conditionalMasteryProbability: association,
       createdAt: r.createdAt,
+      metadata: { relationClass: "association", similarity: r.similarity },
     });
 
     edges.push({
-      id: `cc-rev-${r.toChunkId}-${r.fromChunkId}`,
-      type: "code-similarity-reverse",
+      id: `assoc-rev-code-${r.toChunkId}-${r.fromChunkId}`,
+      type: "association-reverse",
       fromNodeId: r.toChunkId,
       fromNodeType: "code-chunk",
       toNodeId: r.fromChunkId,
       toNodeType: "code-chunk",
-      conditionalMasteryProbability:
-        COGNITIVE_EDGE_PRIORS["code-similarity-reverse"],
+      conditionalMasteryProbability: association,
       createdAt: r.createdAt,
+      metadata: { relationClass: "association", similarity: r.similarity },
     });
   });
 
   state.knowledgeRelations.forEach((r) => {
+    const isDependency = r.relationType === "prerequisite";
+    const forwardType = isDependency
+      ? "dependency-forward"
+      : "association-forward";
+    const reverseType = isDependency
+      ? "dependency-reverse"
+      : "association-reverse";
+    const probability = isDependency
+      ? COGNITIVE_EDGE_PRIORS["dependency-forward"]
+      : toAssociationProbability(r.similarity);
+
     edges.push({
-      id: `kk-fwd-${r.fromKnowledgeId}-${r.toKnowledgeId}`,
-      type: "knowledge-similarity-forward",
+      id: `k-fwd-${r.fromKnowledgeId}-${r.toKnowledgeId}`,
+      type: forwardType,
       fromNodeId: r.fromKnowledgeId,
       fromNodeType: "knowledge-point",
       toNodeId: r.toKnowledgeId,
       toNodeType: "knowledge-point",
-      conditionalMasteryProbability:
-        COGNITIVE_EDGE_PRIORS["knowledge-similarity-forward"],
+      conditionalMasteryProbability: probability,
       createdAt: r.createdAt,
-      metadata: { relationType: r.relationType },
+      metadata: {
+        relationType: r.relationType,
+        relationClass: isDependency ? "dependency" : "association",
+        similarity: r.similarity,
+      },
     });
 
     edges.push({
-      id: `kk-rev-${r.toKnowledgeId}-${r.fromKnowledgeId}`,
-      type: "knowledge-similarity-reverse",
+      id: `k-rev-${r.toKnowledgeId}-${r.fromKnowledgeId}`,
+      type: reverseType,
       fromNodeId: r.toKnowledgeId,
       fromNodeType: "knowledge-point",
       toNodeId: r.fromKnowledgeId,
       toNodeType: "knowledge-point",
-      conditionalMasteryProbability:
-        COGNITIVE_EDGE_PRIORS["knowledge-similarity-reverse"],
+      conditionalMasteryProbability: isDependency
+        ? COGNITIVE_EDGE_PRIORS["dependency-reverse"]
+        : probability,
       createdAt: r.createdAt,
-      metadata: { relationType: r.relationType },
+      metadata: {
+        relationType: r.relationType,
+        relationClass: isDependency ? "dependency" : "association",
+        similarity: r.similarity,
+      },
     });
   });
 
   state.knowledgeToStepRelations.forEach((r) => {
     edges.push({
-      id: `ks-fwd-${r.knowledgeId}-${r.stepId}`,
-      type: "knowledge-to-step-forward",
+      id: `dep-fwd-ks-${r.knowledgeId}-${r.stepId}`,
+      type: "dependency-forward",
       fromNodeId: r.knowledgeId,
       fromNodeType: "knowledge-point",
       toNodeId: r.stepId,
       toNodeType: "step",
       conditionalMasteryProbability:
-        COGNITIVE_EDGE_PRIORS["knowledge-to-step-forward"],
+        COGNITIVE_EDGE_PRIORS["dependency-forward"],
       createdAt: r.createdAt,
+      metadata: { relationClass: "dependency", source: "knowledge-to-step" },
     });
 
     edges.push({
-      id: `ks-rev-${r.stepId}-${r.knowledgeId}`,
-      type: "knowledge-to-step-reverse",
+      id: `dep-rev-sk-${r.stepId}-${r.knowledgeId}`,
+      type: "dependency-reverse",
       fromNodeId: r.stepId,
       fromNodeType: "step",
       toNodeId: r.knowledgeId,
       toNodeType: "knowledge-point",
       conditionalMasteryProbability:
-        COGNITIVE_EDGE_PRIORS["knowledge-to-step-reverse"],
+        COGNITIVE_EDGE_PRIORS["dependency-reverse"],
       createdAt: r.createdAt,
+      metadata: { relationClass: "dependency", source: "step-to-knowledge" },
     });
   });
 
   state.knowledgeToCodeChunkRelations.forEach((r) => {
     edges.push({
-      id: `kc-fwd-${r.knowledgeId}-${r.codeChunkId}`,
-      type: "knowledge-to-code-chunk-forward",
+      id: `dep-fwd-kc-${r.knowledgeId}-${r.codeChunkId}`,
+      type: "dependency-forward",
       fromNodeId: r.knowledgeId,
       fromNodeType: "knowledge-point",
       toNodeId: r.codeChunkId,
       toNodeType: "code-chunk",
       conditionalMasteryProbability:
-        COGNITIVE_EDGE_PRIORS["knowledge-to-code-chunk-forward"],
+        COGNITIVE_EDGE_PRIORS["dependency-forward"],
       createdAt: r.createdAt,
-      metadata: { viaStepId: r.viaStepId },
+      metadata: {
+        viaStepId: r.viaStepId,
+        relationClass: "dependency",
+        source: "knowledge-to-code",
+      },
     });
 
     edges.push({
-      id: `kc-rev-${r.codeChunkId}-${r.knowledgeId}`,
-      type: "knowledge-to-code-chunk-reverse",
+      id: `dep-rev-ck-${r.codeChunkId}-${r.knowledgeId}`,
+      type: "dependency-reverse",
       fromNodeId: r.codeChunkId,
       fromNodeType: "code-chunk",
       toNodeId: r.knowledgeId,
       toNodeType: "knowledge-point",
       conditionalMasteryProbability:
-        COGNITIVE_EDGE_PRIORS["knowledge-to-code-chunk-reverse"],
+        COGNITIVE_EDGE_PRIORS["dependency-reverse"],
       createdAt: r.createdAt,
-      metadata: { viaStepId: r.viaStepId },
+      metadata: {
+        viaStepId: r.viaStepId,
+        relationClass: "dependency",
+        source: "code-to-knowledge",
+      },
     });
   });
 

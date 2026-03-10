@@ -66,6 +66,8 @@ function buildGenerationPrompt(args: {
     linkedKnowledgeNodeIds: string[];
     assumedMasteredNodeIds: string[];
     intentTypes: IntentResolution["intentTypes"];
+    primaryUnmasteredNodeId?: string;
+    nodeFocusPath: string[];
     knowledgeContext: string[];
   }>;
 }): string {
@@ -87,9 +89,10 @@ function buildGenerationPrompt(args: {
     "",
     "Rules:",
     "1. Each card title should be concise and non-duplicated.",
-    "2. Each question should test understanding of the planned knowledge nodes.",
+    "2. Each card should focus on exactly one likely-unmastered but intent-relevant core point (the primary node).",
     "3. Keep linkedKnowledgeNodeIds aligned with the plan and avoid introducing unknown node IDs.",
-    "4. assumedMasteredNodeIds can be empty when uncertain.",
+    "4. assumedMasteredNodeIds can include multiple nodes and can be empty when uncertain.",
+    "5. Question wording should clearly connect to nodeFocusPath (e.g., prerequisite/framework/situation/syntax).",
   ].join("\n");
 }
 
@@ -170,6 +173,9 @@ export const generateCognitiveKnowledgeCards = createAsyncThunk<
         knowledgeGraph: {
           knowledgePoints: state.codeAwareSession.knowledgePoints,
           knowledgeToStep: state.codeAwareSession.knowledgeToStepRelations,
+          knowledgeToCodeChunk:
+            state.codeAwareSession.knowledgeToCodeChunkRelations,
+          codeAwareMappings: state.codeAwareSession.codeAwareMappings,
           knowledgeRelations: state.codeAwareSession.knowledgeRelations,
         },
         maxCards,

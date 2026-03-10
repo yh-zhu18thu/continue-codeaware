@@ -105,7 +105,7 @@ async function persistCognitiveTrackingArtifacts(
       nodeCount: number;
       nodes: Array<{
         id: string;
-        nodeType: "high-level-step" | "step" | "code-chunk" | "knowledge-point";
+        nodeType: "step" | "code-chunk" | "knowledge-point" | "situation";
         title: string;
         abstract: string;
       }>;
@@ -174,14 +174,14 @@ function buildNodeIndexPayload(state: RootState["codeAwareSession"]): {
   nodeCount: number;
   nodes: Array<{
     id: string;
-    nodeType: "high-level-step" | "step" | "code-chunk" | "knowledge-point";
+    nodeType: "step" | "code-chunk" | "knowledge-point" | "situation";
     title: string;
     abstract: string;
   }>;
 } {
   const nodes: Array<{
     id: string;
-    nodeType: "high-level-step" | "step" | "code-chunk" | "knowledge-point";
+    nodeType: "step" | "code-chunk" | "knowledge-point" | "situation";
     title: string;
     abstract: string;
   }> = [];
@@ -189,8 +189,8 @@ function buildNodeIndexPayload(state: RootState["codeAwareSession"]): {
   state.highLevelSteps.forEach((item) => {
     nodes.push({
       id: item.id,
-      nodeType: "high-level-step",
-      title: item.content || "",
+      nodeType: "step",
+      title: `[Framework] ${item.content || ""}`,
       abstract: "",
     });
   });
@@ -223,6 +223,33 @@ function buildNodeIndexPayload(state: RootState["codeAwareSession"]): {
       nodeType: "knowledge-point",
       title: item.title || "",
       abstract: item.content || "",
+    });
+  });
+
+  const situationNodes = new Map<
+    string,
+    { id: string; stepId: string; codeChunkId: string }
+  >();
+  state.codeAwareMappings
+    .filter((mapping) => mapping.semanticElementType === "step")
+    .forEach((mapping) => {
+      const key = `${mapping.semanticElementId}-${mapping.codeChunkId}`;
+      if (!situationNodes.has(key)) {
+        situationNodes.set(key, {
+          id: `sit-${mapping.semanticElementId}-${mapping.codeChunkId}`,
+          stepId: mapping.semanticElementId,
+          codeChunkId: mapping.codeChunkId,
+        });
+      }
+    });
+
+  situationNodes.forEach((situation) => {
+    nodes.push({
+      id: situation.id,
+      nodeType: "situation",
+      title: `Situation ${situation.stepId} -> ${situation.codeChunkId}`,
+      abstract:
+        "Bridge between framework step intent and concrete code context.",
     });
   });
 
@@ -388,6 +415,10 @@ function inferRelationType(
   return "related";
 }
 
+function isCodeScopedKnowledge(point: KnowledgePoint): boolean {
+  return point.category === "syntax" || point.category === "algorithm";
+}
+
 function deduplicateKnowledgePoints(
   points: KnowledgePoint[],
 ): KnowledgePoint[] {
@@ -419,7 +450,7 @@ function buildInitialNodeMasteryScores(
   state.highLevelSteps.forEach((item) => {
     scores.push({
       nodeId: item.id,
-      nodeType: "high-level-step",
+      nodeType: "step",
       score: 0,
       updatedAt: now,
     });
@@ -451,6 +482,23 @@ function buildInitialNodeMasteryScores(
       updatedAt: now,
     });
   });
+
+  const situationPairs = new Set<string>();
+  state.codeAwareMappings
+    .filter((mapping) => mapping.semanticElementType === "step")
+    .forEach((mapping) => {
+      const pairKey = `${mapping.semanticElementId}-${mapping.codeChunkId}`;
+      if (situationPairs.has(pairKey)) {
+        return;
+      }
+      situationPairs.add(pairKey);
+      scores.push({
+        nodeId: `sit-${mapping.semanticElementId}-${mapping.codeChunkId}`,
+        nodeType: "situation",
+        score: 0,
+        updatedAt: now,
+      });
+    });
 
   const deduped = new Map<string, (typeof scores)[number]>();
   scores.forEach((item) => {
@@ -1165,12 +1213,16 @@ export const extractAndLinkKnowledge = createAsyncThunk<
       });
 
     uniqueKnowledgePoints.forEach((point) => {
+      const codeScoped = isCodeScopedKnowledge(point);
+
       point.relatedStepIds.forEach((stepId) => {
-        knowledgeToStepRelations.push({
-          knowledgeId: point.id,
-          stepId,
-          createdAt: Date.now(),
-        });
+        if (!codeScoped) {
+          knowledgeToStepRelations.push({
+            knowledgeId: point.id,
+            stepId,
+            createdAt: Date.now(),
+          });
+        }
 
         const chunkIds = stepToChunkIds.get(stepId) || [];
         chunkIds.forEach((chunkId) => {

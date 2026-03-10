@@ -676,7 +676,7 @@ export interface KnowledgeRelation {
 // CODEAWARE: 节点掌握度（本阶段仅提供存储基础设施，不做推断更新）
 export interface NodeMasteryScore {
   nodeId: string;
-  nodeType: "high-level-step" | "step" | "code-chunk" | "knowledge-point";
+  nodeType: "step" | "code-chunk" | "knowledge-point" | "situation";
   score: number; // 用户掌握度估计，0-1
   updatedAt: number;
 }
@@ -709,25 +709,19 @@ export interface InitialGenerationState {
 
 // CODEAWARE: 统一节点类型（用于关系图视图，不替代现有实体类型）
 export type CodeAwareNodeType =
-  | "high-level-step"
   | "step"
   | "code-chunk"
-  | "knowledge-point";
+  | "knowledge-point"
+  | "situation";
 
 // CODEAWARE: 认知关联边类型（所有关系都显式区分正向/逆向）
 export type CodeAwareCognitiveEdgeType =
-  | "hierarchical-forward"
-  | "hierarchical-reverse"
-  | "semantic-forward"
-  | "semantic-reverse"
-  | "code-similarity-forward"
-  | "code-similarity-reverse"
-  | "knowledge-similarity-forward"
-  | "knowledge-similarity-reverse"
-  | "knowledge-to-step-forward"
-  | "knowledge-to-step-reverse"
-  | "knowledge-to-code-chunk-forward"
-  | "knowledge-to-code-chunk-reverse";
+  | "association-forward"
+  | "association-reverse"
+  | "inference-forward"
+  | "inference-reverse"
+  | "dependency-forward"
+  | "dependency-reverse";
 
 // CODEAWARE: 统一认知关联边（仅此结构维护掌握条件概率）
 export interface CodeAwareCognitiveEdge {

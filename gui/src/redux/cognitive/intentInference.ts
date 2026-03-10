@@ -49,17 +49,35 @@ export function inferIntentFromEvents(args: {
 
   switch (currentEvent.type) {
     case "step_expand":
+      const hasHighLevelNavigationContext = [...recentEvents]
+        .reverse()
+        .slice(0, 6)
+        .some(
+          (event) =>
+            event.stepId === targetStepId &&
+            (event.type === "code_to_step" ||
+              (event.type === "step_to_code" &&
+                event.payload?.derivedFrom === "highLevelStep")),
+        );
+
       intentTypes = isReviewScene
         ? ["task-decomposition", "prerequisite"]
         : ["task-decomposition"];
       preferredInitialView = isReviewScene ? "self-test" : "read";
-      reason = isReviewScene ? "step_revisit" : "step_direct_expand";
+      reason = hasHighLevelNavigationContext
+        ? "highlevel_step_association_navigation"
+        : isReviewScene
+          ? "step_revisit"
+          : "step_direct_expand";
       break;
 
     case "step_to_code":
       intentTypes = ["code-understanding"];
       preferredInitialView = "read";
-      reason = "step_to_code_navigation";
+      reason =
+        currentEvent.payload?.derivedFrom === "highLevelStep"
+          ? "highlevel_to_step_to_code_navigation"
+          : "step_to_code_navigation";
       break;
 
     case "code_to_step":

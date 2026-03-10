@@ -1,0 +1,698 @@
+{
+  "schemaVersion": 1,
+  "sessionId": "0f980879-65cd-46d2-b39e-9551fa3e5066",
+  "generatedAt": "2026-03-10T05:21:11.539Z",
+  "scoreCount": 115,
+  "nodeMasteryScores": [
+    {
+      "nodeId": "r-1",
+      "nodeType": "high-level-step",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "r-2",
+      "nodeType": "high-level-step",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "r-3",
+      "nodeType": "high-level-step",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "r-4",
+      "nodeType": "high-level-step",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "s-1",
+      "nodeType": "step",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "s-2",
+      "nodeType": "step",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "s-3",
+      "nodeType": "step",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "s-4",
+      "nodeType": "step",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "s-5",
+      "nodeType": "step",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "s-6",
+      "nodeType": "step",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "s-7",
+      "nodeType": "step",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "s-8",
+      "nodeType": "step",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-0",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-1",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-2",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-3",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-4",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-5",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-6",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-7",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-8",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-9",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-10",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-11",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-12",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-13",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-14",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-15",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-16",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-17",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-18",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-19",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-20",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-21",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-22",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-23",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-24",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-25",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-26",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-27",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-28",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-29",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-30",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-31",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-32",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-33",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-34",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-35",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-36",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-37",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-38",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-39",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-40",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-41",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-42",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-43",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-44",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-45",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-46",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-47",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-48",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-49",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-50",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-51",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-52",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-53",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-54",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-55",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-56",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-57",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-58",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-59",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-60",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-61",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-62",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-63",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-64",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-65",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-66",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-67",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-68",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-69",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-70",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-71",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-72",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-73",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-74",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-75",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-76",
+      "nodeType": "code-chunk",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "k-s-1-1",
+      "nodeType": "knowledge-point",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "k-s-1-2",
+      "nodeType": "knowledge-point",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "k-s-1-3",
+      "nodeType": "knowledge-point",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "k-s-1-4",
+      "nodeType": "knowledge-point",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "k-s-2-1",
+      "nodeType": "knowledge-point",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "k-s-2-3",
+      "nodeType": "knowledge-point",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "k-s-2-4",
+      "nodeType": "knowledge-point",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "k-s-3-1",
+      "nodeType": "knowledge-point",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "k-s-3-2",
+      "nodeType": "knowledge-point",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "k-s-3-4",
+      "nodeType": "knowledge-point",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "k-s-4-2",
+      "nodeType": "knowledge-point",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "k-s-4-3",
+      "nodeType": "knowledge-point",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "k-s-4-4",
+      "nodeType": "knowledge-point",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "k-s-5-1",
+      "nodeType": "knowledge-point",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "k-s-5-2",
+      "nodeType": "knowledge-point",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "k-s-5-3",
+      "nodeType": "knowledge-point",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "k-s-6-1",
+      "nodeType": "knowledge-point",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "k-s-6-2",
+      "nodeType": "knowledge-point",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "k-s-6-3",
+      "nodeType": "knowledge-point",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "k-s-6-4",
+      "nodeType": "knowledge-point",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "k-s-7-1",
+      "nodeType": "knowledge-point",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "k-s-7-2",
+      "nodeType": "knowledge-point",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "k-s-7-3",
+      "nodeType": "knowledge-point",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "k-s-8-1",
+      "nodeType": "knowledge-point",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "k-s-8-2",
+      "nodeType": "knowledge-point",
+      "score": 0,
+      "updatedAt": 1773120065271
+    },
+    {
+      "nodeId": "k-s-8-3",
+      "nodeType": "knowledge-point",
+      "score": 0,
+      "updatedAt": 1773120065271
+    }
+  ]
+}

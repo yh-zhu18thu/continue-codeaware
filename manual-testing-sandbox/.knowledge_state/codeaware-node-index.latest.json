@@ -1,0 +1,698 @@
+{
+  "schemaVersion": 1,
+  "sessionId": "0f980879-65cd-46d2-b39e-9551fa3e5066",
+  "generatedAt": "2026-03-10T05:21:11.528Z",
+  "nodeCount": 115,
+  "nodes": [
+    {
+      "id": "r-1",
+      "nodeType": "high-level-step",
+      "title": "构建图像能量表示",
+      "abstract": ""
+    },
+    {
+      "id": "r-2",
+      "nodeType": "high-level-step",
+      "title": "查找最优缝路径",
+      "abstract": ""
+    },
+    {
+      "id": "r-3",
+      "nodeType": "high-level-step",
+      "title": "实现图像内容有损缩放",
+      "abstract": ""
+    },
+    {
+      "id": "r-4",
+      "nodeType": "high-level-step",
+      "title": "输出可视化结果",
+      "abstract": ""
+    },
+    {
+      "id": "s-1",
+      "nodeType": "step",
+      "title": "计算图像像素能量",
+      "abstract": "为每个像素赋予代表视觉重要性的能量值，作为后续缝路径决策依据。"
+    },
+    {
+      "id": "s-2",
+      "nodeType": "step",
+      "title": "生成能量图",
+      "abstract": "将所有像素能量整合为二维能量矩阵，为动态规划查找缝路径提供基础数据。"
+    },
+    {
+      "id": "s-3",
+      "nodeType": "step",
+      "title": "动态规划计算最小能量缝",
+      "abstract": "针对能量图，通过动态规划算法识别出一条能量总和最小的像素路径，实现无损重要内容的连续移除。"
+    },
+    {
+      "id": "s-4",
+      "nodeType": "step",
+      "title": "标记最优缝路径",
+      "abstract": "确定并记录需移除的缝路径，以便后续进行内容调整和缩放操作。"
+    },
+    {
+      "id": "s-5",
+      "nodeType": "step",
+      "title": "移除或插入缝调整图像",
+      "abstract": "根据最优缝路径删除像素列或行，实现图像在保留重要内容下的缩放。"
+    },
+    {
+      "id": "s-6",
+      "nodeType": "step",
+      "title": "多次缩放支持",
+      "abstract": "迭代进行多次缝查找与移除，实现逐步缩放，支持用户指定缩放比例或目标尺寸。"
+    },
+    {
+      "id": "s-7",
+      "nodeType": "step",
+      "title": "展示缩放前后图像",
+      "abstract": "对比原始和处理后的图像效果，帮助用户直观理解内容自适应缩放结果。"
+    },
+    {
+      "id": "s-8",
+      "nodeType": "step",
+      "title": "输出缩放后图像结果",
+      "abstract": "保存或输出经过Seam Carving处理的最终图像文件，供后续使用或验收。"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-0",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:1-1",
+      "abstract": "import numpy as np"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-1",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:2-2",
+      "abstract": "import cv2"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-2",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:3-3",
+      "abstract": "from matplotlib import pyplot as plt"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-3",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:6-6",
+      "abstract": "def compute_energy(image):"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-4",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:7-7",
+      "abstract": "gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-5",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:8-8",
+      "abstract": "# Use Sobel filter to compute gradient magnitude as energy"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-6",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:9-9",
+      "abstract": "sobelx = cv2.Sobel(gray, cv2.CV_64F, 1, 0, ksize=3)"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-7",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:10-10",
+      "abstract": "sobely = cv2.Sobel(gray, cv2.CV_64F, 0, 1, ksize=3)"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-8",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:11-11",
+      "abstract": "energy = np.abs(sobelx) + np.abs(sobely)"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-9",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:12-12",
+      "abstract": "return energy"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-10",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:15-15",
+      "abstract": "def cumulative_map_vertical(energy):"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-11",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:16-16",
+      "abstract": "h, w = energy.shape"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-12",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:17-17",
+      "abstract": "M = np.zeros_like(energy)"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-13",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:18-18",
+      "abstract": "backtrack = np.zeros_like(energy, dtype=np.int)"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-14",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:19-19",
+      "abstract": "M[0] = energy[0]"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-15",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:20-20",
+      "abstract": "for i in range(1, h):"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-16",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:21-21",
+      "abstract": "for j in range(0, w):"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-17",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:22-22",
+      "abstract": "left = M[i-1, j-1] if j-1 >= 0 else float('inf')"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-18",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:23-23",
+      "abstract": "up = M[i-1, j]"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-19",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:24-24",
+      "abstract": "right = M[i-1, j+1] if j+1 < w else float('inf')"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-20",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:25-25",
+      "abstract": "min_idx = np.argmin([left, up, right])"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-21",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:26-26",
+      "abstract": "M[i, j] = energy[i, j] + [left, up, right][min_idx]"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-22",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:27-27",
+      "abstract": "backtrack[i, j] = j + (min_idx - 1)"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-23",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:28-28",
+      "abstract": "return M, backtrack"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-24",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:31-31",
+      "abstract": "def find_seam(M, backtrack):"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-25",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:32-32",
+      "abstract": "h, w = M.shape"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-26",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:33-33",
+      "abstract": "seam = np.zeros(h, dtype=np.int)"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-27",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:34-34",
+      "abstract": "seam[-1] = np.argmin(M[-1])"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-28",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:35-35",
+      "abstract": "for i in range(h-2, -1, -1):"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-29",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:36-36",
+      "abstract": "seam[i] = backtrack[i+1, seam[i+1]]"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-30",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:37-37",
+      "abstract": "return seam"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-31",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:40-40",
+      "abstract": "def remove_seam(image, seam):"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-32",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:41-41",
+      "abstract": "h, w, c = image.shape"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-33",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:42-42",
+      "abstract": "output = np.zeros((h, w-1, c), dtype=image.dtype)"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-34",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:43-43",
+      "abstract": "for i in range(h):"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-35",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:44-44",
+      "abstract": "col = seam[i]"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-36",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:45-45",
+      "abstract": "output[i, :, :] = np.delete(image[i, :, :], col, axis=0)"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-37",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:46-46",
+      "abstract": "return output"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-38",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:49-49",
+      "abstract": "def seam_carve(image, scale_width=0.8, out_path=None):"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-39",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:50-50",
+      "abstract": "out = image.copy()"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-40",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:51-51",
+      "abstract": "new_width = int(image.shape[1] * scale_width)"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-41",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:52-52",
+      "abstract": "num_seams = image.shape[1] - new_width"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-42",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:53-53",
+      "abstract": "for _ in range(num_seams):"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-43",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:54-54",
+      "abstract": "energy = compute_energy(out)"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-44",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:55-55",
+      "abstract": "M, backtrack = cumulative_map_vertical(energy)"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-45",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:56-56",
+      "abstract": "seam = find_seam(M, backtrack)"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-46",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:57-57",
+      "abstract": "out = remove_seam(out, seam)"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-47",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:58-58",
+      "abstract": "if out_path is not None:"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-48",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:59-59",
+      "abstract": "cv2.imwrite(out_path, out)"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-49",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:60-60",
+      "abstract": "return out"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-50",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:63-63",
+      "abstract": "def show_images(before, after):"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-51",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:64-64",
+      "abstract": "plt.figure(figsize=(12, 6))"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-52",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:65-65",
+      "abstract": "plt.subplot(1, 2, 1)"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-53",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:66-66",
+      "abstract": "plt.title('Original')"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-54",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:67-67",
+      "abstract": "plt.imshow(cv2.cvtColor(before, cv2.COLOR_BGR2RGB))"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-55",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:68-68",
+      "abstract": "plt.axis('off')"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-56",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:69-69",
+      "abstract": "plt.subplot(1, 2, 2)"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-57",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:70-70",
+      "abstract": "plt.title('Seam Carved')"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-58",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:71-71",
+      "abstract": "plt.imshow(cv2.cvtColor(after, cv2.COLOR_BGR2RGB))"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-59",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:72-72",
+      "abstract": "plt.axis('off')"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-60",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:73-73",
+      "abstract": "plt.show()"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-61",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:76-76",
+      "abstract": "def main():"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-62",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:77-77",
+      "abstract": "import argparse"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-63",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:78-78",
+      "abstract": "parser = argparse.ArgumentParser(description='Seam Carving缩放演示')"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-64",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:79-79",
+      "abstract": "parser.add_argument('input_image', type=str, help='输入图片路径')"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-65",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:80-80",
+      "abstract": "parser.add_argument('--output', type=str, default='seam_carved_output.jpg', help='输出图片路径')"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-66",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:81-81",
+      "abstract": "parser.add_argument('--scale', type=float, default=0.8, help='缩放宽度比例 (0~1)')"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-67",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:82-82",
+      "abstract": "args = parser.parse_args()"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-68",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:84-84",
+      "abstract": "image = cv2.imread(args.input_image)"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-69",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:85-85",
+      "abstract": "if image is None:"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-70",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:86-86",
+      "abstract": "print('图片加载失败:', args.input_image)"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-71",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:87-87",
+      "abstract": "return"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-72",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:88-88",
+      "abstract": "result = seam_carve(image, scale_width=args.scale, out_path=args.output)"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-73",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:89-89",
+      "abstract": "print(f'输出已保存到: {args.output}')"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-74",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:90-90",
+      "abstract": "show_images(image, result)"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-75",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:92-92",
+      "abstract": "if __name__ == '__main__':"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py-chunk-76",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/seam_carving.py:93-93",
+      "abstract": "main()"
+    },
+    {
+      "id": "k-s-1-1",
+      "nodeType": "knowledge-point",
+      "title": "OpenCV 图像处理基础",
+      "abstract": "OpenCV 是一个广泛用于计算机视觉的库，常用于图像和视频处理。了解其基本用法，如读取、转换图像颜色空间（如 BGR 转 Gray）、使用内置滤波器（如 Sobel 算子），对于理解本步骤代码的功能至关重要。"
+    },
+    {
+      "id": "k-s-1-2",
+      "nodeType": "knowledge-point",
+      "title": "Sobel 算子与图像梯度",
+      "abstract": "Sobel 算子是一种常用的图像边缘检测方法，可用来计算图像在水平和垂直方向的梯度。通过获取梯度幅值，可以反映像素的“变化强度”，在能量图计算和视觉重要性评估等场景具有重要应用。"
+    },
+    {
+      "id": "k-s-1-3",
+      "nodeType": "knowledge-point",
+      "title": "NumPy 数组操作",
+      "abstract": "NumPy 是进行数值和数组操作的常用 Python 库，支持高效的多维数组和矩阵运算。理解如 np.abs、数组加法等基本 API，有助于理解如何高效地对整个图像做像素级运算（如能量计算）。"
+    },
+    {
+      "id": "k-s-1-4",
+      "nodeType": "knowledge-point",
+      "title": "梯度幅值与能量图概念",
+      "abstract": "梯度幅值表示图像中像素值变化的强度，可作为像素的重要性指标。能量图将梯度幅值用于后续图像处理，如无损内容感知调整（seam carving）中的路径选择。理解能量图为何以及如何反映图像结构，是理解本步骤核心思想的基础。"
+    },
+    {
+      "id": "k-s-2-1",
+      "nodeType": "knowledge-point",
+      "title": "Sobel 算子原理",
+      "abstract": "Sobel 算子是一种常用于图像处理的边缘检测滤波器，能够计算图像在 x 和 y 方向的梯度信息。理解它有助于明白如何用梯度表达像素能量，以及为什么通过累加 x、y 方向的梯度可以得到能量图。"
+    },
+    {
+      "id": "k-s-2-3",
+      "nodeType": "knowledge-point",
+      "title": "NumPy 数组运算",
+      "abstract": "NumPy 是 Python 进行科学计算的重要库，广泛用于高效的数组和矩阵操作。例如 np.abs 实现数组元素的绝对值计算，了解这些函数有助于理解能量图的数学计算过程。"
+    },
+    {
+      "id": "k-s-2-4",
+      "nodeType": "knowledge-point",
+      "title": "图像灰度化原理",
+      "abstract": "图像灰度化是将彩色图像转换为单通道灰度图像的过程，便于后续进行梯度、能量等分析。理解为什么要先灰度化、如何实现灰度化，有助于掌握能量图生成的前置步骤。"
+    },
+    {
+      "id": "k-s-3-1",
+      "nodeType": "knowledge-point",
+      "title": "动态规划原理",
+      "abstract": "动态规划是一种将复杂问题分解为子问题并记录中间结果以避免重复计算的算法思想。用于在求解最优路径等问题时提高效率。此知识对于理解如何逐层累计最小能量路径至关重要。"
+    },
+    {
+      "id": "k-s-3-2",
+      "nodeType": "knowledge-point",
+      "title": "能量图与图像缝合",
+      "abstract": "能量图是图像每个像素的重要性度量，常用于内容感知图像缩放等场景。了解能量图如何表达像素的重要性、以及如何通过寻找低能量路径实现无损内容移除，对理解本步骤设计和目标至关重要。"
+    },
+    {
+      "id": "k-s-3-4",
+      "nodeType": "knowledge-point",
+      "title": "最短路径问题建模",
+      "abstract": "最小能量缝问题归属于最短路径类问题，需要理解如何将图像每行像素视作路径中的节点，通过状态转移和回溯找到全局能量最小路径。掌握这一建模思想能帮助正确实现与调试相关算法。"
+    },
+    {
+      "id": "k-s-4-2",
+      "nodeType": "knowledge-point",
+      "title": "动态规划路径回溯",
+      "abstract": "动态规划常用于解决最优路径、缝隙移除等问题。回溯表（backtrack）用来记录每一步的决策路径，实现从底部向顶部逐步恢复最优路径。理解回溯机制有助于掌握如何标记并提取最终的缝路径。"
+    },
+    {
+      "id": "k-s-4-3",
+      "nodeType": "knowledge-point",
+      "title": "图像 Seam Carving 原理",
+      "abstract": "Seam Carving 是一种智能图像缩放技术，通过移除或插入最不重要的像素缝（seam）来调整图像尺寸。理解什么是缝以及如何确定和记录最优缝路径，是内容感知调整和缩放的关键。"
+    },
+    {
+      "id": "k-s-4-4",
+      "nodeType": "knowledge-point",
+      "title": "二维数据最小值搜索",
+      "abstract": "find_seam 函数关键在于沿某一维搜索最小值（如 np.argmin），以找到图像能量图中最优缝的起点。理解如何在二维数据中搜索和定位极值对于缝路径标记非常重要。"
+    },
+    {
+      "id": "k-s-5-1",
+      "nodeType": "knowledge-point",
+      "title": "图像像素操作",
+      "abstract": "图像像素操作指的是直接访问和修改图像的原始像素数据，包括按行、列增加或删除像素。在实现图像缝合调整时，需要能够精确定位并操作像素以达到缩放或保护重要内容的目的。"
+    },
+    {
+      "id": "k-s-5-2",
+      "nodeType": "knowledge-point",
+      "title": "图像数据结构",
+      "abstract": "图像通常以二维数组的形式存储，每个元素代表一个像素。如果用编程语言处理，需理解如 numpy 数组或类似结构的组织与操作方式。这对于删除或插入像素行/列以调整大小十分重要。"
+    },
+    {
+      "id": "k-s-5-3",
+      "nodeType": "knowledge-point",
+      "title": "缝合算法原理",
+      "abstract": "缝合算法是一种内容感知图像缩放技术，通过找到能量最小的路径（最优缝）来删除或插入像素，实现保留重要内容的缩放。理解其路径选择和作用原理是完成本步骤的基础。"
+    },
+    {
+      "id": "k-s-6-1",
+      "nodeType": "knowledge-point",
+      "title": "无损内容缩放算法",
+      "abstract": "无损内容缩放（如内容感知缩放，Seam Carving）是一种在不显著破坏图片内容完整性的前提下改变图片尺寸的算法。了解其原理有助于理解为何需要迭代寻找和移除能量最低的像素缝。"
+    },
+    {
+      "id": "k-s-6-2",
+      "nodeType": "knowledge-point",
+      "title": "能量函数计算",
+      "abstract": "在内容感知缩放中，能量函数用于衡量每个像素的重要性。常见做法是根据像素的梯度计算强度，低能量区域优先被移除。理解能量函数有助于掌握缝隙查找的底层逻辑。"
+    },
+    {
+      "id": "k-s-6-3",
+      "nodeType": "knowledge-point",
+      "title": "Python argparse 用法",
+      "abstract": "argparse 是 Python 的标准命令行解析库，允许程序支持自定义参数。掌握 add_argument 的使用方法（如 type、default、help 等参数）有助于理解如何让用户指定缩放比例。"
+    },
+    {
+      "id": "k-s-6-4",
+      "nodeType": "knowledge-point",
+      "title": "NumPy 数组基础与形状操作",
+      "abstract": "NumPy 是 Python 常用的数组处理库。理解 shape 属性用法、数组切片和类型转换等基础操作对于处理图片矩阵、计算新尺寸等流程至关重要。"
+    },
+    {
+      "id": "k-s-7-1",
+      "nodeType": "knowledge-point",
+      "title": "Matplotlib 图像显示",
+      "abstract": "Matplotlib 是 Python 常见的数据可视化库，提供了 imshow、subplot 和 show 等函数，用于在窗口中展示单张或多张图像。理解这些 API 的用法有助于以直观、对比的方式显示处理前后的图片，常见于图像处理、数据分析等场景。"
+    },
+    {
+      "id": "k-s-7-2",
+      "nodeType": "knowledge-point",
+      "title": "OpenCV 图像色彩空间转换",
+      "abstract": "OpenCV 的 cvtColor 函数可实现不同色彩空间（如 BGR 到 RGB）之间的转换。Matplotlib 默认按照 RGB 格式读取和显示图片，而 OpenCV 按 BGR 读取，因此需转换才能正确显示图像的真实色彩。这是许多图像处理流程中常见的步骤。"
+    },
+    {
+      "id": "k-s-7-3",
+      "nodeType": "knowledge-point",
+      "title": "子图布局与对比展示思路",
+      "abstract": "在科学可视化中，常通过子图（subplot）并排展示处理前后的结果，以便观察算法效果。理解 subplot 如何分割画布、展示对比效果以及去除坐标轴冗余信息，是制作直观演示界面的基础。"
+    },
+    {
+      "id": "k-s-8-1",
+      "nodeType": "knowledge-point",
+      "title": "OpenCV 图像保存API",
+      "abstract": "OpenCV 是一个流行的计算机视觉库，其 imwrite 函数用于将处理后的图像数据保存为硬盘上的图片文件。理解如何使用 cv2.imwrite 包括参数含义、支持的格式以及常见报错，有助于正确完成图像输出操作。"
+    },
+    {
+      "id": "k-s-8-2",
+      "nodeType": "knowledge-point",
+      "title": "命令参数解析与使用",
+      "abstract": "在开发中通常需要处理命令行参数，如通过 argparse 库解析和读取输入输出路径。理解如何通过 args.output 访问参数并将其用于输出，是自动化和脚本化程序时的常见需求。"
+    },
+    {
+      "id": "k-s-8-3",
+      "nodeType": "knowledge-point",
+      "title": "条件语句 if 的用法",
+      "abstract": "条件语句 if 在 Python 中用于根据条件决定是否执行某段代码。在保存图像前判断 out_path 是否为 None 可避免错误，是程序健壮性和容错性的基础写法。"
+    }
+  ]
+}

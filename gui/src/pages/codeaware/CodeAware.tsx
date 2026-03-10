@@ -673,6 +673,7 @@ export const CodeAware = () => {
       await logger.addLogEntry("user_export_knowledge_state", {
         edgesPath: result.edgesPath,
         nodeMasteryPath: result.nodeMasteryPath,
+        nodeIndexPath: result.nodeIndexPath,
         timestamp: new Date().toISOString(),
       });
     } catch (error) {

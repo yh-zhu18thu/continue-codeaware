@@ -1,139 +1,93 @@
-import argparse
-import sys
-import os
 import numpy as np
 import cv2
 from matplotlib import pyplot as plt
 
-def load_image(image_path):
-    if not os.path.isfile(image_path):
-        raise FileNotFoundError(f"Image file not found: {image_path}")
-    image = cv2.imread(image_path)
-    if image is None:
-        raise ValueError("Failed to load image. Unsupported format or corrupted file.")
-    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    return image
-
-def save_image(image, file_path):
-    image_bgr = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-    cv2.imwrite(file_path, image_bgr)
-
-def show_comparison(original, carved):
-    plt.figure(figsize=(10,5))
-    plt.subplot(1,2,1)
-    plt.title("Original")
-    plt.axis('off')
-    plt.imshow(original)
-    plt.subplot(1,2,2)
-    plt.title("Seam Carved")
-    plt.axis('off')
-    plt.imshow(carved)
-    plt.show()
 
 def compute_energy(image):
-    gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    # Use Sobel filter to compute gradient magnitude as energy
     sobelx = cv2.Sobel(gray, cv2.CV_64F, 1, 0, ksize=3)
     sobely = cv2.Sobel(gray, cv2.CV_64F, 0, 1, ksize=3)
-    energy = np.hypot(sobelx, sobely)
-    energy = energy / np.max(energy)
+    energy = np.abs(sobelx) + np.abs(sobely)
     return energy
 
-def find_seam(energy):
+
+def cumulative_map_vertical(energy):
     h, w = energy.shape
-    seam = np.zeros((h,), dtype=np.int32)
-    cost = energy.copy()
-    backtrack = np.zeros_like(cost, dtype=np.int32)
+    M = np.zeros_like(energy)
+    backtrack = np.zeros_like(energy, dtype=np.int)
+    M[0] = energy[0]
     for i in range(1, h):
         for j in range(0, w):
-            min_pre = cost[i-1, j]
-            idx = j
-            if j > 0 and cost[i-1, j-1] < min_pre:
-                min_pre = cost[i-1, j-1]
-                idx = j-1
-            if j < w-1 and cost[i-1, j+1] < min_pre:
-                min_pre = cost[i-1, j+1]
-                idx = j+1
-            cost[i, j] += min_pre
-            backtrack[i, j] = idx
-    seam[-1] = np.argmin(cost[-1])
+            left = M[i-1, j-1] if j-1 >= 0 else float('inf')
+            up = M[i-1, j]
+            right = M[i-1, j+1] if j+1 < w else float('inf')
+            min_idx = np.argmin([left, up, right])
+            M[i, j] = energy[i, j] + [left, up, right][min_idx]
+            backtrack[i, j] = j + (min_idx - 1)
+    return M, backtrack
+
+
+def find_seam(M, backtrack):
+    h, w = M.shape
+    seam = np.zeros(h, dtype=np.int)
+    seam[-1] = np.argmin(M[-1])
     for i in range(h-2, -1, -1):
         seam[i] = backtrack[i+1, seam[i+1]]
     return seam
+
 
 def remove_seam(image, seam):
     h, w, c = image.shape
     output = np.zeros((h, w-1, c), dtype=image.dtype)
     for i in range(h):
-        output[i,:, :] = np.delete(image[i, :, :], seam[i], axis=0)
+        col = seam[i]
+        output[i, :, :] = np.delete(image[i, :, :], col, axis=0)
     return output
 
-def carve_column(image, num_remove):
-    carved = image.copy()
-    for _ in range(num_remove):
-        energy = compute_energy(carved)
-        seam = find_seam(energy)
-        carved = remove_seam(carved, seam)
-    return carved
 
-def transpose_image(image):
-    return np.transpose(image, (1,0,2))
+def seam_carve(image, scale_width=0.8, out_path=None):
+    out = image.copy()
+    new_width = int(image.shape[1] * scale_width)
+    num_seams = image.shape[1] - new_width
+    for _ in range(num_seams):
+        energy = compute_energy(out)
+        M, backtrack = cumulative_map_vertical(energy)
+        seam = find_seam(M, backtrack)
+        out = remove_seam(out, seam)
+    if out_path is not None:
+        cv2.imwrite(out_path, out)
+    return out
 
-def carve_row(image, num_remove):
-    """Remove horizontal seams (rows) by transposing image, removing columns, then transposing back."""
-    transposed = transpose_image(image)
-    carved = carve_column(transposed, num_remove)
-    return transpose_image(carved)
 
-def carve_image(image, new_width, new_height):
-    h, w, _ = image.shape
-    assert new_width <= w and new_height <= h
-    carved = image
-    if new_width < w:
-        num = w - new_width
-        carved = carve_column(carved, num)
-    if new_height < h:
-        num = h - new_height
-        carved = carve_row(carved, num)
-    return carved
+def show_images(before, after):
+    plt.figure(figsize=(12, 6))
+    plt.subplot(1, 2, 1)
+    plt.title('Original')
+    plt.imshow(cv2.cvtColor(before, cv2.COLOR_BGR2RGB))
+    plt.axis('off')
+    plt.subplot(1, 2, 2)
+    plt.title('Seam Carved')
+    plt.imshow(cv2.cvtColor(after, cv2.COLOR_BGR2RGB))
+    plt.axis('off')
+    plt.show()
 
-def valid_image_path(path):
-    ext = os.path.splitext(path)[1].lower()
-    if ext not in ['.jpg', '.jpeg', '.png', '.bmp']:
-        raise argparse.ArgumentTypeError('Unsupported image format.')
-    return path
 
 def main():
-    parser = argparse.ArgumentParser(description="Seam Carving (内容感知缩放) 工具")
-    parser.add_argument("-i", "--input", type=valid_image_path, required=True, help="输入图片路径")
-    parser.add_argument("-o", "--output", type=str, required=True, help="输出图片保存路径")
-    parser.add_argument("-W", "--width", type=int, help="目标宽度（像素）")
-    parser.add_argument("-H", "--height", type=int, help="目标高度（像素）")
-    parser.add_argument("-d", "--display", action="store_true", help="是否显示图片对比图")
+    import argparse
+    parser = argparse.ArgumentParser(description='Seam Carving缩放演示')
+    parser.add_argument('input_image', type=str, help='输入图片路径')
+    parser.add_argument('--output', type=str, default='seam_carved_output.jpg', help='输出图片路径')
+    parser.add_argument('--scale', type=float, default=0.8, help='缩放宽度比例 (0~1)')
     args = parser.parse_args()
-    try:
-        image = load_image(args.input)
-    except Exception as e:
-        print(f"加载图像失败: {e}")
-        sys.exit(1)
-    h, w, _ = image.shape
-    new_width = args.width if args.width else w
-    new_height = args.height if args.height else h
-    if new_width > w or new_height > h or new_width <= 0 or new_height <= 0:
-        print("目标尺寸无效，需小于等于原始尺寸且大于0.")
-        sys.exit(1)
-    try:
-        carved = carve_image(image, new_width, new_height)
-    except Exception as e:
-        print(f"缩放处理失败: {e}")
-        sys.exit(1)
-    try:
-        save_image(carved, args.output)
-    except Exception as e:
-        print(f"保存图片失败: {e}")
-        sys.exit(1)
-    if args.display:
-        show_comparison(image, carved)
-    print(f"处理完成，输出图片保存在: {args.output}")
 
-if __name__ == "__main__":
+    image = cv2.imread(args.input_image)
+    if image is None:
+        print('图片加载失败:', args.input_image)
+        return
+    result = seam_carve(image, scale_width=args.scale, out_path=args.output)
+    print(f'输出已保存到: {args.output}')
+    show_images(image, result)
+
+if __name__ == '__main__':
     main()

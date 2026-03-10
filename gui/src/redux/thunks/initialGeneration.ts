@@ -98,11 +98,24 @@ async function persistCognitiveTrackingArtifacts(
     fallbackFilePath?: string;
     nodeMasteryScores: RootState["codeAwareSession"]["nodeMasteryScores"];
     cognitiveEdges: ReturnType<typeof buildCodeAwareCognitiveEdges>;
+    nodeIndex: {
+      schemaVersion: number;
+      sessionId: string;
+      generatedAt: string;
+      nodeCount: number;
+      nodes: Array<{
+        id: string;
+        nodeType: "high-level-step" | "step" | "code-chunk" | "knowledge-point";
+        title: string;
+        abstract: string;
+      }>;
+    };
   },
   extra: ThunkApiType["extra"],
 ): Promise<{
   edgesPath: string;
   nodeMasteryPath: string;
+  nodeIndexPath: string;
 }> {
   const baseDir =
     (args.workspaceDirectory || "").trim() ||
@@ -127,12 +140,14 @@ async function persistCognitiveTrackingArtifacts(
 
   const latestEdgesFilename = "codeaware-cognitive-edges.latest.json";
   const latestNodeMasteryFilename = "codeaware-node-mastery.latest.json";
+  const latestNodeIndexFilename = "codeaware-node-index.latest.json";
 
   const edgesPath = joinPath(knowledgeStateDir, latestEdgesFilename);
   const nodeMasteryPath = joinPath(
     knowledgeStateDir,
     latestNodeMasteryFilename,
   );
+  const nodeIndexPath = joinPath(knowledgeStateDir, latestNodeIndexFilename);
 
   await extra.ideMessenger.request("writeFile", {
     path: edgesPath,
@@ -144,7 +159,88 @@ async function persistCognitiveTrackingArtifacts(
     contents: JSON.stringify(nodeMasteryPayload, null, 2),
   });
 
-  return { edgesPath, nodeMasteryPath };
+  await extra.ideMessenger.request("writeFile", {
+    path: nodeIndexPath,
+    contents: JSON.stringify(args.nodeIndex, null, 2),
+  });
+
+  return { edgesPath, nodeMasteryPath, nodeIndexPath };
+}
+
+function buildNodeIndexPayload(state: RootState["codeAwareSession"]): {
+  schemaVersion: number;
+  sessionId: string;
+  generatedAt: string;
+  nodeCount: number;
+  nodes: Array<{
+    id: string;
+    nodeType: "high-level-step" | "step" | "code-chunk" | "knowledge-point";
+    title: string;
+    abstract: string;
+  }>;
+} {
+  const nodes: Array<{
+    id: string;
+    nodeType: "high-level-step" | "step" | "code-chunk" | "knowledge-point";
+    title: string;
+    abstract: string;
+  }> = [];
+
+  state.highLevelSteps.forEach((item) => {
+    nodes.push({
+      id: item.id,
+      nodeType: "high-level-step",
+      title: item.content || "",
+      abstract: "",
+    });
+  });
+
+  state.steps.forEach((item) => {
+    nodes.push({
+      id: item.id,
+      nodeType: "step",
+      title: item.title || "",
+      abstract: item.abstract || "",
+    });
+  });
+
+  state.codeChunks.forEach((item) => {
+    const [startLine, endLine] = item.range;
+    const title = `${item.filePath}:${startLine}-${endLine}`;
+    const abstract = item.content.trim().slice(0, 240);
+
+    nodes.push({
+      id: item.id,
+      nodeType: "code-chunk",
+      title,
+      abstract,
+    });
+  });
+
+  state.knowledgePoints.forEach((item) => {
+    nodes.push({
+      id: item.id,
+      nodeType: "knowledge-point",
+      title: item.title || "",
+      abstract: item.content || "",
+    });
+  });
+
+  const deduped = new Map<string, (typeof nodes)[number]>();
+  nodes.forEach((node) => {
+    const key = `${node.nodeType}:${node.id}`;
+    deduped.set(key, node);
+  });
+
+  const dedupedNodes = Array.from(deduped.values());
+
+  return {
+    schemaVersion: 1,
+    sessionId: state.currentSessionId,
+    generatedAt: new Date().toISOString(),
+    nodeCount: dedupedNodes.length,
+    nodes: dedupedNodes,
+  };
 }
 
 async function getCurrentFileSnapshot(
@@ -366,7 +462,7 @@ function buildInitialNodeMasteryScores(
 }
 
 export const exportKnowledgeStateArtifacts = createAsyncThunk<
-  { edgesPath: string; nodeMasteryPath: string },
+  { edgesPath: string; nodeMasteryPath: string; nodeIndexPath: string },
   void,
   ThunkApiType
 >(
@@ -386,6 +482,7 @@ export const exportKnowledgeStateArtifacts = createAsyncThunk<
     };
 
     const unifiedEdges = buildCodeAwareCognitiveEdges(refreshedState);
+    const nodeIndex = buildNodeIndexPayload(refreshedState);
 
     const currentFile = await getCurrentFileSnapshot(extra);
     const persistedFiles = await persistCognitiveTrackingArtifacts(
@@ -396,6 +493,7 @@ export const exportKnowledgeStateArtifacts = createAsyncThunk<
           refreshedState.codeChunks[0]?.filePath || currentFile?.path,
         nodeMasteryScores,
         cognitiveEdges: unifiedEdges,
+        nodeIndex,
       },
       extra,
     );
@@ -407,6 +505,7 @@ export const exportKnowledgeStateArtifacts = createAsyncThunk<
         nodeMasteryCount: nodeMasteryScores.length,
         edgesPath: persistedFiles.edgesPath,
         nodeMasteryPath: persistedFiles.nodeMasteryPath,
+        nodeIndexPath: persistedFiles.nodeIndexPath,
         timestamp: new Date().toISOString(),
       },
     });

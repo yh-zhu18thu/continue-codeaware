@@ -1,5 +1,5 @@
 import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import styled from "styled-components";
 import {
   defaultBorderRadius,
@@ -313,6 +313,61 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
   >(feedback);
   const [currentTestIndex, setCurrentTestIndex] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
+  const [isContentLoadingLocal, setIsContentLoadingLocal] = useState(false);
+  const hasTriggeredInitialContentLoadRef = useRef(false);
+  const isContentMissing = markdownContent.trim().length === 0;
+
+  const triggerLazyContentGeneration = useCallback(() => {
+    if (
+      hasTriggeredInitialContentLoadRef.current ||
+      !isExpanded ||
+      currentViewMode !== "read" ||
+      !isContentMissing ||
+      !onGenerateContent ||
+      !stepId ||
+      !cardId ||
+      disabled
+    ) {
+      return;
+    }
+
+    hasTriggeredInitialContentLoadRef.current = true;
+    setIsContentLoadingLocal(true);
+    console.log("Triggering lazy loading for knowledge card:", cardId);
+    onGenerateContent(stepId, cardId, title, learningGoal, codeContext);
+  }, [
+    cardId,
+    codeContext,
+    currentViewMode,
+    disabled,
+    isContentMissing,
+    isExpanded,
+    learningGoal,
+    onGenerateContent,
+    stepId,
+    title,
+  ]);
+
+  useEffect(() => {
+    hasTriggeredInitialContentLoadRef.current = false;
+    setIsContentLoadingLocal(false);
+  }, [cardId]);
+
+  useEffect(() => {
+    // Keep loading animation visible before/while Redux loading state lands.
+    if (markdownContent === "::LOADING::") {
+      setIsContentLoadingLocal(true);
+      return;
+    }
+
+    if (!isContentMissing) {
+      setIsContentLoadingLocal(false);
+    }
+  }, [markdownContent, isContentMissing]);
+
+  useEffect(() => {
+    triggerLazyContentGeneration();
+  }, [triggerLazyContentGeneration]);
 
   useEffect(() => {
     if (viewMode && viewMode !== currentViewMode) {
@@ -439,16 +494,8 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
     if (wasExpanded) {
     }
 
-    // If card is being expanded and content is empty, trigger lazy loading
-    if (
-      !wasExpanded &&
-      !markdownContent &&
-      onGenerateContent &&
-      stepId &&
-      cardId
-    ) {
-      console.log("Triggering lazy loading for knowledge card:", cardId);
-      onGenerateContent(stepId, cardId, title, learningGoal, codeContext);
+    if (!wasExpanded) {
+      triggerLazyContentGeneration();
     }
   };
 
@@ -647,9 +694,11 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
           </FeedbackGroup>
         </InteractionBar>
 
-        {currentViewMode === "read" && markdownContent === "::LOADING::" && (
-          <KnowledgeCardLoader text="Generating knowledge card contents" />
-        )}
+        {currentViewMode === "read" &&
+          (markdownContent === "::LOADING::" ||
+            (isContentLoadingLocal && isContentMissing)) && (
+            <KnowledgeCardLoader text="Generating knowledge card contents" />
+          )}
 
         {currentViewMode === "read" &&
           markdownContent &&
@@ -695,6 +744,7 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
                 }}
                 onClick={() => {
                   if (onGenerateContent && stepId && cardId) {
+                    setIsContentLoadingLocal(true);
                     onGenerateContent(
                       stepId,
                       cardId,
@@ -710,19 +760,22 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
             </div>
           )}
 
-        {currentViewMode === "read" && !markdownContent && (
-          <div
-            style={{
-              padding: "12px",
-              color: "#888",
-              fontSize: "14px",
-              fontStyle: "italic",
-              textAlign: "center",
-            }}
-          >
-            此知识卡片暂无详细内容
-          </div>
-        )}
+        {currentViewMode === "read" &&
+          isContentMissing &&
+          markdownContent !== "::LOADING::" &&
+          !isContentLoadingLocal && (
+            <div
+              style={{
+                padding: "12px",
+                color: "#888",
+                fontSize: "14px",
+                fontStyle: "italic",
+                textAlign: "center",
+              }}
+            >
+              此知识卡片暂无详细内容
+            </div>
+          )}
 
         {currentViewMode === "self-test" && (
           <QuestionPanel>

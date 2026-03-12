@@ -2941,7 +2941,8 @@ export const CodeAware = () => {
 
                         // Default states - 由 viewMode 控制初始视图
                         defaultTestMode: kc.viewMode === "answer",
-                        defaultExpanded: Boolean(kc.content || kc.question), // 有内容或问题时展开
+                        // 新生成主题后默认折叠，由用户自主展开后再触发内容懒加载
+                        defaultExpanded: false,
 
                         // Lazy loading props
                         stepId: step.id,

@@ -392,17 +392,20 @@ export function constructGenerateKnowledgeCardDetailPrompt(
   taskDescription?: string,
 ): string {
   return `{
-        "task": "A user is working on a coding project and needs to acquire knowledge about a specific theme to better understand the concepts, implementation and logic. Based on the knowledge theme, project context, related code, and learning objectives, generate a clear but concise educational explanation.",
+        "task": "A non-programmer user is working on a coding project and needs fast, adaptive scaffolding for one specific confusion point. Based on the knowledge theme, project context, related code, and learning objectives, generate a short and clear knowledge card.",
         "knowledge_theme": "${knowledgeCardTheme}",
         "learning_objectives": "${learningGoal}",
         "related_code": "${codeContext}",
         "project_context": "${taskDescription || ""}",
         "requirements": [
-            "The knowledge card should contain content closely related to the knowledge_theme. Make sure the content is relevant to the specific project context being worked on.",
-            "IMPORTANT: Do not include content beyond the theme and task at hand. Do not include content from downstream tasks from potential next steps. Keep the content brief and concise.",
-            "The knowledge card should start with a very brief, concise and to-the-point sentence describing its theme and main points, TLDR style.",
-            "Consider the project_context and related_code when generating explanations to make them more relevant and practical.",
-            "IMPORTANT: Focus on providing clear, educational content that helps users understand the most necessary concepts and logics. Use simple terms and analogies if appropriate.",
+            "Treat the user as a non-programmer: assume minimal coding background and minimal terminology knowledge.",
+            "Use adaptive scaffolding style: internally choose one of hinting/explaining/instructing/modeling, but DO NOT output the chosen type.",
+            "Focus on one specific confusion point only. Do not expand to downstream topics or unrelated concepts.",
+            "Title must be plain and direct, avoiding obscure jargon. Prefer a concrete question-style or everyday phrase.",
+            "Content must be 2-3 short sentences only, concise and practical.",
+            "Sentence 1: TLDR in plain language. Sentence 2-3: minimal explanation or next action tied to project_context and related_code.",
+            "Use simple words, life-like analogies when helpful, and avoid long definitions.",
+            "Do not dump full code explanations. Only mention the most relevant code behavior if needed.",
             "Respond in the same language as the project_context. You may use Markdown in the content to make it more readable.",
             "You must follow this JSON format in your response: {\\"title\\": \\"(title of the knowledge card)\\", \\"content\\": \\"(content of the knowledge card. Markdown can be used here)\\"}",
             "IMPORTANT: Properly escape all special characters in JSON strings. Ensure the JSON is valid and parseable.",
@@ -421,20 +424,20 @@ export function constructGenerateKnowledgeCardTestsPrompt(
   taskDescription?: string,
 ): string {
   return `{
-        "task": "A student has learned about a specific knowledge theme and wants to verify whether they understand the core concepts or logic of this topic. Generate 1 to 3 test questions that can help the student assess their comprehension, incorporating the current task context and code context while aligning with their learning objectives.",
+  "task": "A non-programmer student has learned one knowledge card and wants a quick self-check. Generate very short self-test questions that verify understanding of the exact core point.",
         "knowledge_card_title": "${knowledgeCardTitle}",
         "knowledge_card_content": "${knowledgeCardContent}",
         "knowledge_theme": "${knowledgeCardTheme}",
         "learning_objectives": "${learningGoal}",
         "code_context": "${codeContext}",
-        "task_context": "${taskDescription || ""}"
+        "task_context": "${taskDescription || ""}",
         "requirements": [
-            "The questions should test understanding of the core concepts or implementation logic covered in the knowledge card content.",
-            "Incorporate actual examples from the code_context and task_context to make the questions more relevant and practical.",
-            "Questions should help students verify their comprehension of the specific concepts presented in the knowledge card.",
-            "Focus on questions that allow learners to demonstrate and apply their understanding of the material.",
-            "Align the questions with the learning_objectives to ensure they support the student's overall learning goals.",
-            "Generate between 1 to 3 questions - prioritize quality and relevance over quantity.",
+          "Treat the learner as a non-programmer. Use plain language and avoid heavy jargon.",
+          "Generate 1-2 high-quality questions only. Keep each stem short and focused on one idea.",
+          "Questions should directly test the exact core concept from the card, not broad extra knowledge.",
+          "Prefer practical understanding checks using task_context/code_context in everyday wording.",
+          "The standard_answer must be concise (1-2 sentences) and easy to understand.",
+          "Avoid trivia or memorization-only questions. Prioritize conceptual understanding and simple application.",
             "Respond in the same language as the task_context.",
             "You must follow this JSON format in your response: {\\"tests\\":[{\\"question_type\\": \\"shortAnswer\\", \\"question\\": {\\"stem\\": \\"(the question itself)\\", \\"standard_answer\\": \\"(the correct answer)\\"}}]}",
             "IMPORTANT: Properly escape all special characters in JSON strings. Ensure the JSON is valid and parseable.",
@@ -631,7 +634,7 @@ export function constructGenerateKnowledgeCardThemesPrompt(
 
   if (currentCode) {
     return `{
-            "task": "You are given a programming task, information about the current step, and learning goals. Generate a list of potential knowledge card themes that would be helpful for the user to understand this step better.",
+            "task": "You are given a programming task, current step information, learning goals, and code. Generate beginner-friendly knowledge card themes for non-programmers so they can quickly find what they don't understand.",
             "task_description": "${taskDescription}",${codeContext}
             "current_step": {
                 "title": "${currentStep.title}",
@@ -639,10 +642,12 @@ export function constructGenerateKnowledgeCardThemesPrompt(
             },
             "learning_goal": "${learningGoal}",
             "requirements": [
-                "Generate 1-3 most critical knowledge card themes that are relevant to the current step",
-                "The themes should cover concepts, techniques, or common questions and issues that learners might have when working on this step",
-                "The themes should align with the learning goals provided. But you can include more general topics in addition to ones directly relevant to the project at hand. You can also add topics that might interest the user.",
-                "Each theme should be a concise phrase or question (no more than 10-15 words)",
+                "Treat learners as non-programmers with low terminology familiarity.",
+                "Generate only 1-2 most critical themes for this step.",
+                "Each theme must be very clear, concrete, and easy to understand at a glance.",
+                "Avoid obscure technical wording. Prefer everyday phrases or direct beginner questions.",
+                "Each theme should be concise (prefer 6-12 words) and should map to one specific confusion point.",
+                "Do not include downstream topics or broad future-learning themes.",
                 ${codeRequirements.map((req) => `"${req}"`).join(",\n                ")},
                 "Respond in the same language as the task_description",
                 "You must follow this JSON format in your response: [{\\"theme\\": \\"(theme title)\\", \\"corresponding_code_snippets\\": [\\"(relevant code snippet 1)\\", \\"(relevant code snippet 2)\\", ...]}]",
@@ -652,7 +657,7 @@ export function constructGenerateKnowledgeCardThemesPrompt(
         }`;
   } else {
     return `{
-            "task": "You are given a programming task, information about the current step, and learning goals. Generate a list of potential knowledge card themes that would be helpful for the user to understand this step better.",
+            "task": "You are given a programming task, current step information, and learning goals. Generate beginner-friendly knowledge card themes for non-programmers so they can quickly identify what they don't understand.",
             "task_description": "${taskDescription}",
             "current_step": {
                 "title": "${currentStep.title}",
@@ -660,10 +665,12 @@ export function constructGenerateKnowledgeCardThemesPrompt(
             },
             "learning_goal": "${learningGoal}",
             "requirements": [
-                "Generate 1-3 knowledge card themes that are relevant to the current step",
-                "The themes should cover concepts, techniques, or common questions and issues that learners might have when working on this step",
-                "The themes should align with the learning goals provided. But you can include more general topics in addition to ones directly relevant to the project at hand. You can also add topics that might interest the user.",
-                "Each theme should be a concise phrase or question (no more than 10-15 words)",
+                "Treat learners as non-programmers with low terminology familiarity.",
+                "Generate only 1-2 most critical themes for this step.",
+                "Each theme must be very clear, concrete, and easy to understand at a glance.",
+                "Avoid obscure technical wording. Prefer everyday phrases or direct beginner questions.",
+                "Each theme should be concise (prefer 6-12 words) and should map to one specific confusion point.",
+                "Do not include downstream topics or broad future-learning themes.",
                 "Since no code is available for this step yet, focus only on generating relevant themes",
                 "Respond in the same language as the task_description",
                 "You must follow this JSON format in your response: [\\"(theme 1)\\", \\"(theme 2)\\", \\"(theme 3)\\", ...]",
@@ -687,7 +694,7 @@ export function constructGenerateKnowledgeCardThemesFromQueryPrompt(
   task: string,
 ): string {
   return `{
-        "task": "You are given a user query in the context of a programming learning session. Based on the query, current step information, current code, existing knowledge card themes, and learning goals, generate new knowledge card themes that address the user's question and complement existing ones.",
+  "task": "You are given a user's question in a programming learning session. Generate beginner-friendly new knowledge card themes that directly solve the user's current confusion and complement existing themes.",
         "query_context": {
             "selected_code": "${queryContext.selectedCode}",
             "selected_text": "${queryContext.selectedText}",
@@ -702,11 +709,12 @@ export function constructGenerateKnowledgeCardThemesFromQueryPrompt(
         "learning_goal": "${learningGoal}",
         "task": "${task}",
         "requirements": [
-            "Generate 1-2 new knowledge card themes that directly address the user's query",
-            "The themes should complement, not duplicate, the existing themes",
-            "Consider why the existing themes might not fully address the user's question. Think about why the user still has questions, and what topic they may need to know or be interested in.",
-            "The themes should be relevant to the current step and align with the learning goals",
-            "Each theme should be a concise phrase or question (no more than 15 words)",
+            "Treat learners as non-programmers with low terminology familiarity.",
+            "Generate 1-2 new themes that directly answer the user's current question.",
+            "The themes should complement, not duplicate, the existing themes.",
+            "Each theme should be plain, specific, and easy to understand at a glance (prefer 6-12 words).",
+            "Avoid obscure technical jargon and avoid broad future-topic expansion.",
+            "Prioritize the exact confusion point implied by the query.",
             "For each theme, identify if there is corresponding code in the current_code that relates to this theme",
             "If corresponding code exists, extract the relevant code chunks; if not, leave the array empty",
             "A knowledge card can have multiple code snippets if different parts of the code relate to the same theme",
@@ -909,7 +917,7 @@ export function constructGlobalQuestionPrompt(
     .join(",\n        ");
 
   return `{
-        "task": "You are given a question about a coding project and all available steps. Choose the most relevant step that the question relates to, and generate knowledge card themes that would help answer the question.",
+      "task": "You are given a non-programmer user's question about a coding project and all available steps. Choose the most relevant step and generate concise, beginner-friendly knowledge card themes that directly answer the confusion.",
         "question": "${question}",
         "all_steps": [
         ${stepsText}
@@ -919,8 +927,11 @@ export function constructGlobalQuestionPrompt(
             "Analyze the question and determine which step from the provided list is most relevant to answering it",
             "The question might be about concepts, implementation details, or understanding specific parts of the code",
             "Select the step that best matches the topic or area of concern in the question",
-            "Generate 1-2 knowledge card themes that would help answer the user's question",
-            "The themes should be specific to the question asked and relevant to the selected step",
+          "Treat learners as non-programmers with low terminology familiarity.",
+          "Generate exactly 1-2 themes that directly help answer the user's question.",
+          "Each theme must be plain, specific, and easy to understand at a glance (prefer 6-12 words).",
+          "Avoid obscure technical jargon and avoid broad future-topic expansion.",
+          "The themes should be specific to the question asked and relevant to the selected step",
             "Consider the project context when generating themes",
             "Respond in the same language as the question and step descriptions",
             "You must follow this JSON format in your response: {\\"selected_step_id\\": \\"(the id of the most relevant step)\\", \\"knowledge_card_themes\\": [\\"(theme 1)\\", \\"(theme 2)\\"]}",

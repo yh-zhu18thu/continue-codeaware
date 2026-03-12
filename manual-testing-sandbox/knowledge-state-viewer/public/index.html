@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Knowledge State Viewer</title>
+    <link rel="stylesheet" href="/public/styles.css" />
+    <script
+      src="https://unpkg.com/vis-network@9.1.9/dist/vis-network.min.js"
+      defer
+    ></script>
+    <script src="/public/app.js" defer></script>
+  </head>
+  <body>
+    <main class="layout">
+      <section class="panel controls">
+        <h1>Knowledge State Viewer</h1>
+        <p class="hint">
+          Place the exported files in <code>data/</code> and click <b>Reload Data</b>.
+        </p>
+        <div class="actions">
+          <button id="reloadBtn" type="button">Reload Data</button>
+          <button id="resetViewBtn" type="button">Reset View</button>
+        </div>
+
+        <div class="legend">
+          <h2>Node Legend</h2>
+          <ul>
+            <li><span class="dot step"></span> Step (box)</li>
+            <li><span class="dot code-chunk"></span> Code Chunk (dot)</li>
+            <li><span class="dot background-knowledge"></span> Knowledge (diamond)</li>
+            <li><span class="dot situation"></span> Situation (triangle)</li>
+          </ul>
+        </div>
+
+        <div class="stats" id="stats"></div>
+        <div class="status" id="status">Waiting for data...</div>
+      </section>
+
+      <section class="panel graph-wrap">
+        <div id="graph"></div>
+        <div id="hoverTooltip" class="hover-tooltip hidden"></div>
+      </section>
+
+      <section class="panel details">
+        <h2>Focused Node</h2>
+        <div id="details">Click a node to focus and inspect details.</div>
+      </section>
+    </main>
+  </body>
+</html>

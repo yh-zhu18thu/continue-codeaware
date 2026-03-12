@@ -32,7 +32,7 @@ describe("applyKnowledgeCardInteraction", () => {
     const scores: NodeMasteryScore[] = [
       {
         nodeId: "k-1",
-        nodeType: "knowledge-point",
+        nodeType: "background-knowledge",
         score: 0.5,
         updatedAt: 1,
       },
@@ -46,7 +46,8 @@ describe("applyKnowledgeCardInteraction", () => {
     });
 
     const updated = result.updatedScores.find(
-      (item) => item.nodeId === "k-1" && item.nodeType === "knowledge-point",
+      (item) =>
+        item.nodeId === "k-1" && item.nodeType === "background-knowledge",
     );
 
     expect(updated).toBeDefined();
@@ -58,7 +59,7 @@ describe("applyKnowledgeCardInteraction", () => {
     const scores: NodeMasteryScore[] = [
       {
         nodeId: "k-1",
-        nodeType: "knowledge-point",
+        nodeType: "background-knowledge",
         score: 0.5,
         updatedAt: 1,
       },
@@ -75,7 +76,7 @@ describe("applyKnowledgeCardInteraction", () => {
         id: "e1",
         type: "dependency-forward",
         fromNodeId: "k-1",
-        fromNodeType: "knowledge-point",
+        fromNodeType: "background-knowledge",
         toNodeId: "s-1",
         toNodeType: "step",
         conditionalMasteryProbability: 0.9,
@@ -87,7 +88,7 @@ describe("applyKnowledgeCardInteraction", () => {
         fromNodeId: "s-1",
         fromNodeType: "step",
         toNodeId: "k-1",
-        toNodeType: "knowledge-point",
+        toNodeType: "background-knowledge",
         conditionalMasteryProbability: 0.6,
         createdAt: 1,
       },
@@ -101,7 +102,8 @@ describe("applyKnowledgeCardInteraction", () => {
     });
 
     const k1 = result.updatedScores.find(
-      (item) => item.nodeId === "k-1" && item.nodeType === "knowledge-point",
+      (item) =>
+        item.nodeId === "k-1" && item.nodeType === "background-knowledge",
     );
     const s1 = result.updatedScores.find(
       (item) => item.nodeId === "s-1" && item.nodeType === "step",
@@ -118,13 +120,13 @@ describe("applyKnowledgeCardInteraction", () => {
     const scores: NodeMasteryScore[] = [
       {
         nodeId: "k-1",
-        nodeType: "knowledge-point",
+        nodeType: "background-knowledge",
         score: 0.5,
         updatedAt: 1,
       },
       {
         nodeId: "k-2",
-        nodeType: "knowledge-point",
+        nodeType: "background-knowledge",
         score: 0.5,
         updatedAt: 1,
       },
@@ -141,7 +143,7 @@ describe("applyKnowledgeCardInteraction", () => {
         id: "e1",
         type: "dependency-forward",
         fromNodeId: "k-1",
-        fromNodeType: "knowledge-point",
+        fromNodeType: "background-knowledge",
         toNodeId: "s-1",
         toNodeType: "step",
         conditionalMasteryProbability: 0.9,
@@ -151,7 +153,7 @@ describe("applyKnowledgeCardInteraction", () => {
         id: "e2",
         type: "dependency-forward",
         fromNodeId: "k-2",
-        fromNodeType: "knowledge-point",
+        fromNodeType: "background-knowledge",
         toNodeId: "s-1",
         toNodeType: "step",
         conditionalMasteryProbability: 0.55,

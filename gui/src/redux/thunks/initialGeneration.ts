@@ -105,7 +105,7 @@ async function persistCognitiveTrackingArtifacts(
       nodeCount: number;
       nodes: Array<{
         id: string;
-        nodeType: "step" | "code-chunk" | "knowledge-point" | "situation";
+        nodeType: "step" | "code-chunk" | "background-knowledge" | "situation";
         title: string;
         abstract: string;
       }>;
@@ -174,14 +174,14 @@ function buildNodeIndexPayload(state: RootState["codeAwareSession"]): {
   nodeCount: number;
   nodes: Array<{
     id: string;
-    nodeType: "step" | "code-chunk" | "knowledge-point" | "situation";
+    nodeType: "step" | "code-chunk" | "background-knowledge" | "situation";
     title: string;
     abstract: string;
   }>;
 } {
   const nodes: Array<{
     id: string;
-    nodeType: "step" | "code-chunk" | "knowledge-point" | "situation";
+    nodeType: "step" | "code-chunk" | "background-knowledge" | "situation";
     title: string;
     abstract: string;
   }> = [];
@@ -220,7 +220,7 @@ function buildNodeIndexPayload(state: RootState["codeAwareSession"]): {
   state.knowledgePoints.forEach((item) => {
     nodes.push({
       id: item.id,
-      nodeType: "knowledge-point",
+      nodeType: "background-knowledge",
       title: item.title || "",
       abstract: item.content || "",
     });
@@ -477,7 +477,7 @@ function buildInitialNodeMasteryScores(
   state.knowledgePoints.forEach((item) => {
     scores.push({
       nodeId: item.id,
-      nodeType: "knowledge-point",
+      nodeType: "background-knowledge",
       score: 0,
       updatedAt: now,
     });

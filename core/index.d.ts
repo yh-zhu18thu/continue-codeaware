@@ -592,7 +592,10 @@ export interface KnowledgeCardItem {
   question?: string;
   viewMode?: "read" | "self-test" | "answer";
   feedback?: "understood" | "uncertain";
+  // Legacy field kept for compatibility: background knowledge node ids.
   linkedKnowledgeNodeIds?: string[];
+  // Mastery graph nodes linked to this card's top candidates.
+  linkedMasteryNodes?: MasteryNodeRef[];
   assumedMasteredNodeIds?: string[];
   content?: string;
   tests?: SelfTestItem[]; //维护该知识卡片下的自测题目
@@ -676,9 +679,14 @@ export interface KnowledgeRelation {
 // CODEAWARE: 节点掌握度（本阶段仅提供存储基础设施，不做推断更新）
 export interface NodeMasteryScore {
   nodeId: string;
-  nodeType: "step" | "code-chunk" | "knowledge-point" | "situation";
+  nodeType: "step" | "code-chunk" | "background-knowledge" | "situation";
   score: number; // 用户掌握度估计，0-1
   updatedAt: number;
+}
+
+export interface MasteryNodeRef {
+  nodeId: string;
+  nodeType: "step" | "code-chunk" | "background-knowledge" | "situation";
 }
 
 // CODEAWARE: 初始生成流程的状态
@@ -711,7 +719,7 @@ export interface InitialGenerationState {
 export type CodeAwareNodeType =
   | "step"
   | "code-chunk"
-  | "knowledge-point"
+  | "background-knowledge"
   | "situation";
 
 // CODEAWARE: 认知关联边类型（所有关系都显式区分正向/逆向）

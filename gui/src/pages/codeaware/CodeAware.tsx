@@ -2085,6 +2085,7 @@ export const CodeAware = () => {
         const step = codeAwareSessionState.steps.find((s) => s.id === stepId);
         const card = step?.knowledgeCards.find((k) => k.id === cardId);
         const linkedKnowledgeNodeIds = card?.linkedKnowledgeNodeIds || [];
+        const linkedMasteryNodes = card?.linkedMasteryNodes || [];
 
         const interaction: KnowledgeCardInteraction = {
           type: "view-major",
@@ -2093,6 +2094,7 @@ export const CodeAware = () => {
 
         const result = applyKnowledgeCardInteraction({
           linkedKnowledgeNodeIds,
+          linkedMasteryNodes,
           interaction,
           nodeMasteryScores: codeAwareSessionState.nodeMasteryScores,
           cognitiveEdges: buildCodeAwareCognitiveEdges(codeAwareSessionState),
@@ -2103,6 +2105,7 @@ export const CodeAware = () => {
           emitMasteryUpdateLogs({
             interaction,
             linkedKnowledgeNodeIds,
+            linkedMasteryNodes,
             changedNodeIds: result.changedNodeIds,
             debug: result.debug,
             knowledgeNodeTitleById,
@@ -2140,6 +2143,7 @@ export const CodeAware = () => {
       const step = codeAwareSessionState.steps.find((s) => s.id === stepId);
       const card = step?.knowledgeCards.find((k) => k.id === cardId);
       const linkedKnowledgeNodeIds = card?.linkedKnowledgeNodeIds || [];
+      const linkedMasteryNodes = card?.linkedMasteryNodes || [];
 
       const interaction: KnowledgeCardInteraction = {
         type: "feedback",
@@ -2148,6 +2152,7 @@ export const CodeAware = () => {
 
       const result = applyKnowledgeCardInteraction({
         linkedKnowledgeNodeIds,
+        linkedMasteryNodes,
         interaction,
         nodeMasteryScores: codeAwareSessionState.nodeMasteryScores,
         cognitiveEdges: buildCodeAwareCognitiveEdges(codeAwareSessionState),
@@ -2158,6 +2163,7 @@ export const CodeAware = () => {
         emitMasteryUpdateLogs({
           interaction,
           linkedKnowledgeNodeIds,
+          linkedMasteryNodes,
           changedNodeIds: result.changedNodeIds,
           debug: result.debug,
           knowledgeNodeTitleById,
@@ -2893,6 +2899,8 @@ export const CodeAware = () => {
 
                               const linkedKnowledgeNodeIds =
                                 kc.linkedKnowledgeNodeIds || [];
+                              const linkedMasteryNodes =
+                                kc.linkedMasteryNodes || [];
                               const interaction: KnowledgeCardInteraction = {
                                 type: "answer",
                                 correctness: submission.correctness,
@@ -2900,6 +2908,7 @@ export const CodeAware = () => {
 
                               const result = applyKnowledgeCardInteraction({
                                 linkedKnowledgeNodeIds,
+                                linkedMasteryNodes,
                                 interaction,
                                 nodeMasteryScores:
                                   codeAwareSessionState.nodeMasteryScores,
@@ -2915,6 +2924,7 @@ export const CodeAware = () => {
                                 emitMasteryUpdateLogs({
                                   interaction,
                                   linkedKnowledgeNodeIds,
+                                  linkedMasteryNodes,
                                   changedNodeIds: result.changedNodeIds,
                                   debug: result.debug,
                                   knowledgeNodeTitleById,

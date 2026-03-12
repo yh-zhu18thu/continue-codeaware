@@ -4,10 +4,14 @@ import {
   KnowledgeRelation,
   KnowledgeToCodeChunkRelation,
   KnowledgeToStepRelation,
+  MasteryNodeRef,
+  NodeMasteryScore,
 } from "core";
 import { IntentResolution } from "./types";
 
 export interface CardPlanItem {
+  topCandidate: MasteryNodeRef;
+  linkedMasteryNodes: MasteryNodeRef[];
   linkedKnowledgeNodeIds: string[];
   assumedMasteredNodeIds: string[];
   intentTypes: IntentResolution["intentTypes"];
@@ -16,10 +20,11 @@ export interface CardPlanItem {
 }
 
 interface CandidateNode {
-  nodeId: string;
+  nodeRef: MasteryNodeRef;
   source: string;
   mastery: number;
   priority: number;
+  linkedBackgroundKnowledgeIds: string[];
 }
 
 const WEIGHTS = {
@@ -32,11 +37,15 @@ function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
 
-function buildMasteryMap(raw: Record<string, number>): Record<string, number> {
+function toNodeKey(nodeRef: MasteryNodeRef): string {
+  return `${nodeRef.nodeType}:${nodeRef.nodeId}`;
+}
+
+function buildMasteryMap(scores: NodeMasteryScore[]): Record<string, number> {
   const map: Record<string, number> = {};
-  for (const [id, score] of Object.entries(raw)) {
-    map[id] = clamp(Number.isFinite(score) ? score : 0.5, 0, 1);
-  }
+  scores.forEach((item) => {
+    map[`${item.nodeType}:${item.nodeId}`] = clamp(item.score ?? 0.5, 0, 1);
+  });
   return map;
 }
 
@@ -82,6 +91,20 @@ function expandOneHopKnowledgeIds(
   return expanded;
 }
 
+function pickTopBackgroundKnowledge(args: {
+  candidates: Set<string>;
+  masteryMap: Record<string, number>;
+  maxCount: number;
+}): string[] {
+  return [...args.candidates]
+    .sort((a, b) => {
+      const scoreA = args.masteryMap[`background-knowledge:${a}`] ?? 0.5;
+      const scoreB = args.masteryMap[`background-knowledge:${b}`] ?? 0.5;
+      return scoreA - scoreB;
+    })
+    .slice(0, args.maxCount);
+}
+
 function deriveStepChunkIds(args: {
   targetStepId: string;
   codeAwareMappings: CodeAwareMapping[];
@@ -124,6 +147,11 @@ function isPrerequisiteKnowledge(
 function getFocusPaths(reason: string): string[] {
   switch (reason) {
     case "step_direct_expand":
+      return [
+        "framework_role_in_decomposition",
+        "step_background_knowledge",
+        "step_situation_to_code",
+      ];
     case "step_revisit":
       return [
         "step_prerequisite_knowledge",
@@ -159,40 +187,43 @@ function getFocusPaths(reason: string): string[] {
 }
 
 function scoreCandidate(args: {
-  nodeId: string;
+  nodeRef: MasteryNodeRef;
   source: string;
   intentBoost: number;
   masteryMap: Record<string, number>;
-  previouslyLinked: Set<string>;
+  previouslyLinkedNodeKeys: Set<string>;
+  linkedBackgroundKnowledgeIds: string[];
 }): CandidateNode {
-  const mastery = args.masteryMap[args.nodeId] ?? 0.5;
-  const novelty = args.previouslyLinked.has(args.nodeId) ? 0.2 : 1;
+  const nodeKey = toNodeKey(args.nodeRef);
+  const mastery = args.masteryMap[nodeKey] ?? 0.5;
+  const novelty = args.previouslyLinkedNodeKeys.has(nodeKey) ? 0.2 : 1;
   const gap = 1 - mastery;
 
   return {
-    nodeId: args.nodeId,
+    nodeRef: args.nodeRef,
     source: args.source,
     mastery,
     priority:
       WEIGHTS.intent * clamp(args.intentBoost, 0, 1) +
       WEIGHTS.gap * gap +
       WEIGHTS.novelty * novelty,
+    linkedBackgroundKnowledgeIds: args.linkedBackgroundKnowledgeIds,
   };
 }
 
 function buildCandidates(args: {
   intent: IntentResolution;
   targetStepId: string;
-  masteryMap: Record<string, number>;
+  masteryScores: NodeMasteryScore[];
   knowledgePoints: KnowledgePoint[];
   knowledgeToStep: KnowledgeToStepRelation[];
   knowledgeToCodeChunk: KnowledgeToCodeChunkRelation[];
   codeAwareMappings: CodeAwareMapping[];
   knowledgeRelations: KnowledgeRelation[];
-  previouslyLinkedKnowledgeNodeIds?: string[];
+  previouslyLinkedNodeKeys?: string[];
 }): CandidateNode[] {
-  const masteryMap = buildMasteryMap(args.masteryMap);
-  const previouslyLinked = new Set(args.previouslyLinkedKnowledgeNodeIds ?? []);
+  const masteryMap = buildMasteryMap(args.masteryScores);
+  const previouslyLinkedNodeKeys = new Set(args.previouslyLinkedNodeKeys ?? []);
   const knowledgeById = new Map(args.knowledgePoints.map((k) => [k.id, k]));
 
   const stepKnowledgeIds = deriveStepKnowledgeIds({
@@ -220,22 +251,36 @@ function buildCandidates(args: {
 
   const focusBuckets = getFocusPaths(args.intent.reason);
   const candidates: CandidateNode[] = [];
+  const defaultBackgroundIds = pickTopBackgroundKnowledge({
+    candidates: new Set([
+      ...expandedStepKnowledgeIds,
+      ...expandedCodeKnowledgeIds,
+    ]),
+    masteryMap,
+    maxCount: 2,
+  });
 
   const pushCandidate = (
-    nodeId: string,
+    nodeRef: MasteryNodeRef,
     source: string,
     intentBoost: number,
+    linkedBackgroundKnowledgeIds: string[] = defaultBackgroundIds,
   ) => {
-    if (!knowledgeById.has(nodeId)) {
+    if (
+      nodeRef.nodeType === "background-knowledge" &&
+      !knowledgeById.has(nodeRef.nodeId)
+    ) {
       return;
     }
+
     candidates.push(
       scoreCandidate({
-        nodeId,
+        nodeRef,
         source,
         intentBoost,
         masteryMap,
-        previouslyLinked,
+        previouslyLinkedNodeKeys,
+        linkedBackgroundKnowledgeIds,
       }),
     );
   };
@@ -246,25 +291,46 @@ function buildCandidates(args: {
     if (focus === "step_prerequisite_knowledge") {
       expandedStepKnowledgeIds.forEach((nodeId) => {
         if (isPrerequisiteKnowledge(nodeId, args.knowledgeRelations)) {
-          pushCandidate(nodeId, focus, baseBoost);
+          pushCandidate(
+            { nodeId, nodeType: "background-knowledge" },
+            focus,
+            baseBoost,
+            [nodeId],
+          );
         }
       });
       return;
     }
 
     if (focus === "framework_role_in_decomposition") {
-      expandedStepKnowledgeIds.forEach((nodeId) => {
-        const point = knowledgeById.get(nodeId);
-        if (point?.category === "framework" || point?.category === "concept") {
-          pushCandidate(nodeId, focus, baseBoost);
-        }
-      });
+      const frameworkBackgroundIds = [...expandedStepKnowledgeIds]
+        .filter((nodeId) => {
+          const point = knowledgeById.get(nodeId);
+          return (
+            point?.category === "framework" || point?.category === "concept"
+          );
+        })
+        .slice(0, 2);
+
+      pushCandidate(
+        { nodeId: args.targetStepId, nodeType: "step" },
+        focus,
+        clamp(baseBoost + 0.2, 0, 1),
+        frameworkBackgroundIds.length > 0
+          ? frameworkBackgroundIds
+          : defaultBackgroundIds,
+      );
       return;
     }
 
     if (focus === "step_background_knowledge") {
       expandedStepKnowledgeIds.forEach((nodeId) => {
-        pushCandidate(nodeId, focus, baseBoost);
+        pushCandidate(
+          { nodeId, nodeType: "background-knowledge" },
+          focus,
+          baseBoost,
+          [nodeId],
+        );
       });
       return;
     }
@@ -274,8 +340,43 @@ function buildCandidates(args: {
       focus === "step_intent_to_code_mapping" ||
       focus === "code_situation_to_step"
     ) {
+      const situationNodeIds = [...stepChunkIds].map(
+        (chunkId) => `sit-${args.targetStepId}-${chunkId}`,
+      );
+
+      situationNodeIds.forEach((situationNodeId) => {
+        pushCandidate(
+          { nodeId: situationNodeId, nodeType: "situation" },
+          focus,
+          clamp(baseBoost + 0.1, 0, 1),
+          pickTopBackgroundKnowledge({
+            candidates: expandedCodeKnowledgeIds,
+            masteryMap,
+            maxCount: 2,
+          }),
+        );
+      });
+
+      [...stepChunkIds].forEach((chunkId) => {
+        pushCandidate(
+          { nodeId: chunkId, nodeType: "code-chunk" },
+          focus,
+          baseBoost,
+          pickTopBackgroundKnowledge({
+            candidates: expandedCodeKnowledgeIds,
+            masteryMap,
+            maxCount: 2,
+          }),
+        );
+      });
+
       expandedCodeKnowledgeIds.forEach((nodeId) => {
-        pushCandidate(nodeId, focus, baseBoost);
+        pushCandidate(
+          { nodeId, nodeType: "background-knowledge" },
+          focus,
+          clamp(baseBoost - 0.08, 0, 1),
+          [nodeId],
+        );
       });
       return;
     }
@@ -283,7 +384,12 @@ function buildCandidates(args: {
     if (focus === "code_prerequisite_knowledge") {
       expandedCodeKnowledgeIds.forEach((nodeId) => {
         if (isPrerequisiteKnowledge(nodeId, args.knowledgeRelations)) {
-          pushCandidate(nodeId, focus, baseBoost);
+          pushCandidate(
+            { nodeId, nodeType: "background-knowledge" },
+            focus,
+            baseBoost,
+            [nodeId],
+          );
         }
       });
       return;
@@ -293,7 +399,12 @@ function buildCandidates(args: {
       expandedCodeKnowledgeIds.forEach((nodeId) => {
         const point = knowledgeById.get(nodeId);
         if (point?.category === "syntax") {
-          pushCandidate(nodeId, focus, baseBoost);
+          pushCandidate(
+            { nodeId, nodeType: "background-knowledge" },
+            focus,
+            baseBoost,
+            [nodeId],
+          );
         }
       });
     }
@@ -301,9 +412,10 @@ function buildCandidates(args: {
 
   const byNode = new Map<string, CandidateNode>();
   candidates.forEach((candidate) => {
-    const existing = byNode.get(candidate.nodeId);
+    const key = toNodeKey(candidate.nodeRef);
+    const existing = byNode.get(key);
     if (!existing || candidate.priority > existing.priority) {
-      byNode.set(candidate.nodeId, candidate);
+      byNode.set(key, candidate);
     }
   });
 
@@ -313,7 +425,7 @@ function buildCandidates(args: {
 export function planKnowledgeCards(args: {
   targetStepId: string;
   intent: IntentResolution;
-  masteryMap: Record<string, number>;
+  masteryScores: NodeMasteryScore[];
   knowledgeGraph: {
     knowledgePoints: KnowledgePoint[];
     knowledgeToStep: KnowledgeToStepRelation[];
@@ -322,7 +434,7 @@ export function planKnowledgeCards(args: {
     knowledgeRelations: KnowledgeRelation[];
   };
   maxCards: number;
-  previouslyLinkedKnowledgeNodeIds?: string[];
+  previouslyLinkedNodeKeys?: string[];
 }): CardPlanItem[] {
   const abbreviate = (value?: string): string => {
     if (!value) {
@@ -342,13 +454,13 @@ export function planKnowledgeCards(args: {
   const candidates = buildCandidates({
     intent: args.intent,
     targetStepId: args.targetStepId,
-    masteryMap: args.masteryMap,
+    masteryScores: args.masteryScores,
     knowledgePoints: args.knowledgeGraph.knowledgePoints,
     knowledgeToStep: args.knowledgeGraph.knowledgeToStep,
     knowledgeToCodeChunk: args.knowledgeGraph.knowledgeToCodeChunk,
     codeAwareMappings: args.knowledgeGraph.codeAwareMappings,
     knowledgeRelations: args.knowledgeGraph.knowledgeRelations,
-    previouslyLinkedKnowledgeNodeIds: args.previouslyLinkedKnowledgeNodeIds,
+    previouslyLinkedNodeKeys: args.previouslyLinkedNodeKeys,
   });
 
   if (candidates.length === 0) {
@@ -359,16 +471,27 @@ export function planKnowledgeCards(args: {
   const selected = candidates.slice(0, maxCards);
   const assumedMasteredPool = candidates
     .filter((candidate) => candidate.mastery >= 0.75)
-    .map((candidate) => candidate.nodeId);
+    .flatMap((candidate) => candidate.linkedBackgroundKnowledgeIds);
 
   const plans = selected.map((candidate) => {
     const primaryUnmasteredNodeId =
-      candidate.mastery < 0.75 ? candidate.nodeId : undefined;
+      candidate.mastery < 0.75 ? candidate.nodeRef.nodeId : undefined;
+    const linkedKnowledgeNodeIds =
+      candidate.nodeRef.nodeType === "background-knowledge"
+        ? Array.from(
+            new Set([
+              candidate.nodeRef.nodeId,
+              ...candidate.linkedBackgroundKnowledgeIds,
+            ]),
+          )
+        : Array.from(new Set(candidate.linkedBackgroundKnowledgeIds));
 
     return {
-      linkedKnowledgeNodeIds: [candidate.nodeId],
+      topCandidate: candidate.nodeRef,
+      linkedMasteryNodes: [candidate.nodeRef],
+      linkedKnowledgeNodeIds,
       assumedMasteredNodeIds: assumedMasteredPool.filter(
-        (nodeId) => nodeId !== candidate.nodeId,
+        (nodeId) => nodeId !== primaryUnmasteredNodeId,
       ),
       intentTypes: args.intent.intentTypes,
       primaryUnmasteredNodeId,
@@ -384,19 +507,31 @@ export function planKnowledgeCards(args: {
     maxCards,
     candidateCount: candidates.length,
     topCandidates: candidates.slice(0, 6).map((candidate) => ({
-      nodeId: candidate.nodeId,
-      nodeTitleShort: abbreviate(knowledgeById.get(candidate.nodeId)?.title),
+      nodeId: candidate.nodeRef.nodeId,
+      nodeType: candidate.nodeRef.nodeType,
+      nodeTitleShort: abbreviate(
+        knowledgeById.get(candidate.nodeRef.nodeId)?.title ||
+          candidate.nodeRef.nodeId,
+      ),
       priority: Number(candidate.priority.toFixed(3)),
       mastery: Number(candidate.mastery.toFixed(3)),
       source: candidate.source,
     })),
     selectedPlans: plans.map((plan, index) => ({
       index,
+      topCandidate: plan.topCandidate,
       linkedNodes: plan.linkedKnowledgeNodeIds.map((nodeId) => ({
         nodeId,
         nodeTitleShort: abbreviate(knowledgeById.get(nodeId)?.title),
-        mastery: Number((args.masteryMap[nodeId] ?? 0.5).toFixed(3)),
+        mastery: Number(
+          (
+            buildMasteryMap(args.masteryScores)[
+              `background-knowledge:${nodeId}`
+            ] ?? 0.5
+          ).toFixed(3),
+        ),
       })),
+      linkedMasteryNodes: plan.linkedMasteryNodes,
       assumedMasteredNodeIds: plan.assumedMasteredNodeIds,
       intentTypes: plan.intentTypes,
       primaryUnmasteredNodeId: plan.primaryUnmasteredNodeId,

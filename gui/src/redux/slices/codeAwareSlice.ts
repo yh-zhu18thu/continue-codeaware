@@ -14,6 +14,7 @@ import {
   KnowledgeRelation,
   KnowledgeToCodeChunkRelation,
   KnowledgeToStepRelation,
+  MasteryNodeRef,
   NodeMasteryScore,
   ProgramRequirement,
   StepItem,
@@ -1107,6 +1108,7 @@ export const codeAwareSessionSlice = createSlice({
         question?: string;
         viewMode?: "read" | "self-test" | "answer";
         linkedKnowledgeNodeIds?: string[];
+        linkedMasteryNodes?: MasteryNodeRef[];
         assumedMasteredNodeIds?: string[];
       }>,
     ) => {
@@ -1117,6 +1119,7 @@ export const codeAwareSessionSlice = createSlice({
         question,
         viewMode,
         linkedKnowledgeNodeIds,
+        linkedMasteryNodes,
         assumedMasteredNodeIds,
       } = action.payload;
       const step = state.steps.find((s) => s.id === stepId);
@@ -1127,6 +1130,7 @@ export const codeAwareSessionSlice = createSlice({
           question,
           viewMode: viewMode || "read",
           linkedKnowledgeNodeIds,
+          linkedMasteryNodes,
           assumedMasteredNodeIds,
           content: "",
           tests: [],

@@ -160,9 +160,9 @@ export function buildCodeAwareCognitiveEdges(
       id: `k-fwd-${r.fromKnowledgeId}-${r.toKnowledgeId}`,
       type: forwardType,
       fromNodeId: r.fromKnowledgeId,
-      fromNodeType: "knowledge-point",
+      fromNodeType: "background-knowledge",
       toNodeId: r.toKnowledgeId,
-      toNodeType: "knowledge-point",
+      toNodeType: "background-knowledge",
       conditionalMasteryProbability: probability,
       createdAt: r.createdAt,
       metadata: {
@@ -176,9 +176,9 @@ export function buildCodeAwareCognitiveEdges(
       id: `k-rev-${r.toKnowledgeId}-${r.fromKnowledgeId}`,
       type: reverseType,
       fromNodeId: r.toKnowledgeId,
-      fromNodeType: "knowledge-point",
+      fromNodeType: "background-knowledge",
       toNodeId: r.fromKnowledgeId,
-      toNodeType: "knowledge-point",
+      toNodeType: "background-knowledge",
       conditionalMasteryProbability: isDependency
         ? COGNITIVE_EDGE_PRIORS["dependency-reverse"]
         : probability,
@@ -196,7 +196,7 @@ export function buildCodeAwareCognitiveEdges(
       id: `dep-fwd-ks-${r.knowledgeId}-${r.stepId}`,
       type: "dependency-forward",
       fromNodeId: r.knowledgeId,
-      fromNodeType: "knowledge-point",
+      fromNodeType: "background-knowledge",
       toNodeId: r.stepId,
       toNodeType: "step",
       conditionalMasteryProbability:
@@ -211,7 +211,7 @@ export function buildCodeAwareCognitiveEdges(
       fromNodeId: r.stepId,
       fromNodeType: "step",
       toNodeId: r.knowledgeId,
-      toNodeType: "knowledge-point",
+      toNodeType: "background-knowledge",
       conditionalMasteryProbability:
         COGNITIVE_EDGE_PRIORS["dependency-reverse"],
       createdAt: r.createdAt,
@@ -224,7 +224,7 @@ export function buildCodeAwareCognitiveEdges(
       id: `dep-fwd-kc-${r.knowledgeId}-${r.codeChunkId}`,
       type: "dependency-forward",
       fromNodeId: r.knowledgeId,
-      fromNodeType: "knowledge-point",
+      fromNodeType: "background-knowledge",
       toNodeId: r.codeChunkId,
       toNodeType: "code-chunk",
       conditionalMasteryProbability:
@@ -243,7 +243,7 @@ export function buildCodeAwareCognitiveEdges(
       fromNodeId: r.codeChunkId,
       fromNodeType: "code-chunk",
       toNodeId: r.knowledgeId,
-      toNodeType: "knowledge-point",
+      toNodeType: "background-knowledge",
       conditionalMasteryProbability:
         COGNITIVE_EDGE_PRIORS["dependency-reverse"],
       createdAt: r.createdAt,

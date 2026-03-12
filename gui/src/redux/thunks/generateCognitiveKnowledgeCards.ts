@@ -1,4 +1,5 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
+import { MasteryNodeRef } from "core";
 import { planKnowledgeCards } from "../cognitive/cardPlanner";
 import { IntentResolution } from "../cognitive/types";
 import {
@@ -15,6 +16,7 @@ interface GeneratedCardPayload {
   title: string;
   question: string;
   linkedKnowledgeNodeIds: string[];
+  linkedMasteryNodes?: MasteryNodeRef[];
   assumedMasteredNodeIds?: string[];
 }
 
@@ -34,6 +36,29 @@ function sanitizeNodeIds(value: unknown): string[] {
     .filter((item): item is string => typeof item === "string")
     .map((item) => item.trim())
     .filter(Boolean);
+}
+
+function sanitizeMasteryNodeRefs(value: unknown): MasteryNodeRef[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .filter(
+      (item): item is { nodeId?: string; nodeType?: string } =>
+        typeof item === "object" && item !== null,
+    )
+    .map((item) => ({
+      nodeId: typeof item.nodeId === "string" ? item.nodeId.trim() : "",
+      nodeType: item.nodeType as MasteryNodeRef["nodeType"],
+    }))
+    .filter(
+      (item) =>
+        Boolean(item.nodeId) &&
+        ["step", "code-chunk", "background-knowledge", "situation"].includes(
+          item.nodeType,
+        ),
+    );
 }
 
 function abbreviateTitle(value: string | undefined): string {
@@ -63,18 +88,21 @@ function buildGenerationPrompt(args: {
   stepAbstract: string;
   intent: IntentResolution;
   plans: Array<{
+    topCandidate: MasteryNodeRef;
+    linkedMasteryNodes: MasteryNodeRef[];
     linkedKnowledgeNodeIds: string[];
     assumedMasteredNodeIds: string[];
     intentTypes: IntentResolution["intentTypes"];
     primaryUnmasteredNodeId?: string;
     nodeFocusPath: string[];
     knowledgeContext: string[];
+    masteryContext: string[];
   }>;
 }): string {
   return [
     "You are generating cognition-aware learning cards for code understanding.",
     "Return strict JSON only: an array of objects with fields:",
-    '[{"title": string, "question": string, "linkedKnowledgeNodeIds": string[], "assumedMasteredNodeIds": string[]}]',
+    '[{"title": string, "question": string, "linkedMasteryNodes": [{"nodeId": string, "nodeType": string}], "linkedKnowledgeNodeIds": string[], "assumedMasteredNodeIds": string[]}]',
     "Do not include markdown or additional keys.",
     "",
     `Task: ${args.taskDescription || "N/A"}`,
@@ -89,8 +117,8 @@ function buildGenerationPrompt(args: {
     "",
     "Rules:",
     "1. Each card title should be concise and non-duplicated.",
-    "2. Each card should focus on exactly one likely-unmastered but intent-relevant core point (the primary node).",
-    "3. Keep linkedKnowledgeNodeIds aligned with the plan and avoid introducing unknown node IDs.",
+    "2. Each card should focus on exactly one likely-unmastered but intent-relevant core point (the topCandidate mastery node).",
+    "3. Keep linkedMasteryNodes and linkedKnowledgeNodeIds aligned with the plan and avoid introducing unknown node IDs.",
     "4. assumedMasteredNodeIds can include multiple nodes and can be empty when uncertain.",
     "5. Question wording should clearly connect to nodeFocusPath (e.g., prerequisite/framework/situation/syntax).",
   ].join("\n");
@@ -152,24 +180,21 @@ export const generateCognitiveKnowledgeCards = createAsyncThunk<
           } as IntentResolution;
         })();
 
-      const masteryMap = state.codeAwareSession.nodeMasteryScores.reduce(
-        (acc, item) => {
-          if (item.nodeType === "knowledge-point") {
-            acc[item.nodeId] = item.score;
-          }
-          return acc;
-        },
-        {} as Record<string, number>,
-      );
-
-      const existingLinkedNodeIds = state.codeAwareSession.steps
+      const existingLinkedNodeKeys = state.codeAwareSession.steps
         .find((step) => step.id === stepId)
-        ?.knowledgeCards.flatMap((card) => card.linkedKnowledgeNodeIds ?? []);
+        ?.knowledgeCards.flatMap((card) => [
+          ...(card.linkedMasteryNodes ?? []).map(
+            (node) => `${node.nodeType}:${node.nodeId}`,
+          ),
+          ...(card.linkedKnowledgeNodeIds ?? []).map(
+            (nodeId) => `background-knowledge:${nodeId}`,
+          ),
+        ]);
 
       const plans = planKnowledgeCards({
         targetStepId: stepId,
         intent,
-        masteryMap,
+        masteryScores: state.codeAwareSession.nodeMasteryScores,
         knowledgeGraph: {
           knowledgePoints: state.codeAwareSession.knowledgePoints,
           knowledgeToStep: state.codeAwareSession.knowledgeToStepRelations,
@@ -179,18 +204,75 @@ export const generateCognitiveKnowledgeCards = createAsyncThunk<
           knowledgeRelations: state.codeAwareSession.knowledgeRelations,
         },
         maxCards,
-        previouslyLinkedKnowledgeNodeIds: existingLinkedNodeIds,
+        previouslyLinkedNodeKeys: existingLinkedNodeKeys,
       });
+
+      const masteryScoreMap = state.codeAwareSession.nodeMasteryScores.reduce(
+        (acc, item) => {
+          acc[`${item.nodeType}:${item.nodeId}`] = item.score;
+          return acc;
+        },
+        {} as Record<string, number>,
+      );
+
+      const stepById = new Map(
+        state.codeAwareSession.steps.map((item) => [item.id, item]),
+      );
+      const chunkById = new Map(
+        state.codeAwareSession.codeChunks.map((item) => [item.id, item]),
+      );
+
+      const formatMasteryNodeTitle = (node: MasteryNodeRef): string => {
+        if (node.nodeType === "background-knowledge") {
+          return (
+            state.codeAwareSession.knowledgePoints.find(
+              (point) => point.id === node.nodeId,
+            )?.title || node.nodeId
+          );
+        }
+
+        if (node.nodeType === "step") {
+          return stepById.get(node.nodeId)?.title || node.nodeId;
+        }
+
+        if (node.nodeType === "code-chunk") {
+          const chunk = chunkById.get(node.nodeId);
+          if (!chunk) {
+            return node.nodeId;
+          }
+          return `${chunk.filePath}:${chunk.range[0]}-${chunk.range[1]}`;
+        }
+
+        if (node.nodeType === "situation") {
+          return node.nodeId;
+        }
+
+        return node.nodeId;
+      };
 
       const nodeDebugByPlan = plans.map((plan, index) => ({
         index,
+        topCandidate: plan.topCandidate,
+        linkedMasteryNodes: plan.linkedMasteryNodes.map((node) => ({
+          ...node,
+          nodeTitleShort: abbreviateTitle(formatMasteryNodeTitle(node)),
+          mastery: Number(
+            (masteryScoreMap[`${node.nodeType}:${node.nodeId}`] ?? 0.5).toFixed(
+              3,
+            ),
+          ),
+        })),
         linkedNodes: plan.linkedKnowledgeNodeIds.map((nodeId) => ({
           nodeId,
           nodeTitleShort: abbreviateTitle(
             state.codeAwareSession.knowledgePoints.find((p) => p.id === nodeId)
               ?.title,
           ),
-          mastery: Number((masteryMap[nodeId] ?? 0.5).toFixed(3)),
+          mastery: Number(
+            (masteryScoreMap[`background-knowledge:${nodeId}`] ?? 0.5).toFixed(
+              3,
+            ),
+          ),
         })),
         assumedMasteredNodeIds: plan.assumedMasteredNodeIds,
         intentTypes: plan.intentTypes,
@@ -223,6 +305,10 @@ export const generateCognitiveKnowledgeCards = createAsyncThunk<
           return point
             ? `${point.id}: ${point.title} | ${point.content}`
             : `${id}: N/A`;
+        }),
+        masteryContext: plan.linkedMasteryNodes.map((node) => {
+          const title = formatMasteryNodeTitle(node);
+          return `${node.nodeType}:${node.nodeId} | ${title}`;
         }),
       }));
 
@@ -269,6 +355,10 @@ export const generateCognitiveKnowledgeCards = createAsyncThunk<
                 sanitizeNodeIds(item?.linkedKnowledgeNodeIds).length > 0
                   ? sanitizeNodeIds(item?.linkedKnowledgeNodeIds)
                   : fallbackPlan.linkedKnowledgeNodeIds,
+              linkedMasteryNodes:
+                sanitizeMasteryNodeRefs(item?.linkedMasteryNodes).length > 0
+                  ? sanitizeMasteryNodeRefs(item?.linkedMasteryNodes)
+                  : fallbackPlan.linkedMasteryNodes,
               assumedMasteredNodeIds:
                 sanitizeNodeIds(item?.assumedMasteredNodeIds).length > 0
                   ? sanitizeNodeIds(item?.assumedMasteredNodeIds)
@@ -295,6 +385,7 @@ export const generateCognitiveKnowledgeCards = createAsyncThunk<
             title,
             question: `How does ${title} support ${stepTitle}?`,
             linkedKnowledgeNodeIds: plan.linkedKnowledgeNodeIds,
+            linkedMasteryNodes: plan.linkedMasteryNodes,
             assumedMasteredNodeIds: plan.assumedMasteredNodeIds,
           };
         });
@@ -326,6 +417,7 @@ export const generateCognitiveKnowledgeCards = createAsyncThunk<
             question: generated.question,
             viewMode: intent.preferredInitialView,
             linkedKnowledgeNodeIds: generated.linkedKnowledgeNodeIds,
+            linkedMasteryNodes: generated.linkedMasteryNodes,
             assumedMasteredNodeIds: generated.assumedMasteredNodeIds,
           }),
         );
@@ -344,8 +436,13 @@ export const generateCognitiveKnowledgeCards = createAsyncThunk<
           linkedNodes: (card.linkedKnowledgeNodeIds || []).map((nodeId) => ({
             nodeId,
             nodeTitleShort: abbreviateTitle(knowledgeById.get(nodeId)?.title),
-            mastery: Number((masteryMap[nodeId] ?? 0.5).toFixed(3)),
+            mastery: Number(
+              (
+                masteryScoreMap[`background-knowledge:${nodeId}`] ?? 0.5
+              ).toFixed(3),
+            ),
           })),
+          linkedMasteryNodes: card.linkedMasteryNodes,
         }));
 
       console.info("[CodeAware][PhaseG][CardGeneration]", {

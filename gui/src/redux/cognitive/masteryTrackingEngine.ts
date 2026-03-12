@@ -1,4 +1,8 @@
-import type { CodeAwareCognitiveEdge, NodeMasteryScore } from "core";
+import type {
+  CodeAwareCognitiveEdge,
+  MasteryNodeRef,
+  NodeMasteryScore,
+} from "core";
 
 const EVIDENCE_VALUES = {
   feedback_understood: 0.8,
@@ -102,7 +106,8 @@ export function deriveEvidenceFromInteraction(
 }
 
 export function updateDirectNodeMastery(args: {
-  linkedKnowledgeNodeIds: string[];
+  linkedKnowledgeNodeIds?: string[];
+  linkedMasteryNodes?: MasteryNodeRef[];
   evidence: number;
   nodeMasteryScores: NodeMasteryScore[];
   now?: number;
@@ -115,8 +120,27 @@ export function updateDirectNodeMastery(args: {
   const directUpdatedNodes: NodeMasteryScore[] = [];
   const directLogs: DirectUpdateResult["directLogs"] = [];
 
-  args.linkedKnowledgeNodeIds.forEach((nodeId) => {
-    const nodeType: NodeMasteryScore["nodeType"] = "knowledge-point";
+  const normalizedRefs: MasteryNodeRef[] = [
+    ...(args.linkedMasteryNodes ?? []),
+    ...(args.linkedKnowledgeNodeIds ?? []).map((nodeId) => ({
+      nodeId,
+      nodeType: "background-knowledge" as const,
+    })),
+  ];
+
+  const seen = new Set<string>();
+
+  normalizedRefs.forEach(({ nodeId, nodeType }) => {
+    if (!nodeId) {
+      return;
+    }
+
+    const dedupKey = `${nodeType}:${nodeId}`;
+    if (seen.has(dedupKey)) {
+      return;
+    }
+    seen.add(dedupKey);
+
     const key = toScoreKey(nodeId, nodeType);
     const existing = scoreMap.get(key);
     const before = existing?.score ?? 0.5;
@@ -244,7 +268,8 @@ export function mergePropagationCandidates(args: {
 }
 
 export function applyKnowledgeCardInteraction(args: {
-  linkedKnowledgeNodeIds: string[];
+  linkedKnowledgeNodeIds?: string[];
+  linkedMasteryNodes?: MasteryNodeRef[];
   interaction: KnowledgeCardInteraction;
   nodeMasteryScores: NodeMasteryScore[];
   cognitiveEdges: CodeAwareCognitiveEdge[];
@@ -256,7 +281,9 @@ export function applyKnowledgeCardInteraction(args: {
   debug: MasteryTrackingDebugInfo;
 } {
   const evidence = deriveEvidenceFromInteraction(args.interaction);
-  if (!evidence || args.linkedKnowledgeNodeIds.length === 0) {
+  const linkedMasteryCount = args.linkedMasteryNodes?.length ?? 0;
+  const linkedKnowledgeCount = args.linkedKnowledgeNodeIds?.length ?? 0;
+  if (!evidence || linkedMasteryCount + linkedKnowledgeCount === 0) {
     return {
       updatedScores: args.nodeMasteryScores,
       changedNodeIds: [],
@@ -269,6 +296,7 @@ export function applyKnowledgeCardInteraction(args: {
 
   const directResult = updateDirectNodeMastery({
     linkedKnowledgeNodeIds: args.linkedKnowledgeNodeIds,
+    linkedMasteryNodes: args.linkedMasteryNodes,
     evidence,
     nodeMasteryScores: args.nodeMasteryScores,
     alpha: args.alpha,
@@ -305,7 +333,8 @@ export function applyKnowledgeCardInteraction(args: {
 
 export function emitMasteryUpdateLogs(args: {
   interaction: KnowledgeCardInteraction;
-  linkedKnowledgeNodeIds: string[];
+  linkedKnowledgeNodeIds?: string[];
+  linkedMasteryNodes?: MasteryNodeRef[];
   changedNodeIds: string[];
   debug: MasteryTrackingDebugInfo;
   knowledgeNodeTitleById?: Record<string, string>;
@@ -325,7 +354,7 @@ export function emitMasteryUpdateLogs(args: {
     return `${trimmed.slice(0, 29)}...`;
   };
 
-  const linkedNodeDebug = args.linkedKnowledgeNodeIds.map((nodeId) => ({
+  const linkedNodeDebug = (args.linkedKnowledgeNodeIds ?? []).map((nodeId) => ({
     nodeId,
     nodeTitleShort: abbreviate(args.knowledgeNodeTitleById?.[nodeId]),
   }));
@@ -338,7 +367,8 @@ export function emitMasteryUpdateLogs(args: {
   console.info("[CodeAware][PhaseG][MasteryUpdate]", {
     tag: "CA_PHASE_G_MASTERY",
     interaction: args.interaction,
-    linkedKnowledgeNodeIds: args.linkedKnowledgeNodeIds,
+    linkedKnowledgeNodeIds: args.linkedKnowledgeNodeIds ?? [],
+    linkedMasteryNodes: args.linkedMasteryNodes ?? [],
     linkedNodeDebug,
     changedNodeIds: args.changedNodeIds,
     changedNodeDebug,

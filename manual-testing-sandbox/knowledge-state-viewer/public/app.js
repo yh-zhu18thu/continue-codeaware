@@ -146,6 +146,8 @@ function buildGraphPayload(nodeIndexPayload, edgesPayload, masteryPayload) {
         id: edge.id,
         from: edge.fromNodeId,
         to: edge.toNodeId,
+        conditionalMasteryProbability: weight,
+        relationType: edge.type || "unknown",
         arrows: "to",
         color: {
           color,
@@ -322,6 +324,72 @@ function showHoverTooltip(nodeId) {
   hoverTooltipEl.style.top = `${top}px`;
 }
 
+function showEdgeTooltip(edgeId) {
+  const edge = datasetEdges.get(edgeId);
+  if (!edge) {
+    hideHoverTooltip();
+    return;
+  }
+
+  const fromNode = datasetNodes.get(edge.from);
+  const toNode = datasetNodes.get(edge.to);
+  const probability =
+    typeof edge.conditionalMasteryProbability === "number"
+      ? edge.conditionalMasteryProbability
+      : null;
+
+  hoverTooltipEl.innerHTML = [
+    `<div class="title">Edge: ${escapeHtml(edge.id || "(no-id)")}</div>`,
+    `<div class="meta">${escapeHtml(edge.relationType || "unknown")}</div>`,
+    `<div>Conditional Mastery: <b>${
+      probability == null ? "N/A" : probability.toFixed(3)
+    }</b></div>`,
+    `<div>From: ${escapeHtml(fromNode?.rawTitle || String(edge.from))}</div>`,
+    `<div>To: ${escapeHtml(toNode?.rawTitle || String(edge.to))}</div>`,
+  ].join("");
+
+  const fromPosMap = network.getPositions([edge.from]);
+  const toPosMap = network.getPositions([edge.to]);
+  const fromCanvasPos = fromPosMap[edge.from];
+  const toCanvasPos = toPosMap[edge.to];
+
+  if (!fromCanvasPos || !toCanvasPos) {
+    hideHoverTooltip();
+    return;
+  }
+
+  const midCanvasPos = {
+    x: (fromCanvasPos.x + toCanvasPos.x) / 2,
+    y: (fromCanvasPos.y + toCanvasPos.y) / 2,
+  };
+  const domPos = network.canvasToDOM(midCanvasPos);
+
+  hoverTooltipEl.classList.remove("hidden");
+
+  const graphRect = graphEl.getBoundingClientRect();
+  const tooltipRect = hoverTooltipEl.getBoundingClientRect();
+
+  let left = domPos.x + 12;
+  let top = domPos.y - tooltipRect.height - 10;
+
+  if (left + tooltipRect.width > graphRect.width - 8) {
+    left = graphRect.width - tooltipRect.width - 8;
+  }
+  if (left < 8) {
+    left = 8;
+  }
+
+  if (top < 8) {
+    top = domPos.y + 12;
+  }
+  if (top + tooltipRect.height > graphRect.height - 8) {
+    top = graphRect.height - tooltipRect.height - 8;
+  }
+
+  hoverTooltipEl.style.left = `${left}px`;
+  hoverTooltipEl.style.top = `${top}px`;
+}
+
 function highlightNeighborhood(centerNodeId) {
   const neighbors = adjacency.get(centerNodeId) || new Set();
   const updates = [];
@@ -439,7 +507,15 @@ function createNetwork(payload) {
     showHoverTooltip(params.node);
   });
 
+  network.on("hoverEdge", (params) => {
+    showEdgeTooltip(params.edge);
+  });
+
   network.on("blurNode", () => {
+    hideHoverTooltip();
+  });
+
+  network.on("blurEdge", () => {
     hideHoverTooltip();
   });
 

@@ -32,8 +32,8 @@ export class ApplyManager {
     toolCallId,
     isSearchAndReplace,
   }: ApplyToFilePayload) {
-    console.log("[ApplyManager][applyToFile] ========== START ==========");
-    console.log("[ApplyManager][applyToFile] Received payload:", {
+    console.log("[CA:Apply:applyToFile] START");
+    console.log("[CA:Apply:applyToFile] Received payload:", {
       streamId,
       filepath,
       toolCallId,
@@ -65,7 +65,7 @@ export class ApplyManager {
     });
 
     const hasExistingDocument = !!activeTextEditor.document.getText().trim();
-    console.log("[ApplyManager][applyToFile] Document status:", {
+    console.log("[CA:Apply:applyToFile] Document status:", {
       hasExistingDocument,
       isSearchAndReplace,
       originalContentLength: originalFileContent.length,
@@ -76,7 +76,7 @@ export class ApplyManager {
       // as the contents of `text`, so we can just instantly apply
       if (isSearchAndReplace) {
         console.log(
-          "[ApplyManager][applyToFile] → instantApplyDiff (search and replace)",
+          "[CA:Apply][applyToFile] → instantApplyDiff (search and replace)",
         );
         await this.verticalDiffManager.instantApplyDiff(
           originalFileContent,
@@ -85,7 +85,7 @@ export class ApplyManager {
           toolCallId,
         );
       } else {
-        console.log("[ApplyManager][applyToFile] → handleExistingDocument");
+        console.log("[CA:Apply:applyToFile] → handleExistingDocument");
         await this.handleExistingDocument(
           activeTextEditor,
           text,
@@ -141,10 +141,8 @@ export class ApplyManager {
     streamId: string,
     toolCallId?: string,
   ) {
-    console.log(
-      "[ApplyManager][handleExistingDocument] ========== START ==========",
-    );
-    console.log("[ApplyManager][handleExistingDocument] Input:", {
+    console.log("[CA:Apply][handleExistingDocument] START");
+    console.log("[CA:Apply:handleExistingDocument] Input:", {
       streamId,
       toolCallId,
       textType: typeof text,
@@ -172,9 +170,7 @@ export class ApplyManager {
     const abortManager = ApplyAbortManager.getInstance();
     const abortController = abortManager.get(fileUri);
 
-    console.log(
-      "[ApplyManager][handleExistingDocument] Calling applyCodeBlock",
-    );
+    console.log("[CA:Apply][handleExistingDocument] Calling applyCodeBlock");
     const { isInstantApply, diffLinesGenerator } = await applyCodeBlock(
       editor.document.getText(),
       text,
@@ -182,12 +178,9 @@ export class ApplyManager {
       llm,
       abortController,
     );
-    console.log(
-      "[ApplyManager][handleExistingDocument] applyCodeBlock returned:",
-      {
-        isInstantApply,
-      },
-    );
+    console.log("[CA:Apply][handleExistingDocument] applyCodeBlock returned:", {
+      isInstantApply,
+    });
 
     if (isInstantApply) {
       await this.verticalDiffManager.streamDiffLines(
@@ -365,7 +358,7 @@ export class ApplyManager {
       // Return the complete file content
       return `${prefix}${streamedLines.join("\n")}${suffix}`;
     } catch (error) {
-      console.error("Error generating applied content:", error);
+      console.error("[CA:Apply] Error generating applied content:", error);
       return undefined;
     }
   }

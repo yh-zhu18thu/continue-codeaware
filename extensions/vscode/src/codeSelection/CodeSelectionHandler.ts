@@ -8,7 +8,7 @@ export class CodeSelectionHandler {
 
   constructor(
     private webviewProtocol: VsCodeWebviewProtocol,
-    context: vscode.ExtensionContext
+    context: vscode.ExtensionContext,
   ) {
     // 注册命令处理器
     this.registerCommands(context);
@@ -28,7 +28,7 @@ export class CodeSelectionHandler {
 
         const selection = new vscode.Selection(range.start, range.end);
         await this.handleCodeAwareQuestion(editor, selection, selectedText);
-      }
+      },
     );
 
     this.disposables.push(askCodeAwareCommand);
@@ -37,7 +37,7 @@ export class CodeSelectionHandler {
   private async handleCodeAwareQuestion(
     editor: vscode.TextEditor,
     selection: vscode.Selection,
-    selectedText: string
+    selectedText: string,
   ) {
     try {
       let hasStartedEditing = false;
@@ -54,13 +54,19 @@ export class CodeSelectionHandler {
               codeAwareLogger.addLogEntry("user_start_edit_code_question", {
                 selectedText: selectedText,
                 filePath: editor.document.uri.fsPath,
-                selectedLines: [selection.start.line + 1, selection.end.line + 1] as [number, number],
+                selectedLines: [
+                  selection.start.line + 1,
+                  selection.end.line + 1,
+                ] as [number, number],
                 fileName: editor.document.fileName,
                 language: editor.document.languageId,
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
               });
             } catch (error) {
-              console.error("Failed to log user_start_edit_code_question:", error);
+              console.error(
+                "[CA:Ext] Failed to log user_start_edit_code_question:",
+                error,
+              );
             }
           }
 
@@ -68,7 +74,7 @@ export class CodeSelectionHandler {
             return "问题不能为空";
           }
           return null;
-        }
+        },
       });
 
       if (!question) {
@@ -80,10 +86,13 @@ export class CodeSelectionHandler {
         selectedText: selectedText,
         question: question.trim(),
         filePath: editor.document.uri.fsPath,
-        selectedLines: [selection.start.line + 1, selection.end.line + 1] as [number, number],
+        selectedLines: [selection.start.line + 1, selection.end.line + 1] as [
+          number,
+          number,
+        ],
         fileName: editor.document.fileName,
         language: editor.document.languageId,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
 
       // 准备发送给CodeAware的数据
@@ -92,31 +101,36 @@ export class CodeSelectionHandler {
         selectedText: selectedText,
         question: question.trim(),
         filePath: editor.document.uri.fsPath,
-        selectedLines: [selection.start.line + 1, selection.end.line + 1] as [number, number],
+        selectedLines: [selection.start.line + 1, selection.end.line + 1] as [
+          number,
+          number,
+        ],
         // 获取更多上下文信息
         contextInfo: {
           fileName: editor.document.fileName,
           language: editor.document.languageId,
           // 可以添加更多上下文，如周围的代码等
-        }
+        },
       };
 
       // 发送给CodeAware前端
-      await this.webviewProtocol.request("codeAwareQuestionFromSelection", questionData);
+      await this.webviewProtocol.request(
+        "codeAwareQuestionFromSelection",
+        questionData,
+      );
 
       // 显示成功消息
       vscode.window.showInformationMessage("问题已发送到 CodeAware！");
 
       // 可选：自动打开CodeAware面板
       await vscode.commands.executeCommand("continue.continueGUIView.focus");
-
     } catch (error) {
-      console.error("Failed to send question to CodeAware:", error);
+      console.error("[CA:Ext] Failed to send question to CodeAware:", error);
       vscode.window.showErrorMessage("发送问题到 CodeAware 失败，请重试。");
     }
   }
 
   dispose() {
-    this.disposables.forEach(d => d.dispose());
+    this.disposables.forEach((d) => d.dispose());
   }
 }

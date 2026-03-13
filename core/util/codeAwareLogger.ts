@@ -32,8 +32,8 @@ export class CodeAwareLoggerService {
     if (workspaceRoot) {
       this.logDirectory = path.join(workspaceRoot, ".codeaware-logs");
       this.ensureLogDirectoryExists();
-      console.log("[CodeAwareLogger] Workspace root set to:", workspaceRoot);
-      console.log("[CodeAwareLogger] Log directory:", this.logDirectory);
+      console.log("[CA:Logger] Workspace root set to:", workspaceRoot);
+      console.log("[CA:Logger] Log directory:", this.logDirectory);
     }
   }
 
@@ -51,12 +51,19 @@ export class CodeAwareLoggerService {
       const cwd = process.cwd();
       if (cwd !== "/" && cwd !== "C:\\" && cwd.length > 1) {
         // Additional check: make sure it's not a system directory
-        if (!cwd.startsWith("/System") && !cwd.startsWith("/usr") && !cwd.startsWith("/var")) {
+        if (
+          !cwd.startsWith("/System") &&
+          !cwd.startsWith("/usr") &&
+          !cwd.startsWith("/var")
+        ) {
           return cwd;
         }
       }
     } catch (error) {
-      console.warn("[CodeAwareLogger] Failed to get current working directory:", error);
+      console.warn(
+        "[CA:Logger] Failed to get current working directory:",
+        error,
+      );
     }
 
     // Fallback 1: Try to find a reasonable project directory
@@ -64,19 +71,22 @@ export class CodeAwareLoggerService {
       path.join(os.homedir(), "Documents"),
       path.join(os.homedir(), "Projects"),
       path.join(os.homedir(), "workspace"),
-      os.homedir()
+      os.homedir(),
     ];
 
     for (const dir of possibleProjectDirs) {
       if (fs.existsSync(dir)) {
-        console.warn("[CodeAwareLogger] Using fallback directory:", dir);
+        console.warn("[CA:Logger] Using fallback directory:", dir);
         return dir;
       }
     }
 
     // Final fallback: use user's home directory
     const homeDir = os.homedir();
-    console.warn("[CodeAwareLogger] Using home directory as final fallback:", homeDir);
+    console.warn(
+      "[CA:Logger] Using home directory as final fallback:",
+      homeDir,
+    );
     return homeDir;
   }
 
@@ -99,7 +109,7 @@ export class CodeAwareLoggerService {
       this.logDirectory = path.join(workspaceDir, ".codeaware-logs");
       this.ensureLogDirectoryExists();
     } else {
-      console.warn("[CodeAwareLogger] Invalid workspace directory:", workspaceDir);
+      console.warn("[CA:Logger] Invalid workspace directory:", workspaceDir);
     }
   }
 
@@ -108,14 +118,14 @@ export class CodeAwareLoggerService {
    */
   public startLogSession(config: CodeAwareLoggerConfig): void {
     this.currentSession = config;
-    
+
     // Create filename: username_sessionName_sessionId.jsonl
     const filename = `${config.username}_${config.sessionName}_${config.codeAwareSessionId}.jsonl`;
     // Sanitize filename to remove illegal characters
     const sanitizedFilename = filename.replace(/[<>:"/\\|?*]/g, "_");
-    
+
     this.currentLogFilePath = path.join(this.logDirectory, sanitizedFilename);
-    
+
     // Create the log file if it doesn't exist
     if (!fs.existsSync(this.currentLogFilePath)) {
       fs.writeFileSync(this.currentLogFilePath, "", "utf8");
@@ -125,7 +135,7 @@ export class CodeAwareLoggerService {
     this.addLogEntry("session_start", {
       username: config.username,
       sessionName: config.sessionName,
-      codeAwareSessionId: config.codeAwareSessionId
+      codeAwareSessionId: config.codeAwareSessionId,
     });
   }
 
@@ -134,7 +144,10 @@ export class CodeAwareLoggerService {
    */
   public addLogEntry(eventType: string, payload: any): void {
     if (!this.currentSession || !this.currentLogFilePath) {
-      console.warn("[CodeAwareLogger] No active session. Cannot log event:", eventType);
+      console.warn(
+        "[CA:Logger] No active session. Cannot log event:",
+        eventType,
+      );
       return;
     }
 
@@ -142,7 +155,7 @@ export class CodeAwareLoggerService {
       timestamp: new Date().toISOString(),
       codeAwareSessionId: this.currentSession.codeAwareSessionId,
       eventType,
-      payload
+      payload,
     };
 
     try {
@@ -150,7 +163,7 @@ export class CodeAwareLoggerService {
       const logLine = JSON.stringify(logEntry) + "\n";
       fs.appendFileSync(this.currentLogFilePath, logLine, "utf8");
     } catch (error) {
-      console.error("[CodeAwareLogger] Failed to write log entry:", error);
+      console.error("[CA:Logger] Failed to write log entry:", error);
     }
   }
 
@@ -160,10 +173,12 @@ export class CodeAwareLoggerService {
   public endLogSession(): void {
     if (this.currentSession) {
       this.addLogEntry("session_end", {
-        sessionDuration: Date.now() - new Date(this.currentSession.codeAwareSessionId).getTime()
+        sessionDuration:
+          Date.now() -
+          new Date(this.currentSession.codeAwareSessionId).getTime(),
       });
     }
-    
+
     this.currentSession = null;
     this.currentLogFilePath = null;
   }
@@ -197,7 +212,7 @@ export class CodeAwareLoggerService {
       try {
         fs.mkdirSync(this.logDirectory, { recursive: true });
       } catch (error) {
-        console.error("[CodeAwareLogger] Failed to create log directory:", error);
+        console.error("[CA:Logger] Failed to create log directory:", error);
       }
     }
   }
@@ -208,21 +223,21 @@ export class CodeAwareLoggerService {
   public readLogEntries(sessionId: string): CodeAwareLogEntry[] {
     try {
       const files = fs.readdirSync(this.logDirectory);
-      const sessionFile = files.find(file => file.includes(sessionId));
-      
+      const sessionFile = files.find((file) => file.includes(sessionId));
+
       if (!sessionFile) {
         return [];
       }
 
       const filePath = path.join(this.logDirectory, sessionFile);
       const content = fs.readFileSync(filePath, "utf8");
-      
+
       return content
         .split("\n")
-        .filter(line => line.trim())
-        .map(line => JSON.parse(line));
+        .filter((line) => line.trim())
+        .map((line) => JSON.parse(line));
     } catch (error) {
-      console.error("[CodeAwareLogger] Failed to read log entries:", error);
+      console.error("[CA:Logger] Failed to read log entries:", error);
       return [];
     }
   }
@@ -232,10 +247,11 @@ export class CodeAwareLoggerService {
    */
   public listLogFiles(): string[] {
     try {
-      return fs.readdirSync(this.logDirectory)
-        .filter(file => file.endsWith(".jsonl"));
+      return fs
+        .readdirSync(this.logDirectory)
+        .filter((file) => file.endsWith(".jsonl"));
     } catch (error) {
-      console.error("[CodeAwareLogger] Failed to list log files:", error);
+      console.error("[CA:Logger] Failed to list log files:", error);
       return [];
     }
   }

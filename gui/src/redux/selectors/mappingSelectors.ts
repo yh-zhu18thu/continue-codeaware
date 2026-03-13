@@ -126,7 +126,9 @@ export const selectCodeChunksByKnowledgeCardId = createSelector(
     }
 
     if (!parentStepId) {
-      console.warn(`⚠️ Knowledge card ${knowledgeCardId} 不属于任何 step`);
+      console.warn(
+        `[CA:Mapping] Knowledge card ${knowledgeCardId} 不属于任何 step`,
+      );
       return [];
     }
 
@@ -136,7 +138,7 @@ export const selectCodeChunksByKnowledgeCardId = createSelector(
     );
 
     console.log(
-      `📋 Knowledge card ${knowledgeCardId} 通过父 step ${parentStepId} 找到 ${parentMappings.length} 个代码映射`,
+      `[CA:Mapping]  Knowledge card ${knowledgeCardId} 通过父 step ${parentStepId} 找到 ${parentMappings.length} 个代码映射`,
     );
 
     return parentMappings;

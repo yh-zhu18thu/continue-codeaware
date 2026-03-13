@@ -499,7 +499,7 @@ export function planKnowledgeCards(args: {
     };
   });
 
-  console.info("[CodeAware][PhaseG][PlannerSelection]", {
+  console.info("[CA:Knowledge:PhaseG][PlannerSelection]", {
     tag: "CA_PHASE_G_PLANNER_SELECTION",
     targetStepId: args.targetStepId,
     intentTypes: args.intent.intentTypes,

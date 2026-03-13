@@ -160,7 +160,7 @@ export const splitBySemanticBlock: CodeChunkSplitStrategy = {
   split: (code: string, filePath: string): CodeChunk[] => {
     // TODO: 实现基于 AST 或其他语义信息的分割
     // 目前先降级到按空行分割
-    console.warn("语义块分割策略尚未实现，降级到按空行分割");
+    console.warn("[CA:Chunk] 语义块分割策略尚未实现，降级到按空行分割");
     return splitByBlankLine.split(code, filePath);
   },
 };
@@ -177,7 +177,7 @@ export let currentStrategy: CodeChunkSplitStrategy = splitByBlankLine;
  */
 export function setCurrentStrategy(strategy: CodeChunkSplitStrategy): void {
   currentStrategy = strategy;
-  console.log(`✅ 切换 Code Chunk 分割策略为: ${strategy.name}`);
+  console.log(`[CA:Chunk] 切换 Code Chunk 分割策略为: ${strategy.name}`);
 }
 
 /**
@@ -217,7 +217,7 @@ export function generateCodeChunks(
   const chunks = strategyToUse.split(fileContent, filePath);
 
   console.log(
-    `📦 使用策略 [${strategyToUse.name}] 分割文件 ${filePath}，生成 ${chunks.length} 个 chunks`,
+    `[CA:Chunk]  使用策略 [${strategyToUse.name}] 分割文件 ${filePath}，生成 ${chunks.length} 个 chunks`,
   );
 
   return chunks;

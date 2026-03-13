@@ -316,7 +316,9 @@ const Step: React.FC<StepProps> = ({
         // If this is a 'related' highlight, clear it after flickering
         if (highlightType === "related" && stepId) {
           dispatch(clearElementHighlight({ type: "step", id: stepId }));
-          console.log(`🧹 Auto-cleared related highlight for step ${stepId}`);
+          console.log(
+            `[CA:UI] Auto-cleared related highlight for step ${stepId}`,
+          );
         }
         // For 'primary' highlights, keep shouldKeepHighlighted as true
       }, 1800);
@@ -425,10 +427,10 @@ const Step: React.FC<StepProps> = ({
     // 保留以前的注释以便理解
     // Trigger highlight event only when expanding from collapsed state
     // if (onHighlightEvent && stepId && willBeExpanded && !wasExpanded) {
-    //   onHighlightEvent({
-    //     sourceType: "step",
-    //     identifier: stepId,
-    //   });
+    // onHighlightEvent({
+    // sourceType: "step",
+    // identifier: stepId,
+    // });
     // }
 
     // Notify parent component about expansion state change with a small delay
@@ -451,7 +453,7 @@ const Step: React.FC<StepProps> = ({
 
   const handleExecuteUntilStep = () => {
     if (disabled) {
-      console.warn("⚠️ Execute until step is disabled in code edit mode");
+      console.warn("[CA:UI] Execute until step is disabled in code edit mode");
       return;
     }
     if (stepId && onExecuteUntilStep) {
@@ -461,7 +463,7 @@ const Step: React.FC<StepProps> = ({
 
   const handleRerunStep = () => {
     if (disabled) {
-      console.warn("⚠️ Rerun step is disabled in code edit mode");
+      console.warn("[CA:UI] Rerun step is disabled in code edit mode");
       return;
     }
     if (stepId && onRerunStep) {
@@ -471,7 +473,7 @@ const Step: React.FC<StepProps> = ({
 
   const handleEditStep = async () => {
     if (disabled) {
-      console.warn("⚠️ Step editing is disabled in code edit mode");
+      console.warn("[CA:UI] Step editing is disabled in code edit mode");
       return;
     }
 
@@ -493,7 +495,7 @@ const Step: React.FC<StepProps> = ({
 
   const handleConfirmEdit = async (newContent: string) => {
     if (disabled) {
-      console.warn("⚠️ Step editing is disabled in code edit mode");
+      console.warn("[CA:UI] Step editing is disabled in code edit mode");
       return;
     }
 
@@ -537,7 +539,9 @@ const Step: React.FC<StepProps> = ({
     cardId: string,
     isExpanded: boolean,
   ) => {
-    console.log(`Knowledge Card ${cardId} expansion changed to: ${isExpanded}`);
+    console.log(
+      `[CA:UI] Knowledge Card ${cardId} expansion changed to: ${isExpanded}`,
+    );
 
     if (isExpanded) {
       // When a knowledge card is expanded, set it as the currently expanded card

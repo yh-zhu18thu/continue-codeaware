@@ -364,7 +364,7 @@ export function emitMasteryUpdateLogs(args: {
     nodeTitleShort: abbreviate(args.knowledgeNodeTitleById?.[nodeId]),
   }));
 
-  console.info("[CodeAware][PhaseG][MasteryUpdate]", {
+  console.info("[CA:Mastery:PhaseG][MasteryUpdate]", {
     tag: "CA_PHASE_G_MASTERY",
     interaction: args.interaction,
     linkedKnowledgeNodeIds: args.linkedKnowledgeNodeIds ?? [],

@@ -29,7 +29,7 @@ function detectAndHandleJsonOutput(output: string): {
 
   try {
     const parsed = JSON.parse(trimmed);
-    console.log("[streamLazyApply] ⚠️ Detected JSON output from LLM:", {
+    console.log("[CA:Apply] Detected JSON output from LLM:", {
       keys: Object.keys(parsed),
       hasCodeField: "code" in parsed,
       hasResultField: "result" in parsed,
@@ -56,14 +56,12 @@ function detectAndHandleJsonOutput(output: string): {
 
       for (const fieldName of codeFieldNames) {
         if (parsed[fieldName] && typeof parsed[fieldName] === "string") {
+          console.log(`[CA:Apply] Extracted code from JSON.${fieldName} field`);
           console.log(
-            `[streamLazyApply] ✅ Extracted code from JSON.${fieldName} field`,
+            `[CA:Apply] Extracted code length: ${parsed[fieldName].length}`,
           );
           console.log(
-            `[streamLazyApply] Extracted code length: ${parsed[fieldName].length}`,
-          );
-          console.log(
-            `[streamLazyApply] Extracted code preview:`,
+            `[CA:Apply] Extracted code preview:`,
             parsed[fieldName].substring(0, 200),
           );
           return { isJson: true, extractedCode: parsed[fieldName] };
@@ -80,19 +78,16 @@ function detectAndHandleJsonOutput(output: string): {
       if (stringFields.length === 1) {
         const fieldName = stringFields[0];
         console.log(
-          `[streamLazyApply] ✅ Found single large string field: ${fieldName}, using as code`,
+          `[CA:Apply] Found single large string field: ${fieldName}, using as code`,
         );
         return { isJson: true, extractedCode: parsed[fieldName] };
       }
     }
 
-    console.error(
-      "[streamLazyApply] ❌ JSON detected but no code field found:",
-      {
-        availableFields: Object.keys(parsed),
-        fieldTypes: Object.entries(parsed).map(([k, v]) => `${k}: ${typeof v}`),
-      },
-    );
+    console.error("[CA:Apply] JSON detected but no code field found:", {
+      availableFields: Object.keys(parsed),
+      fieldTypes: Object.entries(parsed).map(([k, v]) => `${k}: ${typeof v}`),
+    });
     return { isJson: true };
   } catch (e) {
     // Not valid JSON
@@ -106,8 +101,8 @@ export async function* streamLazyApply(
   llm: ILLM,
   abortController: AbortController,
 ): AsyncGenerator<DiffLine> {
-  console.log("[streamLazyApply] ========== START ==========");
-  console.log("[streamLazyApply] Input:", {
+  console.log("[CA:Apply] START");
+  console.log("[CA:Apply] Input:", {
     filename,
     oldCodeLength: oldCode.length,
     newCodeType: typeof newCode,
@@ -121,8 +116,8 @@ export async function* streamLazyApply(
   }
 
   const promptMessages = promptFactory(oldCode, filename, newCode);
-  console.log("[streamLazyApply] Generated prompt for LLM");
-  console.log("[streamLazyApply] Prompt preview:", {
+  console.log("[CA:Apply] Generated prompt for LLM");
+  console.log("[CA:Apply] Prompt preview:", {
     userContentPreview: promptMessages[0]?.content
       ?.toString()
       .substring(0, 300),
@@ -133,7 +128,7 @@ export async function* streamLazyApply(
   const lazyCompletion = llm.streamChat(promptMessages, abortController.signal);
 
   // First, collect the entire LLM output to check for JSON
-  console.log("[streamLazyApply] Collecting LLM output...");
+  console.log("[CA:Apply] Collecting LLM output...");
   let fullOutput = "";
   let messageCount = 0;
   for await (const message of lazyCompletion) {
@@ -142,13 +137,13 @@ export async function* streamLazyApply(
     fullOutput += rendered;
     if (messageCount <= 3) {
       console.log(
-        `[streamLazyApply] Message #${messageCount}:`,
+        `[CA:Apply] Message #${messageCount}:`,
         rendered.substring(0, 200),
       );
     }
   }
 
-  console.log("[streamLazyApply] LLM output complete:", {
+  console.log("[CA:Apply] LLM output complete:", {
     totalMessages: messageCount,
     outputLength: fullOutput.length,
     outputPreview: fullOutput.substring(0, 500),
@@ -160,31 +155,27 @@ export async function* streamLazyApply(
   const jsonCheck = detectAndHandleJsonOutput(fullOutput);
 
   if (jsonCheck.isJson) {
-    console.error("[streamLazyApply] ❌ JSON format detected in LLM output!");
+    console.error("[CA:Apply] JSON format detected in LLM output!");
     console.error(
-      "[streamLazyApply] This indicates the LLM did not follow instructions.",
+      "[CA:Apply] This indicates the LLM did not follow instructions.",
     );
     if (jsonCheck.extractedCode) {
+      console.warn("[CA:Apply] Successfully extracted code from JSON!");
       console.warn(
-        "[streamLazyApply] ✅ Successfully extracted code from JSON!",
-      );
-      console.warn(
-        "[streamLazyApply] Extracted code length:",
+        "[CA:Apply] Extracted code length:",
         jsonCheck.extractedCode.length,
       );
       console.warn(
-        "[streamLazyApply] Extracted code preview:",
+        "[CA:Apply] Extracted code preview:",
         jsonCheck.extractedCode.substring(0, 300),
       );
 
       // Use Myers diff directly instead of complex stream processing
       // This is more reliable when dealing with extracted JSON
-      console.warn(
-        "[streamLazyApply] 🔄 Using direct Myers diff for extracted code",
-      );
+      console.warn("[CA:Apply] Using direct Myers diff for extracted code");
       const diffLines = myersDiff(oldCode, jsonCheck.extractedCode);
       console.warn(
-        "[streamLazyApply] ✅ Myers diff computed successfully:",
+        "[CA:Apply] Myers diff computed successfully:",
         diffLines.length,
         "lines",
       );
@@ -192,26 +183,26 @@ export async function* streamLazyApply(
       // Return diff as async generator
       return generateLines(diffLines);
     } else {
-      console.error("[streamLazyApply] ❌ Could not extract code from JSON!");
+      console.error("[CA:Apply] Could not extract code from JSON!");
       console.error(
-        "[streamLazyApply] 🔄 Last resort: trying direct Myers diff with original newCode",
+        "[CA:Apply] Last resort: trying direct Myers diff with original newCode",
       );
       console.error(
-        "[streamLazyApply] ⚠️ This may produce incorrect results if newCode contains lazy text",
+        "[CA:Apply] This may produce incorrect results if newCode contains lazy text",
       );
 
       try {
         const diffLines = myersDiff(oldCode, newCode);
         console.warn(
-          "[streamLazyApply] ⚠️ Fallback Myers diff computed:",
+          "[CA:Apply] Fallback Myers diff computed:",
           diffLines.length,
           "lines",
         );
         return generateLines(diffLines);
       } catch (e) {
-        console.error("[streamLazyApply] ❌ Fallback also failed:", e);
+        console.error("[CA:Apply] Fallback also failed:", e);
         console.error(
-          "[streamLazyApply] Continuing with broken JSON output (will show incorrect diff)",
+          "[CA:Apply] Continuing with broken JSON output (will show incorrect diff)",
         );
       }
     }
@@ -243,20 +234,20 @@ export async function* streamLazyApply(
   }
 
   let lazyCompletionLines = streamLines(capturedCompletion, true);
-  console.log("[streamLazyApply] streamLines created");
+  console.log("[CA:Apply] streamLines created");
 
   lazyCompletionLines = stopAtLinesWithMarkdownSupport(
     lazyCompletionLines,
     filename,
   );
-  console.log("[streamLazyApply] Applied stopAtLinesWithMarkdownSupport");
+  console.log("[CA:Apply] Applied stopAtLinesWithMarkdownSupport");
 
   lazyCompletionLines = filterLeadingNewline(lazyCompletionLines);
   lazyCompletionLines = removeTrailingWhitespace(lazyCompletionLines);
-  console.log("[streamLazyApply] Applied filters");
+  console.log("[CA:Apply] Applied filters");
 
   // Fill in unchanged code
-  console.log("[streamLazyApply] Filling in unchanged code");
+  console.log("[CA:Apply] Filling in unchanged code");
   let lines = streamFillUnchangedCode(
     lazyCompletionLines,
     oldCode,
@@ -264,7 +255,7 @@ export async function* streamLazyApply(
   );
 
   // Convert output to diff
-  console.log("[streamLazyApply] Converting to diff");
+  console.log("[CA:Apply] Converting to diff");
   const oldLines = oldCode.split(/\r?\n/);
   let diffLines = streamDiff(oldLines, lines);
   diffLines = filterLeadingAndTrailingNewLineInsertion(diffLines);
@@ -273,14 +264,14 @@ export async function* streamLazyApply(
   for await (const diffLine of diffLines) {
     diffLineCount++;
     if (diffLineCount <= 5) {
-      console.log(`[streamLazyApply] Diff line #${diffLineCount}:`, {
+      console.log(`[CA:Apply] Diff line #${diffLineCount}:`, {
         type: diffLine.type,
         line: diffLine.line.substring(0, 100),
       });
     }
     yield diffLine;
   }
-  console.log("[streamLazyApply] ========== END ==========", {
+  console.log("[CA:Apply] END", {
     totalDiffLines: diffLineCount,
   });
 }

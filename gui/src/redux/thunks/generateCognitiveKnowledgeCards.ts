@@ -278,7 +278,7 @@ export const generateCognitiveKnowledgeCards = createAsyncThunk<
         intentTypes: plan.intentTypes,
       }));
 
-      console.info("[CodeAware][PhaseG][CardPlanner]", {
+      console.info("[CA:Knowledge:PhaseG][CardPlanner]", {
         tag: "CA_PHASE_G_CARD_PLAN",
         stepId,
         stepTitle,
@@ -368,7 +368,7 @@ export const generateCognitiveKnowledgeCards = createAsyncThunk<
         }
       } catch (error) {
         console.warn(
-          "[CognitiveCards] parse failed, fallback to planner output",
+          "[CA:Knowledge] [CognitiveCards] parse failed, fallback to planner output",
           error,
         );
       }
@@ -445,7 +445,7 @@ export const generateCognitiveKnowledgeCards = createAsyncThunk<
           linkedMasteryNodes: card.linkedMasteryNodes,
         }));
 
-      console.info("[CodeAware][PhaseG][CardGeneration]", {
+      console.info("[CA:Knowledge:PhaseG][CardGeneration]", {
         tag: "CA_PHASE_G_CARD_CREATED",
         stepId,
         createdCount,

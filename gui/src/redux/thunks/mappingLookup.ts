@@ -73,9 +73,7 @@ function normalizeFilePath(path: string): string {
  * 从 IDE 读取当前文件并分割为 code chunks
  * @returns { filePath, chunks }
  */
-async function fetchAndSplitCurrentFile(
-  ideMessenger: any,
-): Promise<{
+async function fetchAndSplitCurrentFile(ideMessenger: any): Promise<{
   filePath: string;
   fileContent: string;
   chunks: CodeChunk[];
@@ -92,14 +90,14 @@ async function fetchAndSplitCurrentFile(
       currentFileResponse.status !== "success" ||
       !currentFileResponse.content
     ) {
-      console.warn("⚠️ 无法获取当前文件");
+      console.warn("[CA:Mapping] 无法获取当前文件");
       throw new Error("无法读取当前文件");
     }
 
     const currentFile = currentFileResponse.content;
 
     if (!currentFile.path || !currentFile.contents) {
-      console.warn("⚠️ 当前文件缺少路径或内容");
+      console.warn("[CA:Mapping] 当前文件缺少路径或内容");
       throw new Error("无法读取当前文件");
     }
 
@@ -110,7 +108,7 @@ async function fetchAndSplitCurrentFile(
     );
 
     console.log(
-      `📁 读取文件 ${currentFile.path}，分割为 ${chunks.length} 个 chunks`,
+      `[CA:Mapping]  读取文件 ${currentFile.path}，分割为 ${chunks.length} 个 chunks`,
     );
 
     return {
@@ -119,7 +117,7 @@ async function fetchAndSplitCurrentFile(
       chunks,
     };
   } catch (error) {
-    console.error("❌ 读取文件失败:", error);
+    console.error("[CA:Mapping] 读取文件失败:", error);
     throw error;
   }
 }
@@ -157,7 +155,7 @@ function constructStepToCodeLinesPrompt(
   },
   numberedCode: string,
 ): string {
-  return `你是代码映射助手。请针对“步骤”在完整代码中圈出直接实现该步骤的代码行。\n\n步骤信息：\n- ID: ${step.id}\n- 标题: ${step.title}\n- 描述: ${step.abstract}\n\n完整代码（已带行号）：\n${numberedCode}\n\n要求：\n1. 仅选择“直接实现该步骤”的代码，不要选择仅依赖、上下文、框架样板代码。\n2. 允许返回多个连续区间和零星单行。\n3. 行号必须来自上面的代码行号。\n4. 若该步骤暂无直接实现，返回空集合。\n\n返回严格 JSON：\n{\n  "line_ranges": [{ "start_line": 1, "end_line": 3 }],\n  "single_lines": [8, 12],\n  "confidence": 0.0,\n  "reason": "简短说明"\n}`;
+  return `你是代码映射助手。请针对“步骤”在完整代码中圈出直接实现该步骤的代码行。\n\n步骤信息：\n- ID: ${step.id}\n- 标题: ${step.title}\n- 描述: ${step.abstract}\n\n完整代码（已带行号）：\n${numberedCode}\n\n要求：\n1. 仅选择“直接实现该步骤”的代码，不要选择仅依赖、上下文、框架样板代码。\n2. 允许返回多个连续区间和零星单行。\n3. 行号必须来自上面的代码行号。\n4. 若该步骤暂无直接实现，返回空集合。\n\n返回严格 JSON：\n{\n "line_ranges": [{ "start_line": 1, "end_line": 3 }],\n "single_lines": [8, 12],\n "confidence": 0.0,\n "reason": "简短说明"\n}`;
 }
 
 function buildLineToChunkMap(chunks: CodeChunk[]): Map<number, string> {
@@ -259,7 +257,7 @@ async function generateStepLineMappings(params: {
           });
         });
     } catch (error) {
-      console.warn(`⚠️ 步骤行映射失败: ${step.id}`, error);
+      console.warn(`[CA:Mapping] 步骤行映射失败: ${step.id}`, error);
     }
   }
 
@@ -331,11 +329,11 @@ function validateCachedMappings(
 
   if (invalid.length > 0) {
     console.warn(
-      `⚠️ 发现 ${invalid.length} 个失效的 mappings，需要重新查找`,
+      `[CA:Mapping]  发现 ${invalid.length} 个失效的 mappings，需要重新查找`,
       invalid,
     );
   } else if (valid.length > 0) {
-    console.log(`✅ 缓存有效，命中 ${valid.length} 个 mappings`);
+    console.log(`[CA:Mapping] 缓存有效，命中 ${valid.length} 个 mappings`);
   }
 
   return { valid, invalid };
@@ -416,7 +414,7 @@ export const establishSemanticToCodeMapping = createAsyncThunk<
         }
 
         console.log(
-          `📋 Knowledge card ${semanticElementId} → 使用父 step ${parentStepId}`,
+          `[CA:Mapping]  Knowledge card ${semanticElementId} → 使用父 step ${parentStepId}`,
         );
         actualElementId = parentStepId;
         actualElementType = "step";
@@ -568,7 +566,7 @@ export const establishCodeToSemanticMapping = createAsyncThunk<
       const normalizedCurrentPath = normalizeFilePath(filePath);
       const normalizedSelectionPath = normalizeFilePath(codeSelection.filePath);
 
-      console.log("📂 路径对比:", {
+      console.log("[CA:Mapping] 路径对比:", {
         currentFile: normalizedCurrentPath,
         selectionFile: normalizedSelectionPath,
       });
@@ -644,7 +642,7 @@ export const establishCodeToSemanticMapping = createAsyncThunk<
 
       if (!forceRefresh && cachedMappings.length > 0) {
         console.log(
-          `✅ 缓存命中 - 代码区间 ${targetChunks.length} 个行块`,
+          `[CA:Mapping]  缓存命中 - 代码区间 ${targetChunks.length} 个行块`,
           cachedMappings,
         );
         dispatch(setMappingLookupLoading(false));

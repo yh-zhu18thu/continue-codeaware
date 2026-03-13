@@ -284,7 +284,7 @@ const KnowledgeCardSAQ: React.FC<KnowledgeCardSAQProps> = ({
   };
 
   const handleRetry = async () => {
-    console.log("Retry button clicked", { result: result?.userAnswer });
+    console.log("[CA:UI] Retry button clicked", { result: result?.userAnswer });
 
     setIsRetrying(true);
     // 通知父组件更新重试状态
@@ -295,7 +295,7 @@ const KnowledgeCardSAQ: React.FC<KnowledgeCardSAQProps> = ({
     // 将之前的答案同步到编辑器
     if (result?.userAnswer) {
       editor.commands.setContent(result.userAnswer);
-      console.log("Content set to editor:", result.userAnswer);
+      console.log("[CA:UI] Content set to editor:", result.userAnswer);
       // 通知父组件内容变化
       if (onContentChange) {
         onContentChange(result.userAnswer);
@@ -350,7 +350,7 @@ const KnowledgeCardSAQ: React.FC<KnowledgeCardSAQProps> = ({
       {showResult && (
         <ResultSection isCorrect={result.isCorrect}>
           <ResultHeader isCorrect={result.isCorrect}>
-            <ResultIcon>{result.isCorrect ? "✅" : "❌"}</ResultIcon>
+            <ResultIcon>{result.isCorrect ? "" : ""}</ResultIcon>
             {result.isCorrect ? "回答正确" : "回答需要改进"}
           </ResultHeader>
 

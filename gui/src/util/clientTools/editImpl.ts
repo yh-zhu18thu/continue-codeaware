@@ -8,8 +8,8 @@ export const editToolImpl: ClientToolImpl = async (
   toolCallId,
   extras,
 ) => {
-  console.log("[EditToolImpl] ========== START ==========");
-  console.log("[EditToolImpl] Received args:", {
+  console.log("[CA:EditImpl] START");
+  console.log("[CA:EditImpl] Received args:", {
     toolCallId,
     filepath: args.filepath,
     changesType: typeof args.changes,
@@ -49,7 +49,7 @@ export const editToolImpl: ClientToolImpl = async (
     throw new Error(`${filepath} does not exist`);
   }
   const streamId = uuid();
-  console.log("[EditToolImpl] Dispatching applyForEditTool:", {
+  console.log("[CA:EditImpl] Dispatching applyForEditTool:", {
     streamId,
     toolCallId,
     filepath: firstUriMatch,
@@ -60,7 +60,7 @@ export const editToolImpl: ClientToolImpl = async (
         ? args.changes.substring(0, 200)
         : JSON.stringify(args.changes).substring(0, 200),
   });
-  console.log("[EditToolImpl] ========== END ==========");
+  console.log("[CA:EditImpl] END");
 
   void extras.dispatch(
     applyForEditTool({

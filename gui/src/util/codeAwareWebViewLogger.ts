@@ -19,7 +19,9 @@ export class CodeAwareWebViewLogger {
    */
   static getInstance(ideMessenger: any): CodeAwareWebViewLogger {
     if (!CodeAwareWebViewLogger.instance) {
-      CodeAwareWebViewLogger.instance = new CodeAwareWebViewLogger(ideMessenger);
+      CodeAwareWebViewLogger.instance = new CodeAwareWebViewLogger(
+        ideMessenger,
+      );
     }
     // Update the ideMessenger in case it changed
     CodeAwareWebViewLogger.instance.ideMessenger = ideMessenger;
@@ -29,18 +31,26 @@ export class CodeAwareWebViewLogger {
   /**
    * Start a new logging session
    */
-  async startLogSession(username: string, sessionName: string, codeAwareSessionId: string): Promise<void> {
+  async startLogSession(
+    username: string,
+    sessionName: string,
+    codeAwareSessionId: string,
+  ): Promise<void> {
     try {
       await this.ideMessenger.request("startCodeAwareLogSession", {
         username,
         sessionName,
-        codeAwareSessionId
+        codeAwareSessionId,
       });
       this.isSessionActive = true;
-      console.log("📊 [CodeAware] Log session started:", { username, sessionName, codeAwareSessionId });
+      console.log("[CA:Logger] Log session started:", {
+        username,
+        sessionName,
+        codeAwareSessionId,
+      });
     } catch (error) {
       this.isSessionActive = false;
-      console.error("❌ [CodeAware] Failed to start log session:", error);
+      console.error("[CA:Logger] Failed to start log session:", error);
       throw error; // 重新抛出错误，让调用者知道启动失败
     }
   }
@@ -50,18 +60,21 @@ export class CodeAwareWebViewLogger {
    */
   async addLogEntry(eventType: string, payload: any): Promise<void> {
     if (!this.isSessionActive) {
-      console.warn("⚠️ [CodeAware] No active log session. Cannot log event:", eventType);
+      console.warn(
+        "[CA:Logger] No active log session. Cannot log event:",
+        eventType,
+      );
       return;
     }
 
     try {
       await this.ideMessenger.request("addCodeAwareLogEntry", {
         eventType,
-        payload
+        payload,
       });
-      console.log("📝 [CodeAware] Log entry added:", eventType);
+      console.log("[CA:Logger] Log entry added:", eventType);
     } catch (error) {
-      console.error("❌ [CodeAware] Failed to add log entry:", error);
+      console.error("[CA:Logger] Failed to add log entry:", error);
     }
   }
 
@@ -76,9 +89,9 @@ export class CodeAwareWebViewLogger {
     try {
       await this.ideMessenger.request("endCodeAwareLogSession", undefined);
       this.isSessionActive = false;
-      console.log("📊 [CodeAware] Log session ended");
+      console.log("[CA:Logger] Log session ended");
     } catch (error) {
-      console.error("❌ [CodeAware] Failed to end log session:", error);
+      console.error("[CA:Logger] Failed to end log session:", error);
     }
   }
 
@@ -95,7 +108,7 @@ export class CodeAwareWebViewLogger {
  */
 export function useCodeAwareLogger(): CodeAwareWebViewLogger {
   const ideMessenger = useContext(IdeMessengerContext);
-  
+
   // Use useMemo to ensure we get the same instance across re-renders
   return useMemo(() => {
     return CodeAwareWebViewLogger.getInstance(ideMessenger);

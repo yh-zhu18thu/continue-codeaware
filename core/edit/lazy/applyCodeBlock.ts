@@ -22,8 +22,8 @@ export async function applyCodeBlock(
   isInstantApply: boolean;
   diffLinesGenerator: AsyncGenerator<DiffLine>;
 }> {
-  console.log("[applyCodeBlock] ========== START ==========");
-  console.log("[applyCodeBlock] Input:", {
+  console.log("[CA:Apply] START");
+  console.log("[CA:Apply] Input:", {
     filename,
     oldFileLength: oldFile.length,
     newLazyFileType: typeof newLazyFile,
@@ -33,7 +33,7 @@ export async function applyCodeBlock(
   });
 
   if (canUseInstantApply(filename)) {
-    console.log("[applyCodeBlock] Attempting deterministicApplyLazyEdit");
+    console.log("[CA:Apply] Attempting deterministicApplyLazyEdit");
     const diffLines = await deterministicApplyLazyEdit({
       oldFile,
       newLazyFile,
@@ -43,7 +43,7 @@ export async function applyCodeBlock(
 
     if (diffLines !== undefined) {
       console.log(
-        "[applyCodeBlock] ✅ deterministicApplyLazyEdit SUCCESS, returning instant apply",
+        "[CA:Apply] deterministicApplyLazyEdit SUCCESS, returning instant apply",
       );
       return {
         isInstantApply: true,
@@ -51,25 +51,25 @@ export async function applyCodeBlock(
       };
     }
     console.log(
-      "[applyCodeBlock] deterministicApplyLazyEdit returned undefined, trying other methods",
+      "[CA:Apply] deterministicApplyLazyEdit returned undefined, trying other methods",
     );
   }
 
   // If the code block is a diff
-  console.log("[applyCodeBlock] Checking if unified diff format:", {
+  console.log("[CA:Apply] Checking if unified diff format:", {
     isUnifiedDiff: isUnifiedDiffFormat(newLazyFile),
   });
   if (isUnifiedDiffFormat(newLazyFile)) {
-    console.log("[applyCodeBlock] ✅ Unified diff detected, applying");
+    console.log("[CA:Apply] Unified diff detected, applying");
     try {
       const diffLines = applyUnifiedDiff(oldFile, newLazyFile);
-      console.log("[applyCodeBlock] Unified diff applied successfully");
+      console.log("[CA:Apply] Unified diff applied successfully");
       return {
         isInstantApply: true,
         diffLinesGenerator: generateLines(diffLines!),
       };
     } catch (e) {
-      console.error("[applyCodeBlock] ❌ Failed to apply unified diff", e);
+      console.error("[CA:Apply] Failed to apply unified diff", e);
     }
   }
 
@@ -77,19 +77,17 @@ export async function applyCodeBlock(
   // Check if newLazyFile contains lazy text placeholders
   const containsLazyText = isLazyText(newLazyFile);
   console.log(
-    "[applyCodeBlock] Safety check - contains lazy text:",
+    "[CA:Apply] Safety check - contains lazy text:",
     containsLazyText,
   );
 
   if (containsLazyText) {
+    console.error("[CA:Apply] CRITICAL: Detected lazy text placeholders!");
     console.error(
-      "[applyCodeBlock] ❌❌❌ CRITICAL: Detected lazy text placeholders!",
+      "[CA:Apply] This indicates the LLM violated the prompt instruction to provide complete code.",
     );
     console.error(
-      "[applyCodeBlock] This indicates the LLM violated the prompt instruction to provide complete code.",
-    );
-    console.error(
-      "[applyCodeBlock] Using fallback: Simple Myers diff (may produce incorrect results if placeholders were intended to preserve code).",
+      "[CA:Apply] Using fallback: Simple Myers diff (may produce incorrect results if placeholders were intended to preserve code).",
     );
 
     // Use simple Myers diff as a last resort
@@ -102,8 +100,8 @@ export async function applyCodeBlock(
     };
   }
 
-  console.log("[applyCodeBlock] Falling back to streamLazyApply (LLM-based)");
-  console.log("[applyCodeBlock] ========== END (streaming) ==========");
+  console.log("[CA:Apply] Falling back to streamLazyApply (LLM-based)");
+  console.log("[CA:Apply] END");
   return {
     isInstantApply: false,
     diffLinesGenerator: streamLazyApply(

@@ -221,7 +221,7 @@ export function Chat() {
 
             setIsCreatingAgent(false);
           } catch (error) {
-            console.error("Failed to create background agent:", error);
+            console.error("[CA:UI] Failed to create background agent:", error);
             setIsCreatingAgent(false);
           }
         })();

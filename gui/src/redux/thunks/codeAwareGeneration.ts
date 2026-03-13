@@ -66,7 +66,9 @@ export const checkAndUpdateHighLevelStepCompletion = createAsyncThunk<
     // 注意：此函数已暂时禁用，等待重新实现
     // 原逻辑依赖于 stepToHighLevelMappings，现已移除
     // 未来将通过新的映射机制或其他方式来确定完成状态
-    console.log("checkAndUpdateHighLevelStepCompletion: 功能暂时禁用");
+    console.log(
+      "[CA:CodeGen] checkAndUpdateHighLevelStepCompletion: 功能暂时禁用",
+    );
   },
 );
 
@@ -113,7 +115,7 @@ function processCodeChunkMappingResponse(
       endLine > codeLines.length ||
       startLine > endLine
     ) {
-      console.warn(`⚠️ 代码块 ${index + 1} 行号范围无效:`, {
+      console.warn(`[CA:CodeGen] 代码块 ${index + 1} 行号范围无效:`, {
         startLine,
         endLine,
         totalLines: codeLines.length,
@@ -126,7 +128,7 @@ function processCodeChunkMappingResponse(
     const codeContent = chunkLines.join("\n");
 
     // 记录调试信息
-    console.log(`📦 处理代码块 ${index + 1}:`, {
+    console.log(`[CA:CodeGen] 处理代码块 ${index + 1}:`, {
       startLine,
       endLine,
       semanticDescription,
@@ -171,7 +173,7 @@ function processCodeChunkMappingResponse(
     }
   });
 
-  console.log("✅ 代码块映射处理完成:", {
+  console.log("[CA:CodeGen] 代码块映射处理完成:", {
     totalChunks: codeChunksData.length,
     createdCodeChunks: codeChunks.length,
     stepsWithCode: stepsCorrespondingCode.length,
@@ -244,7 +246,7 @@ function validateCodeChunkMapping(
   const coverage = coveredLines.size / totalLines;
   const isValid = gaps.length === 0 && overlaps.length === 0;
 
-  console.log("🔍 代码块映射验证结果:", {
+  console.log("[CA:CodeGen] 代码块映射验证结果:", {
     totalLines,
     coveredLines: coveredLines.size,
     coverage: `${(coverage * 100).toFixed(1)}%`,
@@ -254,11 +256,11 @@ function validateCodeChunkMapping(
   });
 
   if (gaps.length > 0) {
-    console.warn("⚠️ 发现代码覆盖缺口:", gaps);
+    console.warn("[CA:CodeGen] 发现代码覆盖缺口:", gaps);
   }
 
   if (overlaps.length > 0) {
-    console.warn("⚠️ 发现代码块重叠:", overlaps);
+    console.warn("[CA:CodeGen] 发现代码块重叠:", overlaps);
   }
 
   return { isValid, coverage, gaps, overlaps };
@@ -361,7 +363,7 @@ function calculateCodeChunkRange(
 
       if (bestMatch !== -1) {
         console.log(
-          `📍 单行代码部分匹配成功: 相似度 ${(bestSimilarity * 100).toFixed(1)}%`,
+          `[CA:CodeGen]  单行代码部分匹配成功: 相似度 ${(bestSimilarity * 100).toFixed(1)}%`,
           {
             chunkLine: chunkLineTrimmed.substring(0, 50) + "...",
             matchedLine:
@@ -435,7 +437,7 @@ function calculateCodeChunkRange(
   }
 
   // 如果都无法匹配，返回默认范围
-  console.warn("无法为代码块计算精确的行号范围，使用默认范围", {
+  console.warn("[CA:CodeGen] 无法为代码块计算精确的行号范围，使用默认范围", {
     chunkLinesCount: chunkLines.length,
     fullCodeLinesCount: fullCodeLines.length,
     chunkPreview: chunkCode.substring(0, 100),
@@ -524,13 +526,13 @@ function createCodeChunksFromLineArray(
       lastFoundIndex = lineNumber - 1; // 下次从这个位置开始搜索
     } else {
       console.warn(
-        `无法在完整代码中找到代码行: "${trimmedLine.substring(0, 50)}..."`,
+        `[CA:CodeGen] 无法在完整代码中找到代码行: "${trimmedLine.substring(0, 50)}..."`,
       );
     }
   }
 
   if (linePositions.length === 0) {
-    console.warn("无法在完整代码中找到任何指定的代码行");
+    console.warn("[CA:CodeGen] 无法在完整代码中找到任何指定的代码行");
     return [];
   }
 
@@ -593,7 +595,7 @@ function createCodeChunksFromLineArray(
   }
 
   console.log(
-    `📦 从 ${codeLines.length} 行代码创建了 ${codeChunks.length} 个代码块:`,
+    `[CA:CodeGen]  从 ${codeLines.length} 行代码创建了 ${codeChunks.length} 个代码块:`,
     codeChunks.map((chunk) => ({
       id: chunk.id,
       range: chunk.range,
@@ -641,7 +643,7 @@ function createCodeChunkSmart(
 
     if (stepId) result.stepId = stepId;
 
-    console.log(`✅ 智能创建代码块 ${chunkId}:`, {
+    console.log(`[CA:CodeGen] 智能创建代码块 ${chunkId}:`, {
       contentLength: trimmedContent.length,
       range: range,
       stepId,
@@ -650,11 +652,14 @@ function createCodeChunkSmart(
 
     return result;
   } else {
-    console.warn(`⚠️ 无法为代码块 ${chunkId} 计算有效范围，跳过创建`, {
-      contentPreview: trimmedContent.substring(0, 50) + "...",
-      calculatedRange: range,
-      fullCodeLinesCount: fullCodeLines.length,
-    });
+    console.warn(
+      `[CA:CodeGen] 无法为代码块 ${chunkId} 计算有效范围，跳过创建`,
+      {
+        contentPreview: trimmedContent.substring(0, 50) + "...",
+        calculatedRange: range,
+        fullCodeLinesCount: fullCodeLines.length,
+      },
+    );
     return null;
   }
 }
@@ -675,37 +680,37 @@ function constructRerunStepCodeUpdatePromptLocal(
       (step) =>
         `{"id": "${step.id}", "title": "${step.title}", "abstract": "${step.abstract}"}`,
     )
-    .join(",\n        ");
+    .join(",\n ");
 
   return `{
-        "task": "You are given existing code and information about a specific step whose abstract has changed. Update the code minimally to reflect the new abstract while preserving all unrelated functionality.",
-        ${taskDescription ? `"task_description": "${taskDescription}",` : ""}
-        "existing_code": "${existingCode}",
-        "all_steps": [
-        ${stepsText}
-        ],
-        "updated_step": {
-            "id": "${stepId}",
-            "old_abstract": "${oldAbstract}",
-            "new_abstract": "${newAbstract}"
-        },
-        "requirements": [
-            "STRICT RULE 1: Make MINIMAL changes to the existing code. Only modify what is absolutely necessary to reflect the new abstract for the specified step.",
-            "STRICT RULE 2: Do NOT break or remove functionality that is working and relates to other steps.",
-            "STRICT RULE 3: The updated code should maintain the same overall structure and all existing functionality while incorporating the changes required by the new abstract.",
-            "Analyze the difference between the old_abstract and new_abstract for the specified step",
-            "Identify which parts of the existing code need to be modified to match the new requirements",
-            "Preserve all code that implements other steps or is not directly related to the changed step",
-            "Make surgical changes only to the relevant sections",
-            "Maintain code consistency and follow good programming practices",
-            "The output should be the complete updated code file",
-            "Respond in the same language as the step descriptions",
-            "You must follow this JSON format in your response: {\\"complete_code\\": \\"(the complete updated code with minimal changes)\\"}",
-            "CRITICAL: Return ONLY a valid JSON object. Do not add any explanatory text before or after the JSON. Do not use code block markers. The response should start with { and end with }.",
-            "IMPORTANT: Properly escape all special characters in JSON strings. Ensure the JSON is valid and parseable.",
-            "Please do not use invalid code block characters to envelope the JSON response, just return the JSON object directly."
-        ]
-    }`;
+ "task": "You are given existing code and information about a specific step whose abstract has changed. Update the code minimally to reflect the new abstract while preserving all unrelated functionality.",
+ ${taskDescription ? `"task_description": "${taskDescription}",` : ""}
+ "existing_code": "${existingCode}",
+ "all_steps": [
+ ${stepsText}
+ ],
+ "updated_step": {
+ "id": "${stepId}",
+ "old_abstract": "${oldAbstract}",
+ "new_abstract": "${newAbstract}"
+ },
+ "requirements": [
+ "STRICT RULE 1: Make MINIMAL changes to the existing code. Only modify what is absolutely necessary to reflect the new abstract for the specified step.",
+ "STRICT RULE 2: Do NOT break or remove functionality that is working and relates to other steps.",
+ "STRICT RULE 3: The updated code should maintain the same overall structure and all existing functionality while incorporating the changes required by the new abstract.",
+ "Analyze the difference between the old_abstract and new_abstract for the specified step",
+ "Identify which parts of the existing code need to be modified to match the new requirements",
+ "Preserve all code that implements other steps or is not directly related to the changed step",
+ "Make surgical changes only to the relevant sections",
+ "Maintain code consistency and follow good programming practices",
+ "The output should be the complete updated code file",
+ "Respond in the same language as the step descriptions",
+ "You must follow this JSON format in your response: {\\"complete_code\\": \\"(the complete updated code with minimal changes)\\"}",
+ "CRITICAL: Return ONLY a valid JSON object. Do not add any explanatory text before or after the JSON. Do not use code block markers. The response should start with { and end with }.",
+ "IMPORTANT: Properly escape all special characters in JSON strings. Ensure the JSON is valid and parseable.",
+ "Please do not use invalid code block characters to envelope the JSON response, just return the JSON object directly."
+ ]
+ }`;
 }
 
 // 辅助函数：获取步骤对应的所有代码块内容
@@ -714,25 +719,25 @@ export async function getStepCorrespondingCode(
   mappings: any[],
   ideMessenger: any,
 ): Promise<string> {
-  // TODO: [映射重构] 此函数需要重新实现以适配新的 CodeAwareMapping 结构
+  // TODO: [CA:CodeGen] 此函数需要重新实现以适配新的 CodeAwareMapping 结构
   // 找到包含当前step_id的所有映射
   // const stepMappings = mappings.filter((mapping) => mapping.stepId === stepId);
   // if (stepMappings.length === 0) {
-  //   return "";
+  // return "";
   // }
-  console.warn("[映射重构] getStepCorrespondingCode 功能暂时禁用");
+  console.warn("[CA:CodeGen] getStepCorrespondingCode 功能暂时禁用");
   return "";
 
-  // TODO: [映射重构] 以下代码需要重新实现
+  // TODO: [CA:CodeGen] 以下代码需要重新实现
   // // 获取所有对应的代码块
   // const correspondingCodeChunks = stepMappings
-  //   .map((mapping) =>
-  //     codeChunks.find((chunk) => chunk.id === mapping.codeChunkId),
-  //   )
-  //   .filter((chunk) => chunk !== undefined);
+  // .map((mapping) =>
+  // codeChunks.find((chunk) => chunk.id === mapping.codeChunkId),
+  // )
+  // .filter((chunk) => chunk !== undefined);
 
   // if(correspondingCodeChunks.length === 0) {
-  //   return "";
+  // return "";
   // }
 
   // // 按范围起始行号排序，确保代码片段按在文件中的顺序排列
@@ -742,75 +747,75 @@ export async function getStepCorrespondingCode(
   // let allCodeSnippets: string[] = [];
 
   // try {
-  //   const currentFileResponse = await ideMessenger.request(
-  //     "getCurrentFile",
-  //     undefined,
-  //   );
+  // const currentFileResponse = await ideMessenger.request(
+  // "getCurrentFile",
+  // undefined,
+  // );
 
-  //   if (
-  //     currentFileResponse?.status === "success" &&
-  //     currentFileResponse.content
-  //   ) {
-  //     const currentFile = currentFileResponse.content;
-  //     const fileLines = currentFile.contents
-  //       ? currentFile.contents.split("\n")
-  //       : [];
+  // if (
+  // currentFileResponse?.status === "success" &&
+  // currentFileResponse.content
+  // ) {
+  // const currentFile = currentFileResponse.content;
+  // const fileLines = currentFile.contents
+  // ? currentFile.contents.split("\n")
+  // : [];
 
-  //     // 为每个代码块获取最新内容
-  //     for (const chunk of correspondingCodeChunks) {
-  //       // 如果文件路径匹配，从当前文件内容中提取对应行号的代码
-  //       if (currentFile.path === chunk.filePath && fileLines.length > 0) {
-  //         const startLine = Math.max(0, chunk.range[0] - 1); // 转换为0基索引
-  //         const endLine = Math.min(fileLines.length, chunk.range[1]); // 确保不超出范围
+  // // 为每个代码块获取最新内容
+  // for (const chunk of correspondingCodeChunks) {
+  // // 如果文件路径匹配，从当前文件内容中提取对应行号的代码
+  // if (currentFile.path === chunk.filePath && fileLines.length > 0) {
+  // const startLine = Math.max(0, chunk.range[0] - 1); // 转换为0基索引
+  // const endLine = Math.min(fileLines.length, chunk.range[1]); // 确保不超出范围
 
-  //         const currentCode = fileLines.slice(startLine, endLine).join("\n");
-  //         allCodeSnippets.push(currentCode);
+  // const currentCode = fileLines.slice(startLine, endLine).join("\n");
+  // allCodeSnippets.push(currentCode);
 
-  //         console.log(
-  //           `📖 从当前文件获取步骤 ${stepId} 代码片段 ${chunk.id} (行${chunk.range[0]}-${chunk.range[1]}):`,
-  //           currentCode.substring(0, 100) +
-  //             (currentCode.length > 100 ? "..." : ""),
-  //         );
-  //       } else {
-  //         // 如果文件路径不匹配或没有文件内容，使用缓存的代码块内容
-  //         allCodeSnippets.push(chunk.content);
-  //         console.log(
-  //           `📖 使用缓存的代码块内容 ${chunk.id}:`,
-  //           chunk.content.substring(0, 100) +
-  //             (chunk.content.length > 100 ? "..." : ""),
-  //         );
-  //       }
-  //     }
-  //   } else {
-  //     // 如果无法获取当前文件，使用所有缓存的代码块内容
-  //     allCodeSnippets = correspondingCodeChunks.map((chunk) => chunk.content);
-  //     console.warn("⚠️ 无法从IDE获取当前文件内容，使用所有缓存的代码块内容");
-  //   }
+  // console.log(
+  // ` 从当前文件获取步骤 ${stepId} 代码片段 ${chunk.id} (行${chunk.range[0]}-${chunk.range[1]}):`,
+  // currentCode.substring(0, 100) +
+  // (currentCode.length > 100 ? "..." : ""),
+  // );
+  // } else {
+  // // 如果文件路径不匹配或没有文件内容，使用缓存的代码块内容
+  // allCodeSnippets.push(chunk.content);
+  // console.log(
+  // ` 使用缓存的代码块内容 ${chunk.id}:`,
+  // chunk.content.substring(0, 100) +
+  // (chunk.content.length > 100 ? "..." : ""),
+  // );
+  // }
+  // }
+  // } else {
+  // // 如果无法获取当前文件，使用所有缓存的代码块内容
+  // allCodeSnippets = correspondingCodeChunks.map((chunk) => chunk.content);
+  // console.warn(" 无法从IDE获取当前文件内容，使用所有缓存的代码块内容");
+  // }
   // } catch (error) {
-  //   console.warn(
-  //     "⚠️ 无法从IDE获取当前文件内容，使用所有缓存的代码块内容:",
-  //     error,
-  //   );
-  //   allCodeSnippets = correspondingCodeChunks.map((chunk) => chunk.content);
+  // console.warn(
+  // " 无法从IDE获取当前文件内容，使用所有缓存的代码块内容:",
+  // error,
+  // );
+  // allCodeSnippets = correspondingCodeChunks.map((chunk) => chunk.content);
   // }
 
   // // 将所有代码片段合并，用适当的分隔符分开
   // if (allCodeSnippets.length === 0) {
-  //   return "";
+  // return "";
   // } else if (allCodeSnippets.length === 1) {
-  //   return allCodeSnippets[0];
+  // return allCodeSnippets[0];
   // } else {
-  //   // 多个代码片段时，用注释和空行分隔
-  //   const combinedCode = allCodeSnippets
-  //     .map((snippet, index) => {
-  //       return `// --- 代码片段 ${index + 1} ---\n${snippet}`;
-  //     })
-  //     .join("\n\n");
+  // // 多个代码片段时，用注释和空行分隔
+  // const combinedCode = allCodeSnippets
+  // .map((snippet, index) => {
+  // return `// --- 代码片段 ${index + 1} ---\n${snippet}`;
+  // })
+  // .join("\n\n");
 
-  //   console.log(
-  //     `📦 合并了 ${allCodeSnippets.length} 个代码片段，总长度: ${combinedCode.length}`,
-  //   );
-  //   return combinedCode;
+  // console.log(
+  // ` 合并了 ${allCodeSnippets.length} 个代码片段，总长度: ${combinedCode.length}`,
+  // );
+  // return combinedCode;
   // }
 }
 
@@ -836,7 +841,7 @@ export const paraphraseUserIntent = createAsyncThunk<
       const prompt = constructParaphraseUserIntentPrompt(programRequirement);
 
       console.log(
-        "paraphraseUserIntent called with programRequirement:",
+        "[CA:CodeGen] paraphraseUserIntent called with programRequirement:",
         prompt,
       );
       const result = await extra.ideMessenger.request("llm/complete", {
@@ -849,11 +854,11 @@ export const paraphraseUserIntent = createAsyncThunk<
         throw new Error("LLM request failed");
       }
 
-      console.log("LLM response:", result.content);
+      console.log("[CA:CodeGen] LLM response:", result.content);
       dispatch(submitRequirementContent(result.content));
       dispatch(setUserRequirementStatus("confirmed")); // 直接设置为confirmed，跳过AI处理步骤
     } catch (error) {
-      console.error("Error during LLM request:", error);
+      console.error("[CA:CodeGen] Error during LLM request:", error);
       dispatch(setUserRequirementStatus("editing"));
       throw new Error("Failed to fetch LLM response");
       //CATODO: 这里应该有一个UI提示，告诉用户请求失败了
@@ -898,7 +903,7 @@ export const generateStepsFromRequirement = createAsyncThunk<
       for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
           console.log(
-            `🔄 Attempt ${attempt}/${maxRetries} to generate steps...`,
+            `[CA:CodeGen]  Attempt ${attempt}/${maxRetries} to generate steps...`,
           );
 
           result = await extra.ideMessenger.request("llm/complete", {
@@ -908,7 +913,10 @@ export const generateStepsFromRequirement = createAsyncThunk<
           });
 
           if (result.status === "success" && result.content) {
-            console.log("✅ Steps generation successful on attempt", attempt);
+            console.log(
+              "[CA:CodeGen] Steps generation successful on attempt",
+              attempt,
+            );
             break;
           } else {
             throw new Error(
@@ -918,14 +926,14 @@ export const generateStepsFromRequirement = createAsyncThunk<
         } catch (error) {
           lastError = error instanceof Error ? error : new Error(String(error));
           console.warn(
-            `⚠️ Steps generation attempt ${attempt}/${maxRetries} failed:`,
+            `[CA:CodeGen]  Steps generation attempt ${attempt}/${maxRetries} failed:`,
             lastError.message,
           );
 
           if (attempt < maxRetries) {
             // Wait before retry (exponential backoff)
             const waitTime = Math.pow(2, attempt) * 1000; // 2s, 4s, 8s
-            console.log(`⏱️ Waiting ${waitTime}ms before retry...`);
+            console.log(`[CA:CodeGen] Waiting ${waitTime}ms before retry...`);
             await new Promise((resolve) => setTimeout(resolve, waitTime));
           }
         }
@@ -951,7 +959,7 @@ export const generateStepsFromRequirement = createAsyncThunk<
       // 解析 LLM 返回的 JSON 内容
       try {
         const jsonResponse = JSON.parse(result.content);
-        console.log("LLM response JSON:", jsonResponse);
+        console.log("[CA:CodeGen] LLM response JSON:", jsonResponse);
         title = jsonResponse.title || "";
         learningGoal = jsonResponse.learning_goal || "";
         highLevelSteps = jsonResponse.high_level_steps || [];
@@ -1016,11 +1024,11 @@ export const generateStepsFromRequirement = createAsyncThunk<
                 if (matchIndex !== -1) {
                   highLevelStepIndex = matchIndex + 1; // 转换为 1-based
                   console.log(
-                    `✅ Found high-level step by name: "${taskCorrespondingHighLevelTask}" -> index ${highLevelStepIndex}`,
+                    `[CA:CodeGen]  Found high-level step by name: "${taskCorrespondingHighLevelTask}" -> index ${highLevelStepIndex}`,
                   );
                 } else {
                   console.warn(
-                    `⚠️ Cannot find matching high-level step for "${taskCorrespondingHighLevelTask}"`,
+                    `[CA:CodeGen]  Cannot find matching high-level step for "${taskCorrespondingHighLevelTask}"`,
                   );
                 }
               }
@@ -1034,25 +1042,34 @@ export const generateStepsFromRequirement = createAsyncThunk<
                   highLevelStepIndex: highLevelStepIndex,
                 });
                 console.log(
-                  `✅ Created step-to-highLevel mapping: ${stepId} -> ${highLevelStepId} (${highLevelSteps[highLevelStepIndex - 1]})`,
+                  `[CA:CodeGen]  Created step-to-highLevel mapping: ${stepId} -> ${highLevelStepId} (${highLevelSteps[highLevelStepIndex - 1]})`,
                 );
               }
             }
           } else {
-            console.warn("Step is missing title or abstract:", step);
+            console.warn(
+              "[CA:CodeGen] Step is missing title or abstract:",
+              step,
+            );
           }
         }
       } catch (error) {
-        console.error("Error during LLM request for generating steps:", error);
+        console.error(
+          "[CA:CodeGen] Error during LLM request for generating steps:",
+          error,
+        );
         // 在抛出新错误之前，确保 error 是一个 Error 实例，以便保留原始堆栈跟踪
         const errorMessage =
           error instanceof Error ? error.message : String(error);
         throw new Error(`Failed to generate steps: ${errorMessage}`);
         // CATODO: UI提示，告知用户请求失败
       }
-      console.log("Generated high_level_steps array:", highLevelSteps);
       console.log(
-        `📋 Created ${stepToHighLevelMappings.length} step-to-highLevel mappings:`,
+        "[CA:CodeGen] Generated high_level_steps array:",
+        highLevelSteps,
+      );
+      console.log(
+        `[CA:CodeGen]  Created ${stepToHighLevelMappings.length} step-to-highLevel mappings:`,
         stepToHighLevelMappings,
       );
 
@@ -1066,7 +1083,7 @@ export const generateStepsFromRequirement = createAsyncThunk<
       dispatch(setUserRequirementStatus("finalized"));
 
       console.log(
-        `✅ Dispatched setStepToHighLevelMappings with ${stepToHighLevelMappings.length} mappings`,
+        `[CA:CodeGen]  Dispatched setStepToHighLevelMappings with ${stepToHighLevelMappings.length} mappings`,
       );
 
       // Log: 步骤生成完成
@@ -1118,14 +1135,20 @@ export const generateStepsFromRequirement = createAsyncThunk<
         });
 
         console.log(
-          "CodeAware: Successfully synced requirement and steps to IDE",
+          "[CA:CodeGen] CodeAware: Successfully synced requirement and steps to IDE",
         );
       } catch (error) {
-        console.warn("CodeAware: Failed to sync context to IDE:", error);
+        console.warn(
+          "[CA:CodeGen] CodeAware: Failed to sync context to IDE:",
+          error,
+        );
         // 不影响主流程，只是记录警告
       }
     } catch (error) {
-      console.error("Error during LLM request for generating steps:", error);
+      console.error(
+        "[CA:CodeGen] Error during LLM request for generating steps:",
+        error,
+      );
       dispatch(setUserRequirementStatus("editing"));
     }
   },
@@ -1190,7 +1213,7 @@ export const generateKnowledgeCardDetail = createAsyncThunk<
         taskDescription,
       );
 
-      console.log("generateKnowledgeCardDetail called with:", {
+      console.log("[CA:CodeGen] generateKnowledgeCardDetail called with:", {
         stepId,
         knowledgeCardId,
         knowledgeCardTheme,
@@ -1202,7 +1225,7 @@ export const generateKnowledgeCardDetail = createAsyncThunk<
       // 重试机制
       for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
-          console.log(`🔄 知识卡片生成尝试 ${attempt}/${maxRetries}`);
+          console.log(`[CA:CodeGen] 知识卡片生成尝试 ${attempt}/${maxRetries}`);
 
           // 添加超时保护
           const timeoutPromise = new Promise(
@@ -1222,7 +1245,10 @@ export const generateKnowledgeCardDetail = createAsyncThunk<
             throw new Error("LLM request failed or returned empty content");
           }
 
-          console.log("LLM response for knowledge card:", result.content);
+          console.log(
+            "[CA:CodeGen] LLM response for knowledge card:",
+            result.content,
+          );
 
           // 解析 LLM 返回的 JSON 内容
           try {
@@ -1254,7 +1280,7 @@ export const generateKnowledgeCardDetail = createAsyncThunk<
               },
             });
 
-            console.log("✅ 知识卡片生成成功");
+            console.log("[CA:CodeGen] 知识卡片生成成功");
 
             return; // 成功，退出函数
           } catch (parseError) {
@@ -1265,14 +1291,14 @@ export const generateKnowledgeCardDetail = createAsyncThunk<
         } catch (error) {
           lastError = error instanceof Error ? error : new Error(String(error));
           console.warn(
-            `⚠️ 知识卡片生成第 ${attempt} 次尝试失败:`,
+            `[CA:CodeGen]  知识卡片生成第 ${attempt} 次尝试失败:`,
             lastError.message,
           );
 
           // 如果不是最后一次尝试，等待一段时间再重试
           if (attempt < maxRetries) {
             const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000); // 指数退避，最大5秒
-            console.log(`⏱️ 等待 ${delay}ms 后重试...`);
+            console.log(`[CA:CodeGen] 等待 ${delay}ms 后重试...`);
             await new Promise((resolve) => setTimeout(resolve, delay));
           }
         }
@@ -1281,12 +1307,12 @@ export const generateKnowledgeCardDetail = createAsyncThunk<
       // 如果所有重试都失败了，抛出最后一个错误
       throw lastError || new Error("知识卡片生成失败");
     } catch (error) {
-      console.error("❌ 知识卡片生成最终失败:", error);
+      console.error("[CA:CodeGen] 知识卡片生成最终失败:", error);
       const errorMessage =
         error instanceof Error ? error.message : String(error);
 
       // 多次失败后，将知识卡片重置到生成前状态
-      console.log("🔄 重置知识卡片到生成前状态");
+      console.log("[CA:CodeGen] 重置知识卡片到生成前状态");
       dispatch(
         resetKnowledgeCardContent({
           stepId,
@@ -1387,7 +1413,7 @@ export const generateKnowledgeCardTests = createAsyncThunk<
         taskDescription,
       );
 
-      console.log("generateKnowledgeCardTests called with:", {
+      console.log("[CA:CodeGen] generateKnowledgeCardTests called with:", {
         stepId,
         knowledgeCardId,
         knowledgeCardTitle,
@@ -1401,7 +1427,9 @@ export const generateKnowledgeCardTests = createAsyncThunk<
       // 重试机制
       for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
-          console.log(`🔄 知识卡片测试题生成尝试 ${attempt}/${maxRetries}`);
+          console.log(
+            `[CA:CodeGen] 知识卡片测试题生成尝试 ${attempt}/${maxRetries}`,
+          );
 
           // 添加超时保护
           const timeoutPromise = new Promise(
@@ -1421,7 +1449,10 @@ export const generateKnowledgeCardTests = createAsyncThunk<
             throw new Error("LLM request failed or returned empty content");
           }
 
-          console.log("LLM response for knowledge card tests:", result.content);
+          console.log(
+            "[CA:CodeGen] LLM response for knowledge card tests:",
+            result.content,
+          );
 
           // 解析 LLM 返回的 JSON 内容
           try {
@@ -1460,7 +1491,7 @@ export const generateKnowledgeCardTests = createAsyncThunk<
               },
             });
 
-            console.log("✅ 知识卡片测试题生成成功");
+            console.log("[CA:CodeGen] 知识卡片测试题生成成功");
 
             return; // 成功，退出函数
           } catch (parseError) {
@@ -1471,14 +1502,14 @@ export const generateKnowledgeCardTests = createAsyncThunk<
         } catch (error) {
           lastError = error instanceof Error ? error : new Error(String(error));
           console.warn(
-            `⚠️ 知识卡片测试题生成第 ${attempt} 次尝试失败:`,
+            `[CA:CodeGen]  知识卡片测试题生成第 ${attempt} 次尝试失败:`,
             lastError.message,
           );
 
           // 如果不是最后一次尝试，等待一段时间再重试
           if (attempt < maxRetries) {
             const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000); // 指数退避，最大5秒
-            console.log(`⏱️ 等待 ${delay}ms 后重试...`);
+            console.log(`[CA:CodeGen] 等待 ${delay}ms 后重试...`);
             await new Promise((resolve) => setTimeout(resolve, delay));
           }
         }
@@ -1487,7 +1518,7 @@ export const generateKnowledgeCardTests = createAsyncThunk<
       // 如果所有重试都失败了，抛出最后一个错误
       throw lastError || new Error("知识卡片测试题生成失败");
     } catch (error) {
-      console.error("❌ 知识卡片测试题生成最终失败:", error);
+      console.error("[CA:CodeGen] 知识卡片测试题生成最终失败:", error);
       const errorMessage =
         error instanceof Error ? error.message : String(error);
 
@@ -1580,7 +1611,7 @@ export const generateKnowledgeCardThemes = createAsyncThunk<
         );
       }
     } catch (error) {
-      console.error("❌ 知识卡片主题生成最终失败:", error);
+      console.error("[CA:CodeGen] 知识卡片主题生成最终失败:", error);
       dispatch(setKnowledgeCardGenerationStatus({ stepId, status: "empty" }));
     } finally {
       // 确保无论如何都不会卡在generating状态，但不要覆盖已经正确设置的状态
@@ -1590,13 +1621,13 @@ export const generateKnowledgeCardThemes = createAsyncThunk<
       );
       if (currentStep?.knowledgeCardGenerationStatus === "generating") {
         console.warn(
-          `⚠️ 检测到步骤 ${stepId} 仍处于generating状态，重置为empty以允许重试`,
+          `[CA:CodeGen]  检测到步骤 ${stepId} 仍处于generating状态，重置为empty以允许重试`,
         );
         dispatch(setKnowledgeCardGenerationStatus({ stepId, status: "empty" }));
       }
       // 如果状态是 "checked"，说明已经成功完成，不要修改
       console.log(
-        `🔍 最终状态检查 - 步骤 ${stepId} 的知识卡片生成状态: ${currentStep?.knowledgeCardGenerationStatus}`,
+        `[CA:CodeGen]  最终状态检查 - 步骤 ${stepId} 的知识卡片生成状态: ${currentStep?.knowledgeCardGenerationStatus}`,
       );
     }
   },
@@ -1695,7 +1726,7 @@ export const generateKnowledgeCardThemesFromQuery = createAsyncThunk<
         },
       });
     } catch (error) {
-      console.error("❌ 基于查询的知识卡片主题生成最终失败:", error);
+      console.error("[CA:CodeGen] 基于查询的知识卡片主题生成最终失败:", error);
       dispatch(setKnowledgeCardGenerationStatus({ stepId, status: "empty" }));
     } finally {
       // 确保无论如何都不会卡在generating状态，但不要覆盖已经正确设置的状态
@@ -1705,13 +1736,13 @@ export const generateKnowledgeCardThemesFromQuery = createAsyncThunk<
       );
       if (currentStep?.knowledgeCardGenerationStatus === "generating") {
         console.warn(
-          `⚠️ 检测到步骤 ${stepId} 仍处于generating状态，重置为empty以允许重试`,
+          `[CA:CodeGen]  检测到步骤 ${stepId} 仍处于generating状态，重置为empty以允许重试`,
         );
         dispatch(setKnowledgeCardGenerationStatus({ stepId, status: "empty" }));
       }
       // 如果状态是 "checked"，说明已经成功完成，不要修改
       console.log(
-        `🔍 最终状态检查 - 步骤 ${stepId} 的知识卡片生成状态: ${currentStep?.knowledgeCardGenerationStatus}`,
+        `[CA:CodeGen]  最终状态检查 - 步骤 ${stepId} 的知识卡片生成状态: ${currentStep?.knowledgeCardGenerationStatus}`,
       );
     }
   },
@@ -1735,11 +1766,13 @@ export const checkAndClearStuckGeneratingStatus = createAsyncThunk<
 
     if (stuckSteps.length > 0) {
       console.warn(
-        `🔧 发现 ${stuckSteps.length} 个步骤卡在generating状态，正在清理...`,
+        `[CA:CodeGen]  发现 ${stuckSteps.length} 个步骤卡在generating状态，正在清理...`,
       );
 
       stuckSteps.forEach((step) => {
-        console.log(`🔄 重置步骤 ${step.id} (${step.title}) 的生成状态`);
+        console.log(
+          `[CA:CodeGen] 重置步骤 ${step.id} (${step.title}) 的生成状态`,
+        );
         dispatch(
           setKnowledgeCardGenerationStatus({
             stepId: step.id,
@@ -1748,9 +1781,9 @@ export const checkAndClearStuckGeneratingStatus = createAsyncThunk<
         );
       });
 
-      console.log(`✅ 已清理 ${stuckSteps.length} 个卡住的生成状态`);
+      console.log(`[CA:CodeGen] 已清理 ${stuckSteps.length} 个卡住的生成状态`);
     } else {
-      console.log("✅ 没有发现卡住的生成状态");
+      console.log("[CA:CodeGen] 没有发现卡住的生成状态");
     }
   },
 );
@@ -1808,7 +1841,7 @@ export const generateCodeFromSteps = createAsyncThunk<
 
       const state = getState();
 
-      console.log("generateCodeFromSteps called with:", {
+      console.log("[CA:CodeGen] generateCodeFromSteps called with:", {
         existingCodeLength: existingCode.length,
         filepath: filepath,
         stepsCount: orderedSteps.length,
@@ -1830,7 +1863,7 @@ export const generateCodeFromSteps = createAsyncThunk<
       const lastStepId = allSteps[maxStepIndex]?.id;
       const isLastStep = orderedSteps.some((step) => step.id === lastStepId);
 
-      console.log("🔍 步骤判断信息:", {
+      console.log("[CA:CodeGen] 步骤判断信息:", {
         allStepsCount: allSteps.length,
         maxStepIndex,
         lastStepId,
@@ -1839,7 +1872,7 @@ export const generateCodeFromSteps = createAsyncThunk<
       });
 
       // 使用新的流式生成thunk
-      console.log("🚀 开始使用流式生成方式生成代码...");
+      console.log("[CA:CodeGen] 开始使用流式生成方式生成代码...");
 
       // 动态导入以避免循环依赖
       const { streamCodeGenerationThunk } = await import(
@@ -1860,32 +1893,32 @@ export const generateCodeFromSteps = createAsyncThunk<
         }),
       ).unwrap();
 
-      console.log("✅ 流式代码生成完成");
+      console.log("[CA:CodeGen] 流式代码生成完成");
 
-      // ⚠️⚠️⚠️ 以下逻辑已被注释掉，因为不再需要映射关系 ⚠️⚠️⚠️
+      // 以下逻辑已被注释掉，因为不再需要映射关系
       /*
-      // 第二步：并行为每个步骤找到相关的代码行
-      // 第三步：处理所有结果，创建代码块和映射关系
-      // ... 映射关系创建逻辑 ...
-      */
-      // ⚠️⚠️⚠️ 以上逻辑已被注释掉 ⚠️⚠️⚠️
+ // 第二步：并行为每个步骤找到相关的代码行
+ // 第三步：处理所有结果，创建代码块和映射关系
+ // ... 映射关系创建逻辑 ...
+ */
+      // 以上逻辑已被注释掉
 
       // 标记所有相关步骤为已生成
       orderedSteps.forEach((step) => {
         dispatch(setStepStatus({ stepId: step.id, status: "generated" }));
       });
-      console.log("✅ 所有步骤状态已更新为 'generated'");
+      console.log("[CA:CodeGen] 所有步骤状态已更新为 'generated'");
 
       // 调用各个步骤的 checkAndMapKnowledgeCardsToCode
-      console.log("🧭 开始为所有步骤检查和映射知识卡片...");
+      console.log("[CA:CodeGen] 开始为所有步骤检查和映射知识卡片...");
       orderedSteps.forEach((step) => {
-        // TODO: [映射重构] 需要重新实现知识卡片映射检查
+        // TODO: [CA:CodeGen] 需要重新实现知识卡片映射检查
         // void dispatch(checkAndMapKnowledgeCardsToCode({ stepId: step.id }));
-        console.warn("[映射重构] 知识卡片映射检查功能暂时禁用");
-        console.log(`🎯 已触发步骤 ${step.id} 的知识卡片映射检查`);
+        console.warn("[CA:CodeGen] 知识卡片映射检查功能暂时禁用");
+        console.log(`[CA:CodeGen] 已触发步骤 ${step.id} 的知识卡片映射检查`);
       });
 
-      console.log("✅ generateCodeFromSteps 简化版本执行完成");
+      console.log("[CA:CodeGen] generateCodeFromSteps 简化版本执行完成");
 
       // Log: 代码生成完成
       await extra.ideMessenger.request("addCodeAwareLogEntry", {
@@ -1902,7 +1935,7 @@ export const generateCodeFromSteps = createAsyncThunk<
         stepsCorrespondingCode: [], // 不再返回映射关系
       };
     } catch (error) {
-      console.error("❌ generateCodeFromSteps 执行失败:", error);
+      console.error("[CA:CodeGen] generateCodeFromSteps 执行失败:", error);
       // 重置步骤状态
       orderedSteps.forEach((step) => {
         dispatch(setStepStatus({ stepId: step.id, status: "confirmed" }));
@@ -1967,7 +2000,7 @@ export const rerunStep = createAsyncThunk<
       const originalAbstract =
         targetStep.previousStepAbstract || targetStep.abstract;
 
-      console.log("rerunStep called with:", {
+      console.log("[CA:CodeGen] rerunStep called with:", {
         stepId,
         stepTitle: targetStep.title,
         originalAbstract: originalAbstract,
@@ -1979,7 +2012,7 @@ export const rerunStep = createAsyncThunk<
       });
 
       // 第一步：生成更新的代码
-      console.log("📝 第一步：开始生成更新的代码...");
+      console.log("[CA:CodeGen] 第一步：开始生成更新的代码...");
       let updatedCode = "";
 
       // 准备所有步骤信息（不包含知识卡片）
@@ -2010,7 +2043,7 @@ export const rerunStep = createAsyncThunk<
 
       for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
-          console.log(`🔄 代码生成尝试 ${attempt}/${maxRetries}`);
+          console.log(`[CA:CodeGen] 代码生成尝试 ${attempt}/${maxRetries}`);
 
           // 添加超时保护
           const timeoutPromise = new Promise(
@@ -2034,14 +2067,14 @@ export const rerunStep = createAsyncThunk<
         } catch (error) {
           lastError = error instanceof Error ? error : new Error(String(error));
           console.warn(
-            `⚠️ 代码生成第 ${attempt} 次尝试失败:`,
+            `[CA:CodeGen]  代码生成第 ${attempt} 次尝试失败:`,
             lastError.message,
           );
 
           // 如果不是最后一次尝试，等待一段时间再重试
           if (attempt < maxRetries) {
             const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000); // 指数退避
-            console.log(`⏱️ 等待 ${delay}ms 后重试...`);
+            console.log(`[CA:CodeGen] 等待 ${delay}ms 后重试...`);
             await new Promise((resolve) => setTimeout(resolve, delay));
           }
         }
@@ -2064,10 +2097,13 @@ export const rerunStep = createAsyncThunk<
           throw new Error("LLM返回的代码为空");
         }
 
-        console.log("✅ 第一步代码生成成功，代码长度:", updatedCode.length);
+        console.log(
+          "[CA:CodeGen] 第一步代码生成成功，代码长度:",
+          updatedCode.length,
+        );
       } catch (parseError) {
         console.error(
-          "解析第一步LLM响应失败:",
+          "[CA:CodeGen] 解析第一步LLM响应失败:",
           parseError,
           "响应内容:",
           codeResult.content,
@@ -2076,7 +2112,7 @@ export const rerunStep = createAsyncThunk<
       }
 
       // 第二步：并行为每个步骤找到相关的代码行
-      console.log("🎯 第二步：开始并行查找步骤相关代码行...");
+      console.log("[CA:CodeGen] 第二步：开始并行查找步骤相关代码行...");
 
       // 准备所有需要处理的步骤（使用更新后的abstract）
       const allStepsToProcess = steps.map((step) => ({
@@ -2086,7 +2122,7 @@ export const rerunStep = createAsyncThunk<
       }));
 
       console.log(
-        "📝 准备处理的步骤:",
+        "[CA:CodeGen]  准备处理的步骤:",
         allStepsToProcess.map((s) => ({ id: s.id, title: s.title })),
       );
 
@@ -2106,7 +2142,7 @@ export const rerunStep = createAsyncThunk<
             step.abstract,
           );
 
-          console.log(`🔍 为步骤 ${step.id} 创建查找代码行请求...`);
+          console.log(`[CA:CodeGen] 为步骤 ${step.id} 创建查找代码行请求...`);
 
           // 为每个步骤的请求添加重试机制
           for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -2118,7 +2154,7 @@ export const rerunStep = createAsyncThunk<
               });
 
               if (result.status === "success" && result.content) {
-                console.log(`✅ 步骤 ${step.id} 代码行查找成功`);
+                console.log(`[CA:CodeGen] 步骤 ${step.id} 代码行查找成功`);
                 return {
                   stepId: step.id,
                   stepTitle: step.title,
@@ -2132,7 +2168,7 @@ export const rerunStep = createAsyncThunk<
               }
             } catch (error) {
               console.warn(
-                `⚠️ 步骤 ${step.id} 代码行查找尝试 ${attempt}/${maxRetries} 失败:`,
+                `[CA:CodeGen]  步骤 ${step.id} 代码行查找尝试 ${attempt}/${maxRetries} 失败:`,
                 error,
               );
 
@@ -2140,7 +2176,9 @@ export const rerunStep = createAsyncThunk<
                 const waitTime = Math.pow(2, attempt) * 1000;
                 await new Promise((resolve) => setTimeout(resolve, waitTime));
               } else {
-                console.error(`❌ 步骤 ${step.id} 代码行查找最终失败`);
+                console.error(
+                  `[CA:CodeGen] 步骤 ${step.id} 代码行查找最终失败`,
+                );
                 return {
                   stepId: step.id,
                   stepTitle: step.title,
@@ -2162,11 +2200,11 @@ export const rerunStep = createAsyncThunk<
       );
 
       // 等待所有并行请求完成
-      console.log("⏳ 等待所有步骤的代码行查找完成...");
+      console.log("[CA:CodeGen] 等待所有步骤的代码行查找完成...");
       const stepCodeLineResults = await Promise.all(stepCodeLinePromises);
 
       // 第三步：处理所有结果，创建代码块和映射关系
-      console.log("📦 第三步：处理查找结果并创建代码块...");
+      console.log("[CA:CodeGen] 第三步：处理查找结果并创建代码块...");
 
       const stepsCorrespondingCode: Array<{ id: string; code: string }> = [];
       const allCreatedCodeChunks: Array<{
@@ -2184,7 +2222,7 @@ export const rerunStep = createAsyncThunk<
           stepResult.result.status !== "success"
         ) {
           console.warn(
-            `⚠️ 跳过步骤 ${stepResult?.stepId || "unknown"}，因为没有有效结果`,
+            `[CA:CodeGen]  跳过步骤 ${stepResult?.stepId || "unknown"}，因为没有有效结果`,
           );
           continue;
         }
@@ -2215,7 +2253,7 @@ export const rerunStep = createAsyncThunk<
           const relatedCodeLines = parsedResponse.related_code_lines || [];
 
           console.log(
-            `📝 步骤 ${stepResult.stepId} 找到 ${relatedCodeLines.length} 行相关代码`,
+            `[CA:CodeGen]  步骤 ${stepResult.stepId} 找到 ${relatedCodeLines.length} 行相关代码`,
           );
 
           if (relatedCodeLines.length > 0) {
@@ -2245,49 +2283,53 @@ export const rerunStep = createAsyncThunk<
           }
         } catch (parseError) {
           console.error(
-            `❌ 解析步骤 ${stepResult.stepId} 代码行响应失败:`,
+            `[CA:CodeGen]  解析步骤 ${stepResult.stepId} 代码行响应失败:`,
             parseError,
           );
-          console.warn(`⚠️ 跳过步骤 ${stepResult.stepId}，因为解析失败`);
+          console.warn(
+            `[CA:CodeGen] 跳过步骤 ${stepResult.stepId}，因为解析失败`,
+          );
         }
       }
 
-      console.log("✅ rerunStep 第二步并行查找和第三步处理完成:", {
+      console.log("[CA:CodeGen] rerunStep 第二步并行查找和第三步处理完成:", {
         stepsWithCode: stepsCorrespondingCode.length,
         createdCodeChunks: allCreatedCodeChunks.length,
       });
 
       // 清理现有的代码块和映射关系，但保留要求映射
-      console.log("🗑️ 保存要求映射关系并清除现有的代码块和代码映射...");
+      console.log(
+        "[CA:CodeGen] 保存要求映射关系并清除现有的代码块和代码映射...",
+      );
 
       // 首先清理所有知识卡片的代码映射，因为代码重新生成后这些映射可能失效
-      console.log("🧹 清理知识卡片代码映射...");
+      console.log("[CA:CodeGen] 清理知识卡片代码映射...");
       dispatch(clearKnowledgeCardCodeMappings());
 
-      // TODO: [映射重构] 需要重新实现保留映射关系的逻辑
+      // TODO: [CA:CodeGen] 需要重新实现保留映射关系的逻辑
       const currentState = getState();
       // 保留 requirement-step 映射关系
       // const requirementStepMappings =
-      //   currentState.codeAwareSession.codeAwareMappings.filter(
-      //     (mapping: any) =>
-      //       mapping.highLevelStepId &&
-      //       mapping.stepId &&
-      //       !mapping.codeChunkId &&
-      //       !mapping.knowledgeCardId,
-      //   );
+      // currentState.codeAwareSession.codeAwareMappings.filter(
+      // (mapping: any) =>
+      // mapping.highLevelStepId &&
+      // mapping.stepId &&
+      // !mapping.codeChunkId &&
+      // !mapping.knowledgeCardId,
+      // );
       // 保留 requirement-step-knowledgeCard 映射关系（没有代码块的）
       // const requirementKnowledgeCardMappings =
-      //   currentState.codeAwareSession.codeAwareMappings.filter(
-      //     (mapping: any) =>
-      //       mapping.highLevelStepId &&
-      //       mapping.stepId &&
-      //       mapping.knowledgeCardId &&
-      //       !mapping.codeChunkId,
-      //   );
+      // currentState.codeAwareSession.codeAwareMappings.filter(
+      // (mapping: any) =>
+      // mapping.highLevelStepId &&
+      // mapping.stepId &&
+      // mapping.knowledgeCardId &&
+      // !mapping.codeChunkId,
+      // );
       const requirementStepMappings: any[] = [];
       const requirementKnowledgeCardMappings: any[] = [];
 
-      console.log("💾 保存的要求映射关系:", {
+      console.log("[CA:CodeGen] 保存的要求映射关系:", {
         requirementStepMappings: requirementStepMappings.length,
         requirementKnowledgeCardMappings:
           requirementKnowledgeCardMappings.length,
@@ -2296,16 +2338,16 @@ export const rerunStep = createAsyncThunk<
       dispatch(clearAllCodeChunks());
       dispatch(clearAllCodeAwareMappings());
 
-      // TODO: [映射重构] 需要重新实现映射关系恢复逻辑
+      // TODO: [CA:CodeGen] 需要重新实现映射关系恢复逻辑
       // 重新添加要求映射关系
       // requirementStepMappings.forEach((mapping: any) => {
-      //   dispatch(createCodeAwareMapping(mapping));
+      // dispatch(createCodeAwareMapping(mapping));
       // });
       // // 重新添加要求-知识卡片映射关系
       // requirementKnowledgeCardMappings.forEach((mapping: any) => {
-      //   dispatch(createCodeAwareMapping(mapping));
+      // dispatch(createCodeAwareMapping(mapping));
       // });
-      console.warn("[映射重构] 映射关系恢复功能暂时禁用");
+      console.warn("[CA:CodeGen] 映射关系恢复功能暂时禁用");
 
       // 创建所有代码块
       allCreatedCodeChunks.forEach((chunk) => {
@@ -2318,43 +2360,43 @@ export const rerunStep = createAsyncThunk<
           }),
         );
         console.log(
-          `📋 创建代码块 ${chunk.id}，范围: [${chunk.range[0]}, ${chunk.range[1]}]`,
+          `[CA:CodeGen]  创建代码块 ${chunk.id}，范围: [${chunk.range[0]}, ${chunk.range[1]}]`,
         );
       });
 
-      // TODO: [映射重构] 需要重新实现步骤映射创建逻辑
+      // TODO: [CA:CodeGen] 需要重新实现步骤映射创建逻辑
       // 创建映射关系
-      console.log("🔗 开始创建映射关系...");
+      console.log("[CA:CodeGen] 开始创建映射关系...");
       // const updatedState = getState();
       // const existingRequirementMappings =
-      //   updatedState.codeAwareSession.codeAwareMappings.filter(
-      //     (mapping: any) =>
-      //       mapping.highLevelStepId && mapping.stepId && !mapping.codeChunkId,
-      //   );
+      // updatedState.codeAwareSession.codeAwareMappings.filter(
+      // (mapping: any) =>
+      // mapping.highLevelStepId && mapping.stepId && !mapping.codeChunkId,
+      // );
 
       // // 为所有创建的代码块创建映射关系
       // allCreatedCodeChunks.forEach((chunk) => {
-      //   chunk.stepIds.forEach((stepId) => {
-      //     // 找到对应的需求块ID
-      //     const existingReqMapping = existingRequirementMappings.find(
-      //       (mapping) => mapping.stepId === stepId,
-      //     );
+      // chunk.stepIds.forEach((stepId) => {
+      // // 找到对应的需求块ID
+      // const existingReqMapping = existingRequirementMappings.find(
+      // (mapping) => mapping.stepId === stepId,
+      // );
 
-      //     const stepMapping: CodeAwareMapping = {
-      //       codeChunkId: chunk.id,
-      //       stepId: stepId,
-      //       highLevelStepId: existingReqMapping?.highLevelStepId,
-      //       isHighlighted: false,
-      //     };
+      // const stepMapping: CodeAwareMapping = {
+      // codeChunkId: chunk.id,
+      // stepId: stepId,
+      // highLevelStepId: existingReqMapping?.highLevelStepId,
+      // isHighlighted: false,
+      // };
 
-      //     dispatch(createCodeAwareMapping(stepMapping));
-      //     console.log(`🔗 创建步骤映射: ${chunk.id} -> ${stepId}`);
-      //   });
+      // dispatch(createCodeAwareMapping(stepMapping));
+      // console.log(` 创建步骤映射: ${chunk.id} -> ${stepId}`);
       // });
-      console.warn("[映射重构] 步骤映射创建功能暂时禁用");
+      // });
+      console.warn("[CA:CodeGen] 步骤映射创建功能暂时禁用");
 
       // 应用生成的代码到IDE
-      console.log("🚀 开始将更新的代码应用到IDE文件...");
+      console.log("[CA:CodeGen] 开始将更新的代码应用到IDE文件...");
 
       try {
         // 使用diff方式应用代码变更，更安全且支持undo
@@ -2364,9 +2406,9 @@ export const rerunStep = createAsyncThunk<
           newCode: updatedCode,
         });
 
-        console.log("✅ 代码已成功应用到IDE文件");
+        console.log("[CA:CodeGen] 代码已成功应用到IDE文件");
       } catch (error) {
-        console.error("❌ 应用代码到IDE失败:", error);
+        console.error("[CA:CodeGen] 应用代码到IDE失败:", error);
       }
 
       // 更新步骤的抽象内容
@@ -2376,7 +2418,7 @@ export const rerunStep = createAsyncThunk<
           abstract: changedStepAbstract,
         }),
       );
-      console.log(`📄 步骤抽象已更新为: "${changedStepAbstract}"`);
+      console.log(`[CA:CodeGen] 步骤抽象已更新为: "${changedStepAbstract}"`);
 
       // 检查知识卡片是否需要重新生成内容
       const updatedStep = targetStep.knowledgeCards;
@@ -2388,10 +2430,10 @@ export const rerunStep = createAsyncThunk<
             status: "empty",
           }),
         );
-        console.log(`🔄 知识卡片标记为需要重新生成内容`);
+        console.log(`[CA:CodeGen] 知识卡片标记为需要重新生成内容`);
       }
 
-      console.log("✅ 步骤重新运行完成");
+      console.log("[CA:CodeGen] 步骤重新运行完成");
 
       // Log: 步骤重新运行完成
       await extra.ideMessenger.request("addCodeAwareLogEntry", {
@@ -2409,14 +2451,14 @@ export const rerunStep = createAsyncThunk<
 
       // 标记步骤为已生成
       dispatch(setStepStatus({ stepId: stepId, status: "generated" }));
-      console.log(`✅ 步骤 ${stepId} 状态已更新为 'generated'`);
+      console.log(`[CA:CodeGen] 步骤 ${stepId} 状态已更新为 'generated'`);
 
       // 调用 checkAndMapKnowledgeCardsToCode
-      console.log(`🧭 为步骤 ${stepId} 检查和映射知识卡片...`);
-      // TODO: [映射重构] 需要重新实现知识卡片映射检查
+      console.log(`[CA:CodeGen] 为步骤 ${stepId} 检查和映射知识卡片...`);
+      // TODO: [CA:CodeGen] 需要重新实现知识卡片映射检查
       // void dispatch(checkAndMapKnowledgeCardsToCode({ stepId: stepId }));
-      console.warn("[映射重构] 知识卡片映射检查功能暂时禁用");
-      console.log(`🎯 已触发步骤 ${stepId} 的知识卡片映射检查`);
+      console.warn("[CA:CodeGen] 知识卡片映射检查功能暂时禁用");
+      console.log(`[CA:CodeGen] 已触发步骤 ${stepId} 的知识卡片映射检查`);
 
       // 触发highlight事件，以step为source高亮重新运行的步骤变化
       const latestState = getState();
@@ -2431,7 +2473,7 @@ export const rerunStep = createAsyncThunk<
             additionalInfo: rerunStepInfo,
           }),
         );
-        console.log(`✨ 触发了步骤 ${stepId} 的highlight事件`);
+        console.log(`[CA:CodeGen] 触发了步骤 ${stepId} 的highlight事件`);
       }
 
       return {
@@ -2439,7 +2481,7 @@ export const rerunStep = createAsyncThunk<
         stepsCorrespondingCode,
       };
     } catch (error) {
-      console.error("❌ rerunStep 执行失败:", error);
+      console.error("[CA:CodeGen] rerunStep 执行失败:", error);
       // 重置步骤状态
       dispatch(setStepStatus({ stepId: stepId, status: "generated" }));
       throw error;
@@ -2475,46 +2517,46 @@ export const processCodeUpdates = createAsyncThunk<
       );
 
       if (codeDirtySteps.length === 0) {
-        console.log("No code_dirty steps found, skipping update");
+        console.log("[CA:CodeGen] No code_dirty steps found, skipping update");
         return;
       }
 
       console.log(
-        "🔄 Processing code updates for dirty steps:",
+        "[CA:CodeGen]  Processing code updates for dirty steps:",
         codeDirtySteps.map((s) => s.id),
       );
 
       // Disable code chunks and remove mappings for code_dirty steps
       for (const step of codeDirtySteps) {
-        // TODO: [映射重构] 需要重新实现映射查找和禁用逻辑
+        // TODO: [CA:CodeGen] 需要重新实现映射查找和禁用逻辑
         // 查找所有与此步骤相关的映射（包括知识卡片）
         // const relatedMappings = mappings.filter(
-        //   (mapping) =>
-        //     mapping.semanticElementId === step.id ||
-        //     (mapping.semanticElementType === "knowledgeCard" &&
-        //       mapping.semanticElementId.startsWith(`${step.id}-kc-`)),
+        // (mapping) =>
+        // mapping.semanticElementId === step.id ||
+        // (mapping.semanticElementType === "knowledgeCard" &&
+        // mapping.semanticElementId.startsWith(`${step.id}-kc-`)),
         // );
         const relatedMappings: any[] = [];
 
         // Disable related code chunks
         // relatedMappings.forEach((mapping) => {
-        //   if (mapping.codeChunkId) {
-        //     dispatch(
-        //       setCodeChunkDisabled({
-        //         codeChunkId: mapping.codeChunkId,
-        //         disabled: true,
-        //       }),
-        //     );
-        //   }
+        // if (mapping.codeChunkId) {
+        // dispatch(
+        // setCodeChunkDisabled({
+        // codeChunkId: mapping.codeChunkId,
+        // disabled: true,
+        // }),
+        // );
+        // }
         // });
 
         // Remove mappings for this step
-        // TODO: [映射重构] removeCodeAwareMappings 需要更新以适配新的映射结构
+        // TODO: [CA:CodeGen] removeCodeAwareMappings 需要更新以适配新的映射结构
         // dispatch(removeCodeAwareMappings({ semanticElementId: step.id }));
-        console.warn("[映射重构] 禁用代码块和移除映射功能暂时禁用");
+        console.warn("[CA:CodeGen] 禁用代码块和移除映射功能暂时禁用");
 
         console.log(
-          `🚫 Disabled ${relatedMappings.length} code chunks and removed mappings for step ${step.id}`,
+          `[CA:CodeGen]  Disabled ${relatedMappings.length} code chunks and removed mappings for step ${step.id}`,
         );
       }
 
@@ -2546,11 +2588,16 @@ export const processCodeUpdates = createAsyncThunk<
       let lastError: Error | null = null;
       let result: any = null;
 
-      console.log("🤖 Calling LLM to process code changes...", prompt);
+      console.log(
+        "[CA:CodeGen] Calling LLM to process code changes...",
+        prompt,
+      );
 
       for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
-          console.log(`🔄 Attempt ${attempt}/${maxRetries} to call LLM...`);
+          console.log(
+            `[CA:CodeGen] Attempt ${attempt}/${maxRetries} to call LLM...`,
+          );
 
           result = await extra.ideMessenger.request("llm/complete", {
             prompt: prompt,
@@ -2559,7 +2606,10 @@ export const processCodeUpdates = createAsyncThunk<
           });
 
           if (result.status === "success" && result.content) {
-            console.log("✅ LLM request successful on attempt", attempt);
+            console.log(
+              "[CA:CodeGen] LLM request successful on attempt",
+              attempt,
+            );
             break;
           } else {
             throw new Error(
@@ -2569,14 +2619,14 @@ export const processCodeUpdates = createAsyncThunk<
         } catch (error) {
           lastError = error instanceof Error ? error : new Error(String(error));
           console.warn(
-            `⚠️ Attempt ${attempt}/${maxRetries} failed:`,
+            `[CA:CodeGen]  Attempt ${attempt}/${maxRetries} failed:`,
             lastError.message,
           );
 
           if (attempt < maxRetries) {
             // Wait before retry (exponential backoff)
             const waitTime = Math.pow(2, attempt) * 1000; // 2s, 4s, 8s
-            console.log(`⏱️ Waiting ${waitTime}ms before retry...`);
+            console.log(`[CA:CodeGen] Waiting ${waitTime}ms before retry...`);
             await new Promise((resolve) => setTimeout(resolve, waitTime));
           }
         }
@@ -2585,7 +2635,7 @@ export const processCodeUpdates = createAsyncThunk<
       if (!result || result.status !== "success" || !result.content) {
         // If all retries failed, restore step status and throw error
         console.error(
-          "❌ All LLM retry attempts failed, restoring step status...",
+          "[CA:CodeGen]  All LLM retry attempts failed, restoring step status...",
         );
         for (const step of codeDirtySteps) {
           dispatch(setStepStatus({ stepId: step.id, status: "generated" }));
@@ -2595,7 +2645,10 @@ export const processCodeUpdates = createAsyncThunk<
         );
       }
 
-      console.log("LLM response for code update analysis:", result.content);
+      console.log(
+        "[CA:CodeGen] LLM response for code update analysis:",
+        result.content,
+      );
 
       // Parse LLM response with error handling
       try {
@@ -2603,7 +2656,7 @@ export const processCodeUpdates = createAsyncThunk<
         const updatedSteps = jsonResponse.updated_steps || [];
         const knowledgeCards = jsonResponse.knowledge_cards || [];
 
-        console.log("✅ Code update analysis completed:", {
+        console.log("[CA:CodeGen] Code update analysis completed:", {
           updatedStepsCount: updatedSteps.length,
           knowledgeCardsCount: knowledgeCards.length,
           stepsBroken: updatedSteps.filter((s: any) => s.code_broken).length,
@@ -2628,7 +2681,7 @@ export const processCodeUpdates = createAsyncThunk<
             // Check if step's code is broken
             if (stepUpdate.code_broken) {
               console.log(
-                `� Step ${stepId} code is broken, marking as confirmed for regeneration`,
+                `[CA:CodeGen] � Step ${stepId} code is broken, marking as confirmed for regeneration`,
               );
               dispatch(setStepStatus({ stepId, status: "confirmed" }));
               continue; // Skip further processing for this step as its code is broken
@@ -2645,7 +2698,7 @@ export const processCodeUpdates = createAsyncThunk<
                 );
               }
               console.log(
-                `📝 Updated step ${stepId}: title="${stepUpdate.title}", abstract updated`,
+                `[CA:CodeGen]  Updated step ${stepId}: title="${stepUpdate.title}", abstract updated`,
               );
             }
 
@@ -2682,40 +2735,43 @@ export const processCodeUpdates = createAsyncThunk<
               // 添加到新代码块跟踪列表
               newCodeChunks.push(newChunk);
 
-              // TODO: [映射重构] 需要重新实现步骤映射查找和创建逻辑
+              // TODO: [CA:CodeGen] 需要重新实现步骤映射查找和创建逻辑
               // Find requirement chunk for mapping
               // const existingStepMapping = mappings.find(
-              //   (mapping) =>
-              //     mapping.stepId === stepId && mapping.highLevelStepId,
+              // (mapping) =>
+              // mapping.stepId === stepId && mapping.highLevelStepId,
               // );
               // const highLevelStepId = existingStepMapping?.highLevelStepId;
 
               // // Create step mapping
               // const stepMapping: CodeAwareMapping = {
-              //   codeChunkId: stepCodeChunkId,
-              //   stepId: stepId,
-              //   highLevelStepId: highLevelStepId,
-              //   isHighlighted: false,
+              // codeChunkId: stepCodeChunkId,
+              // stepId: stepId,
+              // highLevelStepId: highLevelStepId,
+              // isHighlighted: false,
               // };
 
               // dispatch(createCodeAwareMapping(stepMapping));
               // console.log(
-              //   `🔗 Created new step mapping: ${stepCodeChunkId} -> ${stepId}`,
+              // ` Created new step mapping: ${stepCodeChunkId} -> ${stepId}`,
               // );
-              console.warn("[映射重构] 步骤映射创建功能暂时禁用");
+              console.warn("[CA:CodeGen] 步骤映射创建功能暂时禁用");
             }
 
             // Set step status to generated (only if code is not broken)
             dispatch(setStepStatus({ stepId, status: "generated" }));
 
             // 调用 checkAndMapKnowledgeCardsToCode
-            console.log(`🧭 为步骤 ${stepId} 检查和映射知识卡片...`);
-            // TODO: [映射重构] 需要重新实现知识卡片映射检查
+            console.log(`[CA:CodeGen] 为步骤 ${stepId} 检查和映射知识卡片...`);
+            // TODO: [CA:CodeGen] 需要重新实现知识卡片映射检查
             // void dispatch(checkAndMapKnowledgeCardsToCode({ stepId: stepId }));
-            console.warn("[映射重构] 知识卡片映射检查功能暂时禁用");
-            console.log(`🎯 已触发步骤 ${stepId} 的知识卡片映射检查`);
+            console.warn("[CA:CodeGen] 知识卡片映射检查功能暂时禁用");
+            console.log(`[CA:CodeGen] 已触发步骤 ${stepId} 的知识卡片映射检查`);
           } catch (stepError) {
-            console.error(`❌ Error processing step ${stepId}:`, stepError);
+            console.error(
+              `[CA:CodeGen] Error processing step ${stepId}:`,
+              stepError,
+            );
             // Set this step back to generated status if processing fails
             dispatch(setStepStatus({ stepId, status: "generated" }));
           }
@@ -2738,7 +2794,7 @@ export const processCodeUpdates = createAsyncThunk<
                   }),
                 );
                 console.log(
-                  `🏷️ Updated knowledge card title: ${cardId} -> "${cardUpdate.title}"`,
+                  `[CA:CodeGen]  Updated knowledge card title: ${cardId} -> "${cardUpdate.title}"`,
                 );
               }
 
@@ -2784,38 +2840,38 @@ export const processCodeUpdates = createAsyncThunk<
               // 添加到新代码块跟踪列表
               newCodeChunks.push(newKnowledgeCardChunk);
 
-              // TODO: [映射重构] 需要重新实现知识卡片映射查找和创建逻辑
+              // TODO: [CA:CodeGen] 需要重新实现知识卡片映射查找和创建逻辑
               // Find requirement chunk for mapping
               // const existingCardMapping = mappings.find(
-              //   (mapping) => mapping.knowledgeCardId === cardId,
+              // (mapping) => mapping.knowledgeCardId === cardId,
               // );
               // const highLevelStepId = existingCardMapping?.highLevelStepId;
 
               // // Create knowledge card mapping
               // const cardMapping: CodeAwareMapping = {
-              //   codeChunkId: cardCodeChunkId,
-              //   stepId,
-              //   knowledgeCardId: cardId,
-              //   highLevelStepId: highLevelStepId,
-              //   isHighlighted: false,
+              // codeChunkId: cardCodeChunkId,
+              // stepId,
+              // knowledgeCardId: cardId,
+              // highLevelStepId: highLevelStepId,
+              // isHighlighted: false,
               // };
 
               // dispatch(createCodeAwareMapping(cardMapping));
               // console.log(
-              //   `🎯 Created new knowledge card mapping: ${cardCodeChunkId} -> ${cardId}`,
+              // ` Created new knowledge card mapping: ${cardCodeChunkId} -> ${cardId}`,
               // );
-              console.warn("[映射重构] 知识卡片映射创建功能暂时禁用");
+              console.warn("[CA:CodeGen] 知识卡片映射创建功能暂时禁用");
             }
           } catch (cardError) {
             console.error(
-              `❌ Error processing knowledge card ${cardId}:`,
+              `[CA:CodeGen]  Error processing knowledge card ${cardId}:`,
               cardError,
             );
             // Continue processing other cards even if one fails
           }
         }
 
-        console.log("✅ Code updates processed successfully");
+        console.log("[CA:CodeGen] Code updates processed successfully");
 
         // 触发highlight事件，以code为source高亮更新的代码部分
         // 收集所有新创建的代码块用于highlight
@@ -2828,14 +2884,16 @@ export const processCodeUpdates = createAsyncThunk<
         if (codeHighlightEvents.length > 0) {
           dispatch(updateHighlight(codeHighlightEvents));
           console.log(
-            `✨ 触发了 ${codeHighlightEvents.length} 个代码块的highlight事件`,
+            `[CA:CodeGen]  触发了 ${codeHighlightEvents.length} 个代码块的highlight事件`,
           );
         }
       } catch (parseError) {
-        console.error("Error parsing LLM response:", parseError);
+        console.error("[CA:CodeGen] Error parsing LLM response:", parseError);
 
         // Restore step status for all code_dirty steps
-        console.log("🔄 Restoring step status for failed code update...");
+        console.log(
+          "[CA:CodeGen] Restoring step status for failed code update...",
+        );
         for (const step of codeDirtySteps) {
           dispatch(setStepStatus({ stepId: step.id, status: "generated" }));
         }
@@ -2843,11 +2901,11 @@ export const processCodeUpdates = createAsyncThunk<
         throw new Error("解析LLM代码更新响应失败");
       }
     } catch (error) {
-      console.error("❌ Error processing code updates:", error);
+      console.error("[CA:CodeGen] Error processing code updates:", error);
 
       // Restore step status for all code_dirty steps if any error occurs
       console.log(
-        "🔄 Restoring step status for all code_dirty steps due to error...",
+        "[CA:CodeGen]  Restoring step status for all code_dirty steps due to error...",
       );
       const currentState = getState();
       const currentSteps = currentState.codeAwareSession.steps;
@@ -2907,7 +2965,7 @@ export const processSaqSubmission = createAsyncThunk<
       // Get test information using the selector
       const testInfo = selectTestByTestId(state, testId);
       if (!testInfo || !testInfo.test) {
-        console.error("❌ [CodeAware] Test not found for testId:", testId);
+        console.error("[CA:CodeGen] Test not found for testId:", testId);
         return null;
       }
 
@@ -2915,7 +2973,7 @@ export const processSaqSubmission = createAsyncThunk<
 
       if (test.question_type !== "shortAnswer") {
         console.error(
-          "❌ [CodeAware] Test is not a short answer question:",
+          " [CA:CodeGen] Test is not a short answer question:",
           testId,
         );
         return null;
@@ -2933,7 +2991,7 @@ export const processSaqSubmission = createAsyncThunk<
         }),
       );
 
-      console.log("🔄 [CodeAware] Evaluating SAQ answer for test:", testId);
+      console.log("[CA:CodeGen] Evaluating SAQ answer for test:", testId);
 
       // Create prompt for LLM evaluation
       const prompt = constructEvaluateSaqAnswerPrompt(
@@ -2946,7 +3004,7 @@ export const processSaqSubmission = createAsyncThunk<
       for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
           console.log(
-            `🔄 [CodeAware] SAQ评估尝试 ${attempt}/${maxRetries} for test: ${testId}`,
+            ` [CA:CodeGen] SAQ评估尝试 ${attempt}/${maxRetries} for test: ${testId}`,
           );
 
           // Get LLM response
@@ -2960,10 +3018,7 @@ export const processSaqSubmission = createAsyncThunk<
             throw new Error("LLM request failed");
           }
 
-          console.log(
-            "📝 [CodeAware] LLM evaluation response:",
-            result.content,
-          );
+          console.log(" [CA:CodeGen] LLM evaluation response:", result.content);
 
           // Parse the response
           try {
@@ -2997,7 +3052,7 @@ export const processSaqSubmission = createAsyncThunk<
               },
             });
 
-            console.log("✅ [CodeAware] SAQ evaluation completed:", {
+            console.log("[CA:CodeGen] SAQ evaluation completed:", {
               testId,
               isCorrect: evaluationResult.isCorrect,
               remarks: evaluationResult.remarks,
@@ -3007,14 +3062,14 @@ export const processSaqSubmission = createAsyncThunk<
             break;
           } catch (parseError) {
             console.error(
-              `❌ [CodeAware] SAQ评估尝试 ${attempt} 解析失败:`,
+              ` [CA:CodeGen] SAQ评估尝试 ${attempt} 解析失败:`,
               parseError,
             );
 
             if (attempt === maxRetries) {
               // 最后一次尝试仍然失败，使用fallback
               console.log(
-                "🔄 [CodeAware] 所有重试失败，使用fallback保存用户答案",
+                " [CA:CodeGen] 所有重试失败，使用fallback保存用户答案",
               );
               dispatch(
                 updateSaqTestResult({
@@ -3039,13 +3094,13 @@ export const processSaqSubmission = createAsyncThunk<
               ? attemptError
               : new Error(String(attemptError));
           console.warn(
-            `⚠️ [CodeAware] SAQ评估尝试 ${attempt} 失败:`,
+            ` [CA:CodeGen] SAQ评估尝试 ${attempt} 失败:`,
             lastError.message,
           );
 
           if (attempt === maxRetries) {
             console.error(
-              `❌ [CodeAware] SAQ评估最终失败，已重试 ${maxRetries} 次`,
+              ` [CA:CodeGen] SAQ评估最终失败，已重试 ${maxRetries} 次`,
             );
             // 最后一次尝试仍然失败，使用fallback
             dispatch(
@@ -3085,7 +3140,7 @@ export const processSaqSubmission = createAsyncThunk<
         correctness: finalIsCorrect ? 1 : 0,
       };
     } catch (error) {
-      console.error("❌ [CodeAware] processSaqSubmission failed:", error);
+      console.error("[CA:CodeGen] processSaqSubmission failed:", error);
 
       // Clear loading state on error
       const state = getState();
@@ -3135,7 +3190,7 @@ export const processGlobalQuestion = createAsyncThunk<
         },
       });
 
-      console.log("🔍 [CodeAware] Processing global question:", question);
+      console.log("[CA:CodeGen] Processing global question:", question);
 
       const state = getState();
       const steps = state.codeAwareSession.steps;
@@ -3167,13 +3222,13 @@ export const processGlobalQuestion = createAsyncThunk<
         taskDescription,
       );
 
-      console.log("📤 [CodeAware] Sending global question request to LLM");
+      console.log("[CA:CodeGen] Sending global question request to LLM");
 
       // 重试机制
       let result: any = null;
       for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
-          console.log(`🔄 [CodeAware] 全局提问尝试 ${attempt}/${maxRetries}`);
+          console.log(`[CA:CodeGen] 全局提问尝试 ${attempt}/${maxRetries}`);
 
           // 发送请求到LLM
           result = await extra.ideMessenger.request("llm/complete", {
@@ -3183,7 +3238,7 @@ export const processGlobalQuestion = createAsyncThunk<
           });
 
           console.log(
-            "📥 [CodeAware] Received global question response:",
+            " [CA:CodeGen] Received global question response:",
             result,
           );
 
@@ -3203,13 +3258,13 @@ export const processGlobalQuestion = createAsyncThunk<
               ? attemptError
               : new Error(String(attemptError));
           console.warn(
-            `⚠️ [CodeAware] 全局提问尝试 ${attempt} 失败:`,
+            ` [CA:CodeGen] 全局提问尝试 ${attempt} 失败:`,
             lastError.message,
           );
 
           if (attempt === maxRetries) {
             console.error(
-              `❌ [CodeAware] 全局提问最终失败，已重试 ${maxRetries} 次`,
+              ` [CA:CodeGen] 全局提问最终失败，已重试 ${maxRetries} 次`,
             );
             throw lastError;
           }
@@ -3238,7 +3293,7 @@ export const processGlobalQuestion = createAsyncThunk<
           break; // 解析成功，跳出循环
         } catch (parseError) {
           console.error(
-            `❌ [CodeAware] 全局提问响应解析尝试 ${parseAttempt} 失败:`,
+            ` [CA:CodeGen] 全局提问响应解析尝试 ${parseAttempt} 失败:`,
             parseError,
           );
 
@@ -3271,7 +3326,7 @@ export const processGlobalQuestion = createAsyncThunk<
       }
 
       console.log(
-        `✅ [CodeAware] Selected step: ${selected_step_id}, themes:`,
+        ` [CA:CodeGen] Selected step: ${selected_step_id}, themes:`,
         knowledge_card_themes,
       );
 
@@ -3326,7 +3381,7 @@ export const processGlobalQuestion = createAsyncThunk<
           .filter((card) => createdCardIds.includes(card.id))
           .map((card) => card.title) || [];
 
-      console.info("[CodeAware][PhaseG][GlobalQuestionToCards]", {
+      console.info("[CA:CodeGen:PhaseG][GlobalQuestionToCards]", {
         tag: "CA_PHASE_G_GLOBAL_Q_GENERATION",
         questionPreview: question.slice(0, 120),
         selectedStepId: selected_step_id,
@@ -3341,7 +3396,7 @@ export const processGlobalQuestion = createAsyncThunk<
         ],
       });
 
-      console.log("✅ [CodeAware] Global question processed successfully");
+      console.log("[CA:CodeGen] Global question processed successfully");
 
       // Log: 全局问题处理完成
       await extra.ideMessenger.request("addCodeAwareLogEntry", {
@@ -3363,11 +3418,11 @@ export const processGlobalQuestion = createAsyncThunk<
           checkAndMapKnowledgeCardsToCode({ stepId: selected_step_id }),
         );
         console.log(
-          `✅ 完成步骤 ${selected_step_id} 全局提问知识卡片的代码映射检查`,
+          `[CA:CodeGen]  完成步骤 ${selected_step_id} 全局提问知识卡片的代码映射检查`,
         );
       } catch (mappingError) {
         console.warn(
-          `⚠️ 步骤 ${selected_step_id} 全局提问知识卡片的代码映射检查失败:`,
+          `[CA:CodeGen]  步骤 ${selected_step_id} 全局提问知识卡片的代码映射检查失败:`,
           mappingError,
         );
         // 不抛出错误，让全局提问处理继续完成
@@ -3380,7 +3435,7 @@ export const processGlobalQuestion = createAsyncThunk<
         }),
       );
       console.log(
-        `✨ 全局问题处理：仅高亮步骤 ${selected_step_id}，知识卡片高亮已禁用`,
+        `[CA:CodeGen]  全局问题处理：仅高亮步骤 ${selected_step_id}，知识卡片高亮已禁用`,
       );
 
       // 返回选择的步骤ID和创建的知识卡片ID，用于高亮和展开
@@ -3390,7 +3445,7 @@ export const processGlobalQuestion = createAsyncThunk<
         knowledgeCardIds: createdCardIds,
       };
     } catch (error) {
-      console.error("❌ [CodeAware] processGlobalQuestion failed:", error);
+      console.error("[CA:CodeGen] processGlobalQuestion failed:", error);
       throw error;
     }
   },
@@ -3407,7 +3462,7 @@ export const checkAndMapKnowledgeCardsToCode = createAsyncThunk<
   "codeAware/checkAndMapKnowledgeCardsToCode",
   async ({ stepId }, { getState, dispatch, extra }) => {
     try {
-      console.log(`🔍 检查步骤 ${stepId} 的知识卡片代码映射...`);
+      console.log(`[CA:CodeGen] 检查步骤 ${stepId} 的知识卡片代码映射...`);
 
       const state = getState();
       const steps = state.codeAwareSession.steps;
@@ -3417,58 +3472,58 @@ export const checkAndMapKnowledgeCardsToCode = createAsyncThunk<
       // 找到对应的步骤
       const step = steps.find((s) => s.id === stepId);
       if (!step) {
-        console.warn(`步骤 ${stepId} 未找到`);
+        console.warn(`[CA:CodeGen] 步骤 ${stepId} 未找到`);
         return;
       }
 
       // 如果该步骤没有知识卡片，直接返回
       if (!step.knowledgeCards || step.knowledgeCards.length === 0) {
-        console.log(`步骤 ${stepId} 没有知识卡片，跳过检查`);
+        console.log(`[CA:CodeGen] 步骤 ${stepId} 没有知识卡片，跳过检查`);
         return;
       }
 
-      // TODO: [映射重构] 需要重新实现知识卡片代码映射查找逻辑
+      // TODO: [CA:CodeGen] 需要重新实现知识卡片代码映射查找逻辑
       // 找出没有代码映射的知识卡片
       // const knowledgeCardsWithoutMapping = step.knowledgeCards.filter(
-      //   (card) => {
-      //     const hasMapping = allMappings.some(
-      //       (mapping) =>
-      //         mapping.semanticElementId === card.id && mapping.codeChunkId && mapping.semanticElementType === "knowledgeCard",
-      //     );
-      //     return !hasMapping;
-      //   },
+      // (card) => {
+      // const hasMapping = allMappings.some(
+      // (mapping) =>
+      // mapping.semanticElementId === card.id && mapping.codeChunkId && mapping.semanticElementType === "knowledgeCard",
+      // );
+      // return !hasMapping;
+      // },
       // );
       const knowledgeCardsWithoutMapping = step.knowledgeCards; // 暂时返回所有知识卡片
 
       if (knowledgeCardsWithoutMapping.length === 0) {
-        console.log(`步骤 ${stepId} 的所有知识卡片都已有代码映射`);
+        console.log(`[CA:CodeGen] 步骤 ${stepId} 的所有知识卡片都已有代码映射`);
         return;
       }
 
       console.log(
-        `[映射重构] 步骤 ${stepId} 中有 ${knowledgeCardsWithoutMapping.length} 个知识卡片缺少代码映射（功能暂时禁用）`,
+        `[CA:CodeGen] 步骤 ${stepId} 中有 ${knowledgeCardsWithoutMapping.length} 个知识卡片缺少代码映射（功能暂时禁用）`,
       );
-      // TODO: [映射重构] 需要重新实现后续的映射逻辑
+      // TODO: [CA:CodeGen] 需要重新实现后续的映射逻辑
       return;
 
-      // TODO: [映射重构] 以下代码需要重新实现
+      // TODO: [CA:CodeGen] 以下代码需要重新实现
       // // 获取该步骤对应的所有代码
       // const stepCorrespondingCode = await getStepCorrespondingCode(
-      //   stepId,
-      //   allMappings,
-      //   codeChunks,
-      //   extra.ideMessenger,
+      // stepId,
+      // allMappings,
+      // codeChunks,
+      // extra.ideMessenger,
       // );
 
       // if (!stepCorrespondingCode || stepCorrespondingCode.trim().length === 0) {
-      //   console.warn(`步骤 ${stepId} 没有对应的代码，无法进行映射`);
-      //   return;
+      // console.warn(`步骤 ${stepId} 没有对应的代码，无法进行映射`);
+      // return;
       // }
 
       // // ... 其余所有代码已注释 ...
     } catch (error) {
       console.error(
-        `❌ 检查步骤 ${stepId} 的知识卡片代码映射时发生错误:`,
+        `[CA:CodeGen]  检查步骤 ${stepId} 的知识卡片代码映射时发生错误:`,
         error,
       );
       throw error;

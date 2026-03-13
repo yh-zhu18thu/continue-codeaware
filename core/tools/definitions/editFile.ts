@@ -12,7 +12,7 @@ export const NO_PARALLEL_TOOL_CALLING_INSTRUCTION =
   "This tool CANNOT be called in parallel with other tools.";
 
 const CHANGES_DESCRIPTION =
-  '⚠️ CRITICAL: Provide ONLY RAW CODE - no JSON, no structure, no wrapping. Do NOT use formats like {"result": "code", "language": "python", "notes": [...]}. Simply provide the code modifications directly with comment placeholders (e.g., \'# ... existing code ...\') for unchanged sections.';
+  ' CRITICAL: Provide ONLY RAW CODE - no JSON, no structure, no wrapping. Do NOT use formats like {"result": "code", "language": "python", "notes": [...]}. Simply provide the code modifications directly with comment placeholders (e.g., \'# ... existing code ...\') for unchanged sections.';
 
 export const editFileTool: Tool = {
   type: "function",
@@ -25,7 +25,7 @@ export const editFileTool: Tool = {
   isInstant: false,
   function: {
     name: BuiltInToolNames.EditExistingFile,
-    description: `Use this tool to edit an existing file. If you don't know the contents of the file, read it first.\n${EDIT_CODE_INSTRUCTIONS}\n\n⚠️ CRITICAL REQUIREMENT: The 'changes' parameter must contain ONLY RAW CODE directly - never wrap in JSON like {\"result\": \"...\", \"language\": \"...\", \"notes\": [...]} or {\"updated_code\": \"...\"}. Provide the code modifications DIRECTLY.\n\n${NO_PARALLEL_TOOL_CALLING_INSTRUCTION}`,
+    description: `Use this tool to edit an existing file. If you don't know the contents of the file, read it first.\n${EDIT_CODE_INSTRUCTIONS}\n\n CRITICAL REQUIREMENT: The 'changes' parameter must contain ONLY RAW CODE directly - never wrap in JSON like {\"result\": \"...\", \"language\": \"...\", \"notes\": [...]} or {\"updated_code\": \"...\"}. Provide the code modifications DIRECTLY.\n\n${NO_PARALLEL_TOOL_CALLING_INSTRUCTION}`,
     parameters: {
       type: "object",
       required: ["filepath", "changes"],
@@ -53,15 +53,15 @@ For example:`,
       ["filepath", "path/to/the_file.ts"],
       [
         "changes",
-        "// ... existing code ...\nfunction subtract(a: number, b: number): number {\n  return a - b;\n}\n// ... rest of code ...",
+        "// ... existing code ...\nfunction subtract(a: number, b: number): number {\n return a - b;\n}\n// ... rest of code ...",
       ],
     ],
   },
   preprocessArgs: async (args) => {
     const changes = args.changes as string;
 
-    console.log("[EditFile][preprocessArgs] ========== START ==========");
-    console.log("[EditFile][preprocessArgs] Raw args:", {
+    console.log("[CA:EditFile:preprocessArgs] START");
+    console.log("[CA:EditFile:preprocessArgs] Raw args:", {
       filepath: args.filepath,
       changesType: typeof changes,
       changesLength: changes?.length,
@@ -71,7 +71,7 @@ For example:`,
     // Check if changes is in JSON format (which is incorrect)
     if (changes && typeof changes === "string") {
       const trimmed = changes.trim();
-      console.log("[EditFile][preprocessArgs] Trimmed changes:", {
+      console.log("[CA:EditFile:preprocessArgs] Trimmed changes:", {
         startsWithBrace: trimmed.startsWith("{"),
         endsWithBrace: trimmed.endsWith("}"),
         startsWithBracket: trimmed.startsWith("["),
@@ -84,12 +84,12 @@ For example:`,
         (trimmed.startsWith("[") && trimmed.endsWith("]"))
       ) {
         console.log(
-          "[EditFile][preprocessArgs] Detected potential JSON format, attempting parse",
+          "[CA:EditFile][preprocessArgs] Detected potential JSON format, attempting parse",
         );
         try {
           const parsed = JSON.parse(trimmed);
           console.log(
-            "[EditFile][preprocessArgs] Successfully parsed as JSON:",
+            "[CA:EditFile][preprocessArgs] Successfully parsed as JSON:",
             {
               keys: Object.keys(parsed),
               hasLanguageField: "language" in parsed,
@@ -121,7 +121,7 @@ For example:`,
 
             if (hasJsonStructure) {
               console.error(
-                "[EditFile][preprocessArgs] ❌ REJECTED: JSON structure detected",
+                "[CA:EditFile][preprocessArgs] REJECTED: JSON structure detected",
                 {
                   fields: Object.keys(parsed),
                 },
@@ -133,7 +133,7 @@ For example:`,
                   `CORRECT format - provide ONLY the code directly:\n` +
                   `// ... existing code ...\n` +
                   `def new_function():\n` +
-                  `    return "new code"\n` +
+                  ` return "new code"\n` +
                   `// ... existing code ...\n\n` +
                   `INCORRECT format - do NOT wrap in JSON:\n` +
                   `{"result": "code here", "language": "python"}\n\n` +
@@ -141,13 +141,13 @@ For example:`,
               );
             } else {
               console.log(
-                "[EditFile][preprocessArgs] ✅ JSON parsed but no suspicious fields found",
+                "[CA:EditFile][preprocessArgs] JSON parsed but no suspicious fields found",
               );
             }
           }
         } catch (e) {
           console.log(
-            "[EditFile][preprocessArgs] JSON parse failed (this is OK - probably code):",
+            "[CA:EditFile][preprocessArgs] JSON parse failed (this is OK - probably code):",
             (e as Error).message.substring(0, 100),
           );
           // If it's a JSON parse error, that's fine - it's probably code
@@ -157,11 +157,11 @@ For example:`,
           }
         }
       } else {
-        console.log("[EditFile][preprocessArgs] ✅ No JSON pattern detected");
+        console.log("[CA:EditFile:preprocessArgs] No JSON pattern detected");
       }
     }
 
-    console.log("[EditFile][preprocessArgs] ========== END (PASS) ==========");
+    console.log("[CA:EditFile:preprocessArgs] END");
     return args;
   },
 };

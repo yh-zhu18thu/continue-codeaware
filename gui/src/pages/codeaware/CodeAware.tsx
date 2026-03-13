@@ -296,12 +296,12 @@ export const CodeAware = () => {
 
   // Listen to code selection events from IDE
   useWebviewListener("codeSelectionChanged", async (data) => {
-    console.log("🎯 代码选中变化:", data);
+    console.log("[CA:UI] 代码选中变化:", data);
     setCurrentCodeSelection(data);
   });
 
   useWebviewListener("codeSelectionCleared", async () => {
-    console.log("❌ 代码选中已清除");
+    console.log("[CA:UI] 代码选中已清除");
     setCurrentCodeSelection(null);
   });
 
@@ -398,7 +398,7 @@ export const CodeAware = () => {
         maxCards: decision.maxCards,
       });
 
-      console.info("[CodeAware][PhaseG][IntentRoute]", {
+      console.info("[CA:UI:PhaseG][IntentRoute]", {
         tag: "CA_PHASE_G_INTENT_ROUTE",
         eventType: eventWithTimestamp.type,
         sourceStepId: eventWithTimestamp.stepId,
@@ -439,11 +439,11 @@ export const CodeAware = () => {
             stepFinished: false,
           });
 
-          console.log("📡 [CodeAware] Successfully synced steps to IDE:", {
+          console.log("[CA:UI] Successfully synced steps to IDE:", {
             stepsCount: steps.length,
           });
         } catch (error) {
-          console.warn("⚠️ [CodeAware] Failed to sync steps to IDE:", error);
+          console.warn("[CA:UI] Failed to sync steps to IDE:", error);
         }
       };
 
@@ -477,7 +477,7 @@ export const CodeAware = () => {
           const themeExamples = currentStep.knowledgeCards
             .slice(0, 3)
             .map((card) => card.title);
-          console.log("🎯 [CodeAware] Knowledge card themes generated", {
+          console.log("[CA:UI] Knowledge card themes generated", {
             stepId: currentStep.id,
             stepTitle: currentStep.title,
             count: currentStep.knowledgeCards.length,
@@ -499,7 +499,7 @@ export const CodeAware = () => {
           currentCard.content &&
           currentCard.content.trim() !== ""
         ) {
-          console.log("📝 [CodeAware] Knowledge card content generated", {
+          console.log("[CA:UI] Knowledge card content generated", {
             stepId: currentStep.id,
             stepTitle: currentStep.title,
             cardId: currentCard.id,
@@ -538,12 +538,12 @@ export const CodeAware = () => {
         const pythonFilename = `${sessionName}.py`;
 
         /*await ideMessenger?.request("createAndOpenFile", {
-          filename: pythonFilename,
-          content: "",
-        });*/
+ filename: pythonFilename,
+ content: "",
+ });*/
 
         console.log(
-          `📄 [CodeAware] Created and opened Python file: ${pythonFilename}`,
+          ` [CA:UI] Created and opened Python file: ${pythonFilename}`,
         );
 
         // Log file creation
@@ -554,10 +554,7 @@ export const CodeAware = () => {
           timestamp: new Date().toISOString(),
         });
       } catch (error) {
-        console.error(
-          "❌ [CodeAware] Failed to create and open Python file:",
-          error,
-        );
+        console.error(" [CA:UI] Failed to create and open Python file:", error);
 
         // Log the error but don't prevent session creation
         await logger.addLogEntry("system_create_session_file_error", {
@@ -677,7 +674,7 @@ export const CodeAware = () => {
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
-      console.error("❌ [CodeAware] 导出知识状态失败:", error);
+      console.error("[CA:UI] 导出知识状态失败:", error);
       ideMessenger?.post("showToast", [
         "warning",
         "导出知识状态失败，请查看控制台日志。",
@@ -689,8 +686,8 @@ export const CodeAware = () => {
 
   // log all the data for debugging
   useEffect(() => {
-    console.log("All mappings length: ", allMappings.length);
-    console.log("All Mappings:", allMappings);
+    console.log("[CA:UI] All mappings length: ", allMappings.length);
+    console.log("[CA:UI] All Mappings:", allMappings);
   }, [allMappings]);
 
   // 设置全局样式：
@@ -721,21 +718,21 @@ export const CodeAware = () => {
 
   // Navigation button handlers
   const handleJumpToSemantic = useCallback(async () => {
-    console.log("🚀 [跳转] 代码 → 语义");
+    console.log("[CA:UI:Nav] 代码 → 语义");
 
     try {
       setIsMappingLookupInProgress(true);
 
       // 1. 获取当前选中的代码
       if (!currentCodeSelection) {
-        console.warn("⚠️ 未选中代码");
+        console.warn("[CA:UI] 未选中代码");
         await logger.addLogEntry("user_click_jump_to_semantic_no_selection", {
           timestamp: new Date().toISOString(),
         });
         return;
       }
 
-      console.log("✅ 当前代码选择:", currentCodeSelection);
+      console.log("[CA:UI] 当前代码选择:", currentCodeSelection);
 
       // 2. 使用新的通用接口查找语义元素（支持实时读取和缓存验证）
       const result = await dispatch(
@@ -751,7 +748,7 @@ export const CodeAware = () => {
       ).unwrap();
 
       if (!result || result.mappings.length === 0) {
-        console.warn("⚠️ 未找到对应的语义元素");
+        console.warn("[CA:UI] 未找到对应的语义元素");
         await logger.addLogEntry("user_click_jump_to_semantic_no_result", {
           codeSelection: currentCodeSelection,
           timestamp: new Date().toISOString(),
@@ -768,7 +765,7 @@ export const CodeAware = () => {
         ).values(),
       );
 
-      console.log("✅ 找到语义元素:", uniqueSemanticMappings);
+      console.log("[CA:UI] 找到语义元素:", uniqueSemanticMappings);
 
       const mappedStep = uniqueSemanticMappings.find(
         (mapping) => mapping.semanticElementType === "step",
@@ -815,7 +812,7 @@ export const CodeAware = () => {
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
-      console.error("❌ 跳转失败:", error);
+      console.error("[CA:UI] 跳转失败:", error);
       await logger.addLogEntry("user_click_jump_to_semantic_error", {
         error: error instanceof Error ? error.message : String(error),
         timestamp: new Date().toISOString(),
@@ -826,7 +823,7 @@ export const CodeAware = () => {
   }, [currentCodeSelection, dispatch, logger, recordCognitiveInteraction]);
 
   const handleJumpToCode = useCallback(async () => {
-    console.log("🚀 [跳转] 语义 → 代码");
+    console.log("[CA:UI:Nav] 语义 → 代码");
 
     try {
       setIsMappingLookupInProgress(true);
@@ -848,14 +845,14 @@ export const CodeAware = () => {
       }
 
       if (!focusedElement) {
-        console.warn("⚠️ 未选中语义元素");
+        console.warn("[CA:UI] 未选中语义元素");
         await logger.addLogEntry("user_click_jump_to_code_no_selection", {
           timestamp: new Date().toISOString(),
         });
         return;
       }
 
-      console.log("✅ 找到高亮的语义元素:", focusedElement);
+      console.log("[CA:UI] 找到高亮的语义元素:", focusedElement);
 
       if (focusedElement.type === "step") {
         recordCognitiveInteraction({
@@ -887,7 +884,7 @@ export const CodeAware = () => {
           });
         } else {
           console.warn(
-            "[CognitiveTrace][JumpToCode] no mapped step found for highlighted highLevelStep",
+            "[CA:UI] [CognitiveTrace][JumpToCode] no mapped step found for highlighted highLevelStep",
             {
               highLevelStepId: focusedElement.id,
             },
@@ -906,7 +903,7 @@ export const CodeAware = () => {
       ).unwrap();
 
       if (!result || result.mappings.length === 0) {
-        console.warn("⚠️ 未找到对应的代码块");
+        console.warn("[CA:UI] 未找到对应的代码块");
         await logger.addLogEntry("user_click_jump_to_code_no_result", {
           semanticElementId: focusedElement.id,
           semanticElementType: focusedElement.type,
@@ -924,11 +921,11 @@ export const CodeAware = () => {
       );
 
       if (matchedChunks.length === 0) {
-        console.warn("⚠️ 未找到可高亮的代码块", mappingChunkIds);
+        console.warn("[CA:UI] 未找到可高亮的代码块", mappingChunkIds);
         return;
       }
 
-      console.log("✅ 找到代码块:", matchedChunks);
+      console.log("[CA:UI] 找到代码块:", matchedChunks);
 
       // 5. 通知 IDE 高亮代码
       await ideMessenger?.post("highlightCodeChunks", matchedChunks);
@@ -952,7 +949,7 @@ export const CodeAware = () => {
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
-      console.error("❌ 跳转失败:", error);
+      console.error("[CA:UI] 跳转失败:", error);
       await logger.addLogEntry("user_click_jump_to_code_error", {
         error: error instanceof Error ? error.message : String(error),
         timestamp: new Date().toISOString(),
@@ -1021,7 +1018,7 @@ export const CodeAware = () => {
           return newSet;
         });
         console.log(
-          `🔄 [CodeAware] Removed step ${step.id} from force expanded list as status is now checked`,
+          ` [CA:UI] Removed step ${step.id} from force expanded list as status is now checked`,
         );
       }
     });
@@ -1039,7 +1036,7 @@ export const CodeAware = () => {
     // This prevents jarring page movements when users expand knowledge cards
     if (isAutoScrollDisabled || isAutoScrollDisabledRef.current) {
       console.log(
-        "📍 [CodeAware] Skipping auto-scroll because auto-scroll is temporarily disabled",
+        " [CA:UI] Skipping auto-scroll because auto-scroll is temporarily disabled",
       );
       return;
     }
@@ -1100,7 +1097,7 @@ export const CodeAware = () => {
       });
 
       console.log(
-        `📍 [CodeAware] Auto-scrolling to ${highlightedSteps.length} highlighted step(s)`,
+        ` [CA:UI] Auto-scrolling to ${highlightedSteps.length} highlighted step(s)`,
         {
           stepIds: highlightedSteps.map((s) => s.id),
           minTop,
@@ -1226,7 +1223,9 @@ export const CodeAware = () => {
 
       if (!hasChanges) {
         // 没有修改，直接回到finalized状态
-        console.log("No changes detected, returning to finalized state");
+        console.log(
+          "[CA:UI] No changes detected, returning to finalized state",
+        );
         dispatch(setUserRequirementStatus("finalized"));
         await logger.addLogEntry("user_no_change_requirement", {
           requirement: requirement.trim(),
@@ -1235,7 +1234,7 @@ export const CodeAware = () => {
       }
 
       // 有修改，重新生成步骤
-      console.log("Changes detected, regenerating steps");
+      console.log("[CA:UI] Changes detected, regenerating steps");
       await logger.addLogEntry("user_modify_requirement", {
         oldRequirement: originalRequirement,
         newRequirement: requirement.trim(),
@@ -1246,13 +1245,13 @@ export const CodeAware = () => {
       void dispatch(executeInitialGeneration({ userRequirement: requirement }))
         .unwrap()
         .then(async () => {
-          console.log("Initial generation flow completed");
+          console.log("[CA:UI] Initial generation flow completed");
           await logger.addLogEntry("user_regenerate_steps_completed", {
             requirement: requirement.trim(),
           });
         })
         .catch(async (error) => {
-          console.error("Initial generation flow failed", error);
+          console.error("[CA:UI] Initial generation flow failed", error);
           await logger.addLogEntry("user_regenerate_steps_failed", {
             requirement: requirement.trim(),
             error: error instanceof Error ? error.message : String(error),
@@ -1280,7 +1279,7 @@ export const CodeAware = () => {
     });
 
     try {
-      console.log("🔄 [CodeAware] Starting code regeneration...");
+      console.log("[CA:UI] Starting code regeneration...");
 
       // 1. Clear all code chunks and mappings
       dispatch(clearAllCodeAndMappings());
@@ -1311,14 +1310,14 @@ export const CodeAware = () => {
           path: currentFile.path,
           contents: "",
         });
-        console.log("📄 [CodeAware] Cleared file content in IDE");
+        console.log("[CA:UI] Cleared file content in IDE");
 
         await logger.addLogEntry("user_clear_file_content", {
           filePath: currentFile.path,
           timestamp: new Date().toISOString(),
         });
       } catch (error) {
-        console.warn("⚠️ [CodeAware] Failed to clear file content:", error);
+        console.warn("[CA:UI] Failed to clear file content:", error);
         // Continue even if clearing fails
       }
 
@@ -1328,7 +1327,7 @@ export const CodeAware = () => {
       );
 
       if (generatedSteps.length === 0) {
-        console.log("📝 [CodeAware] No generated steps found");
+        console.log("[CA:UI] No generated steps found");
         ideMessenger?.post("showToast", [
           "info",
           "没有已生成的步骤需要重新生成代码。",
@@ -1346,7 +1345,7 @@ export const CodeAware = () => {
       });
 
       console.log(
-        `📋 [CodeAware] Found ${generatedSteps.length} generated steps to regenerate code`,
+        ` [CA:UI] Found ${generatedSteps.length} generated steps to regenerate code`,
       );
 
       // 6. Prepare ordered steps for code generation
@@ -1361,9 +1360,7 @@ export const CodeAware = () => {
       }));
 
       // 7. Generate code from steps
-      console.log(
-        "🚀 [CodeAware] Starting code generation from generated steps...",
-      );
+      console.log(" [CA:UI] Starting code generation from generated steps...");
       const result = await dispatch(
         generateCodeFromSteps({
           existingCode: "", // Start with empty code
@@ -1374,10 +1371,7 @@ export const CodeAware = () => {
       );
 
       if (generateCodeFromSteps.fulfilled.match(result)) {
-        console.log(
-          "✅ [CodeAware] Code regeneration completed!",
-          result.payload,
-        );
+        console.log(" [CA:UI] Code regeneration completed!", result.payload);
 
         // Set all steps back to generated status
         generatedSteps.forEach((step) => {
@@ -1399,7 +1393,7 @@ export const CodeAware = () => {
         });
       } else if (generateCodeFromSteps.rejected.match(result)) {
         console.error(
-          "❌ [CodeAware] Code regeneration failed:",
+          " [CA:UI] Code regeneration failed:",
           result.error.message,
         );
 
@@ -1420,7 +1414,7 @@ export const CodeAware = () => {
         });
       }
     } catch (error) {
-      console.error("❌ [CodeAware] Error during code regeneration:", error);
+      console.error("[CA:UI] Error during code regeneration:", error);
 
       // Restore all generating steps to generated status on error
       const generatingSteps = steps.filter(
@@ -1455,7 +1449,7 @@ export const CodeAware = () => {
       learningGoal: string,
       codeContext: string,
     ) => {
-      console.log("Generating knowledge card content for:", {
+      console.log("[CA:UI] Generating knowledge card content for:", {
         stepId,
         cardId,
         theme,
@@ -1474,7 +1468,9 @@ export const CodeAware = () => {
       if (!contextToUse) {
         // Knowledge card 现在通过其父 step 映射到代码
         // 使用新的接口实时获取代码
-        console.log(`查找 knowledge card ${cardId} 的父 step ${stepId} 的代码`);
+        console.log(
+          `[CA:UI] 查找 knowledge card ${cardId} 的父 step ${stepId} 的代码`,
+        );
 
         try {
           const result = await dispatch(
@@ -1492,14 +1488,16 @@ export const CodeAware = () => {
               .map((c) => c.content)
               .join("\n\n// --- Related Code Chunk ---\n\n");
             console.log(
-              `使用来自父 step ${stepId} 的 ${result.chunks.length} 个代码块作为上下文`,
+              `[CA:UI] 使用来自父 step ${stepId} 的 ${result.chunks.length} 个代码块作为上下文`,
             );
           } else {
-            console.warn(`父 step ${stepId} 没有找到代码块，使用空上下文`);
+            console.warn(
+              `[CA:UI] 父 step ${stepId} 没有找到代码块，使用空上下文`,
+            );
             contextToUse = "";
           }
         } catch (error) {
-          console.error(`查找代码失败:`, error);
+          console.error(`[CA:UI] 查找代码失败:`, error);
           contextToUse = "";
         }
       }
@@ -1528,7 +1526,7 @@ export const CodeAware = () => {
       learningGoal: string,
       codeContext: string,
     ) => {
-      console.log("Generating knowledge card tests for:", {
+      console.log("[CA:UI] Generating knowledge card tests for:", {
         stepId,
         cardId,
         title,
@@ -1549,7 +1547,9 @@ export const CodeAware = () => {
       if (!contextToUse) {
         // Knowledge card 现在通过其父 step 映射到代码
         // 使用新的接口实时获取代码
-        console.log(`查找 knowledge card ${cardId} 的父 step ${stepId} 的代码`);
+        console.log(
+          `[CA:UI] 查找 knowledge card ${cardId} 的父 step ${stepId} 的代码`,
+        );
 
         try {
           const result = await dispatch(
@@ -1567,14 +1567,16 @@ export const CodeAware = () => {
               .map((c) => c.content)
               .join("\n\n// --- Related Code Chunk ---\n\n");
             console.log(
-              `使用来自父 step ${stepId} 的 ${result.chunks.length} 个代码块作为上下文`,
+              `[CA:UI] 使用来自父 step ${stepId} 的 ${result.chunks.length} 个代码块作为上下文`,
             );
           } else {
-            console.warn(`父 step ${stepId} 没有找到代码块，使用空上下文`);
+            console.warn(
+              `[CA:UI] 父 step ${stepId} 没有找到代码块，使用空上下文`,
+            );
             contextToUse = "";
           }
         } catch (error) {
-          console.error(`查找代码失败:`, error);
+          console.error(`[CA:UI] 查找代码失败:`, error);
           contextToUse = "";
         }
       }
@@ -1597,7 +1599,7 @@ export const CodeAware = () => {
   // 处理禁用知识卡片
   const handleDisableKnowledgeCard = useCallback(
     (stepId: string, cardId: string) => {
-      console.log("Disabling knowledge card:", { stepId, cardId });
+      console.log("[CA:UI] Disabling knowledge card:", { stepId, cardId });
       dispatch(setKnowledgeCardDisabled({ stepId, cardId, disabled: true }));
     },
     [dispatch],
@@ -1645,7 +1647,7 @@ export const CodeAware = () => {
   // Add new functions for step operations
   const executeUntilStep = useCallback(
     async (stepId: string) => {
-      console.log(`执行到步骤: ${stepId}`);
+      console.log(`[CA:UI] 执行到步骤: ${stepId}`);
 
       // Log step execution
       await logger.addLogEntry("user_start_execute_steps", {
@@ -1657,7 +1659,7 @@ export const CodeAware = () => {
         // 1. 根据step_id获取截止到该步骤的所有未执行步骤信息
         const targetStepIndex = steps.findIndex((step) => step.id === stepId);
         if (targetStepIndex === -1) {
-          console.error(`Step with id ${stepId} not found`);
+          console.error(`[CA:UI] Step with id ${stepId} not found`);
           await logger.addLogEntry("user_execute_steps_error", {
             stepId,
             error: "Step not found",
@@ -1691,11 +1693,11 @@ export const CodeAware = () => {
           })),
         }));
 
-        console.log("📋 未执行的步骤信息:", stepsInfo);
-        console.log("📋 已生成的步骤数量:", generatedSteps.length);
+        console.log("[CA:UI] 未执行的步骤信息:", stepsInfo);
+        console.log("[CA:UI] 已生成的步骤数量:", generatedSteps.length);
 
         if (unexecutedSteps.length === 0) {
-          console.log("All steps up to target already executed");
+          console.log("[CA:UI] All steps up to target already executed");
           await logger.addLogEntry("user_execute_steps_completed", {
             stepId,
             message: "All steps already executed",
@@ -1724,7 +1726,9 @@ export const CodeAware = () => {
         // 如果没有当前文件，创建一个默认的文件对象
         // Agent将通过tool calling来创建实际的文件
         if (!currentFile) {
-          console.log("💡 没有打开的文件，agent将通过tool calling创建新文件");
+          console.log(
+            "[CA:UI] 没有打开的文件，agent将通过tool calling创建新文件",
+          );
           currentFile = {
             path: "untitled.ts", // 默认文件名，agent可以通过tool指定其他名称
             isUntitled: true,
@@ -1736,7 +1740,7 @@ export const CodeAware = () => {
           });
         }
 
-        console.log("📁 当前文件信息:", {
+        console.log("[CA:UI] 当前文件信息:", {
           path: currentFile.path,
           isUntitled: currentFile.isUntitled,
           contentLength: currentFile.contents?.length || 0,
@@ -1766,7 +1770,7 @@ export const CodeAware = () => {
         );
 
         console.log(
-          "📋 已生成步骤的对应代码信息:",
+          "[CA:UI]  已生成步骤的对应代码信息:",
           previouslyGeneratedStepsInfo.map((step) => ({
             id: step.id,
             title: step.title,
@@ -1785,7 +1789,7 @@ export const CodeAware = () => {
           })),
         }));
 
-        console.log("🚀 开始生成代码...");
+        console.log("[CA:UI] 开始生成代码...");
         const result = await dispatch(
           generateCodeFromSteps({
             existingCode: currentFile.contents || "",
@@ -1799,13 +1803,13 @@ export const CodeAware = () => {
         );
 
         if (generateCodeFromSteps.fulfilled.match(result)) {
-          console.log("✅ 代码生成完成!", result.payload);
+          console.log("[CA:UI] 代码生成完成!", result.payload);
           // 注意：generateCodeFromSteps已在内部设置步骤状态为"generated"
           // 和调用checkAndUpdateHighLevelStepCompletion，无需在此重复
 
-          console.log("✨ 代码生成和步骤状态更新已完成，可以继续其他操作");
+          console.log("[CA:UI] 代码生成和步骤状态更新已完成，可以继续其他操作");
         } else if (generateCodeFromSteps.rejected.match(result)) {
-          console.error("❌ 代码生成失败:", result.error.message);
+          console.error("[CA:UI] 代码生成失败:", result.error.message);
           // 恢复步骤状态为"confirmed"并显示错误提示
           for (const step of unexecutedSteps) {
             dispatch(setStepStatus({ stepId: step.id, status: "confirmed" }));
@@ -1814,7 +1818,7 @@ export const CodeAware = () => {
           ideMessenger?.post("showToast", ["error", "代码生成失败，请重试。"]);
         }
       } catch (error) {
-        console.error("❌ 执行到步骤时发生错误:", error);
+        console.error("[CA:UI] 执行到步骤时发生错误:", error);
         await logger.addLogEntry("user_execute_steps_error", {
           stepId,
           error: error instanceof Error ? error.message : String(error),
@@ -1842,7 +1846,7 @@ export const CodeAware = () => {
   // Handle rerun step when step is dirty
   const handleRerunStep = useCallback(
     async (stepId: string) => {
-      console.log(`重新运行步骤: ${stepId}`);
+      console.log(`[CA:UI] 重新运行步骤: ${stepId}`);
 
       await logger.addLogEntry("user_start_rerun_step", {
         stepId,
@@ -1853,7 +1857,7 @@ export const CodeAware = () => {
         // 找到对应的步骤
         const step = steps.find((s) => s.id === stepId);
         if (!step) {
-          console.error(`Step with id ${stepId} not found`);
+          console.error(`[CA:UI] Step with id ${stepId} not found`);
           await logger.addLogEntry("user_rerun_step_error", {
             stepId,
             error: "Step not found",
@@ -1864,7 +1868,7 @@ export const CodeAware = () => {
         // 只有在step_dirty状态下才允许重新运行
         if (step.stepStatus !== "step_dirty") {
           console.warn(
-            `Step ${stepId} is not in step_dirty status, current status: ${step.stepStatus}`,
+            `[CA:UI] Step ${stepId} is not in step_dirty status, current status: ${step.stepStatus}`,
           );
           await logger.addLogEntry("user_rerun_step_error", {
             stepId,
@@ -1913,7 +1917,7 @@ export const CodeAware = () => {
         // 检查并更新高级步骤的完成状态
         dispatch(checkAndUpdateHighLevelStepCompletion());
 
-        console.log("✅ 步骤重新运行成功");
+        console.log("[CA:UI] 步骤重新运行成功");
         ideMessenger?.post("showToast", ["info", "步骤重新运行成功！"]);
 
         await logger.addLogEntry("user_rerun_step_completed", {
@@ -1921,7 +1925,7 @@ export const CodeAware = () => {
           timestamp: new Date().toISOString(),
         });
       } catch (error) {
-        console.error("❌ 重新运行步骤时发生错误:", error);
+        console.error("[CA:UI] 重新运行步骤时发生错误:", error);
         await logger.addLogEntry("user_rerun_step_error", {
           stepId,
           error: error instanceof Error ? error.message : String(error),
@@ -1967,7 +1971,7 @@ export const CodeAware = () => {
 
   const handleStepExpansionChange = useCallback(
     async (stepId: string, isExpanded: boolean) => {
-      console.log(`Step ${stepId} expansion changed to: ${isExpanded}`);
+      console.log(`[CA:UI] Step ${stepId} expansion changed to: ${isExpanded}`);
 
       const decision = recordCognitiveInteraction({
         type: isExpanded ? "step_expand" : "step_collapse",
@@ -2006,9 +2010,12 @@ export const CodeAware = () => {
         // 检查知识卡片是否有代码映射，如果没有则生成映射
         try {
           await dispatch(checkAndMapKnowledgeCardsToCode({ stepId }));
-          console.log(`✅ 完成步骤 ${stepId} 的知识卡片代码映射检查`);
+          console.log(`[CA:UI] 完成步骤 ${stepId} 的知识卡片代码映射检查`);
         } catch (error) {
-          console.warn(`⚠️ 步骤 ${stepId} 的知识卡片代码映射检查失败:`, error);
+          console.warn(
+            `[CA:UI] 步骤 ${stepId} 的知识卡片代码映射检查失败:`,
+            error,
+          );
           // 不抛出错误，让展开操作继续进行
         }
       } else {
@@ -2180,7 +2187,11 @@ export const CodeAware = () => {
 
   const handleQuestionSubmit = useCallback(
     async (stepId: string, selectedText: string, question: string) => {
-      console.log("处理步骤问题提交:", { stepId, selectedText, question });
+      console.log("[CA:UI] 处理步骤问题提交:", {
+        stepId,
+        selectedText,
+        question,
+      });
 
       const decision = recordCognitiveInteraction({
         type: "question_submit_step",
@@ -2201,7 +2212,7 @@ export const CodeAware = () => {
       // 通过stepId查找对应的步骤信息
       const step = steps.find((s) => s.id === stepId);
       if (!step) {
-        console.error("未找到对应的步骤:", stepId);
+        console.error("[CA:UI] 未找到对应的步骤:", stepId);
         await logger.addLogEntry("user_submit_question_error", {
           stepId,
           error: "Step not found",
@@ -2245,7 +2256,7 @@ export const CodeAware = () => {
             }),
           );
           console.log(
-            "✅ Knowledge card themes generated successfully, status set to checked",
+            "[CA:UI]  Knowledge card themes generated successfully, status set to checked",
           );
 
           await logger.addLogEntry("user_submit_question_completed", {
@@ -2256,7 +2267,7 @@ export const CodeAware = () => {
           generateKnowledgeCardThemesFromQuery.rejected.match(result)
         ) {
           console.error(
-            "❌ Failed to generate knowledge card themes:",
+            "[CA:UI]  Failed to generate knowledge card themes:",
             result.error.message,
           );
           await logger.addLogEntry("user_submit_question_error", {
@@ -2274,7 +2285,7 @@ export const CodeAware = () => {
           );
         }
       } catch (error) {
-        console.error("❌ Error in handleQuestionSubmit:", error);
+        console.error("[CA:UI] Error in handleQuestionSubmit:", error);
         await logger.addLogEntry("user_submit_question_error", {
           stepId,
           error: error instanceof Error ? error.message : String(error),
@@ -2293,7 +2304,7 @@ export const CodeAware = () => {
   // Handle global question submission
   const handleGlobalQuestionSubmit = useCallback(
     async (question: string) => {
-      console.log("处理全局提问:", { question });
+      console.log("[CA:UI] 处理全局提问:", { question });
 
       const decision = recordCognitiveInteraction({
         type: "question_submit_global",
@@ -2350,7 +2361,7 @@ export const CodeAware = () => {
             }),
           );
 
-          console.log("✅ Global question processed successfully:", {
+          console.log("[CA:UI] Global question processed successfully:", {
             selectedStepId,
             themes,
             knowledgeCardIds,
@@ -2389,7 +2400,7 @@ export const CodeAware = () => {
           });
         } else if (processGlobalQuestion.rejected.match(result)) {
           console.error(
-            "❌ Failed to process global question:",
+            "[CA:UI]  Failed to process global question:",
             result.error.message,
           );
           await logger.addLogEntry("user_submit_global_question_error", {
@@ -2402,7 +2413,7 @@ export const CodeAware = () => {
           ]);
         }
       } catch (error) {
-        console.error("❌ Error in handleGlobalQuestionSubmit:", error);
+        console.error("[CA:UI] Error in handleGlobalQuestionSubmit:", error);
         await logger.addLogEntry("user_submit_global_question_error", {
           error: error instanceof Error ? error.message : String(error),
         });
@@ -2427,7 +2438,7 @@ export const CodeAware = () => {
 
   // Handle opening global question modal
   const handleOpenGlobalQuestion = useCallback(async () => {
-    console.log("打开全局提问对话框");
+    console.log("[CA:UI] 打开全局提问对话框");
 
     await logger.addLogEntry("user_open_global_question_modal", {
       timestamp: new Date().toISOString(),
@@ -2438,7 +2449,7 @@ export const CodeAware = () => {
 
   // Handle closing global question modal
   const handleCloseGlobalQuestion = useCallback(async () => {
-    console.log("关闭全局提问对话框");
+    console.log("[CA:UI] 关闭全局提问对话框");
 
     await logger.addLogEntry("user_close_global_question_modal", {
       timestamp: new Date().toISOString(),
@@ -2461,10 +2472,7 @@ export const CodeAware = () => {
         language: string;
       };
     }) => {
-      console.log(
-        "📝 [CodeAware] Received question from code selection:",
-        data,
-      );
+      console.log(" [CA:UI] Received question from code selection:", data);
 
       await logger.addLogEntry("user_trigger_question_from_code_selection", {
         selectedText: data.selectedText.substring(0, 200),
@@ -2524,7 +2532,7 @@ export const CodeAware = () => {
           }
         } catch (error) {
           console.error(
-            "❌ [CodeAware] Error finding step for code selection:",
+            " [CA:UI] Error finding step for code selection:",
             error,
           );
         }
@@ -2535,7 +2543,7 @@ export const CodeAware = () => {
           const lastStep = steps[steps.length - 1];
           stepIdToUse = lastStep.id;
           console.log(
-            "🔍 [CodeAware] No direct mapping found, using last step:",
+            " [CA:UI] No direct mapping found, using last step:",
             stepIdToUse,
           );
 
@@ -2545,7 +2553,7 @@ export const CodeAware = () => {
           });
         } else {
           stepIdToUse = targetStepId;
-          console.log("🎯 [CodeAware] Found most relevant step:", stepIdToUse);
+          console.log("[CA:UI] Found most relevant step:", stepIdToUse);
 
           await logger.addLogEntry("user_check_code_step_mappings", {
             result: "direct_mapping_found",
@@ -2582,7 +2590,7 @@ export const CodeAware = () => {
         );
       } catch (error) {
         console.error(
-          "❌ [CodeAware] Failed to process question from selection:",
+          " [CA:UI] Failed to process question from selection:",
           error,
         );
         await logger.addLogEntry(
@@ -2628,7 +2636,7 @@ export const CodeAware = () => {
       try {
         ideMessenger?.post("clearCodeHighlight", undefined);
       } catch (error) {
-        console.error("Failed to clear highlights in IDE:", error);
+        console.error("[CA:UI] Failed to clear highlights in IDE:", error);
       }
       // Reset the flag
       dispatch(resetIdeCommFlags());
@@ -2636,13 +2644,16 @@ export const CodeAware = () => {
   }, [shouldClearIdeHighlights, ideMessenger, dispatch]);
 
   useEffect(() => {
-    console.log("Code chunks to highlight in IDE:", codeChunksToHighlightInIde);
+    console.log(
+      "[CA:UI] Code chunks to highlight in IDE:",
+      codeChunksToHighlightInIde,
+    );
     if (codeChunksToHighlightInIde.length > 0) {
       try {
         // Use the new highlightCodeChunks method to avoid merging
         ideMessenger?.post("highlightCodeChunks", codeChunksToHighlightInIde);
       } catch (error) {
-        console.error("Failed to highlight code chunks in IDE:", error);
+        console.error("[CA:UI] Failed to highlight code chunks in IDE:", error);
       }
 
       // Reset the flag
@@ -2864,14 +2875,14 @@ export const CodeAware = () => {
                           selectedOption: string,
                         ) => {
                           console.log(
-                            `MCQ Result for ${kc.title} (Test ${testId}): ${isCorrect ? "Correct" : "Incorrect"}, Selected: ${selectedOption}`,
+                            `[CA:UI] MCQ Result for ${kc.title} (Test ${testId}): ${isCorrect ? "Correct" : "Incorrect"}, Selected: ${selectedOption}`,
                           );
                           // TODO: 实现 MCQ 提交逻辑，更新测试结果到 Redux store
                         },
 
                         onSaqSubmit: (testId: string, answer: string) => {
                           console.log(
-                            `SAQ Answer for ${kc.title} (Test ${testId}): ${answer}`,
+                            `[CA:UI] SAQ Answer for ${kc.title} (Test ${testId}): ${answer}`,
                           );
                           // 调用处理SAQ提交的thunk
                           void dispatch(
@@ -2933,7 +2944,7 @@ export const CodeAware = () => {
                             })
                             .catch((error) => {
                               console.error(
-                                "[MasteryTracking] SAQ submission handling failed",
+                                "[CA:UI] [MasteryTracking] SAQ submission handling failed",
                                 error,
                               );
                             });

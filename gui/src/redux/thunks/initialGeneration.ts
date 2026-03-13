@@ -289,7 +289,7 @@ async function getCurrentFileSnapshot(
       };
     }
   } catch (error) {
-    console.warn("⚠️ 读取当前文件快照失败", error);
+    console.warn("[CA:InitGen] 读取当前文件快照失败", error);
   }
 
   return null;
@@ -578,12 +578,15 @@ async function getLatestFileContent(
       typeof currentFileResponse.content.contents === "string"
     ) {
       console.log(
-        `📖 [Phase 3] 使用编辑器缓冲区内容 (${currentFileResponse.content.contents.length} chars)`,
+        `[CA:InitGen]  [Phase 3] 使用编辑器缓冲区内容 (${currentFileResponse.content.contents.length} chars)`,
       );
       return currentFileResponse.content.contents;
     }
   } catch (error) {
-    console.warn("⚠️ [Phase 3] 读取当前编辑器内容失败，回退到 readFile", error);
+    console.warn(
+      "[CA:InitGen:Phase3] 读取当前编辑器内容失败，回退到 readFile",
+      error,
+    );
   }
 
   const fileResponse = (await extra.ideMessenger.request("readFile", {
@@ -657,7 +660,7 @@ async function mapCodeChunksToSteps(
   const mappings: CodeAwareMapping[] = [];
 
   for (const step of steps) {
-    const prompt = `你是代码映射助手。请针对“步骤”在完整代码中圈出直接实现该步骤的代码行。\n\n步骤信息：\n- ID: ${step.id}\n- 标题: ${step.title}\n- 描述: ${step.abstract}\n\n完整代码（含行号）：\n${numberedCode}\n\n要求：\n1. 只选择直接实现该步骤的代码，不要包含仅依赖/上下文/样板代码。\n2. 可返回连续区间 + 零星单行。\n3. 若步骤尚未实现，返回空集合。\n\n返回严格 JSON：\n{\n  "line_ranges": [{ "start_line": 1, "end_line": 3 }],\n  "single_lines": [8, 12],\n  "confidence": 0.0\n}`;
+    const prompt = `你是代码映射助手。请针对“步骤”在完整代码中圈出直接实现该步骤的代码行。\n\n步骤信息：\n- ID: ${step.id}\n- 标题: ${step.title}\n- 描述: ${step.abstract}\n\n完整代码（含行号）：\n${numberedCode}\n\n要求：\n1. 只选择直接实现该步骤的代码，不要包含仅依赖/上下文/样板代码。\n2. 可返回连续区间 + 零星单行。\n3. 若步骤尚未实现，返回空集合。\n\n返回严格 JSON：\n{\n "line_ranges": [{ "start_line": 1, "end_line": 3 }],\n "single_lines": [8, 12],\n "confidence": 0.0\n}`;
 
     try {
       const llmContent = await completeJson(prompt, modelTitle, extra);
@@ -708,7 +711,10 @@ async function mapCodeChunksToSteps(
           });
         });
     } catch (error) {
-      console.warn("⚠️ 步骤到代码行映射失败", { stepId: step.id, error });
+      console.warn("[CA:InitGen] 步骤到代码行映射失败", {
+        stepId: step.id,
+        error,
+      });
     }
   }
 
@@ -861,7 +867,7 @@ export const generateCompleteCode = createAsyncThunk<
       }
     }
 
-    console.log(`📁 [Phase 2] 请求生成目标文件: ${filepath}`);
+    console.log(`[CA:InitGen:Phase2] 请求生成目标文件: ${filepath}`);
 
     await dispatch(
       generateCodeFromSteps({
@@ -887,14 +893,16 @@ export const generateCompleteCode = createAsyncThunk<
 
     if (appliedFilePath) {
       filepath = appliedFilePath;
-      console.log(`✅ [Phase 2] 检测到实际写入文件: ${filepath}`);
+      console.log(`[CA:InitGen:Phase2] 检测到实际写入文件: ${filepath}`);
     } else {
       const latestCurrentFile = await getCurrentFileSnapshot(extra);
       if (latestCurrentFile?.path) {
         filepath = latestCurrentFile.path;
-        console.log(`ℹ️ [Phase 2] 回退使用当前活动文件: ${filepath}`);
+        console.log(`[CA:InitGen:Phase2] 回退使用当前活动文件: ${filepath}`);
       } else {
-        console.warn(`⚠️ [Phase 2] 未检测到真实写入文件，沿用: ${filepath}`);
+        console.warn(
+          `[CA:InitGen:Phase2] 未检测到真实写入文件，沿用: ${filepath}`,
+        );
       }
     }
 
@@ -919,13 +927,15 @@ export const createCodeToStepMappings = createAsyncThunk<
   "codeAware/createCodeToStepMappings",
   async ({ filePath }, { dispatch, getState, extra }) => {
     let effectiveFilePath = filePath;
-    console.log(`🗺️ [Phase 3] 开始建立映射，目标文件: ${effectiveFilePath}`);
+    console.log(
+      `[CA:InitGen:Phase3] 开始建立映射，目标文件: ${effectiveFilePath}`,
+    );
 
     const state = getState();
     const steps = state.codeAwareSession.steps;
 
     if (steps.length === 0) {
-      console.warn("⚠️ [Phase 3] 没有步骤，跳过映射");
+      console.warn("[CA:InitGen:Phase3] 没有步骤，跳过映射");
       return;
     }
 
@@ -938,7 +948,9 @@ export const createCodeToStepMappings = createAsyncThunk<
     );
 
     let generatedCode = await getLatestFileContent(effectiveFilePath, extra);
-    console.log(`📄 [Phase 3] 读取代码长度: ${generatedCode.length} chars`);
+    console.log(
+      `[CA:InitGen:Phase3] 读取代码长度: ${generatedCode.length} chars`,
+    );
 
     if (!generatedCode.trim()) {
       const currentFile = await getCurrentFileSnapshot(extra);
@@ -946,13 +958,13 @@ export const createCodeToStepMappings = createAsyncThunk<
         effectiveFilePath = currentFile.path;
         generatedCode = currentFile.contents;
         console.warn(
-          `⚠️ [Phase 3] 原目标文件为空，回退使用当前文件: ${effectiveFilePath}`,
+          `[CA:InitGen]  [Phase 3] 原目标文件为空，回退使用当前文件: ${effectiveFilePath}`,
         );
       }
     }
 
     if (!generatedCode.trim()) {
-      console.warn("⚠️ [Phase 3] 代码为空，无法建立映射");
+      console.warn("[CA:InitGen:Phase3] 代码为空，无法建立映射");
       dispatch(setCodeChunks([]));
       dispatch(clearAllCodeAwareMappings());
       await extra.ideMessenger.request("addCodeAwareLogEntry", {
@@ -981,7 +993,7 @@ export const createCodeToStepMappings = createAsyncThunk<
     }));
 
     dispatch(setCodeChunks(codeChunks));
-    console.log(`📦 [Phase 3] 代码块数量: ${codeChunks.length}`);
+    console.log(`[CA:InitGen:Phase3] 代码块数量: ${codeChunks.length}`);
 
     dispatch(
       updateInitialGenerationStatus({
@@ -999,7 +1011,7 @@ export const createCodeToStepMappings = createAsyncThunk<
     );
     dispatch(clearAllCodeAwareMappings());
     dispatch(updateCodeAwareMappings(mappings));
-    console.log(`🔗 [Phase 3] 映射数量: ${mappings.length}`);
+    console.log(`[CA:InitGen:Phase3] 映射数量: ${mappings.length}`);
 
     await extra.ideMessenger.request("addCodeAwareLogEntry", {
       eventType: "initial_generation_phase3_completed",
@@ -1011,7 +1023,7 @@ export const createCodeToStepMappings = createAsyncThunk<
       },
     });
 
-    console.log("✅ [Phase 3] 映射建立完成");
+    console.log("[CA:InitGen:Phase3] 映射建立完成");
   },
 );
 
@@ -1022,14 +1034,14 @@ export const analyzeCodeChunkRelations = createAsyncThunk<
 >(
   "codeAware/analyzeCodeChunkRelations",
   async (_, { dispatch, getState, extra }) => {
-    console.log("🔍 [Phase 4] 开始分析代码块关系");
+    console.log("[CA:InitGen:Phase4] 开始分析代码块关系");
 
     const state = getState();
     const codeChunks = state.codeAwareSession.codeChunks;
 
     if (codeChunks.length < 2) {
       console.log(
-        `ℹ️ [Phase 4] 代码块数量不足 (${codeChunks.length})，跳过关系分析`,
+        `[CA:InitGen]  [Phase 4] 代码块数量不足 (${codeChunks.length})，跳过关系分析`,
       );
       dispatch(setCodeChunkRelations([]));
       await extra.ideMessenger.request("addCodeAwareLogEntry", {
@@ -1054,7 +1066,7 @@ export const analyzeCodeChunkRelations = createAsyncThunk<
       codeChunks.map((chunk) => chunk.content),
       extra,
     );
-    console.log(`🧠 [Phase 4] 获取 embeddings: ${vectors.length}`);
+    console.log(`[CA:InitGen:Phase4] 获取 embeddings: ${vectors.length}`);
 
     const validEmbeddings = vectors
       .map((embedding, index) => ({
@@ -1094,7 +1106,7 @@ export const analyzeCodeChunkRelations = createAsyncThunk<
     }
 
     dispatch(setCodeChunkRelations(relations));
-    console.log(`🔗 [Phase 4] 关系数量: ${relations.length}`);
+    console.log(`[CA:InitGen:Phase4] 关系数量: ${relations.length}`);
 
     await extra.ideMessenger.request("addCodeAwareLogEntry", {
       eventType: "initial_generation_phase4_completed",
@@ -1105,7 +1117,7 @@ export const analyzeCodeChunkRelations = createAsyncThunk<
       },
     });
 
-    console.log("✅ [Phase 4] 关系分析完成");
+    console.log("[CA:InitGen:Phase4] 关系分析完成");
   },
 );
 
@@ -1170,7 +1182,7 @@ export const extractAndLinkKnowledge = createAsyncThunk<
           });
         });
       } catch (error) {
-        console.warn(`⚠️ 提取知识点失败: ${step.id}`, error);
+        console.warn(`[CA:InitGen] 提取知识点失败: ${step.id}`, error);
       }
     }
 
@@ -1192,7 +1204,7 @@ export const extractAndLinkKnowledge = createAsyncThunk<
         relatedStepIds: point.relatedStepIds,
       }));
 
-    console.log("📚 [Phase 5] Knowledge points extracted", {
+    console.log("[CA:InitGen:Phase5] Knowledge points extracted", {
       count: uniqueKnowledgePoints.length,
       examples: knowledgeExamples,
     });
@@ -1345,7 +1357,7 @@ export const executeInitialGeneration = createAsyncThunk<
     { dispatch, getState, extra },
   ) => {
     try {
-      console.log("🚀 [Initial Generation] 启动完整初始化流程");
+      console.log("[CA:InitGen] 启动完整初始化流程");
 
       dispatch(resetInitialGenerationStatus());
 
@@ -1356,9 +1368,9 @@ export const executeInitialGeneration = createAsyncThunk<
           progress: 10,
         }),
       );
-      console.log("🧩 [Initial Generation] Phase 1: 任务分解");
+      console.log("[CA:InitGen] Phase 1: 任务分解");
       await dispatch(generateTaskDecomposition({ userRequirement })).unwrap();
-      console.log("✅ [Initial Generation] Phase 1 完成");
+      console.log("[CA:InitGen] Phase 1 完成");
 
       dispatch(
         updateInitialGenerationStatus({
@@ -1367,11 +1379,11 @@ export const executeInitialGeneration = createAsyncThunk<
           progress: 30,
         }),
       );
-      console.log("💻 [Initial Generation] Phase 2: 代码生成");
+      console.log("[CA:InitGen] Phase 2: 代码生成");
       const filePath = await dispatch(
         generateCompleteCode({ targetFilePath }),
       ).unwrap();
-      console.log("✅ [Initial Generation] Phase 2 完成");
+      console.log("[CA:InitGen] Phase 2 完成");
 
       dispatch(
         updateInitialGenerationStatus({
@@ -1380,9 +1392,9 @@ export const executeInitialGeneration = createAsyncThunk<
           progress: 60,
         }),
       );
-      console.log("🗺️ [Initial Generation] Phase 3: 代码-步骤映射");
+      console.log("[CA:InitGen] Phase 3: 代码-步骤映射");
       await dispatch(createCodeToStepMappings({ filePath })).unwrap();
-      console.log("✅ [Initial Generation] Phase 3 完成");
+      console.log("[CA:InitGen] Phase 3 完成");
 
       dispatch(
         updateInitialGenerationStatus({
@@ -1391,9 +1403,9 @@ export const executeInitialGeneration = createAsyncThunk<
           progress: 75,
         }),
       );
-      console.log("🔍 [Initial Generation] Phase 4: 代码块关系分析");
+      console.log("[CA:InitGen] Phase 4: 代码块关系分析");
       await dispatch(analyzeCodeChunkRelations()).unwrap();
-      console.log("✅ [Initial Generation] Phase 4 完成");
+      console.log("[CA:InitGen] Phase 4 完成");
 
       dispatch(
         updateInitialGenerationStatus({
@@ -1402,16 +1414,16 @@ export const executeInitialGeneration = createAsyncThunk<
           progress: 90,
         }),
       );
-      console.log("📚 [Initial Generation] Phase 5: 知识提取与关联");
+      console.log("[CA:InitGen] Phase 5: 知识提取与关联");
       await dispatch(extractAndLinkKnowledge()).unwrap();
-      console.log("✅ [Initial Generation] Phase 5 完成");
+      console.log("[CA:InitGen] Phase 5 完成");
 
       const masteryBaseline = buildInitialNodeMasteryScores(
         getState().codeAwareSession,
       );
       dispatch(setNodeMasteryScores(masteryBaseline));
       console.log(
-        `🧠 [Initial Generation] 初始化 node mastery scores: ${masteryBaseline.length} 个节点置为 0`,
+        `[CA:InitGen]  [Initial Generation] 初始化 node mastery scores: ${masteryBaseline.length} 个节点置为 0`,
       );
 
       const finalState = getState().codeAwareSession;
@@ -1433,10 +1445,10 @@ export const executeInitialGeneration = createAsyncThunk<
         }),
       );
 
-      console.log("🎉 [Initial Generation] 全部阶段完成");
+      console.log("[CA:InitGen] 全部阶段完成");
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      console.error("❌ [Initial Generation] 流程失败:", message);
+      console.error("[CA:InitGen] 流程失败:", message);
       dispatch(addInitialGenerationError(message));
       dispatch(
         updateInitialGenerationStatus({

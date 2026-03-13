@@ -9,6 +9,7 @@ A lightweight local web viewer for CodeAware exported knowledge state files.
 - Node mastery score from `codeaware-node-mastery.latest.json`
 - Different node type styles (shape + color)
 - Hover tooltip with node details
+- Hover edge to inspect conditional mastery value
 - Click node to focus it as center and highlight neighbors
 
 ## Usage

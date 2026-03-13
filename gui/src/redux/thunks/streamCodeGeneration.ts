@@ -59,7 +59,7 @@ function constructCodeAwareGenerationPrompt(
     .map(
       (s, i) => `
 ${i + 1}. **${s.title}**
-   ${s.abstract}`,
+ ${s.abstract}`,
     )
     .join("\n");
 
@@ -92,35 +92,35 @@ ${previousStepsText}
 - The file must be immediately runnable after creation
 
 **For edit_existing_file tool**:
-- ⚠️ CRITICAL REQUIREMENT: The "changes" parameter MUST contain ONLY RAW CODE ⚠️
+- CRITICAL REQUIREMENT: The "changes" parameter MUST contain ONLY RAW CODE 
 - DO NOT wrap in ANY structured format (JSON, XML, YAML, etc.)
 - DO NOT use fields like: "result", "language", "notes", "updated_code", "changes_applied"
 
-- ✅ CORRECT format - provide COMPLETE code directly in the 'changes' parameter:
-  \`\`\`python
-  import os
-  
-  def existing_function():
-      return "existing"
-  
-  def new_function():
-      return "new code"
-  
-  def another_existing_function():
-      pass
-  \`\`\`
+- CORRECT format - provide COMPLETE code directly in the 'changes' parameter:
+ \`\`\`python
+ import os
+ 
+ def existing_function():
+ return "existing"
+ 
+ def new_function():
+ return "new code"
+ 
+ def another_existing_function():
+ pass
+ \`\`\`
 
-- ❌ INCORRECT formats (NEVER use these):
-  {"result": "code here", "language": "python", "notes": [...]}
-  {"updated_code": "code here", "changes_applied": [...]}
-  {"code": "code here", "modifications": [...]}
-  Any use of "# ... existing code ..." or similar placeholders
+- INCORRECT formats (NEVER use these):
+ {"result": "code here", "language": "python", "notes": [...]}
+ {"updated_code": "code here", "changes_applied": [...]}
+ {"code": "code here", "modifications": [...]}
+ Any use of "# ... existing code ..." or similar placeholders
 
-**Code generation strategy - ⚠️ CRITICAL FOR STABILITY ⚠️**:
+**Code generation strategy - CRITICAL FOR STABILITY **:
 - 🚫 NEVER use placeholders like "# ... existing code ...", "// ... existing code ...", etc.
 - 🚫 NEVER use ellipsis (...) to skip code sections
-- ✅ ALWAYS provide COMPLETE, FULL file content without any omissions
-- ✅ Write out ALL code sections explicitly, even unchanged parts
+- ALWAYS provide COMPLETE, FULL file content without any omissions
+- Write out ALL code sections explicitly, even unchanged parts
 - For files of ANY size: Generate the ENTIRE file content from start to finish
 - Include ALL imports, ALL function definitions, ALL class definitions, ALL logic
 - Ensure code is correct, idiomatic, and maintains consistency
@@ -159,7 +159,9 @@ async function resolveCodeAwareContext({
   ];
 
   // Gather context items
-  console.log("[CodeAware] Starting context collection for code generation...");
+  console.log(
+    "[CA:StreamGen] Starting context collection for code generation...",
+  );
   dispatch(setCodeGenerationStatus("collecting-context"));
   dispatch(setCodeGenerationMessage("正在收集上下文..."));
 
@@ -181,7 +183,7 @@ async function resolveCodeAwareContext({
     if (result.status === "success") {
       contextItems.push(...result.content);
       console.log(
-        `[CodeAware] Collected ${result.content.length} items from provider: ${provider.name}`,
+        `[CA:StreamGen] Collected ${result.content.length} items from provider: ${provider.name}`,
       );
     }
   }
@@ -208,11 +210,11 @@ async function resolveCodeAwareContext({
   );
 
   console.log(
-    `[CodeAware] Total context items collected: ${deduplicatedOutputs.length}`,
+    `[CA:StreamGen] Total context items collected: ${deduplicatedOutputs.length}`,
   );
   deduplicatedOutputs.forEach((item) => {
     console.log(
-      `[CodeAware]  - ${item.id.providerTitle}: ${item.description || item.name}`,
+      `[CA:StreamGen] - ${item.id.providerTitle}: ${item.description || item.name}`,
     );
   });
 
@@ -276,7 +278,7 @@ async function streamCodeAwareGeneration({
     const hasToolType =
       typeof type === "string" && type.toLowerCase().includes("tool");
     if (hasToolType || toolCallId || name) {
-      console.log("[CodeAware][Stream] Tool-related event", {
+      console.log("[CA:StreamGen:Stream] Tool-related event", {
         type,
         toolCallId,
         name,
@@ -294,11 +296,11 @@ async function streamCodeAwareGeneration({
   }
 
   console.log(
-    "[CodeAware] Starting code generation with model:",
+    "[CA:StreamGen] Starting code generation with model:",
     selectedChatModel.title,
   );
   console.log(
-    "[CodeAware] Using custom system message:",
+    "[CA:StreamGen] Using custom system message:",
     customSystemMessage ? customSystemMessage : "No (using default)",
   );
   pushDebug(`[model] ${selectedChatModel.title}`);
@@ -308,7 +310,7 @@ async function streamCodeAwareGeneration({
 
   // Get active tools
   const activeTools = selectActiveTools(state);
-  console.log("[CodeAware] Active tools", {
+  console.log("[CA:StreamGen] Active tools", {
     count: activeTools.length,
     names: activeTools.map((t) => {
       const toolAny = t as any;
@@ -326,7 +328,7 @@ async function streamCodeAwareGeneration({
     ?.onlyUseSystemMessageTools
     ? false
     : modelSupportsNativeTools(selectedChatModel);
-  console.log("[CodeAware] Tool routing decision", {
+  console.log("[CA:StreamGen] Tool routing decision", {
     useNativeTools,
     onlyUseSystemMessageTools:
       state.config.config.experimental?.onlyUseSystemMessageTools ?? false,
@@ -346,7 +348,7 @@ async function streamCodeAwareGeneration({
       tools: activeTools,
     };
   }
-  console.log("[CodeAware] Completion options", {
+  console.log("[CA:StreamGen] Completion options", {
     useNativeTools,
     toolCount: activeTools.length,
     hasSystemToolsFramework: !!systemToolsFramework,
@@ -364,20 +366,20 @@ CRITICAL TOOL USAGE RULES:
 
 Example CORRECT tool call:
 {
-  "name": "edit_existing_file",
-  "arguments": {
-    "filepath": "main.py",
-    "changes": "# ... existing code ...\\n\\ndef new_function():\\n    return 'result'\\n\\n# ... existing code ..."
-  }
+ "name": "edit_existing_file",
+ "arguments": {
+ "filepath": "main.py",
+ "changes": "# ... existing code ...\\n\\ndef new_function():\\n return 'result'\\n\\n# ... existing code ..."
+ }
 }
 
 Example INCORRECT tool call (DO NOT DO THIS):
 {
-  "name": "edit_existing_file",
-  "arguments": {
-    "filepath": "main.py",
-    "changes": "{\\"result\\": \\"def new_function():\\\\n    return 'result'\\", \\"language\\": \\"python\\"}"
-  }
+ "name": "edit_existing_file",
+ "arguments": {
+ "filepath": "main.py",
+ "changes": "{\\"result\\": \\"def new_function():\\\\n return 'result'\\", \\"language\\": \\"python\\"}"
+ }
 }`;
 
   // Use custom system message if provided, otherwise use default
@@ -409,7 +411,7 @@ Example INCORRECT tool call (DO NOT DO THIS):
     systemToolsFramework,
   );
 
-  console.log("[CodeAware] Compiling chat messages...");
+  console.log("[CA:StreamGen] Compiling chat messages...");
 
   // Compile chat
   const precompiledRes = await extra.ideMessenger.request("llm/compileChat", {
@@ -423,7 +425,7 @@ Example INCORRECT tool call (DO NOT DO THIS):
 
   const { compiledChatMessages } = precompiledRes.content;
 
-  console.log("[CodeAware] Starting streaming generation...");
+  console.log("[CA:StreamGen] Starting streaming generation...");
   // Mark session streaming active so tool-call reducers behave like chat
   dispatch(setActive());
   dispatch(setCodeGenerationStatus("generating"));
@@ -446,14 +448,16 @@ Example INCORRECT tool call (DO NOT DO THIS):
 
     if (systemToolsFramework && activeTools.length > 0) {
       gen = interceptSystemToolCalls(gen, streamAborter, systemToolsFramework);
-      console.log("[CodeAware] Using system tool framework for interception");
+      console.log(
+        "[CA:StreamGen] Using system tool framework for interception",
+      );
     }
 
     let progress = 10;
     let next = await gen.next();
     let chunkCount = 0;
 
-    console.log("[CodeAware][Stream] Starting stream consumption...");
+    console.log("[CA:StreamGen:Stream] Starting stream consumption...");
 
     while (!next.done) {
       chunkCount++;
@@ -461,7 +465,7 @@ Example INCORRECT tool call (DO NOT DO THIS):
       pushDebug(`stream-chunk ${formatEvent(next.value)}`);
 
       // Log every chunk for debugging
-      console.log(`[CodeAware][Stream] Chunk #${chunkCount}:`, {
+      console.log(`[CA:StreamGen:Stream] Chunk #${chunkCount}:`, {
         done: next.done,
         hasValue: !!next.value,
         valueType: next.value?.constructor?.name,
@@ -473,7 +477,7 @@ Example INCORRECT tool call (DO NOT DO THIS):
       const toolState = selectCurrentToolCalls(getState());
       if (toolState.length > 0) {
         console.log(
-          `[CodeAware][Stream] 🔧 Tool calls detected in chunk #${chunkCount}:`,
+          `[CA:StreamGen:Stream] Tool calls detected in chunk #${chunkCount}:`,
           toolState.map((t) => ({
             id: t.toolCallId,
             name: (t as any).function?.name,
@@ -496,7 +500,7 @@ Example INCORRECT tool call (DO NOT DO THIS):
     }
 
     console.log(
-      `[CodeAware][Stream] ✅ Stream completed. Total chunks: ${chunkCount}`,
+      `[CA:StreamGen:Stream] Stream completed. Total chunks: ${chunkCount}`,
     );
 
     // Log final event for visibility
@@ -509,7 +513,9 @@ Example INCORRECT tool call (DO NOT DO THIS):
       e instanceof Error &&
       e.message.toLowerCase().includes("premature close")
     ) {
-      console.error("[CodeAware] Premature close error, canceling tool calls");
+      console.error(
+        "[CA:StreamGen] Premature close error, canceling tool calls",
+      );
       for (const tc of toolCallsToCancel) {
         dispatch(setInactive());
       }
@@ -519,26 +525,24 @@ Example INCORRECT tool call (DO NOT DO THIS):
 
   // Tool-call execution outside try block to ensure it runs
   try {
-    console.log(
-      "\n[CodeAware][Tools] ========== TOOL EXECUTION PIPELINE START ==========",
-    );
+    console.log("\n[CA:StreamGen:Tools] TOOL EXECUTION START");
 
     // Tool-call execution pipeline (mirrors streamNormalInput) to ensure edits actually run
     const state1 = getState();
-    console.log("[CodeAware][Tools] Step 1: Checking stream state", {
+    console.log("[CA:StreamGen:Tools] Step 1: Checking stream state", {
       aborted: streamAborter.signal.aborted,
       isStreaming: state1.session.isStreaming,
     });
 
     if (streamAborter.signal.aborted || !state1.session.isStreaming) {
       console.log(
-        "[CodeAware][Tools] ❌ Stream not active, skip tool execution",
+        "[CA:StreamGen:Tools] Stream not active, skip tool execution",
       );
       return;
     }
 
     const originalToolCalls = selectCurrentToolCalls(state1);
-    console.log("[CodeAware][Tools] Step 2: Retrieved tool calls", {
+    console.log("[CA:StreamGen:Tools] Step 2: Retrieved tool calls", {
       count: originalToolCalls.length,
       tools: originalToolCalls.map((t) => ({
         id: t.toolCallId,
@@ -553,20 +557,20 @@ Example INCORRECT tool call (DO NOT DO THIS):
       `after-stream toolCalls=${originalToolCalls.length} streaming=${state1.session.isStreaming} sample=${JSON.stringify(originalToolCalls.slice(0, 2).map((t) => ({ id: t.toolCallId, name: (t as any).function?.name, status: t.status, argsLen: (t as any).function?.arguments?.length })))} `,
     );
 
-    console.log("[CodeAware][Tools] Step 3: Filtering generating calls");
+    console.log("[CA:StreamGen:Tools] Step 3: Filtering generating calls");
     const generatingCalls = originalToolCalls.filter(
       (tc) => tc.status === "generating",
     );
-    console.log("[CodeAware][Tools] Generating calls:", {
+    console.log("[CA:StreamGen:Tools] Generating calls:", {
       count: generatingCalls.length,
       ids: generatingCalls.map((t) => t.toolCallId),
     });
 
     console.log(
-      "[CodeAware][Tools] Step 4: Setting tools to 'generated' status",
+      "[CA:StreamGen:Tools] Step 4: Setting tools to 'generated' status",
     );
     for (const { toolCallId } of generatingCalls) {
-      console.log(`[CodeAware][Tools]   - Setting ${toolCallId} to generated`);
+      console.log(`[CA:StreamGen:Tools] - Setting ${toolCallId} to generated`);
       dispatch(
         setToolGenerated({
           toolCallId,
@@ -575,12 +579,12 @@ Example INCORRECT tool call (DO NOT DO THIS):
       );
     }
     console.log(
-      "[CodeAware][Tools] ✅ All generating calls marked as generated",
+      "[CA:StreamGen:Tools] All generating calls marked as generated",
     );
 
     const state2 = getState();
     console.log(
-      "[CodeAware][Tools] Step 5: Checking stream state after setToolGenerated",
+      "[CA:StreamGen:Tools] Step 5: Checking stream state after setToolGenerated",
       {
         aborted: streamAborter.signal.aborted,
         isStreaming: state2.session.isStreaming,
@@ -588,13 +592,13 @@ Example INCORRECT tool call (DO NOT DO THIS):
     );
     if (streamAborter.signal.aborted || !state2.session.isStreaming) {
       console.log(
-        "[CodeAware][Tools] ❌ Stream not active after setToolGenerated, exiting",
+        "[CA:StreamGen:Tools] Stream not active after setToolGenerated, exiting",
       );
       return;
     }
-    console.log("[CodeAware][Tools] Step 6: Getting pending tool calls");
+    console.log("[CA:StreamGen:Tools] Step 6: Getting pending tool calls");
     const generatedCalls2 = selectPendingToolCalls(state2);
-    console.log("[CodeAware][Tools] Pending after generation:", {
+    console.log("[CA:StreamGen:Tools] Pending after generation:", {
       count: generatedCalls2.length,
       tools: generatedCalls2.map((t) => ({
         id: t.toolCallId,
@@ -604,13 +608,13 @@ Example INCORRECT tool call (DO NOT DO THIS):
     });
     pushDebug(`pending-after-generation=${generatedCalls2.length}`);
 
-    console.log("[CodeAware][Tools] Step 7: Preprocessing tool calls...");
+    console.log("[CA:StreamGen:Tools] Step 7: Preprocessing tool calls...");
     await preprocessToolCalls(dispatch, extra.ideMessenger, generatedCalls2);
-    console.log("[CodeAware][Tools] ✅ Preprocessing completed");
+    console.log("[CA:StreamGen:Tools] Preprocessing completed");
 
     const state3 = getState();
     console.log(
-      "[CodeAware][Tools] Step 8: Checking stream state after preprocessing",
+      "[CA:StreamGen:Tools] Step 8: Checking stream state after preprocessing",
       {
         aborted: streamAborter.signal.aborted,
         isStreaming: state3.session.isStreaming,
@@ -618,16 +622,16 @@ Example INCORRECT tool call (DO NOT DO THIS):
     );
     if (streamAborter.signal.aborted || !state3.session.isStreaming) {
       console.log(
-        "[CodeAware][Tools] ❌ Stream not active after preprocessing, exiting",
+        "[CA:StreamGen:Tools] Stream not active after preprocessing, exiting",
       );
       return;
     }
 
     console.log(
-      "[CodeAware][Tools] Step 9: Getting pending calls after preprocessing",
+      "[CA:StreamGen:Tools] Step 9: Getting pending calls after preprocessing",
     );
     const generatedCalls3 = selectPendingToolCalls(state3);
-    console.log("[CodeAware][Tools] Pending after preprocessing:", {
+    console.log("[CA:StreamGen:Tools] Pending after preprocessing:", {
       count: generatedCalls3.length,
       tools: generatedCalls3.map((t) => ({
         id: t.toolCallId,
@@ -636,7 +640,7 @@ Example INCORRECT tool call (DO NOT DO THIS):
       })),
     });
 
-    console.log("[CodeAware][Tools] Step 10: Evaluating tool policies...");
+    console.log("[CA:StreamGen:Tools] Step 10: Evaluating tool policies...");
     const toolPolicies = state3.ui.toolSettings;
     const policies = await evaluateToolPolicies(
       dispatch,
@@ -648,7 +652,7 @@ Example INCORRECT tool call (DO NOT DO THIS):
     const anyRequireApproval = policies.find(
       ({ policy }) => policy === "allowedWithPermission",
     );
-    console.log("[CodeAware][Tools] Policy evaluation results:", {
+    console.log("[CA:StreamGen:Tools] Policy evaluation results:", {
       totalPolicies: policies.length,
       requiresApproval: !!anyRequireApproval,
       policies: policies.map((p) => ({
@@ -661,23 +665,25 @@ Example INCORRECT tool call (DO NOT DO THIS):
 
     if (originalToolCalls.length === 0) {
       console.log(
-        "[CodeAware][Tools] ⚠️ Setting inactive (no tool calls to execute)",
+        "[CA:StreamGen:Tools] Setting inactive (no tool calls to execute)",
       );
       dispatch(setInactive());
     } else {
       if (anyRequireApproval) {
         console.log(
-          "[CodeAware][Tools] ⚠️ Policies require approval; auto-approving for CodeAware flow",
+          "[CA:StreamGen:Tools] Policies require approval; auto-approving for CodeAware flow",
           policies,
         );
       }
 
-      console.log("[CodeAware][Tools] Step 11: Proceeding with tool execution");
+      console.log(
+        "[CA:StreamGen:Tools] Step 11: Proceeding with tool execution",
+      );
       const state4 = getState();
       const generatedCalls4 = selectPendingToolCalls(state4);
 
       console.log(
-        "[CodeAware][Tools] Step 12: Checking stream state before execution",
+        "[CA:StreamGen:Tools] Step 12: Checking stream state before execution",
         {
           aborted: streamAborter.signal.aborted,
           isStreaming: state4.session.isStreaming,
@@ -685,14 +691,14 @@ Example INCORRECT tool call (DO NOT DO THIS):
       );
       if (streamAborter.signal.aborted || !state4.session.isStreaming) {
         console.log(
-          "[CodeAware][Tools] ❌ Stream not active before execution, exiting",
+          "[CA:StreamGen:Tools] Stream not active before execution, exiting",
         );
         return;
       }
 
       if (generatedCalls4.length > 0) {
         console.log(
-          "[CodeAware][Tools] Step 13: 🚀 Executing auto-approved tool calls",
+          "[CA:StreamGen:Tools] Step 13: Executing auto-approved tool calls",
           {
             count: generatedCalls4.length,
             tools: generatedCalls4.map((t) => ({
@@ -707,7 +713,7 @@ Example INCORRECT tool call (DO NOT DO THIS):
         await Promise.all(
           generatedCalls4.map(async ({ toolCallId }, index) => {
             console.log(
-              `[CodeAware][Tools]   📞 Calling tool ${index + 1}/${generatedCalls4.length}: ${toolCallId}`,
+              `[CA:StreamGen:Tools] Calling tool ${index + 1}/${generatedCalls4.length}: ${toolCallId}`,
             );
             try {
               const result = await dispatch(
@@ -719,11 +725,11 @@ Example INCORRECT tool call (DO NOT DO THIS):
               );
               unwrapResult(result);
               console.log(
-                `[CodeAware][Tools]   ✅ Tool ${toolCallId} executed successfully`,
+                `[CA:StreamGen:Tools] Tool ${toolCallId} executed successfully`,
               );
             } catch (error) {
               console.error(
-                `[CodeAware][Tools]   ❌ Tool ${toolCallId} execution failed:`,
+                `[CA:StreamGen:Tools] Tool ${toolCallId} execution failed:`,
                 error,
               );
               throw error;
@@ -735,11 +741,11 @@ Example INCORRECT tool call (DO NOT DO THIS):
               toolCallId,
             );
             console.log(
-              `[CodeAware][Tools]   📊 Apply state for ${toolCallId}:`,
+              `[CA:StreamGen:Tools] Apply state for ${toolCallId}:`,
               applyState,
             );
             if (applyState) {
-              console.log(`[CodeAware][Tools]   📊 Apply state details:`, {
+              console.log(`[CA:StreamGen:Tools] Apply state details:`, {
                 status: applyState.status,
                 file: applyState.filepath || "<no file>",
                 diffs: applyState.numDiffs ?? 0,
@@ -755,27 +761,27 @@ Example INCORRECT tool call (DO NOT DO THIS):
               );
             } else {
               console.log(
-                `[CodeAware][Tools]   ⚠️ No apply state for ${toolCallId}`,
+                `[CA:StreamGen:Tools] No apply state for ${toolCallId}`,
               );
               console.log(
-                `[CodeAware][Tools]   Tool name: ${(generatedCalls4.find((c) => c.toolCallId === toolCallId) as any)?.function?.name}`,
+                `[CA:StreamGen:Tools] Tool name: ${(generatedCalls4.find((c) => c.toolCallId === toolCallId) as any)?.function?.name}`,
               );
               console.log(
-                `[CodeAware][Tools]   This might be a server-side tool (like create_new_file) that doesn't need apply`,
+                `[CA:StreamGen:Tools] This might be a server-side tool (like create_new_file) that doesn't need apply`,
               );
               pushDebug(`apply-status tool=${toolCallId} <no-apply-state>`);
             }
           }),
         );
-        console.log("[CodeAware][Tools] ✅ All tool calls executed");
+        console.log("[CA:StreamGen:Tools] All tool calls executed");
         // Summarize done apply states across session
         const doneStates = selectDoneApplyStates(getState());
-        console.log("[CodeAware][Tools] Step 14: Summarizing apply states", {
+        console.log("[CA:StreamGen:Tools] Step 14: Summarizing apply states", {
           totalDone: doneStates.length,
         });
         if (doneStates.length) {
           console.log(
-            "[CodeAware][Tools] Done apply states:",
+            "[CA:StreamGen:Tools] Done apply states:",
             doneStates.map((s) => ({
               file: s.filepath,
               diffs: s.numDiffs,
@@ -794,12 +800,12 @@ Example INCORRECT tool call (DO NOT DO THIS):
         }
       } else {
         console.log(
-          "[CodeAware][Tools] ⚠️ No pending calls, streaming response after tool call",
+          "[CA:StreamGen:Tools] No pending calls, streaming response after tool call",
         );
         pushDebug("execute streamResponseAfterToolCall for original calls");
         for (const { toolCallId } of originalToolCalls) {
           console.log(
-            `[CodeAware][Tools] Streaming response for ${toolCallId}`,
+            `[CA:StreamGen:Tools] Streaming response for ${toolCallId}`,
           );
           unwrapResult(
             await dispatch(
@@ -813,16 +819,14 @@ Example INCORRECT tool call (DO NOT DO THIS):
       }
     }
 
-    console.log("\n[CodeAware] ✅ Code generation completed successfully");
-    console.log(
-      "[CodeAware][Tools] ========== TOOL EXECUTION PIPELINE END ==========",
-    );
+    console.log("\n[CA:StreamGen] Code generation completed successfully");
+    console.log("[CA:StreamGen:Tools] TOOL EXECUTION END");
     dispatch(setCodeGenerationProgress(100));
     dispatch(setCodeGenerationMessage("代码生成完成"));
     dispatch(setCodeGenerationStatus("completed"));
     pushDebug("status:completed");
   } catch (e) {
-    console.error("[CodeAware] Tool execution failed:", e);
+    console.error("[CA:StreamGen] Tool execution failed:", e);
     dispatch(setCodeGenerationStatus("error"));
     dispatch(
       setCodeGenerationMessage(e instanceof Error ? e.message : "工具执行失败"),
@@ -866,10 +870,10 @@ export const streamCodeGenerationThunk = createAsyncThunk<
     },
     { dispatch, extra, getState },
   ) => {
-    console.log("[CodeAware] Starting streamCodeGenerationThunk...");
-    console.log("[CodeAware] Steps to generate:", orderedSteps.length);
-    console.log("[CodeAware] Filepath:", filepath);
-    console.log("[CodeAware] Is last step:", isLastStep);
+    console.log("[CA:StreamGen] Starting streamCodeGenerationThunk...");
+    console.log("[CA:StreamGen] Steps to generate:", orderedSteps.length);
+    console.log("[CA:StreamGen] Filepath:", filepath);
+    console.log("[CA:StreamGen] Is last step:", isLastStep);
 
     try {
       // Reset code generation state
@@ -886,7 +890,7 @@ export const streamCodeGenerationThunk = createAsyncThunk<
         isLastStep,
       );
 
-      console.log("[CodeAware] Prompt constructed, length:", prompt.length);
+      console.log("[CA:StreamGen] Prompt constructed, length:", prompt.length);
 
       dispatch(
         appendCodeGenerationDebugLog(
@@ -894,7 +898,7 @@ export const streamCodeGenerationThunk = createAsyncThunk<
         ),
       );
 
-      console.log("[CodeAware] Prompt:", prompt);
+      console.log("[CA:StreamGen] Prompt:", prompt);
 
       // Initialize a session history item so tool calls can attach like chat
       const inputIndex = getState().session.history.length;
@@ -923,7 +927,7 @@ export const streamCodeGenerationThunk = createAsyncThunk<
       });
 
       console.log(
-        "[CodeAware] Context resolved, items:",
+        "[CA:StreamGen] Context resolved, items:",
         selectedContextItems.length,
       );
 
@@ -954,10 +958,10 @@ export const streamCodeGenerationThunk = createAsyncThunk<
       });
 
       console.log(
-        "[CodeAware] streamCodeGenerationThunk completed successfully",
+        "[CA:StreamGen] streamCodeGenerationThunk completed successfully",
       );
     } catch (error) {
-      console.error("[CodeAware] streamCodeGenerationThunk failed:", error);
+      console.error("[CA:StreamGen] streamCodeGenerationThunk failed:", error);
       dispatch(setCodeGenerationStatus("error"));
       dispatch(
         setCodeGenerationMessage(

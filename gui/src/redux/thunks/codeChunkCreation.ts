@@ -1,5 +1,5 @@
 /**
- * ⚠️ DEPRECATED: 此文件已废弃
+ * DEPRECATED: 此文件已废弃
  *
  * 原因：不再静态存储 code chunks，改为实时从 IDE 读取代码并动态分割
  *
@@ -33,12 +33,12 @@ export const createCodeChunksFromFile = createAsyncThunk<
 >(
   "codeAware/createCodeChunksFromFile",
   async ({ filePath, fileContent }, { dispatch, getState }) => {
-    console.log(`📦 开始为文件创建代码块: ${filePath}`);
-    console.log(`📋 文件内容长度: ${fileContent.length} 字符`);
+    console.log(`[CA:Chunk] 开始为文件创建代码块: ${filePath}`);
+    console.log(`[CA:Chunk] 文件内容长度: ${fileContent.length} 字符`);
 
     const lines = fileContent.split("\n");
     const totalLines = lines.length;
-    console.log(`📋 文件总行数: ${totalLines}`);
+    console.log(`[CA:Chunk] 文件总行数: ${totalLines}`);
 
     const chunks: CodeChunk[] = [];
     const CHUNK_SIZE = 50; // 每个chunk的最大行数
@@ -58,13 +58,13 @@ export const createCodeChunksFromFile = createAsyncThunk<
 
       const state = getState();
       // const createdChunk = state.codeAwareSession.codeChunks.find(
-      //   (c) => c.id === chunkId,
+      // (c) => c.id === chunkId,
       // ); // 已移除：不再静态存储 code chunks
 
       // if (createdChunk) {
-      //   chunks.push(createdChunk);
+      // chunks.push(createdChunk);
       console.log(
-        `⚠️ createCodeChunksFromFile 已废弃: 创建单个代码块: ${chunkId} (1-${totalLines}行)`,
+        `[CA:Chunk]  createCodeChunksFromFile 已废弃: 创建单个代码块: ${chunkId} (1-${totalLines}行)`,
       );
       // }
 
@@ -91,20 +91,20 @@ export const createCodeChunksFromFile = createAsyncThunk<
 
       const state = getState();
       // const createdChunk = state.codeAwareSession.codeChunks.find(
-      //   (c) => c.id === chunkId,
+      // (c) => c.id === chunkId,
       // ); // 已移除：不再静态存储 code chunks
 
       // if (createdChunk) {
-      //   chunks.push(createdChunk);
+      // chunks.push(createdChunk);
       console.log(
-        `⚠️ createCodeChunksFromFile 已废弃: 创建代码块: ${chunkId} (${startLine}-${endLine}行, ${chunkContent.length}字符)`,
+        `[CA:Chunk]  createCodeChunksFromFile 已废弃: 创建代码块: ${chunkId} (${startLine}-${endLine}行, ${chunkContent.length}字符)`,
       );
       // }
 
       chunkIndex++;
     }
 
-    console.log(`🎉 完成代码块创建: 共 ${chunks.length} 个代码块`);
+    console.log(`[CA:Chunk] 完成代码块创建: 共 ${chunks.length} 个代码块`);
     return chunks;
   },
 );
@@ -119,7 +119,7 @@ export const createCodeChunksFromCurrentFile = createAsyncThunk<
 >(
   "codeAware/createCodeChunksFromCurrentFile",
   async (_, { dispatch, extra }) => {
-    console.log("📂 正在获取当前文件...");
+    console.log("[CA:Chunk] 正在获取当前文件...");
 
     try {
       const response = await extra.ideMessenger.request(
@@ -129,7 +129,7 @@ export const createCodeChunksFromCurrentFile = createAsyncThunk<
 
       // 检查是否是错误响应
       if (!response || response.status === "error") {
-        console.warn("⚠️ 未获取到当前文件或获取失败");
+        console.warn("[CA:Chunk] 未获取到当前文件或获取失败");
         return [];
       }
 
@@ -137,11 +137,11 @@ export const createCodeChunksFromCurrentFile = createAsyncThunk<
 
       // 确认文件路径存在
       if (!currentFile || !currentFile.path) {
-        console.warn("⚠️ 文件路径为空");
+        console.warn("[CA:Chunk] 文件路径为空");
         return [];
       }
 
-      console.log(`✅ 获取到文件: ${currentFile.path}`);
+      console.log(`[CA:Chunk] 获取到文件: ${currentFile.path}`);
 
       return await dispatch(
         createCodeChunksFromFile({
@@ -150,7 +150,7 @@ export const createCodeChunksFromCurrentFile = createAsyncThunk<
         }),
       ).unwrap();
     } catch (error) {
-      console.error("❌ 创建代码块失败:", error);
+      console.error("[CA:Chunk] 创建代码块失败:", error);
       throw error;
     }
   },
@@ -183,14 +183,14 @@ export const createCodeChunksFromFileWithAST = createAsyncThunk<
     { filePath, fileContent, maxChunkSize = 512 },
     { dispatch, getState },
   ) => {
-    console.log(`🌳 使用AST智能切分: ${filePath}`);
+    console.log(`[CA:Chunk] 使用AST智能切分: ${filePath}`);
 
     // TODO: 实现AST切分
     // 1. 导入 chunkDocumentWithoutId
     // 2. 遍历生成的chunks
     // 3. 创建CodeChunk对象
 
-    console.warn("⚠️ AST切分功能尚未实现，降级到简单切分");
+    console.warn("[CA:Chunk] AST切分功能尚未实现，降级到简单切分");
     return await dispatch(
       createCodeChunksFromFile({ filePath, fileContent }),
     ).unwrap();

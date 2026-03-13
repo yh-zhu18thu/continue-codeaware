@@ -349,11 +349,11 @@ class VsCodeIde implements IDE {
       await this.ideUtils.openFile(fileUri);
 
       console.log(
-        `📄 [VsCodeIde] Created and opened file: ${fileUri.toString()}`,
+        `[CA:IDE]  [VsCodeIde] Created and opened file: ${fileUri.toString()}`,
       );
     } catch (error) {
       console.error(
-        `❌ [VsCodeIde] Failed to create and open file ${filename}:`,
+        `[CA:IDE]  [VsCodeIde] Failed to create and open file ${filename}:`,
         error,
       );
       throw error;
@@ -760,19 +760,21 @@ class VsCodeIde implements IDE {
       const activeEditor = vscode.window.activeTextEditor;
       if (activeEditor && activeEditor.document.isDirty) {
         await activeEditor.document.save();
-        console.log(`💾 Auto-saved file: ${activeEditor.document.fileName}`);
+        console.log(
+          `[CA:IDE] Auto-saved file: ${activeEditor.document.fileName}`,
+        );
 
         // 更新最后保存时间戳
         this.updateLastFileSaveTimestamp();
 
         // 显示简短的状态信息
         vscode.window.setStatusBarMessage(
-          `💾 已自动保存: ${activeEditor.document.fileName.split("/").pop()}`,
+          ` 已自动保存: ${activeEditor.document.fileName.split("/").pop()}`,
           2000,
         );
       }
     } catch (error) {
-      console.error("Auto-save failed:", error);
+      console.error("[CA:IDE] Auto-save failed:", error);
       // 不显示错误通知，避免打断用户
     }
   }
@@ -782,7 +784,7 @@ class VsCodeIde implements IDE {
     // Store the timestamp of the last auto-save
     const now = Date.now();
     console.log(
-      `📅 Updated last file save timestamp: ${new Date(now).toISOString()}`,
+      `[CA:IDE]  Updated last file save timestamp: ${new Date(now).toISOString()}`,
     );
   }
 
@@ -795,11 +797,13 @@ class VsCodeIde implements IDE {
     const { filepath, oldCode, newCode } = args;
 
     try {
-      console.log("apply! diff changes!");
+      console.log("[CA:IDE] apply! diff changes!");
 
       // 如果新旧代码相同，直接返回
       if (oldCode === newCode) {
-        console.log("No changes to apply - old and new code are identical.");
+        console.log(
+          "[CA:IDE] No changes to apply - old and new code are identical.",
+        );
         return;
       }
 
@@ -812,9 +816,11 @@ class VsCodeIde implements IDE {
       // 验证当前文档内容是否与oldCode匹配
       const currentContent = document.getText();
       if (currentContent !== oldCode) {
-        console.warn("⚠️ Current file content differs from expected oldCode");
-        console.log("Current content length:", currentContent.length);
-        console.log("Expected oldCode length:", oldCode.length);
+        console.warn(
+          "[CA:IDE] Current file content differs from expected oldCode",
+        );
+        console.log("[CA:IDE] Current content length:", currentContent.length);
+        console.log("[CA:IDE] Expected oldCode length:", oldCode.length);
 
         // 仍然尝试应用，但使用当前内容作为基础
       }
@@ -833,14 +839,17 @@ class VsCodeIde implements IDE {
       const success = await vscode.workspace.applyEdit(edit);
 
       if (success) {
-        console.log(`✅ 代码差异已成功应用到文件: ${filepath}`);
+        console.log(`[CA:IDE] 代码差异已成功应用到文件: ${filepath}`);
 
         // 自动保存应用了更改的文件
         try {
           await this.saveFile(uri.toString());
-          console.log(`💾 Auto-saved after applying diff: ${filepath}`);
+          console.log(`[CA:IDE] Auto-saved after applying diff: ${filepath}`);
         } catch (saveError) {
-          console.warn("Failed to auto-save after applying diff:", saveError);
+          console.warn(
+            "[CA:IDE] Failed to auto-save after applying diff:",
+            saveError,
+          );
         }
 
         // 显示成功通知
@@ -860,7 +869,7 @@ class VsCodeIde implements IDE {
         throw new Error("WorkspaceEdit application failed");
       }
     } catch (error) {
-      console.error("应用代码差异失败:", error);
+      console.error("[CA:IDE] 应用代码差异失败:", error);
 
       // 显示错误通知
       void vscode.window.showErrorMessage(

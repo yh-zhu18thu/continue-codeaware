@@ -143,8 +143,8 @@ export async function deterministicApplyLazyEdit({
   filename: string;
   onlyFullFileRewrite?: boolean;
 }): Promise<DiffLine[] | undefined> {
-  console.log("[deterministicApplyLazyEdit] ========== START ==========");
-  console.log("[deterministicApplyLazyEdit] Input:", {
+  console.log("[CA:Apply] START");
+  console.log("[CA:Apply] Input:", {
     filename,
     oldFileLength: oldFile.length,
     newLazyFileType: typeof newLazyFile,
@@ -155,7 +155,7 @@ export async function deterministicApplyLazyEdit({
 
   const parser = await getParserForFile(filename);
   if (!parser) {
-    console.log("[deterministicApplyLazyEdit] ❌ No parser available for file");
+    console.log("[CA:Apply] No parser available for file");
     return undefined;
   }
 
@@ -164,29 +164,23 @@ export async function deterministicApplyLazyEdit({
   let reconstructedNewFile: string | undefined = undefined;
 
   if (onlyFullFileRewrite) {
-    console.log("[deterministicApplyLazyEdit] Mode: onlyFullFileRewrite");
+    console.log("[CA:Apply] Mode: onlyFullFileRewrite");
     const hasLazyText = isLazyText(newTree.rootNode.text);
-    console.log("[deterministicApplyLazyEdit] Has lazy text:", hasLazyText);
+    console.log("[CA:Apply] Has lazy text:", hasLazyText);
 
     if (!hasLazyText) {
-      console.log(
-        "[deterministicApplyLazyEdit] No lazy text, computing Myers diff",
-      );
+      console.log("[CA:Apply] No lazy text, computing Myers diff");
       const diff = myersDiff(oldFile, newLazyFile);
 
       if (shouldRejectDiff(diff)) {
-        console.log(
-          "[deterministicApplyLazyEdit] ❌ Diff rejected by shouldRejectDiff",
-        );
+        console.log("[CA:Apply] Diff rejected by shouldRejectDiff");
         return undefined;
       }
 
-      console.log("[deterministicApplyLazyEdit] ✅ Returning Myers diff");
+      console.log("[CA:Apply] Returning Myers diff");
       return diff;
     } else {
-      console.log(
-        "[deterministicApplyLazyEdit] ❌ Has lazy text, returning undefined",
-      );
+      console.log("[CA:Apply] Has lazy text, returning undefined");
       return undefined;
     }
   }
@@ -227,7 +221,7 @@ export async function deterministicApplyLazyEdit({
           newTree.rootNode.text +
           oldText.slice(endIndex);
       } else {
-        console.warn("No matching node found for lazy block");
+        console.warn("[CA:Apply] No matching node found for lazy block");
         return undefined;
       }
     }

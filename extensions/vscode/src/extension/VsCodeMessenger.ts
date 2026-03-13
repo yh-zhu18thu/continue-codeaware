@@ -324,7 +324,7 @@ export class VsCodeMessenger {
           branch = branchInfo;
         }
       } catch (e) {
-        console.error("Error getting repo info:", e);
+        console.error("[CA:Ext] Error getting repo info:", e);
       }
 
       if (!repoUrl) {
@@ -357,13 +357,16 @@ export class VsCodeMessenger {
           agent = encodeFullSlug(currentProfile.profileDescription.fullSlug);
         }
       } catch (e) {
-        console.error("Error getting agent configuration from profile:", e);
+        console.error(
+          "[CA:Ext] Error getting agent configuration from profile:",
+          e,
+        );
         // Continue without agent config - will use default
       }
 
       // Create the background agent
       try {
-        console.log("Creating background agent with:", {
+        console.log("[CA:Ext] Creating background agent with:", {
           name,
           prompt: prompt.substring(0, 50) + "...",
           repoUrl,
@@ -389,7 +392,7 @@ export class VsCodeMessenger {
           `Background agent created successfully! Agent ID: ${result.id}`,
         );
       } catch (e) {
-        console.error("Failed to create background agent:", e);
+        console.error("[CA:Ext] Failed to create background agent:", e);
         const errorMessage =
           e instanceof Error ? e.message : "Unknown error occurred";
 
@@ -433,7 +436,7 @@ export class VsCodeMessenger {
           );
         return result;
       } catch (e) {
-        console.error("Error listing background agents:", e);
+        console.error("[CA:Ext] Error listing background agents:", e);
         return { agents: [], totalCount: 0 };
       }
     });
@@ -560,7 +563,7 @@ export class VsCodeMessenger {
                 "Local changes have been stashed.",
               );
             } catch (e) {
-              console.error("Failed to stash changes:", e);
+              console.error("[CA:Ext] Failed to stash changes:", e);
               const errorMsg = e instanceof Error ? e.message : String(e);
               vscode.window.showErrorMessage(
                 `Failed to stash changes: ${errorMsg}`,
@@ -575,7 +578,7 @@ export class VsCodeMessenger {
         try {
           const currentBranch = await this.ide.getBranch(matchingWorkspace);
           console.log(
-            `Current branch: ${currentBranch}, Target branch: ${branch}`,
+            `[CA:Ext] Current branch: ${currentBranch}, Target branch: ${branch}`,
           );
 
           if (currentBranch !== branch) {
@@ -592,7 +595,7 @@ export class VsCodeMessenger {
                   await repo.checkout(branch);
                 } catch (checkoutError: any) {
                   console.log(
-                    "Checkout failed, trying to fetch first...",
+                    "[CA:Ext] Checkout failed, trying to fetch first...",
                     checkoutError,
                   );
                   // If checkout fails, fetch and try again
@@ -605,10 +608,10 @@ export class VsCodeMessenger {
               `Switched to branch ${branch}`,
             );
           } else {
-            console.log("Already on target branch, skipping checkout");
+            console.log("[CA:Ext] Already on target branch, skipping checkout");
           }
         } catch (e: any) {
-          console.error("Failed to switch branch:", e);
+          console.error("[CA:Ext] Failed to switch branch:", e);
           vscode.window.showErrorMessage(
             `Failed to switch to branch ${branch}: ${e.message || String(e)}`,
           );
@@ -628,7 +631,7 @@ export class VsCodeMessenger {
 
         if (!agentState.session) {
           console.error(
-            "Agent state is missing session field. Full response:",
+            "[CA:Ext] Agent state is missing session field. Full response:",
             agentState,
           );
           vscode.window.showErrorMessage(
@@ -647,7 +650,7 @@ export class VsCodeMessenger {
           `Successfully loaded agent workflow: ${agentState.session.title || "Untitled"}`,
         );
       } catch (e) {
-        console.error("Failed to open agent locally:", e);
+        console.error("[CA:Ext] Failed to open agent locally:", e);
         vscode.window.showErrorMessage(
           `Failed to open agent locally: ${e instanceof Error ? e.message : "Unknown error"}`,
         );
@@ -655,12 +658,12 @@ export class VsCodeMessenger {
     });
 
     this.onWebview("highlightCodeChunk", async (msg) => {
-      console.log("highlightCodeChunk", msg.data);
+      console.log("[CA:Ext] highlightCodeChunk", msg.data);
       await this.highlightCodeManager.highlightCodeChunk(msg.data);
     });
 
     this.onWebview("highlightCodeChunks", async (msg) => {
-      console.log("highlightCodeChunks", msg.data);
+      console.log("[CA:Ext] highlightCodeChunks", msg.data);
       await this.highlightCodeManager.highlightCodeChunks(msg.data);
     });
 
@@ -670,17 +673,17 @@ export class VsCodeMessenger {
 
     // CodeAware: 日志记录相关
     this.onWebview("startCodeAwareLogSession", async (msg) => {
-      console.log("📊 [CodeAware] Starting log session:", msg.data);
+      console.log("[CA:Ext] Starting log session:", msg.data);
       codeAwareLogger.startLogSession(msg.data);
     });
 
     this.onWebview("addCodeAwareLogEntry", async (msg) => {
-      console.log("📝 [CodeAware] Adding log entry:", msg.data.eventType);
+      console.log("[CA:Ext] Adding log entry:", msg.data.eventType);
       codeAwareLogger.addLogEntry(msg.data.eventType, msg.data.payload);
     });
 
     this.onWebview("endCodeAwareLogSession", async (msg) => {
-      console.log("📊 [CodeAware] Ending log session");
+      console.log("[CA:Ext] Ending log session");
       codeAwareLogger.endLogSession();
     });
 

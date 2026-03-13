@@ -45,16 +45,19 @@ export class CompletionProvider {
     private readonly _injectedGetLlm: () => Promise<ILLM | undefined>,
     private readonly _onError: (e: any) => void,
     private readonly getDefinitionsFromLsp: GetLspDefinitionsFunction,
-    private readonly _onCodeAwareEvent?: (eventType: string, data: any) => Promise<void>,
+    private readonly _onCodeAwareEvent?: (
+      eventType: string,
+      data: any,
+    ) => Promise<void>,
   ) {
     this.completionStreamer = new CompletionStreamer(this.onError.bind(this));
     this.contextRetrievalService = new ContextRetrievalService(this.ide);
   }
 
-private async _prepareLlm(): Promise<ILLM | undefined> {
+  private async _prepareLlm(): Promise<ILLM | undefined> {
     const llm = await this._injectedGetLlm();
 
-    console.log("getting llm",llm?.title);
+    console.log("[CA:Completion] getting llm", llm?.title);
 
     if (!llm) {
       return undefined;
@@ -92,7 +95,7 @@ private async _prepareLlm(): Promise<ILLM | undefined> {
       return;
     }
 
-    console.warn("Error generating autocompletion: ", e);
+    console.warn("[CA:Completion] Error generating autocompletion: ", e);
     if (!this.errorsShown.has(e.message)) {
       this.errorsShown.add(e.message);
       this._onError(e);
@@ -100,51 +103,75 @@ private async _prepareLlm(): Promise<ILLM | undefined> {
   }
 
   public cancel() {
-    console.log("🔄 [CodeAware Core] CompletionProvider.cancel() called");
+    console.log("[CA:Completion] CompletionProvider.cancel() called");
     this.loggingService.cancel();
-    
+
     // CodeAware: 发送代码补全取消事件
     if (this._onCodeAwareEvent) {
-      console.log("📤 [CodeAware Core] Sending codeCompletionRejected event...");
+      console.log("[CA:Completion] Sending codeCompletionRejected event...");
       this._onCodeAwareEvent("codeCompletionRejected", {
         timestamp: new Date().toISOString(),
-        reason: "User cancelled completion"
+        reason: "User cancelled completion",
       })
-        .then(() => console.log("✅ [CodeAware Core] codeCompletionRejected event sent successfully"))
-        .catch(error => console.error("❌ [CodeAware Core] Failed to send completion rejected event:", error));
+        .then(() =>
+          console.log(
+            "[CA:Completion] codeCompletionRejected event sent successfully",
+          ),
+        )
+        .catch((error) =>
+          console.error(
+            "[CA:Completion] Failed to send completion rejected event:",
+            error,
+          ),
+        );
     } else {
-      console.log("⚠️ [CodeAware Core] No CodeAware event handler available");
+      console.log("[CA:Completion] No CodeAware event handler available");
     }
   }
 
   public accept(completionId: string) {
-    console.log("🔄 [CodeAware Core] CompletionProvider.accept() called with completionId:", completionId);
+    console.log(
+      "[CA:Completion] CompletionProvider.accept() called with completionId:",
+      completionId,
+    );
     const outcome = this.loggingService.accept(completionId);
     if (!outcome) {
-      console.log("⚠️ [CodeAware Core] No outcome available for completion ID:", completionId);
+      console.log(
+        "[CA:Completion] No outcome available for completion ID:",
+        completionId,
+      );
       return;
     }
     this.bracketMatchingService.handleAcceptedCompletion(
       outcome.completion,
       outcome.filepath,
     );
-    
+
     // CodeAware: 发送代码补全确认事件
     if (this._onCodeAwareEvent) {
-      console.log("📤 [CodeAware Core] Sending codeCompletionAccepted event...", {
+      console.log("[CA:Completion] Sending codeCompletionAccepted event...", {
         completionId: completionId,
         outcomeFields: Object.keys(outcome),
-        completionLength: outcome.completion.length
+        completionLength: outcome.completion.length,
       });
       this._onCodeAwareEvent("codeCompletionAccepted", {
         completionId: completionId,
         outcome: outcome,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       })
-        .then(() => console.log("✅ [CodeAware Core] codeCompletionAccepted event sent successfully"))
-        .catch(error => console.error("❌ [CodeAware Core] Failed to send completion accepted event:", error));
+        .then(() =>
+          console.log(
+            "[CA:Completion] codeCompletionAccepted event sent successfully",
+          ),
+        )
+        .catch((error) =>
+          console.error(
+            "[CA:Completion] Failed to send completion accepted event:",
+            error,
+          ),
+        );
     } else {
-      console.log("⚠️ [CodeAware Core] No CodeAware event handler available");
+      console.log("[CA:Completion] No CodeAware event handler available");
     }
   }
 
@@ -185,7 +212,7 @@ private async _prepareLlm(): Promise<ILLM | undefined> {
 
       const llm = await this._prepareLlm();
       if (!llm) {
-        console.error("No completion llm");
+        console.error("[CA:Completion] No completion llm");
         return undefined;
       }
 
@@ -237,7 +264,10 @@ private async _prepareLlm(): Promise<ILLM | undefined> {
           llm,
         });
 
-      console.log("CompletionProvider: Generated prompt:", prompt);
+      console.log(
+        "[CA:Completion] CompletionProvider: Generated prompt:",
+        prompt,
+      );
 
       // Completion
       let completion: string | undefined = "";
@@ -276,7 +306,10 @@ private async _prepareLlm(): Promise<ILLM | undefined> {
           return undefined;
         }
 
-        console.log("CompletionProvider completion:", completion);
+        console.log(
+          "[CA:Completion] CompletionProvider completion:",
+          completion,
+        );
 
         const processedCompletion = helper.options.transform
           ? postprocessCompletion({
@@ -288,7 +321,10 @@ private async _prepareLlm(): Promise<ILLM | undefined> {
           : completion;
 
         completion = processedCompletion;
-        console.log("CompletionProvider: Postprocessed completion:", processedCompletion);
+        console.log(
+          "[CA:Completion] CompletionProvider: Postprocessed completion:",
+          processedCompletion,
+        );
       }
 
       if (!completion) {
@@ -335,14 +371,17 @@ private async _prepareLlm(): Promise<ILLM | undefined> {
         this.markDisplayed(input.completionId, outcome);
       }
 
-      console.log("CompletionProvider: Autocompletion completed:", {
-        time: outcome.time,
-        model: outcome.modelName,
-        provider: outcome.modelProvider,
-        cacheHit: outcome.cacheHit,
-        filepath: outcome.filepath,
-        content: outcome.completion,
-      });
+      console.log(
+        "[CA:Completion] CompletionProvider: Autocompletion completed:",
+        {
+          time: outcome.time,
+          model: outcome.modelName,
+          provider: outcome.modelProvider,
+          cacheHit: outcome.cacheHit,
+          filepath: outcome.filepath,
+          content: outcome.completion,
+        },
+      );
 
       return outcome;
     } catch (e: any) {

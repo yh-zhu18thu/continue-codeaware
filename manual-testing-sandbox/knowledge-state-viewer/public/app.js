@@ -30,12 +30,14 @@ const graphEl = document.getElementById("graph");
 const hoverTooltipEl = document.getElementById("hoverTooltip");
 const reloadBtn = document.getElementById("reloadBtn");
 const resetViewBtn = document.getElementById("resetViewBtn");
+const typeFilterEls = Array.from(document.querySelectorAll(".type-filter"));
 
 let network = null;
 let datasetNodes = null;
 let datasetEdges = null;
 let rawNodesById = new Map();
 let adjacency = new Map();
+let fullGraphPayload = { nodes: [], edges: [] };
 
 function setStatus(text, isError = false) {
   statusEl.textContent = text;
@@ -82,7 +84,6 @@ function buildGraphPayload(nodeIndexPayload, edgesPayload, masteryPayload) {
     : [];
 
   rawNodesById = new Map();
-  adjacency = new Map();
 
   const nodes = nodeItems.map((node) => {
     const typeStyle = STYLE_BY_TYPE[node.nodeType] || {
@@ -96,8 +97,6 @@ function buildGraphPayload(nodeIndexPayload, edgesPayload, masteryPayload) {
         : node.title;
 
     rawNodesById.set(node.id, node);
-    adjacency.set(node.id, new Set());
-
     return {
       id: node.id,
       label: label || node.id,
@@ -131,15 +130,6 @@ function buildGraphPayload(nodeIndexPayload, edgesPayload, masteryPayload) {
       (edge) => nodeIdSet.has(edge.fromNodeId) && nodeIdSet.has(edge.toNodeId),
     )
     .map((edge) => {
-      const sourceNeighbors = adjacency.get(edge.fromNodeId);
-      const targetNeighbors = adjacency.get(edge.toNodeId);
-      if (sourceNeighbors) {
-        sourceNeighbors.add(edge.toNodeId);
-      }
-      if (targetNeighbors) {
-        targetNeighbors.add(edge.fromNodeId);
-      }
-
       const weight =
         typeof edge.conditionalMasteryProbability === "number"
           ? edge.conditionalMasteryProbability
@@ -168,6 +158,67 @@ function buildGraphPayload(nodeIndexPayload, edgesPayload, masteryPayload) {
     });
 
   return { nodes, edges };
+}
+
+function buildAdjacency(nodes, edges) {
+  const map = new Map();
+  nodes.forEach((node) => {
+    map.set(node.id, new Set());
+  });
+
+  edges.forEach((edge) => {
+    const sourceNeighbors = map.get(edge.from);
+    const targetNeighbors = map.get(edge.to);
+    if (sourceNeighbors) {
+      sourceNeighbors.add(edge.to);
+    }
+    if (targetNeighbors) {
+      targetNeighbors.add(edge.from);
+    }
+  });
+
+  return map;
+}
+
+function getActiveNodeTypes() {
+  const active = new Set();
+  typeFilterEls.forEach((el) => {
+    if (el.checked) {
+      active.add(el.value);
+    }
+  });
+  return active;
+}
+
+function getFilteredGraphPayload() {
+  const activeTypes = getActiveNodeTypes();
+  const nodes = fullGraphPayload.nodes.filter((node) =>
+    activeTypes.has(node.nodeType),
+  );
+  const nodeIdSet = new Set(nodes.map((node) => node.id));
+  const edges = fullGraphPayload.edges.filter(
+    (edge) => nodeIdSet.has(edge.from) && nodeIdSet.has(edge.to),
+  );
+
+  return { nodes, edges };
+}
+
+function renderFilteredGraph() {
+  const payload = getFilteredGraphPayload();
+  adjacency = buildAdjacency(payload.nodes, payload.edges);
+  createNetwork(payload);
+  updateStats(payload.nodes, payload.edges);
+  hideHoverTooltip();
+  renderDetails(null);
+
+  const activeTypes = Array.from(getActiveNodeTypes());
+  if (activeTypes.length === 0) {
+    setStatus("No node type selected. Please enable at least one type.", true);
+  } else {
+    setStatus(
+      `Data loaded. Active filters: ${activeTypes.join(", ")}. Hover for details, click a node to focus.`,
+    );
+  }
 }
 
 function updateStats(nodes, edges) {
@@ -411,16 +462,12 @@ async function reloadData() {
       loadJson(FILES.mastery),
     ]);
 
-    const payload = buildGraphPayload(
+    fullGraphPayload = buildGraphPayload(
       nodeIndexPayload,
       edgesPayload,
       masteryPayload,
     );
-    createNetwork(payload);
-    updateStats(payload.nodes, payload.edges);
-    renderDetails(null);
-
-    setStatus("Data loaded. Hover for details, click a node to focus.");
+    renderFilteredGraph();
   } catch (error) {
     console.error(error);
     setStatus(
@@ -434,6 +481,15 @@ async function reloadData() {
 
 reloadBtn.addEventListener("click", () => {
   reloadData();
+});
+
+typeFilterEls.forEach((el) => {
+  el.addEventListener("change", () => {
+    if (!fullGraphPayload.nodes.length) {
+      return;
+    }
+    renderFilteredGraph();
+  });
 });
 
 resetViewBtn.addEventListener("click", () => {

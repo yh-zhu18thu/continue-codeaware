@@ -114,6 +114,30 @@ const HighLevelStepBadge = styled.span<{ stepStatus?: StepStatus }>`
   transition: background-color 0.15s ease-in-out;
 `;
 
+const MasteryProgressTrack = styled.div`
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background-color: rgba(255, 255, 255, 0.08);
+  border-radius: 0 0 4px 4px;
+  overflow: hidden;
+`;
+
+const MasteryProgressFill = styled.div<{
+  percent: number;
+  masteryColor: string;
+}>`
+  height: 100%;
+  width: ${({ percent }) => percent}%;
+  background-color: ${({ masteryColor }) => masteryColor};
+  border-radius: 0 0 4px 4px;
+  transition:
+    width 0.5s ease-in-out,
+    background-color 0.4s ease-in-out;
+`;
+
 const ChevronContainer = styled.div<{ isExpanded: boolean }>`
   display: flex;
   align-items: center;
@@ -170,6 +194,8 @@ interface StepTitleBarProps {
   isFlickering?: boolean; // Optional prop to indicate if the step is flickering
   stepStatus?: StepStatus; // Add step status to control button availability
   isViewed?: boolean; // 新增：是否已查看过
+  masteryScore?: number | null; // 掌握度分数 (0-1)，null 表示暂无数据
+  masteryColor?: string; // 掌握度对应的颜色
   onToggle?: () => void; // Optional callback for toggle functionality
   onExecuteUntilStep?: () => void; // Optional callback for execute until step
   onRerunStep?: () => void; // Optional callback for rerun step when dirty
@@ -185,6 +211,8 @@ const StepTitleBar: React.FC<StepTitleBarProps> = ({
   isFlickering = false,
   stepStatus = "confirmed",
   isViewed = false,
+  masteryScore = null,
+  masteryColor,
   onToggle,
   onExecuteUntilStep,
   onRerunStep,
@@ -229,6 +257,9 @@ const StepTitleBar: React.FC<StepTitleBarProps> = ({
     return "Execute Until This Step";
   };
 
+  const masteryPercent =
+    masteryScore !== null ? Math.round(masteryScore * 100) : null;
+
   return (
     <TitleBarContainer
       isActive={isActive}
@@ -238,6 +269,7 @@ const StepTitleBar: React.FC<StepTitleBarProps> = ({
       stepStatus={stepStatus}
       isViewed={isViewed}
       onClick={onToggle}
+      style={{ position: "relative", overflow: "hidden" }}
     >
       <TitleContent isViewed={isViewed}>
         <ViewedIndicator isViewed={isViewed} />
@@ -265,6 +297,14 @@ const StepTitleBar: React.FC<StepTitleBarProps> = ({
           <ChevronDownIcon width={16} height={16} />
         </ChevronContainer>
       </IconContainer>
+      {masteryColor && masteryPercent !== null && (
+        <MasteryProgressTrack>
+          <MasteryProgressFill
+            percent={masteryPercent}
+            masteryColor={masteryColor}
+          />
+        </MasteryProgressTrack>
+      )}
     </TitleBarContainer>
   );
 };

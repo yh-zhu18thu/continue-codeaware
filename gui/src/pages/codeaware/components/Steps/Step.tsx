@@ -12,11 +12,13 @@ import {
   vscInputBorder,
 } from "../../../../components";
 import { useAppDispatch, useAppSelector } from "../../../../redux/hooks";
+import { selectStepMastery } from "../../../../redux/selectors/masterySelectors";
 import {
   clearElementHighlight,
   setHighlightedElement,
 } from "../../../../redux/slices/codeAwareSlice";
 import { useCodeAwareLogger } from "../../../../util/codeAwareWebViewLogger";
+import { masteryScoreToColor } from "../../../../utils/masteryColor";
 import KnowledgeCard, {
   KnowledgeCardProps,
 } from "../KnowledgeCard/KnowledgeCard";
@@ -205,6 +207,14 @@ const Step: React.FC<StepProps> = ({
     state.codeAwareSession.steps.find((s) => s.id === stepId),
   );
   const highlightType = fullStep?.highlightType;
+
+  // Mastery：计算该 step 关联 situation 节点的加权平均掌握度
+  const stepMastery = useAppSelector((state) =>
+    stepId ? selectStepMastery(state, stepId) : null,
+  );
+  const masteryScore = stepMastery?.score ?? null;
+  const masteryColor =
+    masteryScore !== null ? masteryScoreToColor(masteryScore) : undefined;
 
   const [isExpanded, setIsExpanded] = useState(
     forceExpanded || defaultExpanded,
@@ -580,6 +590,8 @@ const Step: React.FC<StepProps> = ({
           knowledgeCardGenerationStatus === "generating" ||
           knowledgeCardGenerationStatus === "checked"
         }
+        masteryScore={masteryScore}
+        masteryColor={masteryColor}
         onToggle={handleToggle}
         onExecuteUntilStep={handleExecuteUntilStep}
         onRerunStep={handleRerunStep}

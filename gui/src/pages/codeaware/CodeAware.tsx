@@ -300,11 +300,15 @@ export const CodeAware = () => {
   useWebviewListener("codeSelectionChanged", async (data) => {
     console.log("[CA:UI] 代码选中变化:", data);
     setCurrentCodeSelection(data);
+    // 当用户在编辑器中选中了新的代码，清除两侧的高亮
+    dispatch(clearAllHighlights());
   });
 
   useWebviewListener("codeSelectionCleared", async () => {
     console.log("[CA:UI] 代码选中已清除");
     setCurrentCodeSelection(null);
+    // 代码选中清除时，也清除两侧高亮
+    dispatch(clearAllHighlights());
   });
 
   //CodeAware: 增加一个指令，使得可以发送当前所选择的知识卡片id
@@ -783,14 +787,21 @@ export const CodeAware = () => {
         });
       }
 
-      // 4. 同时高亮所有关联语义元素
+      // 4. 同时高亮所有关联语义元素，并保留代码侧高亮
+      //    构建代码块高亮事件（从查找结果中获取）
+      const codeHighlightEvent: HighlightEvent = {
+        sourceType: "code",
+        identifier: result.chunk.id,
+        additionalInfo: result.chunk,
+      };
       dispatch(
-        updateHighlight(
-          uniqueSemanticMappings.map((mapping) => ({
+        updateHighlight([
+          codeHighlightEvent,
+          ...uniqueSemanticMappings.map((mapping) => ({
             sourceType: mapping.semanticElementType,
             identifier: mapping.semanticElementId,
           })),
-        ),
+        ]),
       );
 
       // 5. 滚动到首个语义元素
@@ -932,15 +943,20 @@ export const CodeAware = () => {
       // 5. 通知 IDE 高亮代码
       await ideMessenger?.post("highlightCodeChunks", matchedChunks);
 
-      // 6. 高亮所有关联代码块（在界面上）
+      // 6. 高亮所有关联代码块，同时保留步骤侧高亮
+      const stepHighlightEvent: HighlightEvent = {
+        sourceType: focusedElement.type,
+        identifier: focusedElement.id,
+      };
       dispatch(
-        updateHighlight(
-          matchedChunks.map((chunk) => ({
-            sourceType: "code",
+        updateHighlight([
+          stepHighlightEvent,
+          ...matchedChunks.map((chunk) => ({
+            sourceType: "code" as const,
             identifier: chunk.id,
             additionalInfo: chunk,
           })),
-        ),
+        ]),
       );
 
       await logger.addLogEntry("user_click_jump_to_code_success", {

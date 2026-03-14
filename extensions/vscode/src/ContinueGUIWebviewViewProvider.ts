@@ -147,6 +147,12 @@ export class ContinueGUIWebviewViewProvider
         // Send new theme to GUI to update embedded Monaco themes
         this.webviewProtocol?.request("setTheme", { theme: getTheme() });
       }
+      if (e.affectsConfiguration("workbench.sideBar.location")) {
+        const position = (vscode.workspace
+          .getConfiguration("workbench")
+          .get<string>("sideBar.location") || "left") as "left" | "right";
+        this.webviewProtocol?.request("setSidebarPosition", { position });
+      }
     });
 
     this.webviewProtocol.webview = panel.webview;
@@ -193,6 +199,7 @@ export class ContinueGUIWebviewViewProvider
           ) || [],
         )}</script>
         <script>window.isFullScreen = ${isFullScreen}</script>
+        <script>window.sidebarPosition = "${vscode.workspace.getConfiguration("workbench").get("sideBar.location") || "left"}"</script>
 
         ${
           edits

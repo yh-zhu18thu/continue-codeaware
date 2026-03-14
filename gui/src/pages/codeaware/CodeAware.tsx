@@ -13,6 +13,7 @@ import { lightGray, vscForeground } from "../../components";
 import { SessionInfoDialog } from "../../components/dialogs/SessionInfoDialog";
 import { PageHeader } from "../../components/PageHeader";
 import { IdeMessengerContext } from "../../context/IdeMessenger";
+import { useSidebarPosition } from "../../hooks/useSidebarPosition";
 import { useWebviewListener } from "../../hooks/useWebviewListener";
 import {
   applyKnowledgeCardInteraction,
@@ -286,6 +287,7 @@ export const CodeAware = () => {
   // Navigation buttons state
   const [isMappingLookupInProgress, setIsMappingLookupInProgress] =
     useState(false);
+  const sidebarPosition = useSidebarPosition();
 
   // Track code selection state
   const [currentCodeSelection, setCurrentCodeSelection] = useState<{
@@ -2710,40 +2712,9 @@ export const CodeAware = () => {
           />
         )}
 
-      {/* Navigation Buttons - 显式跳转按钮 */}
-      {userRequirementStatus === "finalized" && steps.length > 0 && (
-        <div className="mt-2 px-4">
-          <NavigationButtons
-            onJumpToSemantic={handleJumpToSemantic}
-            onJumpToCode={handleJumpToCode}
-            isLoading={isMappingLookupInProgress}
-          />
-        </div>
-      )}
+      {/* Navigation Buttons - 边缘跳转导航条（移至 CodeAwareDiv 底部作为绝对定位浮层） */}
 
-      {/* Debug panel for CodeAware streaming output */}
-      <div className="mt-2 px-4">
-        <button
-          className="rounded border border-gray-600 bg-[#0b1224] px-2 py-1 text-xs text-gray-100 hover:bg-[#111a30]"
-          onClick={() => setShowDebugPanel((v) => !v)}
-        >
-          {showDebugPanel ? "隐藏 Debug 面板" : "显示 Debug 面板"} (
-          {codeGenDebugLogs.length})
-        </button>
-        {showDebugPanel && (
-          <div className="mt-2 max-h-64 space-y-1 overflow-auto rounded border border-gray-700 bg-[#0b1224] p-2 font-mono text-xs text-gray-100">
-            {codeGenDebugLogs.length === 0 ? (
-              <div className="text-gray-400">暂无流式输出</div>
-            ) : (
-              codeGenDebugLogs.map((line, idx) => (
-                <div key={idx} className="whitespace-pre-wrap break-words">
-                  {line}
-                </div>
-              ))
-            )}
-          </div>
-        )}
-      </div>
+      {/* Debug panel (UI hidden, logic preserved) */}
 
       {/* 可滚动的内容区域 */}
       <ScrollableContent ref={scrollableContentRef}>
@@ -3037,6 +3008,21 @@ export const CodeAware = () => {
         onSubmit={handleGlobalQuestionSubmit}
         isLoading={isGlobalQuestionLoading}
       />
+
+      {/* Edge Navigation Buttons - 贴在 webview 靠近编辑器的边缘，垂直居中 */}
+      {userRequirementStatus === "finalized" && steps.length > 0 && (
+        <NavigationButtons
+          onJumpToSemantic={handleJumpToSemantic}
+          onJumpToCode={handleJumpToCode}
+          canJumpToCode={
+            steps.some((s) => s.isHighlighted) ||
+            highLevelSteps.some((h) => h.isHighlighted)
+          }
+          canJumpToSemantic={currentCodeSelection !== null}
+          isLoading={isMappingLookupInProgress}
+          sidebarPosition={sidebarPosition}
+        />
+      )}
     </CodeAwareDiv>
   );
 };

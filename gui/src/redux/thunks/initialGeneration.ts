@@ -13,6 +13,7 @@ import type {
 } from "core";
 import {
   constructExtractKnowledgePointsPrompt,
+  constructGenerateHighLevelStepNarrativePrompt,
   constructGenerateStepsPrompt,
 } from "core/llm/codeAwarePrompts";
 import { buildCodeAwareCognitiveEdges } from "../../utils/codeAwareRelationGraph";
@@ -25,6 +26,7 @@ import {
   setCodeChunkRelations,
   setCodeChunks,
   setGeneratedSteps,
+  setHighLevelStepNarrative,
   setHighLevelSteps,
   setKnowledgePoints,
   setKnowledgeRelations,
@@ -827,6 +829,34 @@ export const generateTaskDecomposition = createAsyncThunk<
     dispatch(setGeneratedSteps(generatedSteps));
     dispatch(setStepToHighLevelMappings(mappings));
     dispatch(setUserRequirementStatus("finalized"));
+
+    // 生成高级步骤叙述文段（第二次 LLM 调用，失败不阻塞主流程）
+    try {
+      const narrativePrompt = constructGenerateHighLevelStepNarrativePrompt(
+        highLevelStepsArray,
+        userRequirement,
+        parsed.learning_goal || "",
+      );
+      const narrativeContent = await completeJson(
+        narrativePrompt,
+        modelTitle,
+        extra,
+      );
+      const narrativeJson = parseJsonFromLlm<{ narrative?: string }>(
+        narrativeContent,
+      );
+      if (narrativeJson.narrative) {
+        dispatch(setHighLevelStepNarrative(narrativeJson.narrative));
+        console.log(
+          "[CA:InitGen] High-level step narrative generated successfully",
+        );
+      }
+    } catch (narrativeError) {
+      console.warn(
+        "[CA:InitGen] Failed to generate narrative (non-blocking):",
+        narrativeError,
+      );
+    }
 
     await extra.ideMessenger.request("addCodeAwareLogEntry", {
       eventType: "initial_generation_phase1_completed",

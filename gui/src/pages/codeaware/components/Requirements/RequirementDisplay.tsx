@@ -1,13 +1,14 @@
 import { CheckCircle } from "@mui/icons-material";
 import { Paper, Step, StepIcon, StepLabel, Stepper } from "@mui/material";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
-import { HighlightEvent } from "core";
+import { HighLevelStepItem, HighlightEvent } from "core";
 import { useEffect, useMemo, useRef, useState } from "react";
 import styled, { css, keyframes } from "styled-components";
 import { defaultBorderRadius, vscForeground } from "../../../../components";
 import { useAppDispatch, useAppSelector } from "../../../../redux/hooks";
 import {
   clearElementHighlight,
+  selectHighLevelStepNarrative,
   selectHighLevelSteps,
   selectRequirementText,
   setHighlightedElement,
@@ -254,6 +255,91 @@ const ContentDisplayDiv = styled.div<{}>`
   font-size: 14px;
 `;
 
+// ---- Narrative 叙述文段相关类型和工具 ----
+
+type NarrativeSegment =
+  | { type: "text"; content: string }
+  | { type: "stepRef"; stepId: string; content: string };
+
+/** 解析叙述文段中的 {{r-N:名称}} 标记，返回文本和引用片段的混合数组 */
+function parseNarrative(
+  narrative: string,
+  highLevelSteps: HighLevelStepItem[],
+): NarrativeSegment[] {
+  const segments: NarrativeSegment[] = [];
+  const regex = /\{\{(r-\d+):([^}]+)\}\}/g;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = regex.exec(narrative)) !== null) {
+    // 添加标记前的纯文本
+    if (match.index > lastIndex) {
+      segments.push({
+        type: "text",
+        content: narrative.slice(lastIndex, match.index),
+      });
+    }
+    const stepId = match[1]; // e.g. "r-1"
+    const stepName = match[2]; // e.g. "图像能量分析"
+    // 验证 stepId 确实存在于 highLevelSteps 中
+    const exists = highLevelSteps.some((s) => s.id === stepId);
+    if (exists) {
+      segments.push({ type: "stepRef", stepId, content: stepName });
+    } else {
+      // stepId 不存在，当作普通文本
+      segments.push({ type: "text", content: stepName });
+    }
+    lastIndex = match.index + match[0].length;
+  }
+
+  // 添加最后剩余的纯文本
+  if (lastIndex < narrative.length) {
+    segments.push({ type: "text", content: narrative.slice(lastIndex) });
+  }
+
+  return segments;
+}
+
+// 叙述文段中可交互的 step 引用样式
+const StepRefSpan = styled.span<{
+  isHighlighted: boolean;
+  isFlickering: boolean;
+  isCompleted: boolean;
+}>`
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border-radius: 4px;
+  padding: 1px 4px;
+  margin: 0 1px;
+
+  ${(props) =>
+    props.isFlickering &&
+    css`
+      animation: ${flicker} 0.6s ease-in-out 3;
+    `}
+
+  color: ${(props) => (props.isHighlighted ? "#00BFFF" : "#82cfff")} !important;
+  font-weight: ${(props) => (props.isHighlighted ? "bold" : "500")} !important;
+  background-color: ${(props) =>
+    props.isHighlighted ? "rgba(0, 191, 255, 0.15)" : "transparent"};
+  text-decoration: ${(props) => (props.isHighlighted ? "none" : "underline")};
+  text-decoration-color: rgba(130, 207, 255, 0.4);
+  text-underline-offset: 3px;
+
+  &:hover {
+    background-color: rgba(0, 191, 255, 0.12);
+    color: #00bfff !important;
+  }
+`;
+
+// 叙述文段容器
+const NarrativeText = styled.div`
+  font-size: 15px;
+  line-height: 1.8;
+  color: #d4d4d4;
+  word-break: break-word;
+`;
+
 interface RequirementDisplayProps {
   onEdit: () => void;
   // onRegenerate: () => void; // 移除重新生成功能
@@ -280,6 +366,7 @@ export default function RequirementDisplay({
 }: RequirementDisplayProps) {
   const requirementText = useAppSelector(selectRequirementText);
   const highLevelSteps = useAppSelector(selectHighLevelSteps);
+  const highLevelStepNarrative = useAppSelector(selectHighLevelStepNarrative);
 
   // CodeAware logger
   const logger = useCodeAwareLogger();
@@ -321,6 +408,17 @@ export default function RequirementDisplay({
       source: "fallback" as const,
     }));
   }, [highLevelSteps, requirementText]);
+
+  // 解析叙述文段为可渲染的片段（仅当叙述文段存在时）
+  const narrativeSegments = useMemo<NarrativeSegment[]>(() => {
+    if (!highLevelStepNarrative || highLevelSteps.length === 0) {
+      return [];
+    }
+    return parseNarrative(highLevelStepNarrative, highLevelSteps);
+  }, [highLevelStepNarrative, highLevelSteps]);
+
+  // 是否使用叙述文段模式
+  const useNarrativeMode = narrativeSegments.length > 0;
 
   // Monitor highlight state changes and trigger flickering
   useEffect(() => {
@@ -492,62 +590,105 @@ export default function RequirementDisplay({
     <div className="px-2.5 pb-1 pt-2">
       <DisplayContainerDiv>
         <ContentDisplayDiv>
-          <ThemeProvider theme={muiTheme}>
-            <Paper
-              elevation={0}
-              sx={{
-                backgroundColor: "transparent",
-                padding: 0,
-              }}
-            >
-              <Stepper orientation="vertical" sx={{ width: "100%" }}>
-                {steps.map((step, index) => {
-                  const isFlickering = flickeringSteps.has(step.id);
-                  const isHighlighted = step.isHighlighted;
+          {useNarrativeMode ? (
+            /* 叙述文段模式：将 high-level steps 串联成连贯可读的文段 */
+            <NarrativeText onBlur={handleChunkBlur} onFocus={handleChunkFocus}>
+              {narrativeSegments.map((segment, idx) => {
+                if (segment.type === "text") {
+                  return <span key={idx}>{segment.content}</span>;
+                }
+                // stepRef 类型：可交互的 step 引用
+                const hlStep = highLevelSteps.find(
+                  (s) => s.id === segment.stepId,
+                );
+                const isHighlighted = hlStep?.isHighlighted ?? false;
+                const isCompleted = hlStep?.isCompleted ?? false;
+                const isFlickering = flickeringSteps.has(segment.stepId);
 
-                  return (
-                    <Step key={step.id} active={true} completed={false}>
-                      <StepLabel
-                        StepIconComponent={(props) => (
-                          <AnimatedStepIcon
-                            {...props}
+                return (
+                  <StepRefSpan
+                    key={idx}
+                    isHighlighted={isHighlighted}
+                    isFlickering={isFlickering}
+                    isCompleted={isCompleted}
+                    onClick={() => handleStepClick(segment.stepId)}
+                    onKeyDown={(e) => handleChunkKeyDown(e, segment.stepId)}
+                    tabIndex={0}
+                    role="button"
+                    aria-label={`功能域: ${segment.content}`}
+                  >
+                    {segment.content}
+                    {isCompleted && (
+                      <CheckCircle
+                        sx={{
+                          fontSize: 14,
+                          color: "#4ade80",
+                          verticalAlign: "middle",
+                          marginLeft: "3px",
+                        }}
+                      />
+                    )}
+                  </StepRefSpan>
+                );
+              })}
+            </NarrativeText>
+          ) : (
+            /* Fallback：原有 Stepper 列表模式 */
+            <ThemeProvider theme={muiTheme}>
+              <Paper
+                elevation={0}
+                sx={{
+                  backgroundColor: "transparent",
+                  padding: 0,
+                }}
+              >
+                <Stepper orientation="vertical" sx={{ width: "100%" }}>
+                  {steps.map((step, index) => {
+                    const isFlickering = flickeringSteps.has(step.id);
+                    const isHighlighted = step.isHighlighted;
+
+                    return (
+                      <Step key={step.id} active={true} completed={false}>
+                        <StepLabel
+                          StepIconComponent={(props) => (
+                            <AnimatedStepIcon
+                              {...props}
+                              isFlickering={isFlickering}
+                              isHighlighted={isHighlighted}
+                              onClick={() => handleStepIconClick(step.id)}
+                              onKeyDown={(e: React.KeyboardEvent) =>
+                                handleChunkKeyDown(e, step.id)
+                              }
+                              tabIndex={0}
+                              role="button"
+                              aria-label={`需求步骤 ${index + 1}: ${step.content}`}
+                            />
+                          )}
+                          onClick={() => handleStepClick(step.id)}
+                          onBlur={handleChunkBlur}
+                          onFocus={handleChunkFocus}
+                          sx={{
+                            cursor: "pointer",
+                            "&:hover": {
+                              // Remove background color on hover
+                            },
+                          }}
+                        >
+                          <AnimatedStepText
                             isFlickering={isFlickering}
                             isHighlighted={isHighlighted}
-                            onClick={() => handleStepIconClick(step.id)}
-                            onKeyDown={(e: React.KeyboardEvent) =>
-                              handleChunkKeyDown(e, step.id)
-                            }
-                            tabIndex={0}
-                            role="button"
-                            aria-label={`需求步骤 ${index + 1}: ${step.content}`}
-                          />
-                        )}
-                        onClick={() => handleStepClick(step.id)}
-                        onBlur={handleChunkBlur}
-                        onFocus={handleChunkFocus}
-                        sx={{
-                          cursor: "pointer",
-                          "&:hover": {
-                            // Remove background color on hover
-                          },
-                        }}
-                      >
-                        <AnimatedStepText
-                          isFlickering={isFlickering}
-                          isHighlighted={isHighlighted}
-                        >
-                          <span style={{ flex: 1 }}>{step.label}</span>
-                          {step.isCompleted && <CompletionIcon />}
-                        </AnimatedStepText>
-                      </StepLabel>
-                    </Step>
-                  );
-                })}
-              </Stepper>
-            </Paper>
-          </ThemeProvider>
-
-          {/* 移除 RequirementDisplayToolBar */}
+                          >
+                            <span style={{ flex: 1 }}>{step.label}</span>
+                            {step.isCompleted && <CompletionIcon />}
+                          </AnimatedStepText>
+                        </StepLabel>
+                      </Step>
+                    );
+                  })}
+                </Stepper>
+              </Paper>
+            </ThemeProvider>
+          )}
         </ContentDisplayDiv>
       </DisplayContainerDiv>
     </div>

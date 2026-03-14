@@ -10,6 +10,7 @@ import {
 import {
   constructEvaluateSaqAnswerPrompt,
   constructFindStepRelatedCodeLinesPrompt,
+  constructGenerateHighLevelStepNarrativePrompt,
   constructGenerateKnowledgeCardDetailPrompt,
   constructGenerateKnowledgeCardTestsPrompt, // 新增测试题生成prompt
   constructGenerateStepsPrompt,
@@ -27,6 +28,7 @@ import {
   selectTestByTestId,
   setCodeAwareTitle,
   setGeneratedSteps,
+  setHighLevelStepNarrative,
   setHighLevelSteps,
   setKnowledgeCardError,
   setKnowledgeCardGenerationStatus,
@@ -1081,6 +1083,46 @@ export const generateStepsFromRequirement = createAsyncThunk<
       dispatch(setStepToHighLevelMappings(stepToHighLevelMappings)); // 设置步骤到高级步骤的映射
       dispatch(updateCodeAwareMappings(initialMappings));
       dispatch(setUserRequirementStatus("finalized"));
+
+      // 生成高级步骤叙述文段（第二次 LLM 调用，失败不阻塞主流程）
+      try {
+        const narrativePrompt = constructGenerateHighLevelStepNarrativePrompt(
+          highLevelSteps,
+          userRequirement,
+          learningGoal,
+        );
+        const narrativeResult = await extra.ideMessenger.request(
+          "llm/complete",
+          {
+            prompt: narrativePrompt,
+            completionOptions: {},
+            title: defaultModel.title,
+          },
+        );
+        if (narrativeResult.status === "success" && narrativeResult.content) {
+          try {
+            const narrativeJson = JSON.parse(
+              narrativeResult.content.replace(/```json\s*|```/g, "").trim(),
+            );
+            if (narrativeJson.narrative) {
+              dispatch(setHighLevelStepNarrative(narrativeJson.narrative));
+              console.log(
+                "[CA:CodeGen] High-level step narrative generated successfully",
+              );
+            }
+          } catch (parseError) {
+            console.warn(
+              "[CA:CodeGen] Failed to parse narrative JSON:",
+              parseError,
+            );
+          }
+        }
+      } catch (narrativeError) {
+        console.warn(
+          "[CA:CodeGen] Failed to generate narrative (non-blocking):",
+          narrativeError,
+        );
+      }
 
       console.log(
         `[CA:CodeGen]  Dispatched setStepToHighLevelMappings with ${stepToHighLevelMappings.length} mappings`,

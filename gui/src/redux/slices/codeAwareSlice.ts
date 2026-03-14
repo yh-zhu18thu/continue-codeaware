@@ -63,6 +63,8 @@ export type CodeAwareSessionState = {
   learningGoal: string;
   //高级步骤列表
   highLevelSteps: HighLevelStepItem[];
+  //高级步骤叙述文段（将 highLevelSteps 串联成连贯可读的陈述性文段）
+  highLevelStepNarrative: string;
   //步骤与高级步骤的层级关系（用于UI关联，不与code映射混淆）
   stepToHighLevelMappings: StepToHighLevelMapping[];
   //当前的flow
@@ -125,6 +127,7 @@ const initialCodeAwareState: CodeAwareSessionState = {
   },
   learningGoal: "",
   highLevelSteps: [],
+  highLevelStepNarrative: "",
   stepToHighLevelMappings: [],
   steps: [],
   codeAwareMappings: [],
@@ -310,6 +313,7 @@ export const codeAwareSessionSlice = createSlice({
       };
       state.learningGoal = "";
       state.highLevelSteps = [];
+      state.highLevelStepNarrative = "";
       state.stepToHighLevelMappings = [];
       state.steps = [];
       state.codeAwareMappings = [];
@@ -578,6 +582,10 @@ export const codeAwareSessionSlice = createSlice({
     // 设置高级步骤
     setHighLevelSteps: (state, action: PayloadAction<HighLevelStepItem[]>) => {
       state.highLevelSteps = action.payload;
+    },
+    // 设置高级步骤叙述文段
+    setHighLevelStepNarrative: (state, action: PayloadAction<string>) => {
+      state.highLevelStepNarrative = action.payload;
     },
     // 设置步骤到高级步骤的映射关系（用于UI层级关联）
     setStepToHighLevelMappings: (
@@ -1221,6 +1229,7 @@ export const codeAwareSessionSlice = createSlice({
       codeAwareSessionSlice.caseReducers.clearAllHighlights(state);
       // Reset everything except userRequirement and currentSessionId
       state.highLevelSteps = [];
+      state.highLevelStepNarrative = "";
       state.steps = [];
       state.codeChunks = [];
       state.codeAwareMappings = [];
@@ -1534,6 +1543,12 @@ export const selectHighLevelSteps = createSelector(
   (highLevelSteps): HighLevelStepItem[] => highLevelSteps || [],
 );
 
+// 选择高级步骤叙述文段
+export const selectHighLevelStepNarrative = createSelector(
+  (state: RootState) => state.codeAwareSession.highLevelStepNarrative,
+  (narrative): string => narrative || "",
+);
+
 export const {
   setUserRequirementStatus,
   submitRequirementContent,
@@ -1547,6 +1562,7 @@ export const {
   clearAllCodeAwareMappings,
   updateHighlight,
   setHighLevelSteps,
+  setHighLevelStepNarrative,
   setStepToHighLevelMappings,
   updateHighLevelStepCompletion,
   updateCodeChunks,

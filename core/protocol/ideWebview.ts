@@ -162,6 +162,17 @@ export type ToWebviewFromIdeProtocol = ToWebviewFromIdeOrCoreProtocol & {
     },
     void,
   ];
+  // CodeAware: 代码注释查看事件
+  codeExplanationEvent: [
+    {
+      filePath: string;
+      selectedLines: [number, number];
+      language: string;
+      action: "view" | "followup" | "edit" | "delete";
+      question?: string;
+    },
+    void,
+  ];
   // CodeAware: 代码补全事件
   codeCompletionGenerated: [
     {

@@ -86,6 +86,14 @@ export function inferIntentFromEvents(args: {
       reason = "code_to_step_navigation";
       break;
 
+    case "code_explanation":
+      intentTypes = ["code-understanding"];
+      preferredInitialView = "read";
+      reason = currentEvent.payload?.hasFollowUp
+        ? "code_explanation_followup"
+        : "code_explanation_view";
+      break;
+
     case "question_submit_step":
       intentTypes = ["code-understanding", "prerequisite"];
       preferredInitialView = "self-test";

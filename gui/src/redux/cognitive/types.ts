@@ -3,6 +3,7 @@ export type CognitiveInteractionEventType =
   | "step_collapse"
   | "step_to_code"
   | "code_to_step"
+  | "code_explanation"
   | "question_submit_step"
   | "question_submit_global"
   | "knowledge_card_open"

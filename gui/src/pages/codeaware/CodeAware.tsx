@@ -311,6 +311,22 @@ export const CodeAware = () => {
     dispatch(clearAllHighlights());
   });
 
+  // CodeAware: 监听代码注释查看事件，记入认知追踪
+  useWebviewListener("codeExplanationEvent", async (data) => {
+    console.log("[CA:UI] 代码注释事件:", data);
+    recordCognitiveInteraction({
+      type: "code_explanation",
+      payload: {
+        filePath: data.filePath,
+        selectedLines: data.selectedLines,
+        language: data.language,
+        action: data.action,
+        question: data.question,
+        hasFollowUp: data.action === "followup",
+      },
+    });
+  });
+
   //CodeAware: 增加一个指令，使得可以发送当前所选择的知识卡片id
   //CATODO: 参照着codeContextProvider的实现，利用上getAllSnippets的获取最近代码的功能，然后再通过coreToWebview的路径发送更新过来。
 

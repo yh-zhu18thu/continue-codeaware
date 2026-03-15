@@ -18,6 +18,8 @@ import {
 import * as vscode from "vscode";
 
 // import { MetaCompleteProvider } from "../autocomplete/metacomplete";
+import { AnnotationStorageService } from "../annotation/AnnotationStorageService";
+import { CodeAnnotationController } from "../annotation/CodeAnnotationController";
 import {
   monitorBatteryChanges,
   setupStatusBar,
@@ -554,6 +556,13 @@ export class VsCodeExtension {
     );
 
     // Commands
+    const annotationStorage = new AnnotationStorageService(context);
+    const annotationController = new CodeAnnotationController(
+      context,
+      annotationStorage,
+    );
+    context.subscriptions.push(annotationController);
+
     registerAllCommands(
       context,
       this.ide,
@@ -566,6 +575,7 @@ export class VsCodeExtension {
       quickEdit,
       this.core,
       this.editDecorationManager,
+      annotationController,
     );
 
     // Disabled due to performance issues

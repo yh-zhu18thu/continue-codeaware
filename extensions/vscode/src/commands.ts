@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import * as fs from "node:fs";
 
-import { ContextMenuConfig, ILLM, ModelInstaller } from "core";
+import { ChatMessage, ContextMenuConfig, ILLM, ModelInstaller } from "core";
 import { CompletionProvider } from "core/autocomplete/CompletionProvider";
 import { ConfigHandler } from "core/config/ConfigHandler";
 import { EXTENSION_NAME } from "core/control-plane/env";
@@ -22,6 +22,7 @@ import * as YAML from "yaml";
 
 import { convertJsonToYamlConfig } from "../../../packages/config-yaml/dist";
 
+import { CodeAnnotationController } from "./annotation/CodeAnnotationController";
 import {
   getAutocompleteStatusBarDescription,
   getAutocompleteStatusBarTitle,
@@ -49,7 +50,6 @@ import { Battery } from "./util/battery";
 import { getMetaKeyLabel } from "./util/util";
 import { openEditorAndRevealRange } from "./util/vscode";
 import { VsCodeIde } from "./VsCodeIde";
-
 
 let fullScreenPanel: vscode.WebviewPanel | undefined;
 
@@ -130,6 +130,7 @@ const getCommandsMap: (
   quickEdit: QuickEdit,
   core: Core,
   editDecorationManager: EditDecorationManager,
+  annotationController?: CodeAnnotationController,
 ) => { [command: string]: (...args: any) => any } = (
   ide,
   extensionContext,
@@ -141,6 +142,7 @@ const getCommandsMap: (
   quickEdit,
   core,
   editDecorationManager,
+  annotationController,
 ) => {
   /**
    * Streams an inline edit to the vertical diff manager.
@@ -363,6 +365,180 @@ const getCommandsMap: (
         "comment",
         "Write comments for this code. Do not change anything about the code itself.",
       );
+    },
+    "continue.generateCodeAnnotation": async () => {
+      if (!annotationController) {
+        return;
+      }
+      const editor = vscode.window.activeTextEditor;
+      if (!editor || editor.selection.isEmpty) {
+        vscode.window.showInformationMessage("请先选中需要注释的代码");
+        return;
+      }
+
+      const selection = editor.selection;
+      const selectedCode = editor.document.getText(selection);
+      const language = editor.document.languageId;
+      const fileName = editor.document.fileName.split("/").pop() || "";
+
+      await vscode.window.withProgress(
+        {
+          location: vscode.ProgressLocation.Notification,
+          title: "正在生成代码注释...",
+          cancellable: true,
+        },
+        async (_progress, token) => {
+          const { config } = await configHandler.loadConfig();
+          if (!config) {
+            vscode.window.showErrorMessage("配置未加载");
+            return;
+          }
+
+          const llm = config.selectedModelByRole.chat;
+          if (!llm) {
+            vscode.window.showErrorMessage("未找到可用的 Chat 模型");
+            return;
+          }
+
+          const abortController = new AbortController();
+          token.onCancellationRequested(() => abortController.abort());
+
+          try {
+            const response: ChatMessage = await llm.chat(
+              [
+                {
+                  role: "system" as const,
+                  content: CodeAnnotationController.getSystemPrompt(),
+                },
+                {
+                  role: "user" as const,
+                  content: CodeAnnotationController.buildUserPrompt(
+                    selectedCode,
+                    language,
+                    fileName,
+                  ),
+                },
+              ],
+              abortController.signal,
+            );
+
+            const annotationText =
+              typeof response.content === "string"
+                ? response.content
+                : response.content
+                    ?.filter((p) => p.type === "text")
+                    .map((p) => p.text)
+                    .join("") || "";
+
+            if (annotationText) {
+              await annotationController.createAnnotation(
+                annotationText.trim(),
+                editor,
+                selection,
+                selectedCode,
+              );
+              // 注释生成成功且用户可见，记入认知事件
+              void sidebar.webviewProtocol.request("codeExplanationEvent", {
+                filePath: editor.document.uri.fsPath,
+                selectedLines: [
+                  selection.start.line + 1,
+                  selection.end.line + 1,
+                ] as [number, number],
+                language,
+                action: "view" as const,
+              });
+            }
+          } catch (e: any) {
+            if (e?.name !== "AbortError") {
+              vscode.window.showErrorMessage(
+                `生成注释失败: ${e?.message || e}`,
+              );
+            }
+          }
+        },
+      );
+    },
+    "continue.deleteCodeAnnotation": async (thread: vscode.CommentThread) => {
+      if (annotationController) {
+        await annotationController.deleteAnnotation(thread);
+      }
+    },
+    "continue.askFollowUpAnnotation": async (thread: vscode.CommentThread) => {
+      if (!annotationController) {
+        return;
+      }
+      const question = await vscode.window.showInputBox({
+        prompt: "请输入你的问题",
+        placeHolder: "例如：这个变量为什么要用 Map？这个函数的返回值代表什么？",
+      });
+      if (!question?.trim()) {
+        return;
+      }
+      // 深入提问记入认知事件
+      void sidebar.webviewProtocol.request("codeExplanationEvent", {
+        filePath: thread.uri.fsPath,
+        selectedLines: [
+          thread.range.start.line + 1,
+          thread.range.end.line + 1,
+        ] as [number, number],
+        language: vscode.window.activeTextEditor?.document.languageId || "",
+        action: "followup" as const,
+        question: question.trim(),
+      });
+      await annotationController.askFollowUp(
+        thread,
+        question.trim(),
+        async (code, language, existingAnnotation, q) => {
+          const { config } = await configHandler.loadConfig();
+          const llm = config?.selectedModelByRole.chat;
+          if (!llm) {
+            throw new Error("未找到可用的 Chat 模型");
+          }
+          const response: ChatMessage = await llm.chat(
+            [
+              {
+                role: "system" as const,
+                content: CodeAnnotationController.getFollowUpSystemPrompt(),
+              },
+              {
+                role: "user" as const,
+                content: CodeAnnotationController.buildFollowUpPrompt(
+                  code,
+                  language,
+                  existingAnnotation,
+                  q,
+                ),
+              },
+            ],
+            new AbortController().signal,
+          );
+          const text =
+            typeof response.content === "string"
+              ? response.content
+              : response.content
+                  ?.filter((p) => p.type === "text")
+                  .map((p) => p.text)
+                  .join("") || "";
+          return text.trim();
+        },
+      );
+    },
+    "continue.editCodeAnnotation": async (thread: vscode.CommentThread) => {
+      if (annotationController) {
+        annotationController.editAnnotation(thread);
+      }
+    },
+    "continue.saveCodeAnnotationEdit": async (thread: vscode.CommentThread) => {
+      if (annotationController) {
+        await annotationController.saveEdit(thread);
+      }
+    },
+    "continue.cancelCodeAnnotationEdit": async (
+      thread: vscode.CommentThread,
+    ) => {
+      if (annotationController) {
+        annotationController.cancelEdit(thread);
+      }
     },
     "continue.writeDocstringForCode": async () => {
       captureCommandTelemetry("writeDocstringForCode");
@@ -938,6 +1114,7 @@ export function registerAllCommands(
   quickEdit: QuickEdit,
   core: Core,
   editDecorationManager: EditDecorationManager,
+  annotationController?: CodeAnnotationController,
 ) {
   for (const [command, callback] of Object.entries(
     getCommandsMap(
@@ -951,6 +1128,7 @@ export function registerAllCommands(
       quickEdit,
       core,
       editDecorationManager,
+      annotationController,
     ),
   )) {
     context.subscriptions.push(

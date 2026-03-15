@@ -742,6 +742,133 @@ async function mapCodeChunksToSteps(
   return mappings;
 }
 
+/**
+ * 将 atomic-line 级别的映射合并为更粗粒度的 code chunks。
+ *
+ * 合并规则：
+ * 1. 连续行（允许最多 2 行空行间隔）且对应相同的 step 集合 → 合并为一个 chunk
+ * 2. 不同的 step 集合 → 分开为不同 chunk
+ * 3. 同一个合并后 chunk 对应 N 个 step → 产生 N 条 mapping
+ */
+function mergeCodeLinesIntoChunks(
+  fullCode: string,
+  filePath: string,
+  rawMappings: CodeAwareMapping[],
+  atomicChunks: Array<{
+    id: string;
+    content: string;
+    range: [number, number];
+  }>,
+): { mergedChunks: CodeChunk[]; mergedMappings: CodeAwareMapping[] } {
+  // Build lineNumber → Set<stepId> from rawMappings + atomicChunks
+  const chunkIdToRange = new Map<string, [number, number]>();
+  atomicChunks.forEach((chunk) => {
+    chunkIdToRange.set(chunk.id, chunk.range);
+  });
+
+  const lineToStepIds = new Map<number, Set<string>>();
+  rawMappings.forEach((mapping) => {
+    if (mapping.semanticElementType !== "step") {
+      return;
+    }
+    const range = chunkIdToRange.get(mapping.codeChunkId);
+    if (!range) {
+      return;
+    }
+    const [start, end] = range;
+    for (let line = start; line <= end; line++) {
+      let stepSet = lineToStepIds.get(line);
+      if (!stepSet) {
+        stepSet = new Set();
+        lineToStepIds.set(line, stepSet);
+      }
+      stepSet.add(mapping.semanticElementId);
+    }
+  });
+
+  // Collect all mapped lines, sorted
+  const mappedLines = Array.from(lineToStepIds.keys()).sort((a, b) => a - b);
+  if (mappedLines.length === 0) {
+    return { mergedChunks: [], mergedMappings: [] };
+  }
+
+  const codeLines = fullCode.split("\n");
+
+  // Helper: turn Set<string> into a canonical key for comparison
+  const stepSetKey = (s: Set<string>) => Array.from(s).sort().join(",");
+
+  // Merge consecutive lines with same step set (allow gap ≤ 2 unmapped lines)
+  interface MergeSegment {
+    startLine: number;
+    endLine: number;
+    stepIds: Set<string>;
+  }
+
+  const segments: MergeSegment[] = [];
+  let currentSegment: MergeSegment | null = null;
+
+  for (const line of mappedLines) {
+    const stepIds = lineToStepIds.get(line)!;
+    const key = stepSetKey(stepIds);
+
+    if (currentSegment) {
+      const gap = line - currentSegment.endLine;
+      const sameSteps = stepSetKey(currentSegment.stepIds) === key;
+
+      // Merge if same step set and gap ≤ 2 (allowing 1-2 blank/unmapped lines)
+      if (sameSteps && gap <= 3) {
+        currentSegment.endLine = line;
+        continue;
+      }
+    }
+
+    // Start a new segment
+    if (currentSegment) {
+      segments.push(currentSegment);
+    }
+    currentSegment = {
+      startLine: line,
+      endLine: line,
+      stepIds: new Set(stepIds),
+    };
+  }
+  if (currentSegment) {
+    segments.push(currentSegment);
+  }
+
+  // Build merged CodeChunks and CodeAwareMappings
+  const mergedChunks: CodeChunk[] = [];
+  const mergedMappings: CodeAwareMapping[] = [];
+
+  segments.forEach((seg, index) => {
+    const chunkId = `${filePath}-merged-${index}`;
+    const contentLines = codeLines.slice(seg.startLine - 1, seg.endLine);
+    const content = contentLines.join("\n");
+
+    mergedChunks.push({
+      id: chunkId,
+      content,
+      range: [seg.startLine, seg.endLine],
+      isHighlighted: false,
+      disabled: false,
+      filePath,
+    });
+
+    seg.stepIds.forEach((stepId) => {
+      mergedMappings.push({
+        codeChunkId: chunkId,
+        semanticElementId: stepId,
+        semanticElementType: "step",
+        createdAt: Date.now(),
+        source: "initial",
+        confidence: 0.8,
+      });
+    });
+  });
+
+  return { mergedChunks, mergedMappings };
+}
+
 export const generateTaskDecomposition = createAsyncThunk<
   void,
   { userRequirement: string },
@@ -1032,23 +1159,46 @@ export const createCodeToStepMappings = createAsyncThunk<
       }),
     );
 
-    const mappings = await mapCodeChunksToSteps(
+    const rawMappings = await mapCodeChunksToSteps(
       generatedCode,
       chunks,
       steps,
       modelTitle,
       extra,
     );
+    console.log(
+      `[CA:InitGen:Phase3] 原始映射数量 (atomic): ${rawMappings.length}`,
+    );
+
+    dispatch(
+      updateInitialGenerationStatus({
+        currentPhase: "正在合并代码块...",
+        progress: 75,
+      }),
+    );
+
+    const { mergedChunks, mergedMappings } = mergeCodeLinesIntoChunks(
+      generatedCode,
+      effectiveFilePath,
+      rawMappings,
+      chunks,
+    );
+
+    dispatch(setCodeChunks(mergedChunks));
     dispatch(clearAllCodeAwareMappings());
-    dispatch(updateCodeAwareMappings(mappings));
-    console.log(`[CA:InitGen:Phase3] 映射数量: ${mappings.length}`);
+    dispatch(updateCodeAwareMappings(mergedMappings));
+    console.log(
+      `[CA:InitGen:Phase3] 合并后代码块: ${mergedChunks.length}, 映射: ${mergedMappings.length}`,
+    );
 
     await extra.ideMessenger.request("addCodeAwareLogEntry", {
       eventType: "initial_generation_phase3_completed",
       payload: {
         filePath: effectiveFilePath,
-        codeChunksCount: codeChunks.length,
-        mappingsCount: mappings.length,
+        atomicChunksCount: codeChunks.length,
+        mergedChunksCount: mergedChunks.length,
+        rawMappingsCount: rawMappings.length,
+        mergedMappingsCount: mergedMappings.length,
         timestamp: new Date().toISOString(),
       },
     });

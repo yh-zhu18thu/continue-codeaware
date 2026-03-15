@@ -1,0 +1,362 @@
+{
+  "schemaVersion": 1,
+  "sessionId": "a60a1326-a06c-488e-9093-7f59e23ff263",
+  "generatedAt": "2026-03-15T08:00:10.475Z",
+  "nodeCount": 59,
+  "nodes": [
+    {
+      "id": "r-1",
+      "nodeType": "step",
+      "title": "[Framework] 三维场景建模",
+      "abstract": ""
+    },
+    {
+      "id": "r-2",
+      "nodeType": "step",
+      "title": "[Framework] 光线追踪核心算法",
+      "abstract": ""
+    },
+    {
+      "id": "r-3",
+      "nodeType": "step",
+      "title": "[Framework] Phong光照计算",
+      "abstract": ""
+    },
+    {
+      "id": "r-4",
+      "nodeType": "step",
+      "title": "[Framework] 像素级渲染输出",
+      "abstract": ""
+    },
+    {
+      "id": "s-1",
+      "nodeType": "step",
+      "title": "定义摄像机和视窗参数",
+      "abstract": "设置摄像机位置、视线方向及像素网格，确定场景观测基础。"
+    },
+    {
+      "id": "s-2",
+      "nodeType": "step",
+      "title": "建立球体与光源对象",
+      "abstract": "描述球体的几何属性和材质参数，以及光源的位置和强度。"
+    },
+    {
+      "id": "s-3",
+      "nodeType": "step",
+      "title": "生成视线方向光线",
+      "abstract": "为每个像素计算并发射一条从摄像机出发的射线，作为光线追踪的起点。"
+    },
+    {
+      "id": "s-4",
+      "nodeType": "step",
+      "title": "检测射线与球体交点",
+      "abstract": "判断每条射线是否与球体相交，并计算最近的交点及法向量。"
+    },
+    {
+      "id": "s-5",
+      "nodeType": "step",
+      "title": "计算环境光、漫反射和镜面反射分量",
+      "abstract": "根据Phong模型，结合交点的材质与法线方向，分别算出三个光照分量。"
+    },
+    {
+      "id": "s-6",
+      "nodeType": "step",
+      "title": "合成最终像素颜色",
+      "abstract": "将环境光、漫反射、镜面反射的结果依据权重组合，并限制色彩取值范围。"
+    },
+    {
+      "id": "s-7",
+      "nodeType": "step",
+      "title": "绘制每个像素的颜色到画布",
+      "abstract": "将计算得到的颜色值映射到图像矩阵，实现球体渲染效果的真实可视化。"
+    },
+    {
+      "id": "s-8",
+      "nodeType": "step",
+      "title": "保存或显示渲染图像",
+      "abstract": "将完整图像以文件保存或直接在窗口中显示，供用户观察最终效果。"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_raytracing_sphere.py-merged-0",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_raytracing_sphere.py:6-25",
+      "abstract": "def __init__(self, position, look_at, up, fov, aspect_ratio, width, height):\n        self.position = np.array(position, dtype=np.float32)\n        self.look_at = np.array(look_at)\n        self.up = np.array(up)\n        self.fov = fov\n       "
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_raytracing_sphere.py-merged-1",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_raytracing_sphere.py:44-64",
+      "abstract": "def intersect(self, ray_origin, ray_dir):\n        # Return nearest t and normal if hit, else None\n        oc = ray_origin - self.center\n        a = np.dot(ray_dir, ray_dir)\n        b = 2.0 * np.dot(oc, ray_dir)\n        c = np.dot(oc, oc) - "
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_raytracing_sphere.py-merged-2",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_raytracing_sphere.py:77-78",
+      "abstract": "camera = Camera(position=[0,0,1], look_at=[0,0,0], up=[0,1,0], \n                fov=45, aspect_ratio=aspect_ratio, width=WIDTH, height=HEIGHT)"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_raytracing_sphere.py-merged-3",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_raytracing_sphere.py:89-91",
+      "abstract": "for y in range(HEIGHT):\n    for x in range(WIDTH):\n        ray_origin, ray_dir = camera.get_ray(x, y)"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_raytracing_sphere.py-merged-4",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_raytracing_sphere.py:92-96",
+      "abstract": "res = sphere.intersect(ray_origin, ray_dir)\n        if res is None:\n            img[y,x] = background_color\n            continue\n        t, pos, normal = res"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_raytracing_sphere.py-merged-5",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_raytracing_sphere.py:97-111",
+      "abstract": "# 环境光\n        ambient = sphere.ka * scene_ambient * sphere.color\n        # 漫反射\n        to_light = light.position - pos\n        to_light_norm = np.linalg.norm(to_light)\n        to_light_dir = to_light / to_light_norm\n        # 判断阴影（若需要可扩展）\n "
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_raytracing_sphere.py-merged-6",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_raytracing_sphere.py:113-114",
+      "abstract": "color = ambient + diffuse + specular\n        color = np.clip(color, 0, 1)"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_raytracing_sphere.py-merged-7",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_raytracing_sphere.py:115-115",
+      "abstract": "img[y, x] = color"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_raytracing_sphere.py-merged-8",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_raytracing_sphere.py:118-121",
+      "abstract": "img_out = (img * 255).astype(np.uint8)\nimage = Image.fromarray(img_out, 'RGB')\nimage.save('phong_raytracing_sphere.png')\nimage.show()"
+    },
+    {
+      "id": "k-s-1-1",
+      "nodeType": "background-knowledge",
+      "title": "三维向量运算基础",
+      "abstract": "三维向量是计算机图形学中的基本数据结构，常见运算包括加减、点积、叉积和归一化。理解这些操作对于描述空间中的位置、方向和计算摄像机坐标变换至关重要。在本步骤中，叉积被用于生成基于视线的右向量和上向量，归一化则保证方向一致性。"
+    },
+    {
+      "id": "k-s-1-2",
+      "nodeType": "background-knowledge",
+      "title": "相机模型与视图变换",
+      "abstract": "在图形学中，摄像机（相机）模型定义了如何从三维场景中取景，包括位置、视线方向、上向量、视野夹角等参数。理解这些参数如何协同决定最终的观察结果是实现渲染和空间变换的关键。"
+    },
+    {
+      "id": "k-s-1-3",
+      "nodeType": "background-knowledge",
+      "title": "NumPy 数组操作",
+      "abstract": "NumPy 是 Python 的科学计算基础库，支持高效的数组计算。在本步骤中，NumPy 用于存储和处理三维坐标，并实现如归一化、叉积等向量运算，掌握 NumPy 的基本用法是理解代码实现的基础。"
+    },
+    {
+      "id": "k-s-1-4",
+      "nodeType": "background-knowledge",
+      "title": "视锥体和投影视窗原理",
+      "abstract": "视锥体描述了相机视野范围，是由视野夹角（FOV）、屏幕宽高比（aspect_ratio）等参数共同确定的。理解如何根据这些参数计算观察平面的位置和尺寸，对实现正确的三维到二维投影至关重要。"
+    },
+    {
+      "id": "k-s-2-1",
+      "nodeType": "background-knowledge",
+      "title": "三维球体几何描述",
+      "abstract": "球体在三维空间中通常由中心点坐标和半径等几何属性进行描述。理解这些参数对于建立球体对象必不可少，尤其影响后续的碰撞、渲染等操作。"
+    },
+    {
+      "id": "k-s-2-2",
+      "nodeType": "background-knowledge",
+      "title": "材质参数与反射建模",
+      "abstract": "材质参数包括颜色、反射率、漫反射系数等，用来描述物体表面对光的响应。了解这些参数是进行物理或基于物理的渲染的基础，有助于真实地表现物体与光的互动。"
+    },
+    {
+      "id": "k-s-2-3",
+      "nodeType": "background-knowledge",
+      "title": "点光源参数设定",
+      "abstract": "点光源通常通过位置坐标和光强来定义。设定这些参数可以让渲染系统精确计算球体表面的照明情况，理解这一知识点是实现光影效果的前提。"
+    },
+    {
+      "id": "k-s-3-1",
+      "nodeType": "background-knowledge",
+      "title": "像素与图像坐标系",
+      "abstract": "理解每个像素在二维图像上的坐标系是基础，通常采用左上为原点的 (x, y) 表示。光线追踪过程中需要根据像素的位置计算射线方向，因此需要掌握像素坐标的概念及如何映射到视口或世界坐标。"
+    },
+    {
+      "id": "k-s-3-2",
+      "nodeType": "background-knowledge",
+      "title": "摄像机模型及射线生成",
+      "abstract": "摄像机模型用于描述视口、位置和方向。在光线追踪中，通过分析摄像机参数和像素位置，生成从摄像机到场景的射线。掌握如何根据像素坐标和摄像机参数生成视线射线是关键。"
+    },
+    {
+      "id": "k-s-3-3",
+      "nodeType": "background-knowledge",
+      "title": "向量表示及操作",
+      "abstract": "射线通常以原点和方向向量描述。理解向量的表示方式，并掌握基本的向量操作（如归一化、加减、点乘）对于生成正确的射线方向至关重要。尤其在三维空间下，向量数学是光线追踪的基础。"
+    },
+    {
+      "id": "k-s-3-4",
+      "nodeType": "background-knowledge",
+      "title": "类与方法的调用",
+      "abstract": "代码中通过 camera.get_ray(x, y) 方法生成射线，这要求理解类的设计、对象实例化及方法调用语法。需要熟悉如何在面向对象编程中组织摄像机模型和射线生成的功能。"
+    },
+    {
+      "id": "k-s-4-1",
+      "nodeType": "background-knowledge",
+      "title": "向量运算基础",
+      "abstract": "在射线与球体相交检测中，需要理解向量的加减、点乘运算，尤其是用于计算射线参数及交点、法向量。这些操作是计算机图形学和物理仿真中的核心，必须掌握才能理解代码含义。"
+    },
+    {
+      "id": "k-s-4-2",
+      "nodeType": "background-knowledge",
+      "title": "射线-球体相交算法",
+      "abstract": "这是图形学中的经典几何算法，用于判断一条射线与一个球体是否相交，并求出最近的交点。需要理解该算法的原理，如二次方程求根、判别式判断交点个数，以及如何恢复交点位置和法向量。"
+    },
+    {
+      "id": "k-s-4-3",
+      "nodeType": "background-knowledge",
+      "title": "NumPy 数组及数学函数",
+      "abstract": "代码中多处使用 NumPy 的函数如 np.dot、np.sqrt、数组操作。理解 NumPy 的数组结构及这些数学函数的用法对于掌握数值运算和向量计算至关重要，尤其是在科学计算和图形领域中。"
+    },
+    {
+      "id": "k-s-4-4",
+      "nodeType": "background-knowledge",
+      "title": "法向量计算及归一化",
+      "abstract": "交点的法向量用于反射计算和光照模型。要理解如何根据交点和球心计算法向量，并通过除以球半径实现归一化。这是后续渲染、物理模拟的基础知识。"
+    },
+    {
+      "id": "k-s-5-1",
+      "nodeType": "background-knowledge",
+      "title": "Phong光照模型原理",
+      "abstract": "Phong光照模型是一种常用的局部光照模型，将光照分为环境光、漫反射和镜面反射三部分。理解这个模型有助于正确计算物体表面颜色，并解释代码中为何需要分别计算三个分量。"
+    },
+    {
+      "id": "k-s-5-2",
+      "nodeType": "background-knowledge",
+      "title": "向量点积与反射计算",
+      "abstract": "点积用于计算两个向量之间的夹角，并常用于判断光线与表面的关系。反射向量的求解用于计算镜面高光效果。这些向量操作在3D图形编程和物理渲染中非常基础且重要。"
+    },
+    {
+      "id": "k-s-5-3",
+      "nodeType": "background-knowledge",
+      "title": "NumPy向量运算",
+      "abstract": "NumPy 是 Python 中用于高效数组和线性代数运算的核心库。理解 NumPy 广播、数组相乘、linalg.norm 等函数的用法，有助于简明高效地实现光照相关的数学计算。"
+    },
+    {
+      "id": "k-s-5-4",
+      "nodeType": "background-knowledge",
+      "title": "材质属性参数含义",
+      "abstract": "材质参数如ka（环境光反射系数）、kd（漫反射系数）、ks（镜面反射系数）、shininess（高光因子）等直接决定物体表面在不同光照分量下的反应。理解这些物理含义有助于调整最终渲染结果。"
+    },
+    {
+      "id": "k-s-6-1",
+      "nodeType": "background-knowledge",
+      "title": "光照模型基本原理",
+      "abstract": "光照模型用于计算三维场景中物体的颜色和亮度。理解环境光（ambient）、漫反射（diffuse）、镜面反射（specular）的含义及其对最终颜色的影响，是合成真实感图像的基础。本步骤组合三种分量以得出最终像素色彩，因此需要掌握这些概念。"
+    },
+    {
+      "id": "k-s-6-3",
+      "nodeType": "background-knowledge",
+      "title": "色彩表示与归一化",
+      "abstract": "在计算机图形学中，颜色通常用浮点型向量表示，每个分量（如 RGB）限定在一定范围（如 0-1 或 0-255）。归一化确保所有颜色计算后仍保持在可显示的范围内，防止溢出或渲染错误。"
+    },
+    {
+      "id": "k-s-7-1",
+      "nodeType": "background-knowledge",
+      "title": "图像矩阵表示",
+      "abstract": "图像通常在内存中以矩阵（二维数组）形式存储，每个元素表示一个像素点的颜色信息。理解这种数据结构有助于掌握如何访问和修改图片上的具体像素，实现如渲染、滤镜等功能。"
+    },
+    {
+      "id": "k-s-7-2",
+      "nodeType": "background-knowledge",
+      "title": "RGB 颜色模型",
+      "abstract": "在数字图像处理中，颜色往往通过 RGB（红、绿、蓝）三原色通道组合表示。理解 RGB 如何映射为像素数据，以及如何通过调节通道值控制颜色，是实现图像渲染的基础。"
+    },
+    {
+      "id": "k-s-7-3",
+      "nodeType": "background-knowledge",
+      "title": "二维数组索引操作",
+      "abstract": "对多维数组或矩阵进行元素访问与赋值时，需要掌握索引的顺序和语法。例如，img[y, x] 表示对第 y 行、第 x 列的像素操作。若不熟悉二维索引，可能导致数据访问错误或渲染混乱。"
+    },
+    {
+      "id": "k-s-7-4",
+      "nodeType": "background-knowledge",
+      "title": "基本渲染原理",
+      "abstract": "渲染是指将场景的数据（如像素颜色）转化为实际可见图像的过程。此处涉及按预计算颜色值依次赋予每个像素，使其真实展现三维体（如球体）的效果，因此需理解渲染基本流程和像素级可视化思想。"
+    },
+    {
+      "id": "k-s-8-1",
+      "nodeType": "background-knowledge",
+      "title": "NumPy 数组数据类型转换",
+      "abstract": "NumPy 提供了灵活的数据类型转换功能，如使用 astype 可以将数组从一种类型（如 float）转换为另一种（如 uint8）。这是实现图像像素值范围规范化、满足图像库要求的关键步骤。理解其用途和正确用法能避免数据溢出或展示异常。"
+    },
+    {
+      "id": "k-s-8-2",
+      "nodeType": "background-knowledge",
+      "title": "Pillow 图像处理库基础",
+      "abstract": "Pillow（PIL）是 Python 常用的图像处理库，能支持多种图像格式的创建、保存、显示等操作。掌握如何从数组创建图像、如何保存和展示图像窗口，对于将渲染结果输出为图片文件或直接可视化非常重要。"
+    },
+    {
+      "id": "k-s-8-3",
+      "nodeType": "background-knowledge",
+      "title": "RGB 颜色空间概念",
+      "abstract": "RGB 是最常用的颜色表示方式，图像数据通常以三通道（红、绿、蓝）存储。理解 RGB 颜色空间对于正确创建和保存彩色图像（如使用 'RGB' 模式）至关重要，否则可能导致色彩显示异常。"
+    },
+    {
+      "id": "sit-s-1-file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_raytracing_sphere.py-merged-0",
+      "nodeType": "situation",
+      "title": "Situation s-1 -> file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_raytracing_sphere.py-merged-0",
+      "abstract": "Bridge between framework step intent and concrete code context."
+    },
+    {
+      "id": "sit-s-4-file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_raytracing_sphere.py-merged-1",
+      "nodeType": "situation",
+      "title": "Situation s-4 -> file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_raytracing_sphere.py-merged-1",
+      "abstract": "Bridge between framework step intent and concrete code context."
+    },
+    {
+      "id": "sit-s-1-file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_raytracing_sphere.py-merged-2",
+      "nodeType": "situation",
+      "title": "Situation s-1 -> file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_raytracing_sphere.py-merged-2",
+      "abstract": "Bridge between framework step intent and concrete code context."
+    },
+    {
+      "id": "sit-s-3-file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_raytracing_sphere.py-merged-3",
+      "nodeType": "situation",
+      "title": "Situation s-3 -> file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_raytracing_sphere.py-merged-3",
+      "abstract": "Bridge between framework step intent and concrete code context."
+    },
+    {
+      "id": "sit-s-4-file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_raytracing_sphere.py-merged-4",
+      "nodeType": "situation",
+      "title": "Situation s-4 -> file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_raytracing_sphere.py-merged-4",
+      "abstract": "Bridge between framework step intent and concrete code context."
+    },
+    {
+      "id": "sit-s-5-file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_raytracing_sphere.py-merged-5",
+      "nodeType": "situation",
+      "title": "Situation s-5 -> file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_raytracing_sphere.py-merged-5",
+      "abstract": "Bridge between framework step intent and concrete code context."
+    },
+    {
+      "id": "sit-s-6-file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_raytracing_sphere.py-merged-6",
+      "nodeType": "situation",
+      "title": "Situation s-6 -> file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_raytracing_sphere.py-merged-6",
+      "abstract": "Bridge between framework step intent and concrete code context."
+    },
+    {
+      "id": "sit-s-6-file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_raytracing_sphere.py-merged-7",
+      "nodeType": "situation",
+      "title": "Situation s-6 -> file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_raytracing_sphere.py-merged-7",
+      "abstract": "Bridge between framework step intent and concrete code context."
+    },
+    {
+      "id": "sit-s-7-file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_raytracing_sphere.py-merged-7",
+      "nodeType": "situation",
+      "title": "Situation s-7 -> file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_raytracing_sphere.py-merged-7",
+      "abstract": "Bridge between framework step intent and concrete code context."
+    },
+    {
+      "id": "sit-s-8-file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_raytracing_sphere.py-merged-8",
+      "nodeType": "situation",
+      "title": "Situation s-8 -> file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_raytracing_sphere.py-merged-8",
+      "abstract": "Bridge between framework step intent and concrete code context."
+    }
+  ]
+}

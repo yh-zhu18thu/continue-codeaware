@@ -1,22 +1,24 @@
 import { createSelector } from "@reduxjs/toolkit";
-import type { NodeMasteryScore } from "core";
+import type { CodeChunk, NodeMasteryScore } from "core";
 import { RootState } from "../store";
 
 /**
  * 根据 stepId 计算其关联 situation 节点掌握度的加权平均。
  *
  * situation nodeId 格式: `sit-{stepId}-{codeChunkId}`
- * 权重来自每个 mapping 的 confidence（默认 1）。
+ * 权重来自每个关联 code chunk 的行数（range[1] - range[0] + 1）。
  */
 export const selectStepMastery = createSelector(
   [
     (state: RootState) => state.codeAwareSession.nodeMasteryScores,
     (state: RootState) => state.codeAwareSession.codeAwareMappings,
+    (state: RootState) => state.codeAwareSession.codeChunks,
     (_: RootState, stepId: string) => stepId,
   ],
   (
     scores: NodeMasteryScore[],
     mappings,
+    codeChunks: CodeChunk[],
     stepId,
   ): { score: number; situationCount: number } | null => {
     // 找到该 step 的所有 step-mapping（step -> codeChunk）
@@ -27,6 +29,13 @@ export const selectStepMastery = createSelector(
     if (stepMappings.length === 0) {
       return null;
     }
+
+    // Build chunk line count lookup
+    const chunkLineCount = new Map<string, number>();
+    codeChunks.forEach((chunk) => {
+      const [start, end] = chunk.range;
+      chunkLineCount.set(chunk.id, end - start + 1);
+    });
 
     // 构造 situation nodeId 集合
     const situationIds = stepMappings.map(
@@ -41,7 +50,7 @@ export const selectStepMastery = createSelector(
       }
     }
 
-    // 加权平均：weight = mapping.confidence ?? 1
+    // 加权平均：weight = chunk 行数
     let totalWeight = 0;
     let weightedSum = 0;
 
@@ -51,7 +60,7 @@ export const selectStepMastery = createSelector(
       if (sitScore === undefined) {
         continue;
       }
-      const weight = stepMappings[i].confidence ?? 1;
+      const weight = chunkLineCount.get(stepMappings[i].codeChunkId) ?? 1;
       weightedSum += sitScore * weight;
       totalWeight += weight;
     }

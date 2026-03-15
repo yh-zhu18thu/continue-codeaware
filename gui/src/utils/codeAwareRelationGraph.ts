@@ -32,6 +32,59 @@ export function buildCodeAwareCognitiveEdges(
   const now = Date.now();
   const edges: CodeAwareCognitiveEdge[] = [];
 
+  // --- Pre-compute lookup tables for proportional weights ---
+
+  // chunkId → line count
+  const chunkLineCount = new Map<string, number>();
+  state.codeChunks.forEach((chunk) => {
+    const [start, end] = chunk.range;
+    chunkLineCount.set(chunk.id, end - start + 1);
+  });
+
+  // stepId → total lines across all its situation chunks
+  const stepTotalLines = new Map<string, number>();
+  // chunkId → number of distinct steps mapping to this chunk
+  const chunkStepCount = new Map<string, number>();
+  // chunkId → Set<situationNodeId> (for shared-chunk association edges)
+  const chunkToSituationIds = new Map<string, Set<string>>();
+
+  // Deduplicate mappings: one situation per (stepId, chunkId) pair
+  const situationPairs = new Set<string>();
+  state.codeAwareMappings
+    .filter((m) => m.semanticElementType === "step")
+    .forEach((m) => {
+      const pairKey = `${m.semanticElementId}::${m.codeChunkId}`;
+      if (situationPairs.has(pairKey)) {
+        return;
+      }
+      situationPairs.add(pairKey);
+
+      const lines = chunkLineCount.get(m.codeChunkId) ?? 1;
+
+      // Accumulate per-step total lines
+      stepTotalLines.set(
+        m.semanticElementId,
+        (stepTotalLines.get(m.semanticElementId) ?? 0) + lines,
+      );
+
+      // Count steps per chunk
+      chunkStepCount.set(
+        m.codeChunkId,
+        (chunkStepCount.get(m.codeChunkId) ?? 0) + 1,
+      );
+
+      // Track situation nodes per chunk
+      const sitId = toSituationNodeId(m.semanticElementId, m.codeChunkId);
+      let sitSet = chunkToSituationIds.get(m.codeChunkId);
+      if (!sitSet) {
+        sitSet = new Set();
+        chunkToSituationIds.set(m.codeChunkId, sitSet);
+      }
+      sitSet.add(sitId);
+    });
+
+  // --- Step ↔ HighLevelStep edges (unchanged) ---
+
   state.stepToHighLevelMappings.forEach((m) => {
     edges.push({
       id: `infer-fwd-step-hls-${m.stepId}-${m.highLevelStepId}`,
@@ -58,6 +111,9 @@ export function buildCodeAwareCognitiveEdges(
     });
   });
 
+  // --- Step ↔ Situation ↔ CodeChunk edges (proportional weights) ---
+
+  const emittedSituations = new Set<string>();
   state.codeAwareMappings.forEach((m, idx) => {
     if (m.semanticElementType !== "step") {
       return;
@@ -68,6 +124,22 @@ export function buildCodeAwareCognitiveEdges(
       m.codeChunkId,
     );
 
+    // Deduplicate: only emit edges once per situation node
+    if (emittedSituations.has(situationNodeId)) {
+      return;
+    }
+    emittedSituations.add(situationNodeId);
+
+    const chunkLines = chunkLineCount.get(m.codeChunkId) ?? 1;
+    const totalStepLines = stepTotalLines.get(m.semanticElementId) ?? 1;
+    const stepsForChunk = chunkStepCount.get(m.codeChunkId) ?? 1;
+
+    // Proportion of this situation within its step (by line count)
+    const stepProportion = clamp01(chunkLines / totalStepLines);
+    // Proportion of this situation within its chunk (by step count)
+    const chunkProportion = clamp01(1 / stepsForChunk);
+
+    // step → situation: scaled by proportion within step
     edges.push({
       id: `infer-fwd-step-sit-${m.semanticElementId}-${m.codeChunkId}-${idx}`,
       type: "inference-forward",
@@ -75,11 +147,18 @@ export function buildCodeAwareCognitiveEdges(
       fromNodeType: "step",
       toNodeId: situationNodeId,
       toNodeType: "situation",
-      conditionalMasteryProbability: COGNITIVE_EDGE_PRIORS["inference-forward"],
+      conditionalMasteryProbability: clamp01(
+        COGNITIVE_EDGE_PRIORS["inference-forward"] * stepProportion,
+      ),
       createdAt: m.createdAt,
-      metadata: { source: "step-to-situation", relationClass: "inference" },
+      metadata: {
+        source: "step-to-situation",
+        relationClass: "inference",
+        stepProportion,
+      },
     });
 
+    // situation → step: scaled by proportion within step
     edges.push({
       id: `infer-rev-sit-step-${m.codeChunkId}-${m.semanticElementId}-${idx}`,
       type: "inference-reverse",
@@ -87,11 +166,18 @@ export function buildCodeAwareCognitiveEdges(
       fromNodeType: "situation",
       toNodeId: m.semanticElementId,
       toNodeType: "step",
-      conditionalMasteryProbability: COGNITIVE_EDGE_PRIORS["inference-reverse"],
+      conditionalMasteryProbability: clamp01(
+        COGNITIVE_EDGE_PRIORS["inference-reverse"] * stepProportion,
+      ),
       createdAt: m.createdAt,
-      metadata: { source: "situation-to-step", relationClass: "inference" },
+      metadata: {
+        source: "situation-to-step",
+        relationClass: "inference",
+        stepProportion,
+      },
     });
 
+    // situation → code-chunk: full probability (chunk entirely belongs to situation)
     edges.push({
       id: `infer-fwd-sit-code-${m.semanticElementId}-${m.codeChunkId}-${idx}`,
       type: "inference-forward",
@@ -104,6 +190,7 @@ export function buildCodeAwareCognitiveEdges(
       metadata: { source: "situation-to-code", relationClass: "inference" },
     });
 
+    // code-chunk → situation: scaled by 1/stepsForChunk
     edges.push({
       id: `infer-rev-code-sit-${m.codeChunkId}-${m.semanticElementId}-${idx}`,
       type: "inference-reverse",
@@ -111,10 +198,61 @@ export function buildCodeAwareCognitiveEdges(
       fromNodeType: "code-chunk",
       toNodeId: situationNodeId,
       toNodeType: "situation",
-      conditionalMasteryProbability: COGNITIVE_EDGE_PRIORS["inference-reverse"],
+      conditionalMasteryProbability: clamp01(
+        COGNITIVE_EDGE_PRIORS["inference-reverse"] * chunkProportion,
+      ),
       createdAt: m.createdAt,
-      metadata: { source: "code-to-situation", relationClass: "inference" },
+      metadata: {
+        source: "code-to-situation",
+        relationClass: "inference",
+        chunkProportion,
+      },
     });
+  });
+
+  // --- Shared-chunk situation association edges ---
+  // When ≥2 situation nodes share the same code chunk, connect them
+
+  const SHARED_CHUNK_ASSOCIATION_PROB = 0.75;
+  chunkToSituationIds.forEach((sitIds, chunkId) => {
+    if (sitIds.size < 2) {
+      return;
+    }
+    const sitArray = Array.from(sitIds);
+    for (let i = 0; i < sitArray.length; i++) {
+      for (let j = i + 1; j < sitArray.length; j++) {
+        edges.push({
+          id: `assoc-fwd-sit-shared-${sitArray[i]}-${sitArray[j]}`,
+          type: "association-forward",
+          fromNodeId: sitArray[i],
+          fromNodeType: "situation",
+          toNodeId: sitArray[j],
+          toNodeType: "situation",
+          conditionalMasteryProbability: SHARED_CHUNK_ASSOCIATION_PROB,
+          createdAt: now,
+          metadata: {
+            source: "shared-code-chunk",
+            chunkId,
+            relationClass: "association",
+          },
+        });
+        edges.push({
+          id: `assoc-rev-sit-shared-${sitArray[j]}-${sitArray[i]}`,
+          type: "association-reverse",
+          fromNodeId: sitArray[j],
+          fromNodeType: "situation",
+          toNodeId: sitArray[i],
+          toNodeType: "situation",
+          conditionalMasteryProbability: SHARED_CHUNK_ASSOCIATION_PROB,
+          createdAt: now,
+          metadata: {
+            source: "shared-code-chunk",
+            chunkId,
+            relationClass: "association",
+          },
+        });
+      }
+    }
   });
 
   state.codeChunkRelations.forEach((r) => {

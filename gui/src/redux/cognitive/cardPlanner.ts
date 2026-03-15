@@ -1,5 +1,6 @@
 import {
   CodeAwareMapping,
+  CodeChunk,
   KnowledgePoint,
   KnowledgeRelation,
   KnowledgeToCodeChunkRelation,
@@ -7,6 +8,10 @@ import {
   MasteryNodeRef,
   NodeMasteryScore,
 } from "core";
+import {
+  computeSituationGroups,
+  toSituationNodeId,
+} from "../../utils/situationGrouping";
 import { IntentResolution } from "./types";
 
 export interface CardPlanItem {
@@ -221,6 +226,7 @@ function buildCandidates(args: {
   codeAwareMappings: CodeAwareMapping[];
   knowledgeRelations: KnowledgeRelation[];
   previouslyLinkedNodeKeys?: string[];
+  codeChunks: CodeChunk[];
 }): CandidateNode[] {
   const masteryMap = buildMasteryMap(args.masteryScores);
   const previouslyLinkedNodeKeys = new Set(args.previouslyLinkedNodeKeys ?? []);
@@ -340,9 +346,13 @@ function buildCandidates(args: {
       focus === "step_intent_to_code_mapping" ||
       focus === "code_situation_to_step"
     ) {
-      const situationNodeIds = [...stepChunkIds].map(
-        (chunkId) => `sit-${args.targetStepId}-${chunkId}`,
+      const groups = computeSituationGroups(
+        args.codeAwareMappings,
+        args.codeChunks,
       );
+      const situationNodeIds = groups
+        .filter((g) => g.stepIds.includes(args.targetStepId))
+        .map((g) => toSituationNodeId(args.targetStepId, g.groupId));
 
       situationNodeIds.forEach((situationNodeId) => {
         pushCandidate(
@@ -432,6 +442,7 @@ export function planKnowledgeCards(args: {
     knowledgeToCodeChunk: KnowledgeToCodeChunkRelation[];
     codeAwareMappings: CodeAwareMapping[];
     knowledgeRelations: KnowledgeRelation[];
+    codeChunks: CodeChunk[];
   };
   maxCards: number;
   previouslyLinkedNodeKeys?: string[];
@@ -461,6 +472,7 @@ export function planKnowledgeCards(args: {
     codeAwareMappings: args.knowledgeGraph.codeAwareMappings,
     knowledgeRelations: args.knowledgeGraph.knowledgeRelations,
     previouslyLinkedNodeKeys: args.previouslyLinkedNodeKeys,
+    codeChunks: args.knowledgeGraph.codeChunks,
   });
 
   if (candidates.length === 0) {

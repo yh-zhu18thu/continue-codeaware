@@ -202,6 +202,7 @@ export const generateCognitiveKnowledgeCards = createAsyncThunk<
             state.codeAwareSession.knowledgeToCodeChunkRelations,
           codeAwareMappings: state.codeAwareSession.codeAwareMappings,
           knowledgeRelations: state.codeAwareSession.knowledgeRelations,
+          codeChunks: state.codeAwareSession.codeChunks,
         },
         maxCards,
         previouslyLinkedNodeKeys: existingLinkedNodeKeys,

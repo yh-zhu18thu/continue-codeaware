@@ -32,7 +32,7 @@ export class CodeAwareActionProvider implements vscode.CodeActionProvider {
       command: "continue.generateCodeAnnotation",
       title: "生成代码注释",
     };
-    annotateAction.isPreferred = false;
+    annotateAction.isPreferred = true;
 
     return [annotateAction];
   }

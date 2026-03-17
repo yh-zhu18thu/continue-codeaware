@@ -381,6 +381,28 @@ const getCommandsMap: (
       const language = editor.document.languageId;
       const fileName = editor.document.fileName.split("/").pop() || "";
 
+      // 当选中代码较短时，收集上下文帮助 LLM 理解语境
+      let contextCode: string | undefined;
+      const selectedLineCount = selection.end.line - selection.start.line + 1;
+      if (selectedLineCount <= 5) {
+        const contextPadding = 15;
+        const contextStart = Math.max(0, selection.start.line - contextPadding);
+        const contextEnd = Math.min(
+          editor.document.lineCount - 1,
+          selection.end.line + contextPadding,
+        );
+        const contextRange = new vscode.Range(
+          contextStart,
+          0,
+          contextEnd,
+          editor.document.lineAt(contextEnd).text.length,
+        );
+        const fullContext = editor.document.getText(contextRange);
+        if (fullContext !== selectedCode) {
+          contextCode = fullContext;
+        }
+      }
+
       await vscode.window.withProgress(
         {
           location: vscode.ProgressLocation.Notification,
@@ -416,6 +438,7 @@ const getCommandsMap: (
                     selectedCode,
                     language,
                     fileName,
+                    contextCode,
                   ),
                 },
               ],

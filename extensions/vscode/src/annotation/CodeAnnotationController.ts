@@ -10,22 +10,26 @@ import {
 
 /** 注释生成的系统提示词 */
 const ANNOTATION_SYSTEM_PROMPT =
-  "你是一个代码注释助手。你需要用中文为代码添加逐段注释，帮助用户理解每一部分代码的含义。直接引用代码中的关键符号（如变量名、函数名、类名等）来讲解，语气自然流畅，像在给同事讲解代码一样。只输出注释内容，不要输出代码本身。";
+  "You are a code explanation assistant helping a non-programmer understand code. Assume the user has minimal coding background. Use plain, everyday language and life-like analogies when helpful. Respond in Chinese. Output only the explanation, do not output the code itself.";
 
 /** 构建用户提示词 */
 function buildUserPrompt(
   code: string,
   language: string,
   fileName: string,
+  contextCode?: string,
 ): string {
-  return `请用中文为以下 ${language} 代码添加注释。要求：
-1. 按代码的逻辑段落来讲解，每段用一两句话说明
-2. 直接引用代码中的关键词（如 \`variableName\`、\`functionName()\`）来说明它们的作用，不要用"第几行"这种方式
-3. 如果有类型定义、接口、条件分支等，说清楚它们的含义和用途
-4. 最后简要总结这段代码整体在做什么
+  const contextSection = contextCode
+    ? `\n以下是选中代码的上下文（帮助你理解语境，但不需要解释这部分）：\n\`\`\`${language}\n${contextCode}\n\`\`\`\n`
+    : "";
 
-文件：${fileName}
-
+  return `请用中文为以下代码添加解释，帮助一个没有编程基础的用户理解它。要求：
+1. 先用一句大白话总结这段代码整体在做什么，让用户先有全局认识
+2. 然后按逻辑段落逐段解释，把用户当作非程序员，用日常生活的类比和通俗语言
+3. 引用代码中的关键词（如 \`variableName\`、\`functionName()\`）来说明它们的作用，让用户能对应到代码中的具体位置
+4. 每段解释用 1-2 句短句，简洁实用，只解释最关键的行为
+${contextSection}
+需要解释的代码（文件：${fileName}）：
 \`\`\`${language}
 ${code}
 \`\`\``;
@@ -33,7 +37,7 @@ ${code}
 
 /** 深入提问的系统提示词 */
 const FOLLOWUP_SYSTEM_PROMPT =
-  "你是一个代码解释助手。用户已经看到了一段代码的基础注释，现在想深入了解某些细节。请用中文简洁回答用户的追问，结合代码上下文给出具体解释。";
+  "You are a code explanation assistant for non-programmers. The user has seen a basic explanation of some code and wants to understand a specific detail. Respond in Chinese with plain, everyday language. Keep it concise (2-3 sentences). Use analogies when helpful.";
 
 /** 构建深入提问的用户提示词 */
 function buildFollowUpPrompt(
@@ -102,6 +106,13 @@ export class CodeAnnotationController implements vscode.Disposable {
     storage: AnnotationStorageService,
   ) {
     this.storage = storage;
+
+    // 启动时清理已不存在文件的注释
+    void this.storage.cleanupStaleAnnotations().then((removed) => {
+      if (removed > 0) {
+        console.log(`[CodeAware] Cleaned up ${removed} stale annotation(s)`);
+      }
+    });
 
     this.commentController = vscode.comments.createCommentController(
       "codeaware-annotations",
@@ -378,8 +389,9 @@ export class CodeAnnotationController implements vscode.Disposable {
     code: string,
     language: string,
     fileName: string,
+    contextCode?: string,
   ): string {
-    return buildUserPrompt(code, language, fileName);
+    return buildUserPrompt(code, language, fileName, contextCode);
   }
 
   dispose(): void {

@@ -1,4 +1,5 @@
 import * as crypto from "node:crypto";
+import * as fs from "node:fs";
 
 import * as vscode from "vscode";
 
@@ -113,5 +114,22 @@ export class AnnotationStorageService {
       annotation.annotationText = newText;
       await this.saveAll(all);
     }
+  }
+
+  /** 清理已不存在文件的注释 */
+  async cleanupStaleAnnotations(): Promise<number> {
+    const all = this.getAll();
+    const valid = all.filter((a) => {
+      try {
+        return fs.existsSync(a.filePath);
+      } catch {
+        return false;
+      }
+    });
+    const removed = all.length - valid.length;
+    if (removed > 0) {
+      await this.saveAll(valid);
+    }
+    return removed;
   }
 }

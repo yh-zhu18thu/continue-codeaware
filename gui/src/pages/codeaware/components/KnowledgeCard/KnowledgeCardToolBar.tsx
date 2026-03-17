@@ -7,8 +7,8 @@ import { XMarkIcon } from "@heroicons/react/24/solid";
 import React from "react";
 import styled from "styled-components";
 import {
-  lightGray,
   defaultBorderRadius,
+  lightGray,
   vscButtonBackground,
   vscForeground,
 } from "../../../../components";

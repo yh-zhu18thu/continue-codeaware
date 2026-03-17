@@ -5,20 +5,12 @@ interface CodeChunk {
   range: [number, number];
 }
 
-interface CodeMasteryDecoration {
-  filePath: string;
-  range: [number, number]; // 1-based [startLine, endLine]
-  score: number; // 0-1
-  color: string; // rgb() color string
-}
-
 export class HighlightCodeManager implements vscode.Disposable {
   private activeDecorations: Map<string, vscode.TextEditorDecorationType[]> =
     new Map();
   private blinkTimeouts: Map<string, NodeJS.Timeout[]> = new Map();
   private blinkDecorations: Map<string, vscode.TextEditorDecorationType[]> =
     new Map(); // 新增：跟踪闪烁装饰器
-  private masteryDecorationTypes: vscode.TextEditorDecorationType[] = [];
   private disposables: vscode.Disposable[] = [];
   private onHighlightClearedCallback?: (filePath: string) => void;
 
@@ -786,7 +778,6 @@ export class HighlightCodeManager implements vscode.Disposable {
    */
   dispose(): void {
     this.clearAllHighlights();
-    this.clearCodeMasteryDecorations();
 
     // Dispose of all event listeners
     this.disposables.forEach((disposable) => disposable.dispose());
@@ -794,93 +785,6 @@ export class HighlightCodeManager implements vscode.Disposable {
 
     // Clear callback reference
     this.onHighlightClearedCallback = undefined;
-  }
-
-  /**
-   * Sets mastery decorations (left border color bars) in the editor.
-   * Completely independent from highlight decorations.
-   */
-  async setCodeMasteryDecorations(
-    decorations: CodeMasteryDecoration[],
-  ): Promise<void> {
-    // Clear existing mastery decorations first
-    this.clearCodeMasteryDecorations();
-
-    if (!decorations || decorations.length === 0) {
-      return;
-    }
-
-    // Group by file path
-    const byFile = new Map<string, CodeMasteryDecoration[]>();
-    for (const dec of decorations) {
-      const key = this.normalizeFilePath(dec.filePath);
-      if (!byFile.has(key)) {
-        byFile.set(key, []);
-      }
-      byFile.get(key)!.push(dec);
-    }
-
-    for (const [normalizedPath, fileDecs] of byFile) {
-      // Find editor for this file (don't open new editors)
-      const editor = vscode.window.visibleTextEditors.find(
-        (e) =>
-          this.normalizeFilePath(e.document.fileName) === normalizedPath ||
-          this.normalizeFilePath(e.document.uri.fsPath) === normalizedPath,
-      );
-
-      if (!editor || editor.document.lineCount === 0) {
-        continue;
-      }
-
-      for (const dec of fileDecs) {
-        const [startLine, endLine] = dec.range;
-        const adjustedStart = Math.max(0, startLine - 1);
-        const adjustedEnd = Math.max(0, endLine - 1);
-
-        if (
-          adjustedStart >= editor.document.lineCount ||
-          adjustedEnd >= editor.document.lineCount ||
-          adjustedStart > adjustedEnd
-        ) {
-          continue;
-        }
-
-        const range = new vscode.Range(
-          new vscode.Position(adjustedStart, 0),
-          new vscode.Position(
-            adjustedEnd,
-            editor.document.lineAt(adjustedEnd).text.length,
-          ),
-        );
-
-        // Create a left border decoration for this mastery range
-        const decorationType = vscode.window.createTextEditorDecorationType({
-          borderWidth: "0 0 0 3px",
-          borderStyle: "solid",
-          borderColor: dec.color,
-          overviewRulerColor: dec.color,
-          overviewRulerLane: vscode.OverviewRulerLane.Left,
-          isWholeLine: true,
-        });
-
-        editor.setDecorations(decorationType, [range]);
-        this.masteryDecorationTypes.push(decorationType);
-      }
-    }
-  }
-
-  /**
-   * Clears all mastery decorations from all editors
-   */
-  clearCodeMasteryDecorations(): void {
-    for (const dec of this.masteryDecorationTypes) {
-      try {
-        dec.dispose();
-      } catch {
-        // ignore
-      }
-    }
-    this.masteryDecorationTypes = [];
   }
 
   /**

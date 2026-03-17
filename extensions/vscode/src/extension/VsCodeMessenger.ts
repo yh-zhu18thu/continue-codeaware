@@ -671,14 +671,6 @@ export class VsCodeMessenger {
       this.highlightCodeManager.clearAllHighlights();
     });
 
-    this.onWebview("setCodeMasteryDecorations", async (msg) => {
-      await this.highlightCodeManager.setCodeMasteryDecorations(msg.data);
-    });
-
-    this.onWebview("clearCodeMasteryDecorations", async (msg) => {
-      this.highlightCodeManager.clearCodeMasteryDecorations();
-    });
-
     // CodeAware: 日志记录相关
     this.onWebview("startCodeAwareLogSession", async (msg) => {
       console.log("[CA:Ext] Starting log session:", msg.data);

@@ -126,20 +126,6 @@ export type ToIdeFromWebviewOrCoreProtocol = {
     }>,
     void,
   ];
-
-  // CodeAware: Set mastery decorations (left border color bars) in the editor
-  setCodeMasteryDecorations: [
-    Array<{
-      filePath: string;
-      range: [number, number]; // 1-based [startLine, endLine]
-      score: number; // 0-1
-      color: string; // rgb() color string
-    }>,
-    void,
-  ];
-
-  // CodeAware: Clear all mastery decorations from the editor
-  clearCodeMasteryDecorations: [undefined, void];
 };
 
 export type ToWebviewOrCoreFromIdeProtocol = {

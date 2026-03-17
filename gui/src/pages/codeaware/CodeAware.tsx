@@ -1,3 +1,4 @@
+import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
 import {
   HighlightEvent,
   KnowledgeCardItem,
@@ -5,7 +6,6 @@ import {
   StepItem,
   StepStatus,
 } from "core";
-import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
 import {
   Key,
   useCallback,
@@ -32,7 +32,6 @@ import {
   KnowledgeCardInteraction,
 } from "../../redux/cognitive/masteryTrackingEngine";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks";
-import { selectCodeMasteryBySituationGroups } from "../../redux/selectors/masterySelectors";
 import {
   clearAllCodeAndMappings,
   clearAllHighlights,
@@ -694,11 +693,10 @@ export const CodeAware = () => {
     (state) => state.codeAwareSession.codeChunksToHighlightInIde,
   );
 
-  // Mastery indicators toggle + code mastery groups for editor decorations
+  // Mastery indicators toggle
   const showMasteryIndicators = useAppSelector(
     (state) => state.codeAwareSession.showMasteryIndicators,
   );
-  const codeMasteryGroups = useAppSelector(selectCodeMasteryBySituationGroups);
 
   // Get all the mappings:
   const allMappings = useAppSelector(
@@ -2724,24 +2722,6 @@ export const CodeAware = () => {
       dispatch(resetIdeCommFlags());
     }
   }, [codeChunksToHighlightInIde, ideMessenger, dispatch]);
-
-  // Sync code mastery decorations to the editor
-  useEffect(() => {
-    if (!ideMessenger) return;
-    if (showMasteryIndicators && codeMasteryGroups.length > 0) {
-      ideMessenger.post(
-        "setCodeMasteryDecorations",
-        codeMasteryGroups.map((g) => ({
-          filePath: g.filePath,
-          range: g.lineRange,
-          score: g.score,
-          color: g.color,
-        })),
-      );
-    } else {
-      ideMessenger.post("clearCodeMasteryDecorations", undefined);
-    }
-  }, [showMasteryIndicators, codeMasteryGroups, ideMessenger]);
 
   // Cleanup effect for auto-scroll disable timeout
   useEffect(() => {

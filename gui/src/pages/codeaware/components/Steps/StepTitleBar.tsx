@@ -81,6 +81,8 @@ const TitleContent = styled.div<{ isViewed?: boolean }>`
   flex: 1;
   font-weight: ${({ isViewed }) =>
     isViewed ? "400" : "500"}; // 查看过的稍微减轻字重
+  position: relative;
+  z-index: 1;
 `;
 
 const ViewedIndicator = styled.div<{ isViewed: boolean }>`
@@ -114,25 +116,20 @@ const HighLevelStepBadge = styled.span<{ stepStatus?: StepStatus }>`
   transition: background-color 0.15s ease-in-out;
 `;
 
-const MasteryProgressTrack = styled.div`
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 3px;
-  background-color: rgba(255, 255, 255, 0.08);
-  border-radius: 0 0 4px 4px;
-  overflow: hidden;
-`;
-
-const MasteryProgressFill = styled.div<{
+const MasteryBackgroundFill = styled.div<{
   percent: number;
   masteryColor: string;
 }>`
-  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
   width: ${({ percent }) => percent}%;
   background-color: ${({ masteryColor }) => masteryColor};
-  border-radius: 0 0 4px 4px;
+  opacity: 0.18;
+  border-radius: ${defaultBorderRadius};
+  pointer-events: none;
+  z-index: 0;
   transition:
     width 0.5s ease-in-out,
     background-color 0.4s ease-in-out;
@@ -150,6 +147,8 @@ const IconContainer = styled.div`
   display: flex;
   align-items: center;
   gap: 8px;
+  position: relative;
+  z-index: 1;
 `;
 
 const IconButton = styled.button<{
@@ -298,12 +297,10 @@ const StepTitleBar: React.FC<StepTitleBarProps> = ({
         </ChevronContainer>
       </IconContainer>
       {masteryColor && masteryPercent !== null && (
-        <MasteryProgressTrack>
-          <MasteryProgressFill
-            percent={masteryPercent}
-            masteryColor={masteryColor}
-          />
-        </MasteryProgressTrack>
+        <MasteryBackgroundFill
+          percent={masteryPercent}
+          masteryColor={masteryColor}
+        />
       )}
     </TitleBarContainer>
   );

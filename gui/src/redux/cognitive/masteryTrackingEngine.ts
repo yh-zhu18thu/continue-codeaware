@@ -11,10 +11,15 @@ const EVIDENCE_VALUES = {
   self_test_major_interaction: 0.55,
   answer_mode_correct: 0.85,
   answer_mode_wrong: 0.2,
+  timed_view_step: 0.55,
+  timed_view_situation: 0.5,
+  timed_view_code: 0.55,
+  timed_view_knowledge_card: 0.55,
 } as const;
 
 const DEFAULT_ALPHA = 0.35;
 const DEFAULT_BETA = 0.25;
+const SITUATION_TIMED_VIEW_ALPHA = 0.15;
 
 type ScoreKey = string;
 
@@ -39,10 +44,13 @@ function buildScoreMap(
   return map;
 }
 
+export type TimedViewTarget = "step" | "situation" | "code" | "knowledge-card";
+
 export type KnowledgeCardInteraction =
   | { type: "feedback"; value: "understood" | "uncertain" }
   | { type: "view-major"; value: "read" | "self-test" }
-  | { type: "answer"; correctness: number };
+  | { type: "answer"; correctness: number }
+  | { type: "timed-view"; value: TimedViewTarget };
 
 interface DirectUpdateResult {
   scoreMap: Map<ScoreKey, NodeMasteryScore>;
@@ -100,6 +108,16 @@ export function deriveEvidenceFromInteraction(
     return interaction.correctness >= 0.5
       ? EVIDENCE_VALUES.answer_mode_correct
       : EVIDENCE_VALUES.answer_mode_wrong;
+  }
+
+  if (interaction.type === "timed-view") {
+    const timedViewMap: Record<TimedViewTarget, number> = {
+      step: EVIDENCE_VALUES.timed_view_step,
+      situation: EVIDENCE_VALUES.timed_view_situation,
+      code: EVIDENCE_VALUES.timed_view_code,
+      "knowledge-card": EVIDENCE_VALUES.timed_view_knowledge_card,
+    };
+    return timedViewMap[interaction.value];
   }
 
   return undefined;
@@ -294,12 +312,20 @@ export function applyKnowledgeCardInteraction(args: {
     };
   }
 
+  // Use a smaller alpha for timed-view situation to produce a gentler update
+  const effectiveAlpha =
+    args.alpha ??
+    (args.interaction.type === "timed-view" &&
+    args.interaction.value === "situation"
+      ? SITUATION_TIMED_VIEW_ALPHA
+      : undefined);
+
   const directResult = updateDirectNodeMastery({
     linkedKnowledgeNodeIds: args.linkedKnowledgeNodeIds,
     linkedMasteryNodes: args.linkedMasteryNodes,
     evidence,
     nodeMasteryScores: args.nodeMasteryScores,
-    alpha: args.alpha,
+    alpha: effectiveAlpha,
   });
 
   const propagationResult = propagateOneHop({

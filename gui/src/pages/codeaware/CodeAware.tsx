@@ -1,4 +1,10 @@
-import { HighlightEvent, KnowledgeCardItem, StepItem, StepStatus } from "core";
+import {
+  HighlightEvent,
+  KnowledgeCardItem,
+  MasteryNodeRef,
+  StepItem,
+  StepStatus,
+} from "core";
 import {
   Key,
   useCallback,
@@ -14,6 +20,10 @@ import { SessionInfoDialog } from "../../components/dialogs/SessionInfoDialog";
 import { PageHeader } from "../../components/PageHeader";
 import { IdeMessengerContext } from "../../context/IdeMessenger";
 import { useSidebarPosition } from "../../hooks/useSidebarPosition";
+import {
+  useTimedMasteryTracker,
+  type TimedViewResult,
+} from "../../hooks/useTimedMasteryTracker";
 import { useWebviewListener } from "../../hooks/useWebviewListener";
 import {
   applyKnowledgeCardInteraction,
@@ -68,6 +78,14 @@ import {
 } from "../../redux/thunks/mappingLookup"; // 新的接口
 import { useCodeAwareLogger } from "../../util/codeAwareWebViewLogger";
 import { buildCodeAwareCognitiveEdges } from "../../utils/codeAwareRelationGraph";
+import {
+  calculateMinReadingTimeMs,
+  estimateCodeWordCount,
+} from "../../utils/readingTimeUtils";
+import {
+  computeSituationGroups,
+  toSituationNodeId,
+} from "../../utils/situationGrouping";
 import "./CodeAware.css";
 import GlobalQuestionModal from "./components/QuestionPopup/GlobalQuestionModal";
 import RequirementDisplay from "./components/Requirements/RequirementDisplay"; // Import RequirementDisplay
@@ -309,6 +327,44 @@ export const CodeAware = () => {
   // CodeAware: 监听代码注释查看事件
   useWebviewListener("codeExplanationEvent", async (data) => {
     console.log("[CA:UI] 代码注释事件:", data);
+
+    // Flush any existing pending view
+    handleFlushTimedViewMastery();
+
+    if (data.action === "view" || data.action === "followup") {
+      // Find code chunks that overlap with the annotation line range
+      const codeChunks = codeAwareSessionState.codeChunks;
+      const matchedRefs: MasteryNodeRef[] = [];
+      const [selStart, selEnd] = data.selectedLines;
+
+      codeChunks.forEach((chunk) => {
+        const [chunkStart, chunkEnd] = chunk.range;
+        if (chunkStart <= selEnd && chunkEnd >= selStart) {
+          matchedRefs.push({ nodeId: chunk.id, nodeType: "code-chunk" });
+        }
+      });
+
+      if (matchedRefs.length > 0) {
+        const lineCount = selEnd - selStart + 1;
+        const estimatedWords = estimateCodeWordCount(lineCount);
+        const minMs = Math.max(
+          (estimatedWords / 200) * 60 * 1000,
+          5000, // at least 5s for code explanation
+        );
+
+        startDetailTracking({
+          type: "code",
+          masteryNodeRefs: matchedRefs,
+          startTime: Date.now(),
+          minReadingTimeMs: minMs,
+          metadata: {
+            filePath: data.filePath,
+            selectedLines: data.selectedLines,
+            action: data.action,
+          },
+        });
+      }
+    }
   });
 
   //CodeAware: 增加一个指令，使得可以发送当前所选择的知识卡片id
@@ -362,6 +418,107 @@ export const CodeAware = () => {
       ]),
     );
   }, [codeAwareSessionState.knowledgePoints]);
+
+  // --- Timed passive viewing mastery tracker (two-slot: step + detail) ---
+  const {
+    startStepTracking,
+    startDetailTracking,
+    flushStepView,
+    flushDetailView,
+    flushAllViews,
+    clearAll: clearTimedViews,
+  } = useTimedMasteryTracker();
+
+  /** Apply mastery update for a single flushed result. */
+  const applyTimedViewResult = useCallback(
+    (flushed: TimedViewResult): void => {
+      const interaction: KnowledgeCardInteraction = {
+        type: "timed-view",
+        value: flushed.type,
+      };
+
+      const result = applyKnowledgeCardInteraction({
+        linkedMasteryNodes: flushed.masteryNodeRefs,
+        interaction,
+        nodeMasteryScores: codeAwareSessionState.nodeMasteryScores,
+        cognitiveEdges: buildCodeAwareCognitiveEdges(codeAwareSessionState),
+      });
+
+      if (result.changedNodeIds.length > 0) {
+        dispatch(setNodeMasteryScores(result.updatedScores));
+        emitMasteryUpdateLogs({
+          interaction,
+          linkedMasteryNodes: flushed.masteryNodeRefs,
+          changedNodeIds: result.changedNodeIds,
+          debug: result.debug,
+          knowledgeNodeTitleById,
+        });
+      }
+    },
+    [codeAwareSessionState, dispatch, knowledgeNodeTitleById],
+  );
+
+  /** Flush ALL pending views (step + detail) and apply mastery updates.
+   *  Use when attention is leaving the current step entirely. */
+  const handleFlushTimedViewMastery = useCallback((): void => {
+    const results = flushAllViews();
+    results.forEach(applyTimedViewResult);
+  }, [flushAllViews, applyTimedViewResult]);
+
+  /** Flush only detail-level pending view. Step tracking stays alive.
+   *  Use when switching between knowledge cards within the same step. */
+  const handleFlushDetailTimedView = useCallback((): void => {
+    const flushed = flushDetailView();
+    if (flushed) {
+      applyTimedViewResult(flushed);
+    }
+  }, [flushDetailView, applyTimedViewResult]);
+
+  /** Called by Step / KnowledgeCard when user starts viewing content. */
+  const handleStartTimedView = useCallback(
+    (args: {
+      type: "step" | "knowledge-card";
+      masteryNodeRefs: MasteryNodeRef[];
+      text: string;
+    }) => {
+      if (args.masteryNodeRefs.length === 0) {
+        return;
+      }
+
+      const config = {
+        type: args.type,
+        masteryNodeRefs: args.masteryNodeRefs,
+        startTime: Date.now(),
+        minReadingTimeMs: calculateMinReadingTimeMs(args.text),
+        metadata: {
+          nodeIds: args.masteryNodeRefs.map((r) => r.nodeId),
+        },
+      };
+
+      if (args.type === "step") {
+        // Flush both slots when switching steps
+        handleFlushTimedViewMastery();
+        startStepTracking(config);
+      } else {
+        // Detail-level: only flush detail slot, step stays alive
+        handleFlushDetailTimedView();
+        startDetailTracking(config);
+      }
+    },
+    [
+      handleFlushTimedViewMastery,
+      handleFlushDetailTimedView,
+      startStepTracking,
+      startDetailTracking,
+    ],
+  );
+
+  // Cleanup timed view on unmount
+  useEffect(() => {
+    return () => {
+      clearTimedViews();
+    };
+  }, [clearTimedViews]);
 
   // 监听steps变化，同步给IDE
   useEffect(() => {
@@ -656,6 +813,9 @@ export const CodeAware = () => {
   const handleJumpToSemantic = useCallback(async () => {
     console.log("[CA:UI:Nav] 代码 → 语义");
 
+    // Flush any pending timed view before starting new navigation
+    handleFlushTimedViewMastery();
+
     try {
       setIsMappingLookupInProgress(true);
 
@@ -740,6 +900,37 @@ export const CodeAware = () => {
         matchedCount: uniqueSemanticMappings.length,
         timestamp: new Date().toISOString(),
       });
+
+      // Start situation tracking for the matched step(s)
+      const stepMappings = uniqueSemanticMappings.filter(
+        (m) => m.semanticElementType === "step",
+      );
+      if (stepMappings.length > 0) {
+        const groups = computeSituationGroups(
+          codeAwareSessionState.codeAwareMappings,
+          codeAwareSessionState.codeChunks,
+        );
+        const sitRefs: MasteryNodeRef[] = [];
+        stepMappings.forEach((m) => {
+          groups
+            .filter((g) => g.stepIds.includes(m.semanticElementId))
+            .forEach((g) => {
+              sitRefs.push({
+                nodeId: toSituationNodeId(m.semanticElementId, g.groupId),
+                nodeType: "situation",
+              });
+            });
+        });
+        if (sitRefs.length > 0) {
+          startDetailTracking({
+            type: "situation",
+            masteryNodeRefs: sitRefs,
+            startTime: Date.now(),
+            minReadingTimeMs: 4000, // fixed 4s threshold for navigation
+            metadata: { source: "code-to-step" },
+          });
+        }
+      }
     } catch (error) {
       console.error("[CA:UI] 跳转失败:", error);
       await logger.addLogEntry("user_click_jump_to_semantic_error", {
@@ -749,10 +940,21 @@ export const CodeAware = () => {
     } finally {
       setIsMappingLookupInProgress(false);
     }
-  }, [currentCodeSelection, dispatch, logger]);
+  }, [
+    currentCodeSelection,
+    dispatch,
+    logger,
+    handleFlushTimedViewMastery,
+    codeAwareSessionState.codeAwareMappings,
+    codeAwareSessionState.codeChunks,
+    startDetailTracking,
+  ]);
 
   const handleJumpToCode = useCallback(async () => {
     console.log("[CA:UI:Nav] 语义 → 代码");
+
+    // Flush any pending timed view before starting new navigation
+    handleFlushTimedViewMastery();
 
     try {
       setIsMappingLookupInProgress(true);
@@ -844,6 +1046,32 @@ export const CodeAware = () => {
         matchedCount: matchedChunks.length,
         timestamp: new Date().toISOString(),
       });
+
+      // Start situation tracking for the focused step
+      if (focusedElement.type === "step") {
+        const groups = computeSituationGroups(
+          codeAwareSessionState.codeAwareMappings,
+          codeAwareSessionState.codeChunks,
+        );
+        const sitRefs: MasteryNodeRef[] = [];
+        groups
+          .filter((g) => g.stepIds.includes(focusedElement!.id))
+          .forEach((g) => {
+            sitRefs.push({
+              nodeId: toSituationNodeId(focusedElement!.id, g.groupId),
+              nodeType: "situation",
+            });
+          });
+        if (sitRefs.length > 0) {
+          startDetailTracking({
+            type: "situation",
+            masteryNodeRefs: sitRefs,
+            startTime: Date.now(),
+            minReadingTimeMs: 4000, // fixed 4s threshold for navigation
+            metadata: { source: "step-to-code" },
+          });
+        }
+      }
     } catch (error) {
       console.error("[CA:UI] 跳转失败:", error);
       await logger.addLogEntry("user_click_jump_to_code_error", {
@@ -860,6 +1088,10 @@ export const CodeAware = () => {
     dispatch,
     ideMessenger,
     logger,
+    handleFlushTimedViewMastery,
+    codeAwareSessionState.codeAwareMappings,
+    codeAwareSessionState.codeChunks,
+    startDetailTracking,
   ]);
 
   // Track steps that should be force expanded due to code selection questions
@@ -1868,6 +2100,9 @@ export const CodeAware = () => {
     async (stepId: string, isExpanded: boolean) => {
       console.log(`[CA:UI] Step ${stepId} expansion changed to: ${isExpanded}`);
 
+      // Flush any pending timed view (attention is switching)
+      handleFlushTimedViewMastery();
+
       if (isExpanded) {
         // When a step is expanded, immediately set it as the currently expanded step
         setCurrentlyExpandedStepId(stepId);
@@ -1916,14 +2151,16 @@ export const CodeAware = () => {
       setCurrentlyExpandedStepId,
       setForceExpandedSteps,
       setGlobalQuestionExpandedSteps,
+      handleFlushTimedViewMastery,
     ],
   );
 
   const handleKnowledgeCardExpansionChange = useCallback(
     (_stepId: string, _cardId: string, _isExpanded: boolean) => {
-      // No-op: intent tracking removed
+      // Flush only detail-level view (step tracking stays alive)
+      handleFlushDetailTimedView();
     },
-    [],
+    [handleFlushDetailTimedView],
   );
 
   const handleKnowledgeCardViewModeChange = useCallback(
@@ -1932,6 +2169,9 @@ export const CodeAware = () => {
       cardId: string,
       viewMode: "read" | "self-test" | "answer",
     ) => {
+      // Flush only detail-level view (step tracking stays alive)
+      handleFlushDetailTimedView();
+
       dispatch(
         setKnowledgeCardViewMode({
           stepId,
@@ -1972,11 +2212,19 @@ export const CodeAware = () => {
         }
       }
     },
-    [codeAwareSessionState, dispatch, knowledgeNodeTitleById],
+    [
+      codeAwareSessionState,
+      dispatch,
+      knowledgeNodeTitleById,
+      handleFlushDetailTimedView,
+    ],
   );
 
   const handleKnowledgeCardFeedback = useCallback(
     (stepId: string, cardId: string, feedback: "understood" | "uncertain") => {
+      // Flush only detail-level view (step tracking stays alive)
+      handleFlushDetailTimedView();
+
       dispatch(
         setKnowledgeCardFeedback({
           stepId,
@@ -2015,7 +2263,12 @@ export const CodeAware = () => {
         });
       }
     },
-    [codeAwareSessionState, dispatch, knowledgeNodeTitleById],
+    [
+      codeAwareSessionState,
+      dispatch,
+      knowledgeNodeTitleById,
+      handleFlushDetailTimedView,
+    ],
   );
 
   const handleQuestionSubmit = useCallback(
@@ -2577,6 +2830,7 @@ export const CodeAware = () => {
                   onDisableKnowledgeCard={handleDisableKnowledgeCard} // Pass knowledge card disable function
                   onQuestionSubmit={handleQuestionSubmit} // Pass question submit function
                   onRegisterRef={registerStepRef} // Pass step ref registration function
+                  onStartTimedView={handleStartTimedView}
                   knowledgeCards={step.knowledgeCards.map(
                     (kc: KnowledgeCardItem, kcIndex: number) => {
                       // 使用testStatesMap获取测试项目数据
@@ -2638,6 +2892,10 @@ export const CodeAware = () => {
 
                         // Loading states
                         isTestsLoading: (kc as any).isTestsLoading || false, // 获取测试题加载状态
+
+                        // Mastery node refs for timed view tracking
+                        linkedMasteryNodes: kc.linkedMasteryNodes,
+                        linkedKnowledgeNodeIds: kc.linkedKnowledgeNodeIds,
 
                         // 事件处理函数
                         onMcqSubmit: (

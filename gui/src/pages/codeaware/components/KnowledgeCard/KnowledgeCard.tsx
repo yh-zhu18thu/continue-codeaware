@@ -1,4 +1,5 @@
 import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
+import type { MasteryNodeRef } from "core";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import styled from "styled-components";
 import {
@@ -274,6 +275,15 @@ export interface KnowledgeCardProps {
 
   // Loading states
   isTestsLoading?: boolean; // 新增：测试题加载状态
+
+  // Timed mastery tracking
+  linkedMasteryNodes?: MasteryNodeRef[];
+  linkedKnowledgeNodeIds?: string[];
+  onStartTimedView?: (args: {
+    type: "step" | "knowledge-card";
+    masteryNodeRefs: MasteryNodeRef[];
+    text: string;
+  }) => void;
 }
 
 const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
@@ -302,6 +312,9 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
   disabled = false,
   onDisable,
   isTestsLoading = false, // 新增：测试题加载状态
+  linkedMasteryNodes,
+  linkedKnowledgeNodeIds,
+  onStartTimedView,
 }) => {
   const logger = useCodeAwareLogger();
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
@@ -315,6 +328,7 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
   const [isHovered, setIsHovered] = useState(false);
   const [isContentLoadingLocal, setIsContentLoadingLocal] = useState(false);
   const hasTriggeredInitialContentLoadRef = useRef(false);
+  const hasStartedTimedViewRef = useRef(false);
   const isContentMissing = markdownContent.trim().length === 0;
 
   const triggerLazyContentGeneration = useCallback(() => {
@@ -350,6 +364,7 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
 
   useEffect(() => {
     hasTriggeredInitialContentLoadRef.current = false;
+    hasStartedTimedViewRef.current = false;
     setIsContentLoadingLocal(false);
   }, [cardId]);
 
@@ -368,6 +383,46 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
   useEffect(() => {
     triggerLazyContentGeneration();
   }, [triggerLazyContentGeneration]);
+
+  // Start timed view tracking when lazy-loaded content arrives
+  useEffect(() => {
+    if (
+      !isExpanded ||
+      hasStartedTimedViewRef.current ||
+      !markdownContent ||
+      markdownContent === "::LOADING::" ||
+      markdownContent.trim().length === 0
+    ) {
+      return;
+    }
+
+    if (!onStartTimedView) {
+      return;
+    }
+
+    const nodeRefs: MasteryNodeRef[] = [
+      ...(linkedMasteryNodes ?? []),
+      ...(linkedKnowledgeNodeIds ?? []).map((id) => ({
+        nodeId: id,
+        nodeType: "background-knowledge" as const,
+      })),
+    ];
+
+    if (nodeRefs.length > 0) {
+      hasStartedTimedViewRef.current = true;
+      onStartTimedView({
+        type: "knowledge-card",
+        masteryNodeRefs: nodeRefs,
+        text: markdownContent,
+      });
+    }
+  }, [
+    isExpanded,
+    markdownContent,
+    onStartTimedView,
+    linkedMasteryNodes,
+    linkedKnowledgeNodeIds,
+  ]);
 
   useEffect(() => {
     if (viewMode && viewMode !== currentViewMode) {
@@ -459,6 +514,32 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
     // Log knowledge card expansion/collapse events
     if (cardId) {
       if (!wasExpanded) {
+        // Start timed view tracking for knowledge card mastery
+        // (only for cards that already have content; lazy-loaded cards
+        //  are handled by the useEffect that watches markdownContent)
+        if (
+          onStartTimedView &&
+          markdownContent &&
+          markdownContent !== "::LOADING::" &&
+          markdownContent.trim().length > 0
+        ) {
+          const nodeRefs: MasteryNodeRef[] = [
+            ...(linkedMasteryNodes ?? []),
+            ...(linkedKnowledgeNodeIds ?? []).map((id) => ({
+              nodeId: id,
+              nodeType: "background-knowledge" as const,
+            })),
+          ];
+          if (nodeRefs.length > 0) {
+            hasStartedTimedViewRef.current = true;
+            onStartTimedView({
+              type: "knowledge-card",
+              masteryNodeRefs: nodeRefs,
+              text: markdownContent,
+            });
+          }
+        }
+
         // Log knowledge card viewing start
         await logger.addLogEntry("user_view_and_highlight_knowledge_card", {
           cardTitle: title,

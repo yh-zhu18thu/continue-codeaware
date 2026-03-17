@@ -2,6 +2,7 @@ import { PlusIcon } from "@heroicons/react/24/outline";
 import {
   HighlightEvent,
   KnowledgeCardGenerationStatus,
+  MasteryNodeRef,
   StepStatus,
 } from "core";
 import React, { useEffect, useRef, useState } from "react";
@@ -168,6 +169,11 @@ interface StepProps {
     cardId: string,
     feedback: "understood" | "uncertain",
   ) => void;
+  onStartTimedView?: (args: {
+    type: "step" | "knowledge-card";
+    masteryNodeRefs: MasteryNodeRef[];
+    text: string;
+  }) => void;
   disabled?: boolean; // Optional disabled state for code edit mode
 }
 
@@ -197,6 +203,7 @@ const Step: React.FC<StepProps> = ({
   onKnowledgeCardExpansionChange,
   onKnowledgeCardViewModeChange,
   onKnowledgeCardFeedback,
+  onStartTimedView,
   disabled = false,
 }) => {
   const logger = useCodeAwareLogger();
@@ -370,6 +377,15 @@ const Step: React.FC<StepProps> = ({
     // Log step expansion/collapse events
     if (stepId) {
       if (willBeExpanded && !wasExpanded) {
+        // Start timed view tracking for step mastery
+        if (onStartTimedView && description) {
+          onStartTimedView({
+            type: "step",
+            masteryNodeRefs: [{ nodeId: stepId, nodeType: "step" }],
+            text: description,
+          });
+        }
+
         // Log step viewing start
         await logger.addLogEntry("user_view_and_highlight_step", {
           stepTitle: title,
@@ -641,6 +657,7 @@ const Step: React.FC<StepProps> = ({
                     shouldCollapse={shouldCollapseThisCard} // Pass collapse signal with auto-collapse logic
                     onDisable={onDisableKnowledgeCard}
                     onExpansionChange={handleKnowledgeCardExpansionChange} // Pass expansion change handler
+                    onStartTimedView={onStartTimedView}
                     onViewModeChange={(cardId, viewMode) => {
                       if (stepId && onKnowledgeCardViewModeChange) {
                         onKnowledgeCardViewModeChange(stepId, cardId, viewMode);

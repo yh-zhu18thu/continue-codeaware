@@ -1,4 +1,4 @@
-import { PlusIcon } from "@heroicons/react/24/outline";
+import { QuestionMarkCircleIcon } from "@heroicons/react/24/outline";
 import {
   HighlightEvent,
   KnowledgeCardGenerationStatus,
@@ -24,7 +24,6 @@ import KnowledgeCard, {
   KnowledgeCardProps,
 } from "../KnowledgeCard/KnowledgeCard";
 import KnowledgeCardLoader from "../KnowledgeCard/KnowledgeCardLoader";
-import QuestionPopup from "../QuestionPopup/QuestionPopup";
 import StepAbstract from "./StepAbstract";
 import StepEditor from "./StepEditor";
 import StepTitleBar from "./StepTitleBar";
@@ -93,37 +92,37 @@ const KnowledgeCardLoaderContainer = styled.div`
   align-items: center;
 `;
 
-const AddQuestionButtonContainer = styled.div`
+const ConfusionButtonContainer = styled.div`
   width: 100%;
   display: flex;
   justify-content: center;
   align-items: center;
   margin-top: 8px;
-  padding: 0px 0;
-  position: relative;
-  z-index: 100;
+  padding: 4px 0;
 `;
 
-const AddQuestionButton = styled.button`
-  background-color: transparent;
-  color: ${vscForeground};
-  border: 1px solid ${vscInputBorder};
-  border-radius: 50%;
-  width: 32px;
-  height: 32px;
-  cursor: pointer;
-  transition: all 0.15s ease-in-out;
+const ConfusionButton = styled.button`
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 4px;
+  background-color: transparent;
+  color: var(--vscode-descriptionForeground);
+  border: 1px dashed ${vscInputBorder};
+  border-radius: 6px;
+  padding: 4px 12px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
 
   &:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-    border-color: #007acc;
+    color: ${vscForeground};
+    border-color: var(--vscode-focusBorder, #007acc);
+    background-color: rgba(0, 122, 204, 0.06);
   }
 
-  &:active {
-    background-color: rgba(255, 255, 255, 0.2);
+  svg {
+    width: 14px;
+    height: 14px;
   }
 `;
 
@@ -142,8 +141,10 @@ interface StepProps {
   knowledgeCardGenerationStatus?: KnowledgeCardGenerationStatus; // Add knowledge card generation status
   onHighlightEvent?: (event: HighlightEvent) => void;
   onClearHighlight?: () => void;
-  onExecuteUntilStep?: (stepId: string) => void;
-  onRerunStep?: (stepId: string) => void; // Callback for rerun step
+  onStepConfusion?: (stepId: string) => void; // Confusion button handler
+  onStepSelfTest?: (stepId: string) => void; // Self-test handler
+  onStepPin?: (stepId: string) => void; // Pin handler
+  isPinned?: boolean; // Whether this step is pinned
   onStepEdit?: (stepId: string, newContent: string) => void; // Callback for step edit
   onStepStatusChange?: (stepId: string, newStatus: StepStatus) => void; // Callback for status change
   onDisableKnowledgeCard?: (stepId: string, cardId: string) => void; // Callback for disabling knowledge card
@@ -192,8 +193,10 @@ const Step: React.FC<StepProps> = ({
   knowledgeCardGenerationStatus = "empty", // Default to empty for backward compatibility
   onHighlightEvent,
   onClearHighlight,
-  onExecuteUntilStep,
-  onRerunStep,
+  onStepConfusion,
+  onStepSelfTest,
+  onStepPin,
+  isPinned = false,
   onStepEdit,
   onStepStatusChange,
   onDisableKnowledgeCard,
@@ -233,7 +236,6 @@ const Step: React.FC<StepProps> = ({
   const [isFlickering, setIsFlickering] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [shouldKeepHighlighted, setShouldKeepHighlighted] = useState(false);
-  const [showQuestionPopup, setShowQuestionPopup] = useState(false);
   const [isUserExpanding, setIsUserExpanding] = useState(false); // Track if user is actively expanding this step
   const [shouldCollapseCards, setShouldCollapseCards] = useState(false); // Signal to collapse all knowledge cards
   const [currentlyExpandedCardId, setCurrentlyExpandedCardId] = useState<
@@ -482,22 +484,28 @@ const Step: React.FC<StepProps> = ({
   };
 
   const handleExecuteUntilStep = () => {
-    if (disabled) {
-      console.warn("[CA:UI] Execute until step is disabled in code edit mode");
-      return;
-    }
-    if (stepId && onExecuteUntilStep) {
-      onExecuteUntilStep(stepId);
-    }
+    // Preserved as no-op; execute-until-step removed from UI
   };
 
   const handleRerunStep = () => {
-    if (disabled) {
-      console.warn("[CA:UI] Rerun step is disabled in code edit mode");
-      return;
+    // Preserved as no-op; rerun removed from UI
+  };
+
+  const handleConfusionClick = async () => {
+    if (stepId && onStepConfusion) {
+      onStepConfusion(stepId);
     }
-    if (stepId && onRerunStep) {
-      onRerunStep(stepId);
+  };
+
+  const handleSelfTestClick = () => {
+    if (stepId && onStepSelfTest) {
+      onStepSelfTest(stepId);
+    }
+  };
+
+  const handlePinClick = () => {
+    if (stepId && onStepPin) {
+      onStepPin(stepId);
     }
   };
 
@@ -550,21 +558,6 @@ const Step: React.FC<StepProps> = ({
     // in the Redux slice will intelligently determine the correct status based on content changes
   };
 
-  const handleAddQuestionClick = async () => {
-    setShowQuestionPopup(true);
-  };
-
-  const handleQuestionSubmit = async (question: string) => {
-    if (stepId && onQuestionSubmit) {
-      onQuestionSubmit(stepId, "", question); // Empty string for selectedText
-    }
-    setShowQuestionPopup(false);
-  };
-
-  const handleQuestionCancel = async () => {
-    setShowQuestionPopup(false);
-  };
-
   const handleKnowledgeCardExpansionChange = async (
     cardId: string,
     isExpanded: boolean,
@@ -612,9 +605,10 @@ const Step: React.FC<StepProps> = ({
         }
         masteryScore={masteryScore}
         masteryColor={masteryColor}
+        isPinned={isPinned}
         onToggle={handleToggle}
-        onExecuteUntilStep={handleExecuteUntilStep}
-        onRerunStep={handleRerunStep}
+        onSelfTest={handleSelfTestClick}
+        onPin={handlePinClick}
         disabled={disabled}
       />
       <ContentArea isVisible={isExpanded}>
@@ -684,23 +678,16 @@ const Step: React.FC<StepProps> = ({
           </KnowledgeCardLoaderContainer>
         )}
 
-        {/* Add Question Button - only show when not editing and knowledgeCardGenerationStatus is "checked" */}
-        {knowledgeCardGenerationStatus === "ready" && (
-          <AddQuestionButtonContainer>
-            <AddQuestionButton onClick={handleAddQuestionClick}>
-              <PlusIcon width={16} height={16} />
-            </AddQuestionButton>
-          </AddQuestionButtonContainer>
+        {/* Confusion Button - replaces old AddQuestionButton */}
+        {knowledgeCardGenerationStatus !== "generating" && isExpanded && (
+          <ConfusionButtonContainer>
+            <ConfusionButton onClick={handleConfusionClick}>
+              <QuestionMarkCircleIcon />
+              我有疑惑
+            </ConfusionButton>
+          </ConfusionButtonContainer>
         )}
       </ContentArea>
-
-      {/* Question Popup */}
-      {showQuestionPopup && (
-        <QuestionPopup
-          onSubmit={handleQuestionSubmit}
-          onCancel={handleQuestionCancel}
-        />
-      )}
     </StepContainer>
   );
 };

@@ -1,8 +1,9 @@
 import {
-  ArrowPathIcon,
+  AcademicCapIcon,
+  BookmarkIcon as BookmarkOutlineIcon,
   ChevronDownIcon,
-  PlayIcon,
 } from "@heroicons/react/24/outline";
+import { BookmarkIcon as BookmarkSolidIcon } from "@heroicons/react/24/solid";
 import { StepStatus } from "core";
 import React from "react";
 import styled from "styled-components";
@@ -195,9 +196,10 @@ interface StepTitleBarProps {
   isViewed?: boolean; // 新增：是否已查看过
   masteryScore?: number | null; // 掌握度分数 (0-1)，null 表示暂无数据
   masteryColor?: string; // 掌握度对应的颜色
+  isPinned?: boolean; // 是否已标记
   onToggle?: () => void; // Optional callback for toggle functionality
-  onExecuteUntilStep?: () => void; // Optional callback for execute until step
-  onRerunStep?: () => void; // Optional callback for rerun step when dirty
+  onSelfTest?: () => void; // Callback for self-test
+  onPin?: () => void; // Callback for pin/bookmark
   disabled?: boolean; // Optional disabled state for code edit mode
 }
 
@@ -212,48 +214,24 @@ const StepTitleBar: React.FC<StepTitleBarProps> = ({
   isViewed = false,
   masteryScore = null,
   masteryColor,
+  isPinned = false,
   onToggle,
-  onExecuteUntilStep,
-  onRerunStep,
+  onSelfTest,
+  onPin,
   disabled = false,
 }) => {
-  const handleButtonClick = (e: React.MouseEvent) => {
+  const handleSelfTestClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-
-    if (disabled) {
-      console.warn("[CA:UI] Step execution is disabled in code edit mode");
-      return;
-    }
-
-    if (stepStatus === "step_dirty") {
-      // 如果状态是step_dirty，执行重新运行逻辑
-      if (onRerunStep) {
-        onRerunStep();
-      }
-    } else {
-      // 否则执行正常的执行逻辑
-      if (
-        stepStatus !== "generating" &&
-        stepStatus !== "generated" &&
-        onExecuteUntilStep
-      ) {
-        onExecuteUntilStep();
-      }
+    if (!disabled && onSelfTest) {
+      onSelfTest();
     }
   };
 
-  const isButtonDisabled =
-    stepStatus === "generating" || stepStatus === "generated" || disabled;
-  const isStepDirty = stepStatus === "step_dirty";
-
-  // Tooltip text based on step status
-  const getTooltipText = () => {
-    if (disabled) return "Disabled in code edit mode";
-    if (stepStatus === "generating") return "Generating Code...";
-    if (stepStatus === "generated")
-      return "Code Generated - Confirm to Proceed";
-    if (isStepDirty) return "Rerun Step";
-    return "Execute Until This Step";
+  const handlePinClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!disabled && onPin) {
+      onPin();
+    }
   };
 
   const masteryPercent =
@@ -281,15 +259,28 @@ const StepTitleBar: React.FC<StepTitleBarProps> = ({
       </TitleContent>
       <IconContainer>
         <IconButton
-          onClick={handleButtonClick}
-          disabled={isButtonDisabled}
+          onClick={handleSelfTestClick}
+          disabled={disabled}
           stepStatus={stepStatus}
-          title={getTooltipText()}
+          title="自我测试"
         >
-          {isStepDirty ? (
-            <ArrowPathIcon width={16} height={16} />
+          <AcademicCapIcon width={15} height={15} />
+        </IconButton>
+        <IconButton
+          onClick={handlePinClick}
+          disabled={disabled}
+          stepStatus={stepStatus}
+          title={isPinned ? "取消标记" : "标记待学"}
+          style={
+            isPinned
+              ? { color: "var(--vscode-charts-blue, #3b82f6)" }
+              : undefined
+          }
+        >
+          {isPinned ? (
+            <BookmarkSolidIcon width={15} height={15} />
           ) : (
-            <PlayIcon width={16} height={16} />
+            <BookmarkOutlineIcon width={15} height={15} />
           )}
         </IconButton>
         <ChevronContainer isExpanded={isExpanded}>

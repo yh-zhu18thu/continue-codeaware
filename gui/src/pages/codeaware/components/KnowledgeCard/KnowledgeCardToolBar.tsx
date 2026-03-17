@@ -1,9 +1,9 @@
 import {
   AcademicCapIcon,
-  BookOpenIcon,
+  BookmarkIcon as BookmarkOutlineIcon,
   ChevronDownIcon,
 } from "@heroicons/react/24/outline";
-import { XMarkIcon } from "@heroicons/react/24/solid";
+import { BookmarkIcon as BookmarkSolidIcon } from "@heroicons/react/24/solid";
 import React from "react";
 import styled from "styled-components";
 import {
@@ -12,8 +12,6 @@ import {
   vscButtonBackground,
   vscForeground,
 } from "../../../../components";
-import { ToolTip } from "../../../../components/gui/Tooltip";
-import HoverItem from "../../../../components/mainInput/InputToolbar/HoverItem";
 
 const ToolBarContainer = styled.div<{
   isHighlighted?: boolean;
@@ -33,23 +31,12 @@ const ToolBarContainer = styled.div<{
   position: relative;
 `;
 
-const DisableButtonContainer = styled.div`
-  position: absolute;
-  top: 0px;
-  left: 0px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 10;
-`;
-
 const TitleSection = styled.div`
   display: flex;
   align-items: center;
   flex: 1;
   cursor: pointer;
   min-width: 0; /* Allow text to shrink */
-  margin-left: 10px; /* Add space to avoid overlap with the x button */
 `;
 
 const Title = styled.span`
@@ -63,12 +50,37 @@ const Title = styled.span`
   max-width: 100%; /* Ensure it doesn't overflow */
 `;
 
-const QuestionButtonContainer = styled.div`
+const ActionButtonsContainer = styled.div`
   display: flex;
   align-items: center;
+  gap: 2px;
   flex-shrink: 0;
-  margin-right: 8px;
-  margin-top: 2px; /* Align with the title */
+  margin-right: 4px;
+`;
+
+const ActionBtn = styled.button<{ $active?: boolean }>`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 4px;
+  background: ${(p) => (p.$active ? "rgba(59,130,246,0.15)" : "transparent")};
+  color: ${(p) =>
+    p.$active ? "var(--vscode-charts-blue, #3b82f6)" : "inherit"};
+  cursor: pointer;
+  transition: all 150ms;
+  padding: 0;
+
+  &:hover {
+    background: var(--vscode-toolbar-hoverBackground, rgba(90, 93, 94, 0.31));
+  }
+
+  svg {
+    width: 14px;
+    height: 14px;
+  }
 `;
 
 const ChevronContainer = styled.div<{ isExpanded: boolean }>`
@@ -103,13 +115,11 @@ interface KnowledgeCardToolBarProps {
   title: string;
   isExpanded?: boolean;
   onToggle?: () => void;
-  onQuestionClick?: () => void;
-  onDisableClick?: () => void; // Replace chat and add to collection with disable
-  isQuestionDisabled?: boolean;
+  onSelfTest?: () => void;
+  onPin?: () => void;
+  isPinned?: boolean;
   isHighlighted?: boolean;
   isFlickering?: boolean;
-  isTestMode?: boolean; // 新增：是否在测试模式
-  hasCorrectAnswer?: boolean; // 新增：是否有正确答案
   masteryScore?: number | null;
   masteryColor?: string;
 }
@@ -118,13 +128,11 @@ const KnowledgeCardToolBar: React.FC<KnowledgeCardToolBarProps> = ({
   title,
   isExpanded = true,
   onToggle,
-  onQuestionClick,
-  onDisableClick,
-  isQuestionDisabled = false,
+  onSelfTest,
+  onPin,
+  isPinned = false,
   isHighlighted = false,
   isFlickering = false,
-  isTestMode = false, // 新增默认值
-  hasCorrectAnswer = false, // 新增默认值
   masteryScore = null,
   masteryColor,
 }) => {
@@ -133,43 +141,33 @@ const KnowledgeCardToolBar: React.FC<KnowledgeCardToolBarProps> = ({
 
   return (
     <ToolBarContainer isHighlighted={isHighlighted} isFlickering={isFlickering}>
-      {/* Small disable button in top-left corner */}
-      <DisableButtonContainer>
-        <HoverItem>
-          <ToolTip content="删除不需要的知识卡片" place="top">
-            <XMarkIcon
-              className="h-3 w-3 cursor-pointer text-white transition-colors hover:text-gray-300"
-              onClick={onDisableClick}
-            />
-          </ToolTip>
-        </HoverItem>
-      </DisableButtonContainer>
-
-      {/* Title section in the middle */}
+      {/* Title section */}
       <TitleSection onClick={onToggle}>
         <Title title={title}>{title}</Title>
       </TitleSection>
 
-      {/* Test/Knowledge toggle button */}
-      <QuestionButtonContainer>
-        <HoverItem>
-          {isTestMode ? (
-            <ToolTip content="返回知识卡片" place="top">
-              <BookOpenIcon
-                className={`h-5 w-5 cursor-pointer hover:brightness-125`}
-                onClick={onQuestionClick}
-              />
-            </ToolTip>
-          ) : (
-            <ToolTip content="查看测试题" place="top">
-              <AcademicCapIcon
-                className={`h-5 w-5 ${isQuestionDisabled ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:brightness-125"} ${hasCorrectAnswer ? "text-green-500" : ""}`}
-                onClick={!isQuestionDisabled ? onQuestionClick : undefined}
-              />
-            </ToolTip>
-          )}
-        </HoverItem>
-      </QuestionButtonContainer>
+      {/* Self-test and Pin buttons */}
+      <ActionButtonsContainer>
+        <ActionBtn
+          onClick={(e) => {
+            e.stopPropagation();
+            onSelfTest?.();
+          }}
+          title="自我测试"
+        >
+          <AcademicCapIcon />
+        </ActionBtn>
+        <ActionBtn
+          $active={isPinned}
+          onClick={(e) => {
+            e.stopPropagation();
+            onPin?.();
+          }}
+          title={isPinned ? "取消标记" : "标记待学"}
+        >
+          {isPinned ? <BookmarkSolidIcon /> : <BookmarkOutlineIcon />}
+        </ActionBtn>
+      </ActionButtonsContainer>
 
       {/* Chevron button on the right */}
       <ChevronContainer isExpanded={isExpanded} onClick={onToggle}>

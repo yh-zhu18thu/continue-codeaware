@@ -3,6 +3,7 @@ import {
   HighlightEvent,
   KnowledgeCardItem,
   MasteryNodeRef,
+  PinnedItem,
   StepItem,
   StepStatus,
 } from "core";
@@ -33,9 +34,11 @@ import {
 } from "../../redux/cognitive/masteryTrackingEngine";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks";
 import {
+  addPinnedItem,
   clearAllCodeAndMappings,
   clearAllHighlights,
   newCodeAwareSession,
+  removePinnedItem,
   resetIdeCommFlags,
   resetSessionExceptRequirement,
   selectCodeAwareSessionState,
@@ -89,7 +92,10 @@ import {
   toSituationNodeId,
 } from "../../utils/situationGrouping";
 import "./CodeAware.css";
-import GlobalQuestionModal from "./components/QuestionPopup/GlobalQuestionModal";
+import GlobalInteractionOverlay, {
+  OverlayTab,
+} from "./components/GlobalOverlay/GlobalInteractionOverlay";
+import { ConfusionOptionType } from "./components/KnowledgeCard/ConfusionOptions";
 import RequirementDisplay from "./components/Requirements/RequirementDisplay"; // Import RequirementDisplay
 import RequirementDisplayHorizontal from "./components/Requirements/RequirementDisplayHorizontal"; // Import RequirementDisplayHorizontal
 import RequirementEditor from "./components/Requirements/RequirementEditor"; // Import RequirementEditor
@@ -1130,11 +1136,18 @@ export const CodeAware = () => {
   const autoScrollDisableTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isAutoScrollDisabledRef = useRef<boolean>(false); // Immediate ref for sync access
 
-  // Global question modal state
-  const [isGlobalQuestionModalOpen, setIsGlobalQuestionModalOpen] =
+  // Global overlay state (replaces old GlobalQuestionModal)
+  const [isGlobalOverlayOpen, setIsGlobalOverlayOpen] =
     useState<boolean>(false);
-  const [isGlobalQuestionLoading, setIsGlobalQuestionLoading] =
+  const [globalOverlayTab, setGlobalOverlayTab] =
+    useState<OverlayTab>("confusion");
+  const [isGlobalConfusionLoading, setIsGlobalConfusionLoading] =
     useState<boolean>(false);
+
+  // Pinned items from Redux
+  const pinnedItems = useAppSelector(
+    (state) => state.codeAwareSession.pinnedItems,
+  );
 
   // Effect to remove steps from forceExpandedSteps when their status changes from generating to checked
   // But keep global question expanded steps expanded
@@ -2384,20 +2397,19 @@ export const CodeAware = () => {
     [steps, learningGoal, task, dispatch, logger],
   );
 
-  // Handle global question submission
-  const handleGlobalQuestionSubmit = useCallback(
+  // Handle global confusion submission (replaces old handleGlobalQuestionSubmit)
+  const handleGlobalConfusionSubmit = useCallback(
     async (question: string) => {
       console.log("[CA:UI] 处理全局提问:", { question });
 
-      setIsGlobalQuestionLoading(true);
+      setIsGlobalConfusionLoading(true);
 
       await logger.addLogEntry("user_submit_global_question", {
-        question: question.substring(0, 200), // Log first 200 chars
+        question: question.substring(0, 200),
         timestamp: new Date().toISOString(),
       });
 
       try {
-        // 获取当前代码
         const currentFileResponse = await ideMessenger?.request(
           "getCurrentFile",
           undefined,
@@ -2413,7 +2425,6 @@ export const CodeAware = () => {
 
         const currentCode = currentFileResponse.content.contents || "";
 
-        // 调用全局提问处理thunk
         const result = await dispatch(
           processGlobalQuestion({
             question,
@@ -2430,10 +2441,10 @@ export const CodeAware = () => {
             knowledgeCardIds,
           });
 
-          // 关闭对话框
-          setIsGlobalQuestionModalOpen(false);
+          // Close overlay
+          setIsGlobalOverlayOpen(false);
 
-          // 高亮选择的步骤
+          // Highlight selected step
           dispatch(
             updateHighlight({
               sourceType: "step",
@@ -2441,14 +2452,13 @@ export const CodeAware = () => {
             }),
           );
 
-          // 强制展开该步骤
+          // Force expand step
           setForceExpandedSteps((prev) => new Set([...prev, selectedStepId]));
           setGlobalQuestionExpandedSteps(
             (prev) => new Set([...prev, selectedStepId]),
-          ); // Mark as global question expanded
+          );
           setCurrentlyExpandedStepId(selectedStepId);
 
-          // 显示成功消息
           ideMessenger?.post("showToast", [
             "info",
             `已为您找到相关步骤并生成了 ${themes.length} 个知识卡片主题`,
@@ -2458,35 +2468,26 @@ export const CodeAware = () => {
             selectedStepId,
             themesCount: themes.length,
             knowledgeCardIds,
-            stepExpanded: true, // Log that step was expanded
             timestamp: new Date().toISOString(),
           });
         } else if (processGlobalQuestion.rejected.match(result)) {
           console.error(
-            "[CA:UI]  Failed to process global question:",
+            "[CA:UI] Failed to process global question:",
             result.error.message,
           );
-          await logger.addLogEntry("user_submit_global_question_error", {
-            error: result.error.message || "Failed to process global question",
-          });
-
           ideMessenger?.post("showToast", [
             "error",
             "处理问题时发生错误，请重试",
           ]);
         }
       } catch (error) {
-        console.error("[CA:UI] Error in handleGlobalQuestionSubmit:", error);
-        await logger.addLogEntry("user_submit_global_question_error", {
-          error: error instanceof Error ? error.message : String(error),
-        });
-
+        console.error("[CA:UI] Error in handleGlobalConfusionSubmit:", error);
         ideMessenger?.post("showToast", [
           "error",
           "处理问题时发生错误，请重试",
         ]);
       } finally {
-        setIsGlobalQuestionLoading(false);
+        setIsGlobalConfusionLoading(false);
       }
     },
     [
@@ -2498,27 +2499,252 @@ export const CodeAware = () => {
     ],
   );
 
-  // Handle opening global question modal
-  const handleOpenGlobalQuestion = useCallback(async () => {
-    console.log("[CA:UI] 打开全局提问对话框");
+  // Global overlay open/close
+  const handleOpenGlobalOverlay = useCallback(
+    (tab: OverlayTab) => {
+      setGlobalOverlayTab(tab);
+      setIsGlobalOverlayOpen(true);
+      void logger.addLogEntry("user_open_global_overlay", {
+        tab,
+        timestamp: new Date().toISOString(),
+      });
+    },
+    [logger],
+  );
 
-    await logger.addLogEntry("user_open_global_question_modal", {
+  const handleCloseGlobalOverlay = useCallback(() => {
+    setIsGlobalOverlayOpen(false);
+    void logger.addLogEntry("user_close_global_overlay", {
       timestamp: new Date().toISOString(),
     });
-
-    setIsGlobalQuestionModalOpen(true);
   }, [logger]);
 
-  // Handle closing global question modal
-  const handleCloseGlobalQuestion = useCallback(async () => {
-    console.log("[CA:UI] 关闭全局提问对话框");
+  // Pin navigation: scroll to target item
+  const handlePinNavigate = useCallback(
+    (item: PinnedItem) => {
+      setIsGlobalOverlayOpen(false);
 
-    await logger.addLogEntry("user_close_global_question_modal", {
-      timestamp: new Date().toISOString(),
-    });
+      if (item.level === "step") {
+        // Highlight and scroll to step
+        dispatch(
+          updateHighlight({ sourceType: "step", identifier: item.targetId }),
+        );
+        setForceExpandedSteps((prev) => new Set([...prev, item.targetId]));
+        setCurrentlyExpandedStepId(item.targetId);
+      } else if (item.level === "knowledge-card" && item.stepId) {
+        // Expand parent step and highlight knowledge card
+        dispatch(
+          updateHighlight({ sourceType: "step", identifier: item.stepId }),
+        );
+        setForceExpandedSteps((prev) => new Set([...prev, item.stepId!]));
+        setCurrentlyExpandedStepId(item.stepId);
+      }
 
-    setIsGlobalQuestionModalOpen(false);
-  }, [logger]);
+      void logger.addLogEntry("user_navigate_to_pinned_item", {
+        pinnedItemId: item.id,
+        level: item.level,
+        targetId: item.targetId,
+        timestamp: new Date().toISOString(),
+      });
+    },
+    [dispatch, logger, setForceExpandedSteps, setCurrentlyExpandedStepId],
+  );
+
+  // Pin removal
+  const handlePinRemove = useCallback(
+    (itemId: string) => {
+      dispatch(removePinnedItem(itemId));
+      void logger.addLogEntry("user_remove_pin", {
+        pinnedItemId: itemId,
+        timestamp: new Date().toISOString(),
+      });
+    },
+    [dispatch, logger],
+  );
+
+  // Step-level confusion handler
+  const handleStepConfusion = useCallback(
+    async (stepId: string) => {
+      await logger.addLogEntry("user_step_confusion", {
+        stepId,
+        timestamp: new Date().toISOString(),
+      });
+      // Generate prerequisite knowledge cards for this step
+      await dispatch(generatePrerequisiteKnowledgeCards({ stepId }));
+    },
+    [dispatch, logger],
+  );
+
+  // Step-level self-test handler
+  const handleStepSelfTest = useCallback(
+    async (stepId: string) => {
+      await logger.addLogEntry("user_step_self_test", {
+        stepId,
+        timestamp: new Date().toISOString(),
+      });
+      // Switch all knowledge cards in this step to self-test/answer view
+      const step = steps.find((s) => s.id === stepId);
+      if (step) {
+        step.knowledgeCards.forEach((kc) => {
+          if (!kc.disabled) {
+            dispatch(
+              setKnowledgeCardViewMode({
+                stepId,
+                cardId: kc.id,
+                viewMode: "answer",
+              }),
+            );
+          }
+        });
+      }
+    },
+    [dispatch, logger, steps],
+  );
+
+  // Step-level pin handler
+  const handleStepPin = useCallback(
+    (stepId: string) => {
+      const step = steps.find((s) => s.id === stepId);
+      if (!step) return;
+
+      const alreadyPinned = pinnedItems.some(
+        (p) => p.level === "step" && p.targetId === stepId,
+      );
+
+      if (alreadyPinned) {
+        const pin = pinnedItems.find(
+          (p) => p.level === "step" && p.targetId === stepId,
+        );
+        if (pin) dispatch(removePinnedItem(pin.id));
+      } else {
+        const newPin: PinnedItem = {
+          id: `pin-step-${stepId}-${Date.now()}`,
+          level: "step",
+          targetId: stepId,
+          title: step.title,
+          pinnedAt: Date.now(),
+        };
+        dispatch(addPinnedItem(newPin));
+
+        // Apply mastery decrease (pin = "I don't know this well")
+        const interaction: KnowledgeCardInteraction = {
+          type: "pin",
+          value: "pin",
+        };
+        const result = applyKnowledgeCardInteraction({
+          linkedMasteryNodes: [{ nodeId: stepId, nodeType: "step" }],
+          interaction,
+          nodeMasteryScores: codeAwareSessionState.nodeMasteryScores,
+          cognitiveEdges: buildCodeAwareCognitiveEdges(codeAwareSessionState),
+        });
+        if (result.changedNodeIds.length > 0) {
+          dispatch(setNodeMasteryScores(result.updatedScores));
+        }
+      }
+
+      void logger.addLogEntry("user_toggle_step_pin", {
+        stepId,
+        action: alreadyPinned ? "unpin" : "pin",
+        timestamp: new Date().toISOString(),
+      });
+    },
+    [dispatch, logger, steps, pinnedItems, codeAwareSessionState],
+  );
+
+  // Knowledge card level pin handler
+  const handleKnowledgeCardPin = useCallback(
+    (stepId: string, cardId: string) => {
+      const step = steps.find((s) => s.id === stepId);
+      const card = step?.knowledgeCards.find((k) => k.id === cardId);
+      if (!card) return;
+
+      const alreadyPinned = pinnedItems.some(
+        (p) => p.level === "knowledge-card" && p.targetId === cardId,
+      );
+
+      if (alreadyPinned) {
+        const pin = pinnedItems.find(
+          (p) => p.level === "knowledge-card" && p.targetId === cardId,
+        );
+        if (pin) dispatch(removePinnedItem(pin.id));
+      } else {
+        const newPin: PinnedItem = {
+          id: `pin-kc-${cardId}-${Date.now()}`,
+          level: "knowledge-card",
+          targetId: cardId,
+          title: card.title,
+          stepId,
+          pinnedAt: Date.now(),
+        };
+        dispatch(addPinnedItem(newPin));
+
+        // Apply mastery decrease
+        const linkedMasteryNodes = card.linkedMasteryNodes || [];
+        const interaction: KnowledgeCardInteraction = {
+          type: "pin",
+          value: "pin",
+        };
+        const result = applyKnowledgeCardInteraction({
+          linkedMasteryNodes,
+          interaction,
+          nodeMasteryScores: codeAwareSessionState.nodeMasteryScores,
+          cognitiveEdges: buildCodeAwareCognitiveEdges(codeAwareSessionState),
+        });
+        if (result.changedNodeIds.length > 0) {
+          dispatch(setNodeMasteryScores(result.updatedScores));
+        }
+      }
+
+      void logger.addLogEntry("user_toggle_kc_pin", {
+        stepId,
+        cardId,
+        action: alreadyPinned ? "unpin" : "pin",
+        timestamp: new Date().toISOString(),
+      });
+    },
+    [dispatch, logger, steps, pinnedItems, codeAwareSessionState],
+  );
+
+  // Knowledge card level self-test handler
+  const handleKnowledgeCardSelfTest = useCallback(
+    (stepId: string, cardId: string) => {
+      dispatch(
+        setKnowledgeCardViewMode({ stepId, cardId, viewMode: "answer" }),
+      );
+      void logger.addLogEntry("user_kc_self_test", {
+        stepId,
+        cardId,
+        timestamp: new Date().toISOString(),
+      });
+    },
+    [dispatch, logger],
+  );
+
+  // Knowledge card level confusion handler
+  const handleKnowledgeCardConfusion = useCallback(
+    async (
+      stepId: string,
+      cardId: string,
+      type: ConfusionOptionType,
+      customQuestion?: string,
+    ) => {
+      await logger.addLogEntry("user_kc_confusion", {
+        stepId,
+        cardId,
+        type,
+        customQuestion,
+        timestamp: new Date().toISOString(),
+      });
+      // For now, log the action. Deep-dive content generation thunk to be added later.
+      console.log("[CA:UI] Knowledge card confusion:", {
+        stepId,
+        cardId,
+        type,
+        customQuestion,
+      });
+    },
+    [logger],
+  );
 
   // Add webview listener for questions from code selection
   useWebviewListener(
@@ -2747,10 +2973,13 @@ export const CodeAware = () => {
       {/* CodeAware Header with Edit Mode Toggle - 固定在顶部 */}
       <PageHeader
         title={displayTitle}
-        onGlobalQuestion={handleOpenGlobalQuestion}
-        showGlobalQuestionButton={
+        onGlobalConfusion={() => handleOpenGlobalOverlay("confusion")}
+        onGlobalSelfTest={() => handleOpenGlobalOverlay("self-test")}
+        onGlobalPins={() => handleOpenGlobalOverlay("pins")}
+        showActionButtons={
           userRequirementStatus === "finalized" && steps.length > 0
         }
+        pinCount={pinnedItems.length}
         rightContent={
           <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
             <HeaderActionButton
@@ -2834,12 +3063,16 @@ export const CodeAware = () => {
                     !globalQuestionExpandedSteps.has(step.id)
                   } // Don't collapse force expanded or global question expanded steps
                   onHighlightEvent={handleHighlightEvent}
-                  onClearHighlight={removeHighlightEvent} // Pass the clear highlight function
-                  onExecuteUntilStep={executeUntilStep} // Pass execute until step function
-                  onRerunStep={handleRerunStep} // Pass rerun step function
-                  onStepEdit={handleStepEdit} // Pass step edit function
-                  onStepStatusChange={handleStepStatusChange} // Pass step status change function
-                  onStepExpansionChange={handleStepExpansionChange} // Pass step expansion change function
+                  onClearHighlight={removeHighlightEvent}
+                  onStepConfusion={handleStepConfusion}
+                  onStepSelfTest={handleStepSelfTest}
+                  onStepPin={handleStepPin}
+                  isPinned={pinnedItems.some(
+                    (p) => p.level === "step" && p.targetId === step.id,
+                  )}
+                  onStepEdit={handleStepEdit}
+                  onStepStatusChange={handleStepStatusChange}
+                  onStepExpansionChange={handleStepExpansionChange}
                   onKnowledgeCardExpansionChange={
                     handleKnowledgeCardExpansionChange
                   }
@@ -2847,9 +3080,9 @@ export const CodeAware = () => {
                     handleKnowledgeCardViewModeChange
                   }
                   onKnowledgeCardFeedback={handleKnowledgeCardFeedback}
-                  onDisableKnowledgeCard={handleDisableKnowledgeCard} // Pass knowledge card disable function
-                  onQuestionSubmit={handleQuestionSubmit} // Pass question submit function
-                  onRegisterRef={registerStepRef} // Pass step ref registration function
+                  onDisableKnowledgeCard={handleDisableKnowledgeCard}
+                  onQuestionSubmit={handleQuestionSubmit}
+                  onRegisterRef={registerStepRef}
                   onStartTimedView={handleStartTimedView}
                   knowledgeCards={step.knowledgeCards.map(
                     (kc: KnowledgeCardItem, kcIndex: number) => {
@@ -2916,6 +3149,32 @@ export const CodeAware = () => {
                         // Mastery node refs for timed view tracking
                         linkedMasteryNodes: kc.linkedMasteryNodes,
                         linkedKnowledgeNodeIds: kc.linkedKnowledgeNodeIds,
+
+                        // Unified action callbacks for knowledge card level
+                        isPinned: pinnedItems.some(
+                          (p) =>
+                            p.level === "knowledge-card" &&
+                            p.targetId ===
+                              (kc.id || `${step.id}-card-${kcIndex}`),
+                        ),
+                        onConfusion: (
+                          cardId: string,
+                          type: ConfusionOptionType,
+                          customQuestion?: string,
+                        ) => {
+                          void handleKnowledgeCardConfusion(
+                            step.id,
+                            cardId,
+                            type,
+                            customQuestion,
+                          );
+                        },
+                        onSelfTest: (cardId: string) => {
+                          handleKnowledgeCardSelfTest(step.id, cardId);
+                        },
+                        onPin: (cardId: string) => {
+                          handleKnowledgeCardPin(step.id, cardId);
+                        },
 
                         // 事件处理函数
                         onMcqSubmit: (
@@ -3068,12 +3327,20 @@ export const CodeAware = () => {
         onCancel={handleSessionInfoCancel}
       />
 
-      {/* Global Question Modal */}
-      <GlobalQuestionModal
-        isOpen={isGlobalQuestionModalOpen}
-        onClose={handleCloseGlobalQuestion}
-        onSubmit={handleGlobalQuestionSubmit}
-        isLoading={isGlobalQuestionLoading}
+      {/* Global Interaction Overlay (replaces old GlobalQuestionModal) */}
+      <GlobalInteractionOverlay
+        isOpen={isGlobalOverlayOpen}
+        initialTab={globalOverlayTab}
+        onClose={handleCloseGlobalOverlay}
+        onConfusionSubmit={handleGlobalConfusionSubmit}
+        confusionLoading={isGlobalConfusionLoading}
+        onRequestSelfTest={() => {
+          // TODO: implement global self-test generation
+          console.log("[CA:UI] Global self-test requested");
+        }}
+        pinnedItems={pinnedItems}
+        onPinNavigate={handlePinNavigate}
+        onPinRemove={handlePinRemove}
       />
 
       {/* Edge Navigation Buttons - 贴在 webview 靠近编辑器的边缘，垂直居中 */}

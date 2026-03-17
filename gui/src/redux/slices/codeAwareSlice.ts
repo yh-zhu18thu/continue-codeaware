@@ -16,6 +16,7 @@ import {
   KnowledgeToStepRelation,
   MasteryNodeRef,
   NodeMasteryScore,
+  PinnedItem,
   ProgramRequirement,
   StepItem,
   StepStatus,
@@ -84,6 +85,8 @@ export type CodeAwareSessionState = {
   knowledgeToCodeChunkRelations: KnowledgeToCodeChunkRelation[];
   // 节点掌握度
   nodeMasteryScores: NodeMasteryScore[];
+  // Pin/待学列表
+  pinnedItems: PinnedItem[];
   // 掌握度指示器可见性
   showMasteryIndicators: boolean;
   // 初始生成状态
@@ -139,6 +142,7 @@ const initialCodeAwareState: CodeAwareSessionState = {
   knowledgeToStepRelations: [],
   knowledgeToCodeChunkRelations: [],
   nodeMasteryScores: [],
+  pinnedItems: [],
   showMasteryIndicators: true,
   initialGeneration: {
     status: "idle",
@@ -326,6 +330,7 @@ export const codeAwareSessionSlice = createSlice({
       state.knowledgeToStepRelations = [];
       state.knowledgeToCodeChunkRelations = [];
       state.nodeMasteryScores = [];
+      state.pinnedItems = [];
       state.cognitiveTrace = createEmptyCognitiveTrace();
       state.initialGeneration = {
         status: "idle",
@@ -729,6 +734,26 @@ export const codeAwareSessionSlice = createSlice({
       action: PayloadAction<NodeMasteryScore[]>,
     ) => {
       state.nodeMasteryScores = action.payload;
+    },
+    // Pin/待学列表操作
+    addPinnedItem: (state, action: PayloadAction<PinnedItem>) => {
+      // 避免重复 pin
+      const exists = state.pinnedItems.some(
+        (item) =>
+          item.level === action.payload.level &&
+          item.targetId === action.payload.targetId,
+      );
+      if (!exists) {
+        state.pinnedItems.push(action.payload);
+      }
+    },
+    removePinnedItem: (state, action: PayloadAction<string>) => {
+      state.pinnedItems = state.pinnedItems.filter(
+        (item) => item.id !== action.payload,
+      );
+    },
+    clearPinnedItems: (state) => {
+      state.pinnedItems = [];
     },
     // 掌握度指示器可见性开关
     toggleMasteryIndicators: (state) => {
@@ -1245,6 +1270,7 @@ export const codeAwareSessionSlice = createSlice({
       state.knowledgeToStepRelations = [];
       state.knowledgeToCodeChunkRelations = [];
       state.nodeMasteryScores = [];
+      state.pinnedItems = [];
       state.cognitiveTrace = createEmptyCognitiveTrace();
       state.initialGeneration = {
         status: "idle",
@@ -1581,6 +1607,9 @@ export const {
   setNodeMasteryScores,
   upsertNodeMasteryScore,
   toggleMasteryIndicators,
+  addPinnedItem,
+  removePinnedItem,
+  clearPinnedItems,
   updateInitialGenerationStatus,
   resetInitialGenerationStatus,
   addInitialGenerationError,

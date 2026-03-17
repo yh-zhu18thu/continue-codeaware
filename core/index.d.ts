@@ -605,6 +605,28 @@ export interface KnowledgeCardItem {
   codeContext?: string; // 代码上下文，在触发knowledge card item生成时一并存储。
 }
 
+// CODEAWARE: Pin/待学列表项
+export type PinnedItemLevel = "step" | "knowledge-card" | "code";
+
+export interface PinnedItem {
+  id: string;
+  level: PinnedItemLevel;
+  targetId: string; // stepId, knowledgeCardId, or codeChunkId
+  title: string;
+  stepId?: string; // 所属步骤ID（知识卡片级时使用）
+  filePath?: string; // 代码级时使用
+  lineRange?: [number, number]; // 代码级时使用
+  pinnedAt: number; // timestamp ms
+}
+
+// CODEAWARE: 困惑选项
+export interface ConfusionOption {
+  id: string;
+  label: string;
+  description?: string;
+  targetNodeId?: string; // 关联的knowledge/situation node id
+}
+
 export type SelfTestResult = "correct" | "wrong" | "unanswered";
 
 // CODEAWARE：自测题目与回答

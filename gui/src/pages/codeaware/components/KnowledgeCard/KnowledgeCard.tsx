@@ -11,6 +11,7 @@ import { useAppSelector } from "../../../../redux/hooks";
 import { selectKnowledgeCardMastery } from "../../../../redux/selectors/masterySelectors";
 import { useCodeAwareLogger } from "../../../../util/codeAwareWebViewLogger";
 import { masteryScoreToColor } from "../../../../utils/masteryColor";
+import ConfusionOptions, { ConfusionOptionType } from "./ConfusionOptions";
 import KnowledgeCardContent from "./KnowledgeCardContent";
 import KnowledgeCardLoader from "./KnowledgeCardLoader";
 import KnowledgeCardMCQ from "./KnowledgeCardMCQ";
@@ -54,63 +55,11 @@ const ContentArea = styled.div<{ isVisible: boolean }>`
   box-sizing: border-box;
 `;
 
-const InteractionBar = styled.div`
+const ConfusionFooter = styled.div`
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 10px 6px;
-  border-bottom: 1px solid ${lightGray}22;
-  flex-wrap: wrap;
-`;
-
-const ViewModeGroup = styled.div`
-  display: inline-flex;
-  border: 1px solid ${lightGray}44;
-  border-radius: 6px;
-  overflow: hidden;
-`;
-
-const ViewModeButton = styled.button<{ active: boolean }>`
-  border: none;
-  background: ${({ active }) => (active ? "#202a1f" : "#121212")};
-  color: ${({ active }) => (active ? "#7de58b" : vscForeground)};
-  padding: 4px 10px;
-  font-size: 11px;
-  cursor: pointer;
-
-  &:not(:last-child) {
-    border-right: 1px solid ${lightGray}33;
-  }
-`;
-
-const FeedbackGroup = styled.div`
-  display: inline-flex;
-  gap: 6px;
-`;
-
-const FeedbackButton = styled.button<{
-  active: boolean;
-  tone: "good" | "warn";
-}>`
-  border: 1px solid
-    ${({ active, tone }) => {
-      if (tone === "good") {
-        return active ? "#3fb950" : `${lightGray}44`;
-      }
-      return active ? "#d29922" : `${lightGray}44`;
-    }};
-  background: ${({ active, tone }) => {
-    if (!active) {
-      return "#121212";
-    }
-    return tone === "good" ? "#1d3b20" : "#3a2d10";
-  }};
-  color: ${vscForeground};
-  border-radius: 6px;
-  padding: 4px 8px;
-  font-size: 11px;
-  cursor: pointer;
+  justify-content: center;
+  padding: 6px 8px 8px;
+  border-top: 1px solid ${lightGray}22;
 `;
 
 const QuestionPanel = styled.div`
@@ -260,6 +209,17 @@ export interface KnowledgeCardProps {
   ) => void;
   onFeedback?: (cardId: string, feedback: "understood" | "uncertain") => void;
 
+  // Unified action callbacks
+  onConfusion?: (
+    cardId: string,
+    type: ConfusionOptionType,
+    customQuestion?: string,
+  ) => void;
+  onSelfTest?: (cardId: string) => void;
+  onPin?: (cardId: string) => void;
+  isPinned?: boolean;
+  confusionLoading?: boolean;
+
   // Lazy loading props
   stepId?: string;
   learningGoal?: string;
@@ -308,6 +268,11 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
   onExpansionChange,
   onViewModeChange,
   onFeedback,
+  onConfusion,
+  onSelfTest,
+  onPin,
+  isPinned = false,
+  confusionLoading = false,
   stepId,
   learningGoal = "",
   codeContext = "",
@@ -745,62 +710,26 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
         title={title}
         isExpanded={isExpanded}
         onToggle={handleToggle}
-        onQuestionClick={onQuestionMarkClick} // Pass to the actual prop name in KnowledgeCardToolBar
-        onDisableClick={handleDisableCard} // Add disable functionality
-        isQuestionDisabled={
-          !markdownContent ||
-          markdownContent === "::LOADING::" ||
-          markdownContent.startsWith("加载失败:") ||
-          markdownContent.startsWith("生成失败")
-        } // 只有在有知识卡片内容时才能生成测试题
+        onSelfTest={() => {
+          if (cardId && onSelfTest) {
+            onSelfTest(cardId);
+          } else {
+            // Fallback: switch to answer view
+            void switchViewMode("answer");
+          }
+        }}
+        onPin={() => {
+          if (cardId && onPin) {
+            onPin(cardId);
+          }
+        }}
+        isPinned={isPinned}
         isHighlighted={false}
         isFlickering={false}
-        isTestMode={currentViewMode === "answer"} // 传递答题模式状态
-        hasCorrectAnswer={hasCorrectAnswer} // 传递正确答案状态
         masteryScore={kcMasteryScore}
         masteryColor={kcMasteryColor}
       />
       <ContentArea isVisible={isExpanded}>
-        <InteractionBar>
-          <ViewModeGroup>
-            <ViewModeButton
-              active={currentViewMode === "read"}
-              onClick={() => void switchViewMode("read")}
-            >
-              查阅
-            </ViewModeButton>
-            <ViewModeButton
-              active={currentViewMode === "self-test"}
-              onClick={() => void switchViewMode("self-test")}
-            >
-              自测
-            </ViewModeButton>
-            <ViewModeButton
-              active={currentViewMode === "answer"}
-              onClick={() => void switchViewMode("answer")}
-            >
-              答题
-            </ViewModeButton>
-          </ViewModeGroup>
-
-          <FeedbackGroup>
-            <FeedbackButton
-              active={currentFeedback === "understood"}
-              tone="good"
-              onClick={() => void handleFeedback("understood")}
-            >
-              懂了
-            </FeedbackButton>
-            <FeedbackButton
-              active={currentFeedback === "uncertain"}
-              tone="warn"
-              onClick={() => void handleFeedback("uncertain")}
-            >
-              存疑
-            </FeedbackButton>
-          </FeedbackGroup>
-        </InteractionBar>
-
         {currentViewMode === "read" &&
           (markdownContent === "::LOADING::" ||
             (isContentLoadingLocal && isContentMissing)) && (
@@ -1003,6 +932,21 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
                 )}
             </TestContainer>
           )}
+
+        {/* Confusion button at bottom of card */}
+        {isExpanded && markdownContent && markdownContent !== "::LOADING::" && (
+          <ConfusionFooter>
+            <ConfusionOptions
+              onSelect={(type, customQuestion) => {
+                if (cardId && onConfusion) {
+                  onConfusion(cardId, type, customQuestion);
+                }
+              }}
+              loading={confusionLoading}
+              disabled={disabled}
+            />
+          </ConfusionFooter>
+        )}
       </ContentArea>
     </KnowledgeCardContainer>
   );

@@ -87,6 +87,7 @@ const saveSubsetFilters = [
     "knowledgeToStepRelations",
     "knowledgeToCodeChunkRelations",
     "nodeMasteryScores",
+    "showMasteryIndicators",
     "cognitiveTrace",
     "initialGeneration",
     // Note: shouldClearIdeHighlights and codeChunksToHighlightInIde are intentionally not persisted

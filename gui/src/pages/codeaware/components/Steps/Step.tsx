@@ -216,10 +216,14 @@ const Step: React.FC<StepProps> = ({
   const highlightType = fullStep?.highlightType;
 
   // Mastery：计算该 step 关联 situation 节点的加权平均掌握度
+  const showMasteryIndicators = useAppSelector(
+    (state) => state.codeAwareSession.showMasteryIndicators,
+  );
   const stepMastery = useAppSelector((state) =>
     stepId ? selectStepMastery(state, stepId) : null,
   );
-  const masteryScore = stepMastery?.score ?? null;
+  const masteryScore =
+    showMasteryIndicators && stepMastery ? stepMastery.score : null;
   const masteryColor =
     masteryScore !== null ? masteryScoreToColor(masteryScore) : undefined;
 

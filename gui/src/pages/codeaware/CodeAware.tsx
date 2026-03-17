@@ -5,6 +5,7 @@ import {
   StepItem,
   StepStatus,
 } from "core";
+import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
 import {
   Key,
   useCallback,
@@ -31,6 +32,7 @@ import {
   KnowledgeCardInteraction,
 } from "../../redux/cognitive/masteryTrackingEngine";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks";
+import { selectCodeMasteryBySituationGroups } from "../../redux/selectors/masterySelectors";
 import {
   clearAllCodeAndMappings,
   clearAllHighlights,
@@ -53,6 +55,7 @@ import {
   setStepStatus,
   setUserRequirementStatus,
   submitRequirementContent,
+  toggleMasteryIndicators,
   updateHighlight,
 } from "../../redux/slices/codeAwareSlice";
 import {
@@ -690,6 +693,12 @@ export const CodeAware = () => {
   const codeChunksToHighlightInIde = useAppSelector(
     (state) => state.codeAwareSession.codeChunksToHighlightInIde,
   );
+
+  // Mastery indicators toggle + code mastery groups for editor decorations
+  const showMasteryIndicators = useAppSelector(
+    (state) => state.codeAwareSession.showMasteryIndicators,
+  );
+  const codeMasteryGroups = useAppSelector(selectCodeMasteryBySituationGroups);
 
   // Get all the mappings:
   const allMappings = useAppSelector(
@@ -2716,6 +2725,24 @@ export const CodeAware = () => {
     }
   }, [codeChunksToHighlightInIde, ideMessenger, dispatch]);
 
+  // Sync code mastery decorations to the editor
+  useEffect(() => {
+    if (!ideMessenger) return;
+    if (showMasteryIndicators && codeMasteryGroups.length > 0) {
+      ideMessenger.post(
+        "setCodeMasteryDecorations",
+        codeMasteryGroups.map((g) => ({
+          filePath: g.filePath,
+          range: g.lineRange,
+          score: g.score,
+          color: g.color,
+        })),
+      );
+    } else {
+      ideMessenger.post("clearCodeMasteryDecorations", undefined);
+    }
+  }, [showMasteryIndicators, codeMasteryGroups, ideMessenger]);
+
   // Cleanup effect for auto-scroll disable timeout
   useEffect(() => {
     return () => {
@@ -2745,13 +2772,26 @@ export const CodeAware = () => {
           userRequirementStatus === "finalized" && steps.length > 0
         }
         rightContent={
-          <HeaderActionButton
-            onClick={handleExportKnowledgeState}
-            disabled={isExportingKnowledgeState}
-            title="导出/更新认知状态文件到 .knowledge_state/"
-          >
-            {isExportingKnowledgeState ? "导出中..." : "导出知识状态"}
-          </HeaderActionButton>
+          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+            <HeaderActionButton
+              onClick={() => dispatch(toggleMasteryIndicators())}
+              title={showMasteryIndicators ? "隐藏掌握度" : "显示掌握度"}
+              style={{ padding: "6px 8px", minWidth: "auto" }}
+            >
+              {showMasteryIndicators ? (
+                <EyeIcon style={{ width: 16, height: 16 }} />
+              ) : (
+                <EyeSlashIcon style={{ width: 16, height: 16 }} />
+              )}
+            </HeaderActionButton>
+            <HeaderActionButton
+              onClick={handleExportKnowledgeState}
+              disabled={isExportingKnowledgeState}
+              title="导出/更新认知状态文件到 .knowledge_state/"
+            >
+              {isExportingKnowledgeState ? "导出中..." : "导出知识状态"}
+            </HeaderActionButton>
+          </div>
         }
       />
 

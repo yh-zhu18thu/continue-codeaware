@@ -84,6 +84,8 @@ export type CodeAwareSessionState = {
   knowledgeToCodeChunkRelations: KnowledgeToCodeChunkRelation[];
   // 节点掌握度
   nodeMasteryScores: NodeMasteryScore[];
+  // 掌握度指示器可见性
+  showMasteryIndicators: boolean;
   // 初始生成状态
   initialGeneration: InitialGenerationState;
   // 映射查找状态
@@ -137,6 +139,7 @@ const initialCodeAwareState: CodeAwareSessionState = {
   knowledgeToStepRelations: [],
   knowledgeToCodeChunkRelations: [],
   nodeMasteryScores: [],
+  showMasteryIndicators: true,
   initialGeneration: {
     status: "idle",
     currentPhase: "",
@@ -726,6 +729,10 @@ export const codeAwareSessionSlice = createSlice({
       action: PayloadAction<NodeMasteryScore[]>,
     ) => {
       state.nodeMasteryScores = action.payload;
+    },
+    // 掌握度指示器可见性开关
+    toggleMasteryIndicators: (state) => {
+      state.showMasteryIndicators = !state.showMasteryIndicators;
     },
     upsertNodeMasteryScore: (
       state,
@@ -1573,6 +1580,7 @@ export const {
   setKnowledgeToCodeChunkRelations,
   setNodeMasteryScores,
   upsertNodeMasteryScore,
+  toggleMasteryIndicators,
   updateInitialGenerationStatus,
   resetInitialGenerationStatus,
   addInitialGenerationError,

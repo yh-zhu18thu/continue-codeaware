@@ -8,6 +8,7 @@ import React from "react";
 import styled from "styled-components";
 import {
   lightGray,
+  defaultBorderRadius,
   vscButtonBackground,
   vscForeground,
 } from "../../../../components";
@@ -79,6 +80,25 @@ const ChevronContainer = styled.div<{ isExpanded: boolean }>`
     isExpanded ? "rotate(0deg)" : "rotate(-90deg)"};
 `;
 
+const MasteryBackgroundFill = styled.div<{
+  percent: number;
+  masteryColor: string;
+}>`
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: ${({ percent }) => percent}%;
+  background-color: ${({ masteryColor }) => masteryColor};
+  opacity: 0.18;
+  border-radius: ${defaultBorderRadius};
+  pointer-events: none;
+  z-index: 0;
+  transition:
+    width 0.5s ease-in-out,
+    background-color 0.4s ease-in-out;
+`;
+
 interface KnowledgeCardToolBarProps {
   title: string;
   isExpanded?: boolean;
@@ -90,6 +110,8 @@ interface KnowledgeCardToolBarProps {
   isFlickering?: boolean;
   isTestMode?: boolean; // 新增：是否在测试模式
   hasCorrectAnswer?: boolean; // 新增：是否有正确答案
+  masteryScore?: number | null;
+  masteryColor?: string;
 }
 
 const KnowledgeCardToolBar: React.FC<KnowledgeCardToolBarProps> = ({
@@ -103,7 +125,12 @@ const KnowledgeCardToolBar: React.FC<KnowledgeCardToolBarProps> = ({
   isFlickering = false,
   isTestMode = false, // 新增默认值
   hasCorrectAnswer = false, // 新增默认值
+  masteryScore = null,
+  masteryColor,
 }) => {
+  const masteryPercent =
+    masteryScore !== null ? Math.round(masteryScore * 100) : null;
+
   return (
     <ToolBarContainer isHighlighted={isHighlighted} isFlickering={isFlickering}>
       {/* Small disable button in top-left corner */}
@@ -148,6 +175,14 @@ const KnowledgeCardToolBar: React.FC<KnowledgeCardToolBarProps> = ({
       <ChevronContainer isExpanded={isExpanded} onClick={onToggle}>
         <ChevronDownIcon width={16} height={16} />
       </ChevronContainer>
+
+      {/* Mastery background fill */}
+      {masteryColor && masteryPercent !== null && (
+        <MasteryBackgroundFill
+          percent={masteryPercent}
+          masteryColor={masteryColor}
+        />
+      )}
     </ToolBarContainer>
   );
 };

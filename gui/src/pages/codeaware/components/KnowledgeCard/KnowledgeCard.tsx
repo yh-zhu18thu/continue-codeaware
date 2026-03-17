@@ -7,7 +7,10 @@ import {
   lightGray,
   vscForeground,
 } from "../../../../components";
+import { useAppSelector } from "../../../../redux/hooks";
+import { selectKnowledgeCardMastery } from "../../../../redux/selectors/masterySelectors";
 import { useCodeAwareLogger } from "../../../../util/codeAwareWebViewLogger";
+import { masteryScoreToColor } from "../../../../utils/masteryColor";
 import KnowledgeCardContent from "./KnowledgeCardContent";
 import KnowledgeCardLoader from "./KnowledgeCardLoader";
 import KnowledgeCardMCQ from "./KnowledgeCardMCQ";
@@ -330,6 +333,27 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
   const hasTriggeredInitialContentLoadRef = useRef(false);
   const hasStartedTimedViewRef = useRef(false);
   const isContentMissing = markdownContent.trim().length === 0;
+
+  // Mastery: compute mastery from all linked nodes
+  const allMasteryNodeRefs: MasteryNodeRef[] = [
+    ...(linkedMasteryNodes ?? []),
+    ...(linkedKnowledgeNodeIds ?? []).map((id) => ({
+      nodeId: id,
+      nodeType: "background-knowledge" as const,
+    })),
+  ];
+  const showMasteryIndicators = useAppSelector(
+    (state) => state.codeAwareSession.showMasteryIndicators,
+  );
+  const kcMastery = useAppSelector((state) =>
+    allMasteryNodeRefs.length > 0
+      ? selectKnowledgeCardMastery(state, allMasteryNodeRefs)
+      : null,
+  );
+  const kcMasteryScore =
+    showMasteryIndicators && kcMastery ? kcMastery.score : null;
+  const kcMasteryColor =
+    kcMasteryScore !== null ? masteryScoreToColor(kcMasteryScore) : undefined;
 
   const triggerLazyContentGeneration = useCallback(() => {
     if (
@@ -733,6 +757,8 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
         isFlickering={false}
         isTestMode={currentViewMode === "answer"} // 传递答题模式状态
         hasCorrectAnswer={hasCorrectAnswer} // 传递正确答案状态
+        masteryScore={kcMasteryScore}
+        masteryColor={kcMasteryColor}
       />
       <ContentArea isVisible={isExpanded}>
         <InteractionBar>

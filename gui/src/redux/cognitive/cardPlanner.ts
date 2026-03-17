@@ -12,14 +12,12 @@ import {
   computeSituationGroups,
   toSituationNodeId,
 } from "../../utils/situationGrouping";
-import { IntentResolution } from "./types";
 
 export interface CardPlanItem {
   topCandidate: MasteryNodeRef;
   linkedMasteryNodes: MasteryNodeRef[];
   linkedKnowledgeNodeIds: string[];
   assumedMasteredNodeIds: string[];
-  intentTypes: IntentResolution["intentTypes"];
   primaryUnmasteredNodeId?: string;
   nodeFocusPath: string[];
 }
@@ -217,7 +215,6 @@ function scoreCandidate(args: {
 }
 
 function buildCandidates(args: {
-  intent: IntentResolution;
   targetStepId: string;
   masteryScores: NodeMasteryScore[];
   knowledgePoints: KnowledgePoint[];
@@ -255,7 +252,12 @@ function buildCandidates(args: {
     args.knowledgeRelations,
   );
 
-  const focusBuckets = getFocusPaths(args.intent.reason);
+  // Use default focus path: background knowledge + prerequisite + situation
+  const focusBuckets = [
+    "step_background_knowledge",
+    "step_prerequisite_knowledge",
+    "step_situation_to_code",
+  ];
   const candidates: CandidateNode[] = [];
   const defaultBackgroundIds = pickTopBackgroundKnowledge({
     candidates: new Set([
@@ -434,7 +436,6 @@ function buildCandidates(args: {
 
 export function planKnowledgeCards(args: {
   targetStepId: string;
-  intent: IntentResolution;
   masteryScores: NodeMasteryScore[];
   knowledgeGraph: {
     knowledgePoints: KnowledgePoint[];
@@ -463,7 +464,6 @@ export function planKnowledgeCards(args: {
   );
 
   const candidates = buildCandidates({
-    intent: args.intent,
     targetStepId: args.targetStepId,
     masteryScores: args.masteryScores,
     knowledgePoints: args.knowledgeGraph.knowledgePoints,
@@ -505,17 +505,13 @@ export function planKnowledgeCards(args: {
       assumedMasteredNodeIds: assumedMasteredPool.filter(
         (nodeId) => nodeId !== primaryUnmasteredNodeId,
       ),
-      intentTypes: args.intent.intentTypes,
       primaryUnmasteredNodeId,
       nodeFocusPath: [candidate.source],
     };
   });
 
-  console.info("[CA:Knowledge:PhaseG][PlannerSelection]", {
-    tag: "CA_PHASE_G_PLANNER_SELECTION",
+  console.info("[CA:Knowledge][PlannerSelection]", {
     targetStepId: args.targetStepId,
-    intentTypes: args.intent.intentTypes,
-    preferredInitialView: args.intent.preferredInitialView,
     maxCards,
     candidateCount: candidates.length,
     topCandidates: candidates.slice(0, 6).map((candidate) => ({
@@ -545,7 +541,6 @@ export function planKnowledgeCards(args: {
       })),
       linkedMasteryNodes: plan.linkedMasteryNodes,
       assumedMasteredNodeIds: plan.assumedMasteredNodeIds,
-      intentTypes: plan.intentTypes,
       primaryUnmasteredNodeId: plan.primaryUnmasteredNodeId,
       nodeFocusPath: plan.nodeFocusPath,
     })),

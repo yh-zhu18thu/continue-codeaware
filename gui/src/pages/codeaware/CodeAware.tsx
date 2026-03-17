@@ -20,18 +20,14 @@ import {
   emitMasteryUpdateLogs,
   KnowledgeCardInteraction,
 } from "../../redux/cognitive/masteryTrackingEngine";
-import { routeCognitiveTrigger } from "../../redux/cognitive/triggerRouter";
-import { CognitiveInteractionEvent } from "../../redux/cognitive/types";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks";
 import {
   clearAllCodeAndMappings,
   clearAllHighlights,
   newCodeAwareSession,
-  recordCognitiveEvent,
   resetIdeCommFlags,
   resetSessionExceptRequirement,
   selectCodeAwareSessionState,
-  selectCognitiveTrace,
   selectCurrentSessionId,
   selectIsRequirementInEditMode,
   selectIsStepsGenerated,
@@ -42,7 +38,6 @@ import {
   setKnowledgeCardFeedback,
   setKnowledgeCardGenerationStatus,
   setKnowledgeCardViewMode,
-  setLatestIntentForStep,
   setNodeMasteryScores,
   setStepAbstract,
   setStepStatus,
@@ -56,8 +51,8 @@ import {
   generateCodeFromSteps,
   generateKnowledgeCardDetail,
   generateKnowledgeCardTests, // 新增：导入测试题生成thunk
-  generateKnowledgeCardThemes,
   generateKnowledgeCardThemesFromQuery,
+  generatePrerequisiteKnowledgeCards,
   getStepCorrespondingCode,
   processGlobalQuestion,
   processSaqSubmission,
@@ -311,20 +306,9 @@ export const CodeAware = () => {
     dispatch(clearAllHighlights());
   });
 
-  // CodeAware: 监听代码注释查看事件，记入认知追踪
+  // CodeAware: 监听代码注释查看事件
   useWebviewListener("codeExplanationEvent", async (data) => {
     console.log("[CA:UI] 代码注释事件:", data);
-    recordCognitiveInteraction({
-      type: "code_explanation",
-      payload: {
-        filePath: data.filePath,
-        selectedLines: data.selectedLines,
-        language: data.language,
-        action: data.action,
-        question: data.question,
-        hasFollowUp: data.action === "followup",
-      },
-    });
   });
 
   //CodeAware: 增加一个指令，使得可以发送当前所选择的知识卡片id
@@ -370,7 +354,6 @@ export const CodeAware = () => {
     return map;
   }, [stepToHighLevelMappings]);
 
-  const cognitiveTrace = useAppSelector(selectCognitiveTrace);
   const knowledgeNodeTitleById = useMemo(() => {
     return Object.fromEntries(
       codeAwareSessionState.knowledgePoints.map((point) => [
@@ -379,75 +362,6 @@ export const CodeAware = () => {
       ]),
     );
   }, [codeAwareSessionState.knowledgePoints]);
-
-  const recordCognitiveInteraction = useCallback(
-    (event: Omit<CognitiveInteractionEvent, "id" | "timestamp">) => {
-      const now = Date.now();
-      const eventWithTimestamp: CognitiveInteractionEvent = {
-        ...event,
-        id: `cog-ui-${now}-${Math.random().toString(36).slice(2, 8)}`,
-        timestamp: now,
-      };
-
-      dispatch(recordCognitiveEvent(eventWithTimestamp));
-
-      const recentEvents = cognitiveTrace.events.slice(-30);
-      const nextRecentEvents = [...recentEvents, eventWithTimestamp].slice(-30);
-      const decision = routeCognitiveTrigger({
-        currentEvent: eventWithTimestamp,
-        recentEvents: nextRecentEvents,
-        stepVisitStats: cognitiveTrace.stepVisitStats,
-      });
-
-      console.info("[CognitiveTrace][Event]", {
-        id: eventWithTimestamp.id,
-        type: eventWithTimestamp.type,
-        stepId: eventWithTimestamp.stepId,
-        knowledgeCardId: eventWithTimestamp.knowledgeCardId,
-        timestamp: eventWithTimestamp.timestamp,
-        isoTime: new Date(eventWithTimestamp.timestamp).toISOString(),
-        localTime: new Date(eventWithTimestamp.timestamp).toLocaleString(),
-        recentWindowSize: nextRecentEvents.length,
-      });
-
-      console.info("[CognitiveTrace][Decision]", {
-        eventType: eventWithTimestamp.type,
-        targetStepId: decision.intent.targetStepId,
-        reason: decision.intent.reason,
-        intentTypes: decision.intent.intentTypes,
-        preferredInitialView: decision.intent.preferredInitialView,
-        shouldGenerateCards: decision.shouldGenerateCards,
-        maxCards: decision.maxCards,
-      });
-
-      console.info("[CA:UI:PhaseG][IntentRoute]", {
-        tag: "CA_PHASE_G_INTENT_ROUTE",
-        eventType: eventWithTimestamp.type,
-        sourceStepId: eventWithTimestamp.stepId,
-        routedStepId: decision.intent.targetStepId,
-        intentTypes: decision.intent.intentTypes,
-        reason: decision.intent.reason,
-        preferredInitialView: decision.intent.preferredInitialView,
-        shouldGenerateCards: decision.shouldGenerateCards,
-        maxCards: decision.maxCards,
-      });
-
-      dispatch(
-        setLatestIntentForStep({
-          stepId: decision.intent.targetStepId,
-          summary: {
-            intentTypes: decision.intent.intentTypes,
-            preferredInitialView: decision.intent.preferredInitialView,
-            reason: decision.intent.reason,
-            updatedAt: Date.now(),
-          },
-        }),
-      );
-
-      return decision;
-    },
-    [cognitiveTrace.events, cognitiveTrace.stepVisitStats, dispatch],
-  );
 
   // 监听steps变化，同步给IDE
   useEffect(() => {
@@ -789,20 +703,6 @@ export const CodeAware = () => {
 
       console.log("[CA:UI] 找到语义元素:", uniqueSemanticMappings);
 
-      const mappedStep = uniqueSemanticMappings.find(
-        (mapping) => mapping.semanticElementType === "step",
-      );
-      if (mappedStep) {
-        recordCognitiveInteraction({
-          type: "code_to_step",
-          stepId: mappedStep.semanticElementId,
-          payload: {
-            source: "jump_to_semantic",
-            codeChunkId: result.chunk.id,
-          },
-        });
-      }
-
       // 4. 同时高亮所有关联语义元素，并保留代码侧高亮
       //    构建代码块高亮事件（从查找结果中获取）
       const codeHighlightEvent: HighlightEvent = {
@@ -849,7 +749,7 @@ export const CodeAware = () => {
     } finally {
       setIsMappingLookupInProgress(false);
     }
-  }, [currentCodeSelection, dispatch, logger, recordCognitiveInteraction]);
+  }, [currentCodeSelection, dispatch, logger]);
 
   const handleJumpToCode = useCallback(async () => {
     console.log("[CA:UI:Nav] 语义 → 代码");
@@ -882,44 +782,6 @@ export const CodeAware = () => {
       }
 
       console.log("[CA:UI] 找到高亮的语义元素:", focusedElement);
-
-      if (focusedElement.type === "step") {
-        recordCognitiveInteraction({
-          type: "step_to_code",
-          stepId: focusedElement.id,
-          payload: {
-            source: "jump_to_code",
-          },
-        });
-      } else {
-        const mappedStep = stepToHighLevelMappings.find(
-          (mapping) => mapping.highLevelStepId === focusedElement.id,
-        );
-
-        if (mappedStep?.stepId) {
-          recordCognitiveInteraction({
-            type: "step_to_code",
-            stepId: mappedStep.stepId,
-            payload: {
-              source: "jump_to_code",
-              derivedFrom: "highLevelStep",
-              highLevelStepId: focusedElement.id,
-            },
-          });
-
-          console.info("[CognitiveTrace][JumpToCode] derived step_to_code", {
-            highLevelStepId: focusedElement.id,
-            derivedStepId: mappedStep.stepId,
-          });
-        } else {
-          console.warn(
-            "[CA:UI] [CognitiveTrace][JumpToCode] no mapped step found for highlighted highLevelStep",
-            {
-              highLevelStepId: focusedElement.id,
-            },
-          );
-        }
-      }
 
       // 2. 使用新的通用接口查找代码块（支持实时读取和缓存验证）
       const result = await dispatch(
@@ -998,7 +860,6 @@ export const CodeAware = () => {
     dispatch,
     ideMessenger,
     logger,
-    recordCognitiveInteraction,
   ]);
 
   // Track steps that should be force expanded due to code selection questions
@@ -2007,38 +1868,19 @@ export const CodeAware = () => {
     async (stepId: string, isExpanded: boolean) => {
       console.log(`[CA:UI] Step ${stepId} expansion changed to: ${isExpanded}`);
 
-      const decision = recordCognitiveInteraction({
-        type: isExpanded ? "step_expand" : "step_collapse",
-        stepId,
-        payload: {
-          source: "step_panel_toggle",
-        },
-      });
-
       if (isExpanded) {
         // When a step is expanded, immediately set it as the currently expanded step
-        // This ensures the step stays expanded while other steps are collapsed
         setCurrentlyExpandedStepId(stepId);
 
-        // Phase D intent-aware generation gate:
-        // only generate when router resolves this expanded step as the intent target.
+        // 首次展开时，生成前置背景知识卡片
         const expandedStep = steps.find((step) => step.id === stepId);
-        const canGenerateFromIntent =
-          decision.shouldGenerateCards &&
-          decision.intent.targetStepId === stepId &&
-          decision.intent.intentTypes.length > 0;
         const isGenerationIdle =
           expandedStep?.knowledgeCardGenerationStatus !== "generating";
+        const isFirstExpansion =
+          expandedStep?.knowledgeCardGenerationStatus === "empty";
 
-        if (expandedStep && canGenerateFromIntent && isGenerationIdle) {
-          await dispatch(
-            generateKnowledgeCardThemes({
-              stepId,
-              stepTitle: expandedStep.title,
-              stepAbstract: expandedStep.abstract,
-              learningGoal: learningGoal || "提升编程技能和理解相关概念",
-            }),
-          );
+        if (expandedStep && isFirstExpansion && isGenerationIdle) {
+          await dispatch(generatePrerequisiteKnowledgeCards({ stepId }));
         }
 
         // 检查知识卡片是否有代码映射，如果没有则生成映射
@@ -2050,7 +1892,6 @@ export const CodeAware = () => {
             `[CA:UI] 步骤 ${stepId} 的知识卡片代码映射检查失败:`,
             error,
           );
-          // 不抛出错误，让展开操作继续进行
         }
       } else {
         // When a step is collapsed, clear the currently expanded step if it's this one
@@ -2071,10 +1912,7 @@ export const CodeAware = () => {
     },
     [
       dispatch,
-      logger,
-      recordCognitiveInteraction,
       steps,
-      learningGoal,
       setCurrentlyExpandedStepId,
       setForceExpandedSteps,
       setGlobalQuestionExpandedSteps,
@@ -2082,21 +1920,10 @@ export const CodeAware = () => {
   );
 
   const handleKnowledgeCardExpansionChange = useCallback(
-    (stepId: string, cardId: string, isExpanded: boolean) => {
-      if (!isExpanded) {
-        return;
-      }
-
-      recordCognitiveInteraction({
-        type: "knowledge_card_open",
-        stepId,
-        knowledgeCardId: cardId,
-        payload: {
-          source: "knowledge_card_panel_toggle",
-        },
-      });
+    (_stepId: string, _cardId: string, _isExpanded: boolean) => {
+      // No-op: intent tracking removed
     },
-    [recordCognitiveInteraction],
+    [],
   );
 
   const handleKnowledgeCardViewModeChange = useCallback(
@@ -2112,15 +1939,6 @@ export const CodeAware = () => {
           viewMode,
         }),
       );
-
-      recordCognitiveInteraction({
-        type: "knowledge_card_view_mode_change",
-        stepId,
-        knowledgeCardId: cardId,
-        payload: {
-          viewMode,
-        },
-      });
 
       if (viewMode === "read" || viewMode === "self-test") {
         const step = codeAwareSessionState.steps.find((s) => s.id === stepId);
@@ -2154,12 +1972,7 @@ export const CodeAware = () => {
         }
       }
     },
-    [
-      codeAwareSessionState,
-      dispatch,
-      knowledgeNodeTitleById,
-      recordCognitiveInteraction,
-    ],
+    [codeAwareSessionState, dispatch, knowledgeNodeTitleById],
   );
 
   const handleKnowledgeCardFeedback = useCallback(
@@ -2171,15 +1984,6 @@ export const CodeAware = () => {
           feedback,
         }),
       );
-
-      recordCognitiveInteraction({
-        type: "knowledge_card_feedback",
-        stepId,
-        knowledgeCardId: cardId,
-        payload: {
-          feedback,
-        },
-      });
 
       const step = codeAwareSessionState.steps.find((s) => s.id === stepId);
       const card = step?.knowledgeCards.find((k) => k.id === cardId);
@@ -2211,12 +2015,7 @@ export const CodeAware = () => {
         });
       }
     },
-    [
-      codeAwareSessionState,
-      dispatch,
-      knowledgeNodeTitleById,
-      recordCognitiveInteraction,
-    ],
+    [codeAwareSessionState, dispatch, knowledgeNodeTitleById],
   );
 
   const handleQuestionSubmit = useCallback(
@@ -2225,15 +2024,6 @@ export const CodeAware = () => {
         stepId,
         selectedText,
         question,
-      });
-
-      const decision = recordCognitiveInteraction({
-        type: "question_submit_step",
-        stepId,
-        payload: {
-          selectedText,
-          question,
-        },
       });
 
       await logger.addLogEntry("user_submit_question", {
@@ -2277,7 +2067,6 @@ export const CodeAware = () => {
             existingThemes,
             learningGoal: learningGoal || "",
             task: taskDescription,
-            intentOverride: decision.intent,
           }),
         );
 
@@ -2332,20 +2121,13 @@ export const CodeAware = () => {
         );
       }
     },
-    [steps, learningGoal, task, dispatch, logger, recordCognitiveInteraction],
+    [steps, learningGoal, task, dispatch, logger],
   );
 
   // Handle global question submission
   const handleGlobalQuestionSubmit = useCallback(
     async (question: string) => {
       console.log("[CA:UI] 处理全局提问:", { question });
-
-      const decision = recordCognitiveInteraction({
-        type: "question_submit_global",
-        payload: {
-          question,
-        },
-      });
 
       setIsGlobalQuestionLoading(true);
 
@@ -2376,24 +2158,11 @@ export const CodeAware = () => {
           processGlobalQuestion({
             question,
             currentCode,
-            intentOverride: decision.intent,
           }),
         );
 
         if (processGlobalQuestion.fulfilled.match(result)) {
           const { selectedStepId, themes, knowledgeCardIds } = result.payload;
-
-          dispatch(
-            setLatestIntentForStep({
-              stepId: selectedStepId,
-              summary: {
-                intentTypes: decision.intent.intentTypes,
-                preferredInitialView: decision.intent.preferredInitialView,
-                reason: decision.intent.reason,
-                updatedAt: Date.now(),
-              },
-            }),
-          );
 
           console.log("[CA:UI] Global question processed successfully:", {
             selectedStepId,
@@ -2466,7 +2235,6 @@ export const CodeAware = () => {
       logger,
       setForceExpandedSteps,
       setCurrentlyExpandedStepId,
-      recordCognitiveInteraction,
     ],
   );
 
@@ -2899,17 +2667,6 @@ export const CodeAware = () => {
                               if (!submission) {
                                 return;
                               }
-
-                              recordCognitiveInteraction({
-                                type: "knowledge_card_answer_result",
-                                stepId: submission.stepId,
-                                knowledgeCardId: submission.knowledgeCardId,
-                                payload: {
-                                  testId,
-                                  answerLength: answer.length,
-                                  correctness: submission.correctness,
-                                },
-                              });
 
                               const linkedKnowledgeNodeIds =
                                 kc.linkedKnowledgeNodeIds || [];

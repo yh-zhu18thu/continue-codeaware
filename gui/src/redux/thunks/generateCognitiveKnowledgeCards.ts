@@ -1,7 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import { MasteryNodeRef } from "core";
 import { planKnowledgeCards } from "../cognitive/cardPlanner";
-import { IntentResolution } from "../cognitive/types";
 import {
   createKnowledgeCard,
   setKnowledgeCardGenerationStatus,
@@ -72,27 +71,16 @@ function abbreviateTitle(value: string | undefined): string {
   return `${text.slice(0, 33)}...`;
 }
 
-function buildIntentFallback(stepId: string): IntentResolution {
-  return {
-    targetStepId: stepId,
-    intentTypes: ["task-decomposition"],
-    preferredInitialView: "read",
-    reason: "phase_d_fallback",
-  };
-}
-
 function buildGenerationPrompt(args: {
   taskDescription: string;
   learningGoal: string;
   stepTitle: string;
   stepAbstract: string;
-  intent: IntentResolution;
   plans: Array<{
     topCandidate: MasteryNodeRef;
     linkedMasteryNodes: MasteryNodeRef[];
     linkedKnowledgeNodeIds: string[];
     assumedMasteredNodeIds: string[];
-    intentTypes: IntentResolution["intentTypes"];
     primaryUnmasteredNodeId?: string;
     nodeFocusPath: string[];
     knowledgeContext: string[];
@@ -100,7 +88,7 @@ function buildGenerationPrompt(args: {
   }>;
 }): string {
   return [
-    "You are generating cognition-aware learning cards for code understanding.",
+    "You are generating learning cards for code understanding.",
     "Return strict JSON only: an array of objects with fields:",
     '[{"title": string, "question": string, "linkedMasteryNodes": [{"nodeId": string, "nodeType": string}], "linkedKnowledgeNodeIds": string[], "assumedMasteredNodeIds": string[]}]',
     "Do not include markdown or additional keys.",
@@ -109,18 +97,16 @@ function buildGenerationPrompt(args: {
     `Learning goal: ${args.learningGoal || "N/A"}`,
     `Target step title: ${args.stepTitle}`,
     `Target step abstract: ${args.stepAbstract}`,
-    `Intent types: ${args.intent.intentTypes.join(", ")}`,
-    `Preferred initial view: ${args.intent.preferredInitialView}`,
     "",
     "Card plans to fulfill (one card per plan item):",
     JSON.stringify(args.plans, null, 2),
     "",
     "Rules:",
     "1. Each card title should be concise and non-duplicated.",
-    "2. Each card should focus on exactly one likely-unmastered but intent-relevant core point (the topCandidate mastery node).",
+    "2. Each card should focus on exactly one likely-unmastered core point (the topCandidate mastery node).",
     "3. Keep linkedMasteryNodes and linkedKnowledgeNodeIds aligned with the plan and avoid introducing unknown node IDs.",
     "4. assumedMasteredNodeIds can include multiple nodes and can be empty when uncertain.",
-    "5. Question wording should clearly connect to nodeFocusPath (e.g., prerequisite/framework/situation/syntax).",
+    "5. Question wording should clearly connect to the knowledge point's role in this step.",
   ].join("\n");
 }
 
@@ -134,7 +120,6 @@ export const generateCognitiveKnowledgeCards = createAsyncThunk<
     maxCards: number;
     taskDescription?: string;
     existingThemes?: string[];
-    intentOverride?: IntentResolution;
   },
   ThunkApiType
 >(
@@ -148,7 +133,6 @@ export const generateCognitiveKnowledgeCards = createAsyncThunk<
       maxCards,
       taskDescription,
       existingThemes,
-      intentOverride,
     },
     { dispatch, getState, extra },
   ) => {
@@ -164,22 +148,6 @@ export const generateCognitiveKnowledgeCards = createAsyncThunk<
         throw new Error("Default model not defined");
       }
 
-      const intent =
-        intentOverride ||
-        (() => {
-          const summary =
-            state.codeAwareSession.cognitiveTrace.latestIntentByStep[stepId];
-          if (!summary) {
-            return buildIntentFallback(stepId);
-          }
-          return {
-            targetStepId: stepId,
-            intentTypes: summary.intentTypes,
-            preferredInitialView: summary.preferredInitialView,
-            reason: summary.reason,
-          } as IntentResolution;
-        })();
-
       const existingLinkedNodeKeys = state.codeAwareSession.steps
         .find((step) => step.id === stepId)
         ?.knowledgeCards.flatMap((card) => [
@@ -193,7 +161,6 @@ export const generateCognitiveKnowledgeCards = createAsyncThunk<
 
       const plans = planKnowledgeCards({
         targetStepId: stepId,
-        intent,
         masteryScores: state.codeAwareSession.nodeMasteryScores,
         knowledgeGraph: {
           knowledgePoints: state.codeAwareSession.knowledgePoints,
@@ -276,15 +243,11 @@ export const generateCognitiveKnowledgeCards = createAsyncThunk<
           ),
         })),
         assumedMasteredNodeIds: plan.assumedMasteredNodeIds,
-        intentTypes: plan.intentTypes,
       }));
 
-      console.info("[CA:Knowledge:PhaseG][CardPlanner]", {
-        tag: "CA_PHASE_G_CARD_PLAN",
+      console.info("[CA:Knowledge][CardPlanner]", {
         stepId,
         stepTitle,
-        intentTypes: intent.intentTypes,
-        preferredInitialView: intent.preferredInitialView,
         maxCards,
         plannedCards: plans.length,
         nodeDebugByPlan,
@@ -321,7 +284,6 @@ export const generateCognitiveKnowledgeCards = createAsyncThunk<
         learningGoal,
         stepTitle,
         stepAbstract,
-        intent,
         plans: planWithContext,
       });
 
@@ -416,7 +378,7 @@ export const generateCognitiveKnowledgeCards = createAsyncThunk<
             cardId,
             theme: generated.title,
             question: generated.question,
-            viewMode: intent.preferredInitialView,
+            viewMode: "read",
             linkedKnowledgeNodeIds: generated.linkedKnowledgeNodeIds,
             linkedMasteryNodes: generated.linkedMasteryNodes,
             assumedMasteredNodeIds: generated.assumedMasteredNodeIds,
@@ -446,13 +408,10 @@ export const generateCognitiveKnowledgeCards = createAsyncThunk<
           linkedMasteryNodes: card.linkedMasteryNodes,
         }));
 
-      console.info("[CA:Knowledge:PhaseG][CardGeneration]", {
-        tag: "CA_PHASE_G_CARD_CREATED",
+      console.info("[CA:Knowledge][CardGeneration]", {
         stepId,
         createdCount,
         plannedCount: plans.length,
-        intentTypes: intent.intentTypes,
-        preferredInitialView: intent.preferredInitialView,
         createdCards,
       });
 

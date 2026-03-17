@@ -13,16 +13,17 @@ import {
   constructGenerateHighLevelStepNarrativePrompt,
   constructGenerateKnowledgeCardDetailPrompt,
   constructGenerateKnowledgeCardTestsPrompt, // 新增测试题生成prompt
+  constructGeneratePrerequisiteKnowledgeCardsPrompt,
   constructGenerateStepsPrompt,
   constructGlobalQuestionPrompt,
   constructParaphraseUserIntentPrompt,
   constructProcessCodeChangesPrompt,
 } from "../../../../core/llm/codeAwarePrompts";
-import { IntentResolution } from "../cognitive/types";
 import {
   clearAllCodeAwareMappings,
   clearAllCodeChunks,
   clearKnowledgeCardCodeMappings,
+  createKnowledgeCard,
   createOrGetCodeChunk,
   resetKnowledgeCardContent,
   selectTestByTestId,
@@ -1675,6 +1676,224 @@ export const generateKnowledgeCardThemes = createAsyncThunk<
   },
 );
 
+// 异步生成前置背景知识卡片 - 步骤首次展开时调用
+export const generatePrerequisiteKnowledgeCards = createAsyncThunk<
+  { createdCount: number },
+  { stepId: string },
+  ThunkApiType
+>(
+  "codeAware/generatePrerequisiteKnowledgeCards",
+  async ({ stepId }, { dispatch, getState, extra }) => {
+    dispatch(
+      setKnowledgeCardGenerationStatus({ stepId, status: "generating" }),
+    );
+
+    try {
+      const state = getState();
+      const defaultModel =
+        selectJsonGenerationModel(state) || selectSelectedChatModel(state);
+      if (!defaultModel) {
+        throw new Error("Default model not defined");
+      }
+
+      // 1. 找到该步骤关联的前置知识点
+      const stepKnowledgeRelations =
+        state.codeAwareSession.knowledgeToStepRelations.filter(
+          (rel) => rel.stepId === stepId,
+        );
+      const knowledgePointIds = new Set(
+        stepKnowledgeRelations.map((rel) => rel.knowledgeId),
+      );
+
+      // 同时查找 relatedStepIds 中包含该步骤的知识点
+      state.codeAwareSession.knowledgePoints.forEach((kp) => {
+        if (kp.relatedStepIds.includes(stepId)) {
+          knowledgePointIds.add(kp.id);
+        }
+      });
+
+      const prerequisiteKnowledgePoints =
+        state.codeAwareSession.knowledgePoints.filter((kp) =>
+          knowledgePointIds.has(kp.id),
+        );
+
+      console.log(
+        `[CA:CodeGen] 步骤 ${stepId} 的前置知识点:`,
+        prerequisiteKnowledgePoints.map((kp) => ({
+          id: kp.id,
+          title: kp.title,
+          category: kp.category,
+        })),
+      );
+
+      // 2. 如果没有前置知识点，直接设置为 ready
+      if (prerequisiteKnowledgePoints.length === 0) {
+        console.log(
+          `[CA:CodeGen] 步骤 ${stepId} 没有前置知识点，跳过知识卡片生成`,
+        );
+        dispatch(setKnowledgeCardGenerationStatus({ stepId, status: "ready" }));
+        return { createdCount: 0 };
+      }
+
+      // 3. 找到父 highLevelStep
+      const step = state.codeAwareSession.steps.find((s) => s.id === stepId);
+      if (!step) {
+        throw new Error(`Step ${stepId} not found`);
+      }
+
+      const mapping = state.codeAwareSession.stepToHighLevelMappings.find(
+        (m) => m.stepId === stepId,
+      );
+      const parentHighLevelStep = mapping
+        ? state.codeAwareSession.highLevelSteps.find(
+            (hls) => hls.id === mapping.highLevelStepId,
+          )
+        : null;
+      const parentHighLevelStepName = parentHighLevelStep?.content || "未知";
+
+      // 4. 构建 prompt
+      const taskDescription =
+        state.codeAwareSession.userRequirement?.requirementDescription || "";
+      const learningGoal = state.codeAwareSession.learningGoal || "";
+
+      const prompt = constructGeneratePrerequisiteKnowledgeCardsPrompt(
+        step.title,
+        step.abstract,
+        parentHighLevelStepName,
+        taskDescription,
+        learningGoal,
+        prerequisiteKnowledgePoints.map((kp) => ({
+          id: kp.id,
+          title: kp.title,
+          content: kp.content,
+          category: kp.category,
+          difficulty: kp.difficulty,
+        })),
+      );
+
+      // 5. 调用 LLM
+      const result = await extra.ideMessenger.request("llm/complete", {
+        prompt,
+        completionOptions: {},
+        title: defaultModel.title,
+      });
+
+      if (result.status !== "success" || !result.content) {
+        throw new Error("LLM request failed or returned empty content");
+      }
+
+      // 6. 解析响应
+      let generatedCards: Array<{
+        title: string;
+        question: string;
+        linkedKnowledgeNodeIds: string[];
+      }> = [];
+
+      try {
+        const parsed = JSON.parse(result.content);
+        if (Array.isArray(parsed)) {
+          generatedCards = parsed
+            .filter(
+              (item: any) =>
+                typeof item?.title === "string" && item.title.trim(),
+            )
+            .map((item: any, index: number) => ({
+              title: item.title.trim(),
+              question:
+                typeof item.question === "string" ? item.question.trim() : "",
+              linkedKnowledgeNodeIds: Array.isArray(item.linkedKnowledgeNodeIds)
+                ? item.linkedKnowledgeNodeIds.filter(
+                    (id: any) => typeof id === "string",
+                  )
+                : prerequisiteKnowledgePoints[index]
+                  ? [prerequisiteKnowledgePoints[index].id]
+                  : [],
+            }));
+        }
+      } catch (parseError) {
+        console.warn(
+          "[CA:CodeGen] 解析前置知识卡片响应失败，使用 fallback:",
+          parseError,
+        );
+      }
+
+      // 7. 如果解析失败，使用 fallback 直接从知识点生成
+      if (generatedCards.length === 0) {
+        generatedCards = prerequisiteKnowledgePoints.map((kp) => ({
+          title: kp.title,
+          question: `为什么「${kp.title}」对理解「${step.title}」很重要？`,
+          linkedKnowledgeNodeIds: [kp.id],
+        }));
+      }
+
+      // 8. 创建知识卡片
+      const existingTitleSet = new Set(
+        step.knowledgeCards.map((card) => card.title),
+      );
+      let nextCardIndex = step.knowledgeCards.length;
+      let createdCount = 0;
+
+      for (const generated of generatedCards) {
+        if (existingTitleSet.has(generated.title)) {
+          continue;
+        }
+
+        nextCardIndex += 1;
+        const cardId = `${stepId}-kc-${nextCardIndex}`;
+
+        const linkedMasteryNodes = generated.linkedKnowledgeNodeIds.map(
+          (nodeId) => ({
+            nodeId,
+            nodeType: "background-knowledge" as const,
+          }),
+        );
+
+        dispatch(
+          createKnowledgeCard({
+            stepId,
+            cardId,
+            theme: generated.title,
+            question: generated.question,
+            viewMode: "read",
+            linkedKnowledgeNodeIds: generated.linkedKnowledgeNodeIds,
+            linkedMasteryNodes,
+          }),
+        );
+
+        existingTitleSet.add(generated.title);
+        createdCount += 1;
+      }
+
+      console.info("[CA:CodeGen][PrerequisiteCards]", {
+        stepId,
+        stepTitle: step.title,
+        prerequisiteCount: prerequisiteKnowledgePoints.length,
+        createdCount,
+        cardTitles: generatedCards.map((c) => c.title),
+      });
+
+      // Log
+      await extra.ideMessenger.request("addCodeAwareLogEntry", {
+        eventType: "system_prerequisite_knowledge_cards_generated",
+        payload: {
+          stepId,
+          stepTitle: step.title,
+          prerequisiteCount: prerequisiteKnowledgePoints.length,
+          createdCount,
+          timestamp: new Date().toISOString(),
+        },
+      });
+
+      dispatch(setKnowledgeCardGenerationStatus({ stepId, status: "ready" }));
+      return { createdCount };
+    } catch (error) {
+      console.error("[CA:CodeGen] 前置知识卡片生成失败:", error);
+      dispatch(setKnowledgeCardGenerationStatus({ stepId, status: "empty" }));
+      throw error;
+    }
+  },
+);
+
 // 异步根据用户问题生成相关的知识卡片主题
 export const generateKnowledgeCardThemesFromQuery = createAsyncThunk<
   void,
@@ -1692,21 +1911,12 @@ export const generateKnowledgeCardThemesFromQuery = createAsyncThunk<
     existingThemes: string[];
     learningGoal: string;
     task: string;
-    intentOverride?: IntentResolution;
   },
   ThunkApiType
 >(
   "codeAware/generateKnowledgeCardThemesFromQuery",
   async (
-    {
-      stepId,
-      queryContext,
-      currentStep,
-      existingThemes,
-      learningGoal,
-      task,
-      intentOverride,
-    },
+    { stepId, queryContext, currentStep, existingThemes, learningGoal, task },
     { dispatch, extra, getState },
   ) => {
     try {
@@ -1738,18 +1948,6 @@ export const generateKnowledgeCardThemesFromQuery = createAsyncThunk<
           maxCards: 3,
           taskDescription: task,
           existingThemes,
-          intentOverride:
-            intentOverride ||
-            ({
-              targetStepId: stepId,
-              intentTypes: [
-                "function-mapping",
-                "code-understanding",
-                "prerequisite",
-              ],
-              preferredInitialView: "self-test",
-              reason: "question_submit_step",
-            } as IntentResolution),
         }),
       );
 
@@ -3209,15 +3407,11 @@ export const processGlobalQuestion = createAsyncThunk<
   {
     question: string;
     currentCode: string;
-    intentOverride?: IntentResolution;
   },
   ThunkApiType
 >(
   "codeAware/processGlobalQuestion",
-  async (
-    { question, currentCode, intentOverride },
-    { getState, dispatch, extra },
-  ) => {
+  async ({ question, currentCode }, { getState, dispatch, extra }) => {
     const maxRetries = 3; // 最大重试次数
     let lastError: Error | null = null;
 
@@ -3390,17 +3584,6 @@ export const processGlobalQuestion = createAsyncThunk<
           maxCards: Math.max(1, Math.min(3, knowledge_card_themes.length || 3)),
           taskDescription,
           existingThemes,
-          intentOverride: {
-            targetStepId: selected_step_id,
-            intentTypes: intentOverride?.intentTypes || [
-              "function-mapping",
-              "code-understanding",
-              "prerequisite",
-            ],
-            preferredInitialView:
-              intentOverride?.preferredInitialView || "self-test",
-            reason: intentOverride?.reason || "question_submit_global",
-          },
         }),
       );
 
@@ -3423,19 +3606,13 @@ export const processGlobalQuestion = createAsyncThunk<
           .filter((card) => createdCardIds.includes(card.id))
           .map((card) => card.title) || [];
 
-      console.info("[CA:CodeGen:PhaseG][GlobalQuestionToCards]", {
-        tag: "CA_PHASE_G_GLOBAL_Q_GENERATION",
+      console.info("[CA:CodeGen][GlobalQuestionToCards]", {
         questionPreview: question.slice(0, 120),
         selectedStepId: selected_step_id,
         selectedStepTitle: selectedStep.title,
         llmSuggestedThemes: knowledge_card_themes,
         createdCardIds,
         createdThemes,
-        intentTypes: intentOverride?.intentTypes || [
-          "function-mapping",
-          "code-understanding",
-          "prerequisite",
-        ],
       });
 
       console.log("[CA:CodeGen] Global question processed successfully");

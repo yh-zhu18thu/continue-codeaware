@@ -30,7 +30,6 @@ import {
 import {
   CognitiveInteractionEvent,
   CognitiveTraceState,
-  IntentSummary,
 } from "../cognitive/types";
 
 // Import RootState for proper typing
@@ -1447,13 +1446,6 @@ export const codeAwareSessionSlice = createSlice({
         },
       }),
     },
-    setLatestIntentForStep: (
-      state,
-      action: PayloadAction<{ stepId: string; summary: IntentSummary }>,
-    ) => {
-      const { stepId, summary } = action.payload;
-      state.cognitiveTrace.latestIntentByStep[stepId] = summary;
-    },
     clearCognitiveTrace: (state) => {
       state.cognitiveTrace = createEmptyCognitiveTrace();
     },
@@ -1628,7 +1620,6 @@ export const {
   appendCodeGenerationDebugLog,
   clearCodeGenerationDebugLogs,
   recordCognitiveEvent,
-  setLatestIntentForStep,
   clearCognitiveTrace,
 } = codeAwareSessionSlice.actions;
 

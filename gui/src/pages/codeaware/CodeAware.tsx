@@ -34,9 +34,11 @@ import {
 } from "../../redux/cognitive/masteryTrackingEngine";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks";
 import {
+  addGlobalQAMessage,
   addPinnedItem,
   clearAllCodeAndMappings,
   clearAllHighlights,
+  clearGlobalQASession,
   newCodeAwareSession,
   removePinnedItem,
   resetIdeCommFlags,
@@ -56,6 +58,7 @@ import {
   setStepAbstract,
   setStepStatus,
   setUserRequirementStatus,
+  startGlobalQASession,
   submitRequirementContent,
   toggleMasteryIndicators,
   updateHighlight,
@@ -63,15 +66,16 @@ import {
 import {
   checkAndMapKnowledgeCardsToCode,
   checkAndUpdateHighLevelStepCompletion,
+  convertQAToKnowledgeCard,
   generateCodeFromSteps,
   generateKnowledgeCardDetail,
   generateKnowledgeCardTests, // 新增：导入测试题生成thunk
   generateKnowledgeCardThemesFromQuery,
   generatePrerequisiteKnowledgeCards,
   getStepCorrespondingCode,
-  processGlobalQuestion,
   processSaqSubmission,
   rerunStep,
+  respondToGlobalQA,
 } from "../../redux/thunks/codeAwareGeneration";
 import {
   executeInitialGeneration,
@@ -1147,6 +1151,11 @@ export const CodeAware = () => {
   // Pinned items from Redux
   const pinnedItems = useAppSelector(
     (state) => state.codeAwareSession.pinnedItems,
+  );
+
+  // Global QA session from Redux
+  const globalQASession = useAppSelector(
+    (state) => state.codeAwareSession.globalQASession,
   );
 
   // Effect to remove steps from forceExpandedSteps when their status changes from generating to checked
@@ -2397,88 +2406,64 @@ export const CodeAware = () => {
     [steps, learningGoal, task, dispatch, logger],
   );
 
-  // Handle global confusion submission (replaces old handleGlobalQuestionSubmit)
+  // Handle global confusion submission — Q&A conversation mode
   const handleGlobalConfusionSubmit = useCallback(
     async (question: string) => {
-      console.log("[CA:UI] 处理全局提问:", { question });
+      console.log("[CA:UI] 全局Q&A提问:", { question });
 
       setIsGlobalConfusionLoading(true);
 
-      await logger.addLogEntry("user_submit_global_question", {
-        question: question.substring(0, 200),
-        timestamp: new Date().toISOString(),
-      });
-
       try {
-        const currentFileResponse = await ideMessenger?.request(
-          "getCurrentFile",
-          undefined,
-        );
-
-        if (
-          !currentFileResponse ||
-          currentFileResponse.status !== "success" ||
-          !currentFileResponse.content
-        ) {
-          throw new Error("无法获取当前文件内容");
+        // Start a new QA session if none exists
+        if (!globalQASession) {
+          dispatch(startGlobalQASession());
         }
 
-        const currentCode = currentFileResponse.content.contents || "";
-
-        const result = await dispatch(
-          processGlobalQuestion({
-            question,
-            currentCode,
+        // Add user message to session
+        dispatch(
+          addGlobalQAMessage({
+            id: `qa-msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            role: "user",
+            content: question,
+            timestamp: Date.now(),
           }),
         );
 
-        if (processGlobalQuestion.fulfilled.match(result)) {
-          const { selectedStepId, themes, knowledgeCardIds } = result.payload;
+        await logger.addLogEntry("user_submit_global_qa_question", {
+          question: question.substring(0, 200),
+          conversationLength: (globalQASession?.messages.length ?? 0) + 1,
+          timestamp: new Date().toISOString(),
+        });
 
-          console.log("[CA:UI] Global question processed successfully:", {
-            selectedStepId,
-            themes,
-            knowledgeCardIds,
-          });
-
-          // Close overlay
-          setIsGlobalOverlayOpen(false);
-
-          // Highlight selected step
-          dispatch(
-            updateHighlight({
-              sourceType: "step",
-              identifier: selectedStepId,
-            }),
+        // Get current code for context
+        let currentCode = "";
+        try {
+          const currentFileResponse = await ideMessenger?.request(
+            "getCurrentFile",
+            undefined,
           );
+          if (
+            currentFileResponse &&
+            currentFileResponse.status === "success" &&
+            currentFileResponse.content
+          ) {
+            currentCode = currentFileResponse.content.contents || "";
+          }
+        } catch {
+          // Continue without code context
+        }
 
-          // Force expand step
-          setForceExpandedSteps((prev) => new Set([...prev, selectedStepId]));
-          setGlobalQuestionExpandedSteps(
-            (prev) => new Set([...prev, selectedStepId]),
-          );
-          setCurrentlyExpandedStepId(selectedStepId);
+        // Dispatch respondToGlobalQA thunk
+        const result = await dispatch(
+          respondToGlobalQA({ question, currentCode }),
+        );
 
-          ideMessenger?.post("showToast", [
-            "info",
-            `已为您找到相关步骤并生成了 ${themes.length} 个知识卡片主题`,
-          ]);
-
-          await logger.addLogEntry("user_submit_global_question_completed", {
-            selectedStepId,
-            themesCount: themes.length,
-            knowledgeCardIds,
-            timestamp: new Date().toISOString(),
-          });
-        } else if (processGlobalQuestion.rejected.match(result)) {
+        if (respondToGlobalQA.rejected.match(result)) {
           console.error(
-            "[CA:UI] Failed to process global question:",
+            "[CA:UI] Failed to get QA response:",
             result.error.message,
           );
-          ideMessenger?.post("showToast", [
-            "error",
-            "处理问题时发生错误，请重试",
-          ]);
+          ideMessenger?.post("showToast", ["error", "回复生成失败，请重试"]);
         }
       } catch (error) {
         console.error("[CA:UI] Error in handleGlobalConfusionSubmit:", error);
@@ -2490,14 +2475,77 @@ export const CodeAware = () => {
         setIsGlobalConfusionLoading(false);
       }
     },
-    [
-      dispatch,
-      ideMessenger,
-      logger,
-      setForceExpandedSteps,
-      setCurrentlyExpandedStepId,
-    ],
+    [dispatch, ideMessenger, logger, globalQASession],
   );
+
+  // Handle ending the global Q&A session — convert to knowledge card
+  const handleGlobalQAEnd = useCallback(async () => {
+    if (!globalQASession || globalQASession.messages.length === 0) {
+      // No conversation to convert, just close
+      dispatch(clearGlobalQASession());
+      setIsGlobalOverlayOpen(false);
+      return;
+    }
+
+    console.log("[CA:UI] 结束全局Q&A，转化为知识卡片");
+
+    await logger.addLogEntry("user_end_global_qa", {
+      conversationLength: globalQASession.messages.length,
+      timestamp: new Date().toISOString(),
+    });
+
+    try {
+      const result = await dispatch(convertQAToKnowledgeCard());
+
+      if (convertQAToKnowledgeCard.fulfilled.match(result)) {
+        const { stepId, cardId } = result.payload;
+
+        console.log("[CA:UI] Q&A converted to card:", { stepId, cardId });
+
+        // Close overlay
+        setIsGlobalOverlayOpen(false);
+
+        // Force expand step
+        setForceExpandedSteps((prev) => new Set([...prev, stepId]));
+        setGlobalQuestionExpandedSteps((prev) => new Set([...prev, stepId]));
+        setCurrentlyExpandedStepId(stepId);
+
+        ideMessenger?.post("showToast", ["info", "已将问答整理为知识卡片"]);
+
+        await logger.addLogEntry("user_global_qa_converted_to_card", {
+          stepId,
+          cardId,
+          timestamp: new Date().toISOString(),
+        });
+      } else if (convertQAToKnowledgeCard.rejected.match(result)) {
+        console.error(
+          "[CA:UI] Failed to convert QA to card:",
+          result.error.message,
+        );
+        ideMessenger?.post("showToast", [
+          "warning",
+          "问答转化为知识卡片失败，但对话内容已保留",
+        ]);
+        // Don't clear session on failure so user can retry
+        setIsGlobalOverlayOpen(false);
+        return;
+      }
+
+      // Clear session on success
+      dispatch(clearGlobalQASession());
+    } catch (error) {
+      console.error("[CA:UI] Error in handleGlobalQAEnd:", error);
+      ideMessenger?.post("showToast", ["warning", "问答转化过程中发生错误"]);
+      setIsGlobalOverlayOpen(false);
+    }
+  }, [
+    dispatch,
+    globalQASession,
+    ideMessenger,
+    logger,
+    setForceExpandedSteps,
+    setCurrentlyExpandedStepId,
+  ]);
 
   // Global overlay open/close
   const handleOpenGlobalOverlay = useCallback(
@@ -2513,11 +2561,20 @@ export const CodeAware = () => {
   );
 
   const handleCloseGlobalOverlay = useCallback(() => {
+    // If there's an active QA session with messages, auto-end and convert
+    if (
+      globalQASession &&
+      globalQASession.messages.length > 0 &&
+      globalQASession.status === "active"
+    ) {
+      void handleGlobalQAEnd();
+      return;
+    }
     setIsGlobalOverlayOpen(false);
     void logger.addLogEntry("user_close_global_overlay", {
       timestamp: new Date().toISOString(),
     });
-  }, [logger]);
+  }, [logger, globalQASession, handleGlobalQAEnd]);
 
   // Pin navigation: scroll to target item
   const handlePinNavigate = useCallback(
@@ -3334,6 +3391,9 @@ export const CodeAware = () => {
         onClose={handleCloseGlobalOverlay}
         onConfusionSubmit={handleGlobalConfusionSubmit}
         confusionLoading={isGlobalConfusionLoading}
+        qaMessages={globalQASession?.messages ?? []}
+        qaStatus={globalQASession?.status ?? null}
+        onQAEnd={handleGlobalQAEnd}
         onRequestSelfTest={() => {
           // TODO: implement global self-test generation
           console.log("[CA:UI] Global self-test requested");

@@ -972,6 +972,112 @@ export function constructRerunStepCodeUpdatePrompt(
     }`;
 }
 
+// ─── Global Q&A: in-overlay conversation scaffolding response ───
+export function constructGlobalQAResponsePrompt(
+  conversationHistory: Array<{ role: "user" | "assistant"; content: string }>,
+  allSteps: Array<{ id: string; title: string; abstract: string }>,
+  codeContext: string,
+  taskDescription: string,
+  learningGoal: string,
+): string {
+  const historyText = conversationHistory
+    .map(
+      (msg) => `${msg.role === "user" ? "User" : "Assistant"}: ${msg.content}`,
+    )
+    .join("\n");
+
+  const stepsText = (Array.isArray(allSteps) ? allSteps : [])
+    .map((s) => `- ${s.title}: ${s.abstract}`)
+    .join("\n");
+
+  return `{
+    "task": "A non-programmer user is confused about a coding project. They are having a conversation with you. Based on the conversation history, project context, related code, learning objectives, and project steps, provide a short, clear, and helpful response using adaptive scaffolding.",
+    "conversation_history": ${JSON.stringify(historyText)},
+    "project_steps": ${JSON.stringify(stepsText)},
+    "related_code": ${JSON.stringify(codeContext)},
+    "project_context": ${JSON.stringify(taskDescription)},
+    "learning_objectives": ${JSON.stringify(learningGoal)},
+    "requirements": [
+        "Treat the user as a non-programmer: assume minimal coding background and minimal terminology knowledge.",
+        "Use adaptive scaffolding style: internally choose one of hinting/explaining/instructing/modeling, but DO NOT output the chosen type.",
+        "Directly answer the user's latest question in the conversation. Do not repeat previous answers.",
+        "If the user says they still don't understand, try a different approach: use an analogy, give a concrete example, or simplify further.",
+        "Response must be 2-4 short sentences, concise and practical.",
+        "Sentence 1: TLDR in plain language. Remaining sentences: minimal explanation or next action tied to project context and code.",
+        "Use simple words, life-like analogies when helpful, and avoid long definitions.",
+        "Do not dump full code explanations. Only mention the most relevant code behavior if needed.",
+        "Respond in the same language as the user's question. You may use Markdown for readability.",
+        "You must follow this JSON format in your response: {\\"response\\": \\"(your response in Markdown)\\"}",
+        "IMPORTANT: Properly escape all special characters in JSON strings. Ensure the JSON is valid and parseable.",
+        "Please do not use invalid code block characters to envelope the JSON response, just return the JSON object directly."
+    ]
+  }`;
+}
+
+// ─── Global Q&A: convert conversation to knowledge card ───
+export function constructQAToKnowledgeCardPrompt(
+  conversationHistory: Array<{ role: "user" | "assistant"; content: string }>,
+  allSteps: Array<{ id: string; title: string; abstract: string }>,
+  existingNodes: Array<{
+    nodeId: string;
+    nodeType: "step" | "code-chunk" | "background-knowledge" | "situation";
+    title: string;
+  }>,
+  taskDescription: string,
+): string {
+  const historyText = conversationHistory
+    .map(
+      (msg) => `${msg.role === "user" ? "User" : "Assistant"}: ${msg.content}`,
+    )
+    .join("\n");
+
+  const stepsJson = (Array.isArray(allSteps) ? allSteps : [])
+    .map(
+      (s) =>
+        `{"id": "${s.id}", "title": "${s.title}", "abstract": "${s.abstract}"}`,
+    )
+    .join(",\n    ");
+
+  const nodesJson = (Array.isArray(existingNodes) ? existingNodes : [])
+    .map(
+      (n) =>
+        `{"nodeId": "${n.nodeId}", "nodeType": "${n.nodeType}", "title": "${n.title}"}`,
+    )
+    .join(",\n    ");
+
+  return `{
+    "task": "Analyze the following Q&A conversation between a non-programmer user and an assistant about a coding project. Extract the key knowledge from this conversation and convert it into a knowledge card. You must: (1) identify the most prominent knowledge node category from the conversation, (2) identify the theme within that category, (3) map to existing nodes in the knowledge graph, and (4) select the most relevant step to attach this card to.",
+    "conversation": ${JSON.stringify(historyText)},
+    "all_steps": [
+    ${stepsJson}
+    ],
+    "existing_knowledge_nodes": [
+    ${nodesJson}
+    ],
+    "project_description": ${JSON.stringify(taskDescription)},
+    "node_categories_explanation": {
+        "background-knowledge": "Foundational concepts, syntax, algorithms, or framework knowledge needed to understand the code",
+        "step": "Understanding of what a specific implementation step does and why",
+        "code-chunk": "Understanding of specific code segments, their behavior and purpose",
+        "situation": "Understanding of how code and concepts connect in practice"
+    },
+    "requirements": [
+        "Analyze the conversation to determine what the user was confused about and what they learned.",
+        "Identify the single most prominent node category (background-knowledge, step, code-chunk, or situation) that best describes the nature of the user's confusion.",
+        "Identify a specific theme within that category (e.g., for background-knowledge: 'Python list comprehension syntax').",
+        "From the existing_knowledge_nodes list, find ALL nodes that are related to this conversation. The card can link to multiple nodes across different types.",
+        "Select the step (from all_steps) that is most relevant to the conversation topic.",
+        "Generate a concise knowledge card title (plain language, 6-15 words) and content (2-3 sentences in Markdown, using adaptive scaffolding style).",
+        "The content should synthesize the key insight from the conversation, not just repeat the last answer.",
+        "Respond in the same language as the conversation.",
+        "You must follow this JSON format: {\\"selected_step_id\\": \\"(step id)\\", \\"node_category\\": \\"(background-knowledge|step|code-chunk|situation)\\", \\"theme\\": \\"(identified theme)\\", \\"linkedMasteryNodes\\": [{\\"nodeId\\": \\"(id)\\", \\"nodeType\\": \\"(type)\\"}], \\"linkedKnowledgeNodeIds\\": [\\"(knowledge node id 1)\\", ...], \\"title\\": \\"(card title)\\", \\"content\\": \\"(card content in Markdown)\\"}",
+        "IMPORTANT: linkedMasteryNodes and linkedKnowledgeNodeIds MUST reference nodeIds from the existing_knowledge_nodes list. Do not invent new IDs.",
+        "IMPORTANT: Properly escape all special characters in JSON strings. Ensure the JSON is valid and parseable.",
+        "Please do not use invalid code block characters to envelope the JSON response, just return the JSON object directly."
+    ]
+  }`;
+}
+
 // 构建全局提问的prompt - 根据问题选择最相关的步骤并生成知识卡片主题
 export function constructGlobalQuestionPrompt(
   question: string,

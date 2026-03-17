@@ -1,11 +1,13 @@
 import {
   AcademicCapIcon,
   BookmarkIcon,
+  ChatBubbleLeftIcon,
+  CheckCircleIcon,
   QuestionMarkCircleIcon,
   XMarkIcon,
 } from "@heroicons/react/24/outline";
 import { PaperAirplaneIcon } from "@heroicons/react/24/solid";
-import type { PinnedItem } from "core";
+import type { GlobalQAMessage, GlobalQASession, PinnedItem } from "core";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import styled from "styled-components";
@@ -16,6 +18,7 @@ import {
   vscInputBackground,
   vscInputBorder,
 } from "../../../../components";
+import StyledMarkdownPreview from "../../../../components/StyledMarkdownPreview";
 
 /* ─── types ─── */
 export type OverlayTab = "confusion" | "self-test" | "pins";
@@ -24,9 +27,13 @@ export interface GlobalInteractionOverlayProps {
   isOpen: boolean;
   initialTab?: OverlayTab;
   onClose: () => void;
-  /** Confusion tab: submit a free-text question */
+  /** Confusion tab: submit a free-text question (Q&A mode) */
   onConfusionSubmit: (question: string) => void;
   confusionLoading?: boolean;
+  /** Q&A conversation data */
+  qaMessages?: GlobalQAMessage[];
+  qaStatus?: GlobalQASession["status"] | null;
+  onQAEnd?: () => void;
   /** Self-test tab: request generation */
   onRequestSelfTest: () => void;
   selfTestLoading?: boolean;
@@ -169,11 +176,144 @@ const TabContent = styled.div`
   }
 `;
 
-/* confusion tab */
+/* confusion tab - Q&A conversation */
 const QuestionArea = styled.div`
   display: flex;
   flex-direction: column;
   gap: 8px;
+`;
+
+const ConversationArea = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 10px;
+`;
+
+const MessageBubble = styled.div<{ $role: "user" | "assistant" }>`
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 12.5px;
+  line-height: 1.55;
+  max-width: 100%;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+
+  ${(p) =>
+    p.$role === "user"
+      ? `
+    background: var(--vscode-button-background, #007acc);
+    color: var(--vscode-button-foreground, #fff);
+    align-self: flex-end;
+    border-bottom-right-radius: 3px;
+    max-width: 85%;
+  `
+      : `
+    background: var(--vscode-editorWidget-background, var(--vscode-editor-background));
+    border: 1px solid var(--vscode-editorWidget-border, var(--vscode-widget-border, rgba(128,128,128,0.2)));
+    color: var(--vscode-foreground);
+    align-self: flex-start;
+    border-bottom-left-radius: 3px;
+
+    /* Markdown content styling */
+    .wmde-markdown {
+      font-size: 12.5px !important;
+      line-height: 1.55 !important;
+      color: var(--vscode-foreground) !important;
+      background: transparent !important;
+      p { margin: 0 0 6px; }
+      p:last-child { margin-bottom: 0; }
+      code {
+        font-size: 11px;
+        background: var(--vscode-textCodeBlock-background, rgba(128,128,128,0.12)) !important;
+        padding: 1px 4px;
+        border-radius: 3px;
+      }
+      pre {
+        background: var(--vscode-textCodeBlock-background, rgba(128,128,128,0.12)) !important;
+        border-radius: 4px;
+        padding: 8px;
+        margin: 4px 0;
+      }
+      ul, ol { margin: 2px 0; padding-left: 18px; }
+      li { margin: 1px 0; }
+    }
+  `}
+`;
+
+const ActionRow = styled.div`
+  display: flex;
+  gap: 6px;
+  margin-top: 2px;
+  margin-left: 4px;
+  flex-wrap: wrap;
+`;
+
+/* Unified icon-text action button — matches UnifiedActionBar pattern */
+const ActionBtn = styled.button<{ $variant?: "default" | "primary" }>`
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--vscode-descriptionForeground);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 150ms ease;
+
+  &:hover:not(:disabled) {
+    background: var(--vscode-toolbar-hoverBackground, rgba(90, 93, 94, 0.31));
+    color: var(--vscode-foreground);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  svg {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+  }
+
+  /* Primary variant for "结束提问" */
+  ${(p) =>
+    p.$variant === "primary" &&
+    `
+    color: var(--vscode-charts-blue, #3b82f6);
+
+    &:hover:not(:disabled) {
+      background: rgba(59, 130, 246, 0.12);
+      color: var(--vscode-charts-blue, #3b82f6);
+    }
+  `}
+`;
+
+const LoadingBubble = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border-bottom-left-radius: 3px;
+  background: var(
+    --vscode-editorWidget-background,
+    var(--vscode-editor-background)
+  );
+  border: 1px solid
+    var(
+      --vscode-editorWidget-border,
+      var(--vscode-widget-border, rgba(128, 128, 128, 0.2))
+    );
+  color: var(--vscode-descriptionForeground);
+  font-size: 12px;
+  align-self: flex-start;
 `;
 
 const QuestionInput = styled.textarea`
@@ -204,6 +344,8 @@ const QuestionInput = styled.textarea`
 const SendRow = styled.div`
   display: flex;
   justify-content: flex-end;
+  align-items: center;
+  gap: 6px;
 `;
 
 const SendBtn = styled.button`
@@ -217,19 +359,19 @@ const SendBtn = styled.button`
   color: var(--vscode-button-foreground, #fff);
   font-size: 12px;
   cursor: pointer;
-  transition: background 150ms;
+  transition: all 150ms ease;
 
   &:hover:not(:disabled) {
     background: var(--vscode-button-hoverBackground, #005a9e);
   }
   &:disabled {
-    opacity: 0.5;
+    opacity: 0.4;
     cursor: not-allowed;
   }
 
   svg {
-    width: 14px;
-    height: 14px;
+    width: 13px;
+    height: 13px;
   }
 `;
 
@@ -383,6 +525,9 @@ export const GlobalInteractionOverlay: React.FC<
   onClose,
   onConfusionSubmit,
   confusionLoading = false,
+  qaMessages = [],
+  qaStatus = null,
+  onQAEnd,
   onRequestSelfTest,
   selfTestLoading = false,
   selfTestContent,
@@ -393,6 +538,7 @@ export const GlobalInteractionOverlay: React.FC<
   const [activeTab, setActiveTab] = useState<OverlayTab>(initialTab);
   const [question, setQuestion] = useState("");
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const conversationEndRef = useRef<HTMLDivElement>(null);
 
   // Sync initial tab when prop changes while overlay opens
   useEffect(() => {
@@ -409,12 +555,30 @@ export const GlobalInteractionOverlay: React.FC<
     }
   }, [isOpen, activeTab]);
 
+  // Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    if (qaMessages.length > 0) {
+      setTimeout(() => {
+        conversationEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      }, 50);
+    }
+  }, [qaMessages.length]);
+
   const handleSubmit = useCallback(() => {
     const q = question.trim();
     if (!q || confusionLoading) return;
     onConfusionSubmit(q);
     setQuestion("");
   }, [question, confusionLoading, onConfusionSubmit]);
+
+  const handleStillConfused = useCallback(() => {
+    if (confusionLoading) return;
+    onConfusionSubmit("我还是不太理解，能换一种方式解释吗？");
+  }, [confusionLoading, onConfusionSubmit]);
+
+  const handleEnd = useCallback(() => {
+    onQAEnd?.();
+  }, [onQAEnd]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -425,6 +589,18 @@ export const GlobalInteractionOverlay: React.FC<
     },
     [handleSubmit],
   );
+
+  const hasConversation = qaMessages.length > 0;
+  const isConversationActive = qaStatus === "active";
+  const isConverting = qaStatus === "converting";
+  // Find the last assistant message index for action buttons
+  const lastAssistantIdx = qaMessages.reduce(
+    (acc, msg, idx) => (msg.role === "assistant" ? idx : acc),
+    -1,
+  );
+  // Max 5 rounds (10 messages) to prevent overly long conversations
+  const MAX_ROUNDS = 10;
+  const reachedMaxRounds = qaMessages.length >= MAX_ROUNDS;
 
   if (!isOpen) return null;
 
@@ -469,29 +645,110 @@ export const GlobalInteractionOverlay: React.FC<
         <TabContent>
           {activeTab === "confusion" && (
             <QuestionArea>
-              <QuestionInput
-                ref={inputRef}
-                value={question}
-                onChange={(e) => setQuestion(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="输入你的疑问… (⌘ + Enter 发送)"
-                disabled={confusionLoading}
-              />
-              <SendRow>
-                <SendBtn
-                  onClick={handleSubmit}
-                  disabled={!question.trim() || confusionLoading}
-                >
-                  {confusionLoading ? (
-                    <Spinner />
-                  ) : (
-                    <>
-                      <PaperAirplaneIcon />
-                      发送
-                    </>
+              {/* Conversation messages */}
+              {hasConversation && (
+                <ConversationArea>
+                  {qaMessages.map((msg, idx) => (
+                    <React.Fragment key={msg.id}>
+                      <MessageBubble $role={msg.role}>
+                        {msg.role === "assistant" ? (
+                          <StyledMarkdownPreview
+                            source={msg.content}
+                            isRenderingInStepContainer={true}
+                          />
+                        ) : (
+                          msg.content
+                        )}
+                      </MessageBubble>
+                      {/* Action buttons after the LAST assistant message */}
+                      {msg.role === "assistant" &&
+                        idx === lastAssistantIdx &&
+                        isConversationActive &&
+                        !confusionLoading && (
+                          <ActionRow>
+                            <ActionBtn
+                              onClick={() => inputRef.current?.focus()}
+                            >
+                              <ChatBubbleLeftIcon />
+                              继续追问
+                            </ActionBtn>
+                            <ActionBtn
+                              onClick={handleStillConfused}
+                              disabled={confusionLoading}
+                            >
+                              <QuestionMarkCircleIcon />
+                              还不懂
+                            </ActionBtn>
+                            <ActionBtn $variant="primary" onClick={handleEnd}>
+                              <CheckCircleIcon />
+                              结束提问
+                            </ActionBtn>
+                          </ActionRow>
+                        )}
+                    </React.Fragment>
+                  ))}
+                  {/* Loading indicator */}
+                  {confusionLoading && (
+                    <LoadingBubble>
+                      <Spinner />
+                      正在思考…
+                    </LoadingBubble>
                   )}
-                </SendBtn>
-              </SendRow>
+                  {/* Converting indicator */}
+                  {isConverting && (
+                    <LoadingBubble>
+                      <Spinner />
+                      正在整理为知识卡片…
+                    </LoadingBubble>
+                  )}
+                  {/* Max rounds hint */}
+                  {reachedMaxRounds && isConversationActive && (
+                    <ActionRow>
+                      <ActionBtn $variant="primary" onClick={handleEnd}>
+                        <CheckCircleIcon />
+                        已达最大对话轮次，点击结束提问
+                      </ActionBtn>
+                    </ActionRow>
+                  )}
+                  <div ref={conversationEndRef} />
+                </ConversationArea>
+              )}
+
+              {/* Input area: show when conversation is active or not started */}
+              {(!hasConversation ||
+                (isConversationActive && !reachedMaxRounds)) && (
+                <>
+                  <QuestionInput
+                    ref={inputRef}
+                    value={question}
+                    onChange={(e) => setQuestion(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder={
+                      hasConversation
+                        ? "继续提问… (⌘ + Enter 发送)"
+                        : "输入你的疑问… (⌘ + Enter 发送)"
+                    }
+                    disabled={confusionLoading || isConverting}
+                  />
+                  <SendRow>
+                    <SendBtn
+                      onClick={handleSubmit}
+                      disabled={
+                        !question.trim() || confusionLoading || isConverting
+                      }
+                    >
+                      {confusionLoading && !hasConversation ? (
+                        <Spinner />
+                      ) : (
+                        <>
+                          <PaperAirplaneIcon />
+                          发送
+                        </>
+                      )}
+                    </SendBtn>
+                  </SendRow>
+                </>
+              )}
             </QuestionArea>
           )}
 

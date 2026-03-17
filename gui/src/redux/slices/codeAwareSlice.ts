@@ -5,6 +5,8 @@ import {
   CodeChunk,
   CodeChunkRelation,
   CollaborationStatus,
+  GlobalQAMessage,
+  GlobalQASession,
   HighLevelStepItem,
   HighlightEvent,
   InitialGenerationState,
@@ -87,6 +89,8 @@ export type CodeAwareSessionState = {
   nodeMasteryScores: NodeMasteryScore[];
   // Pin/待学列表
   pinnedItems: PinnedItem[];
+  // Global Q&A session (overlay conversation)
+  globalQASession: GlobalQASession | null;
   // 掌握度指示器可见性
   showMasteryIndicators: boolean;
   // 初始生成状态
@@ -143,6 +147,7 @@ const initialCodeAwareState: CodeAwareSessionState = {
   knowledgeToCodeChunkRelations: [],
   nodeMasteryScores: [],
   pinnedItems: [],
+  globalQASession: null,
   showMasteryIndicators: true,
   initialGeneration: {
     status: "idle",
@@ -331,6 +336,7 @@ export const codeAwareSessionSlice = createSlice({
       state.knowledgeToCodeChunkRelations = [];
       state.nodeMasteryScores = [];
       state.pinnedItems = [];
+      state.globalQASession = null;
       state.cognitiveTrace = createEmptyCognitiveTrace();
       state.initialGeneration = {
         status: "idle",
@@ -754,6 +760,28 @@ export const codeAwareSessionSlice = createSlice({
     },
     clearPinnedItems: (state) => {
       state.pinnedItems = [];
+    },
+    // Global Q&A session management
+    startGlobalQASession: (state) => {
+      state.globalQASession = { messages: [], status: "active" };
+    },
+    addGlobalQAMessage: (state, action: PayloadAction<GlobalQAMessage>) => {
+      if (state.globalQASession) {
+        state.globalQASession.messages.push(action.payload);
+      }
+    },
+    endGlobalQASession: (state) => {
+      if (state.globalQASession) {
+        state.globalQASession.status = "ended";
+      }
+    },
+    setGlobalQASessionConverting: (state) => {
+      if (state.globalQASession) {
+        state.globalQASession.status = "converting";
+      }
+    },
+    clearGlobalQASession: (state) => {
+      state.globalQASession = null;
     },
     // 掌握度指示器可见性开关
     toggleMasteryIndicators: (state) => {
@@ -1271,6 +1299,7 @@ export const codeAwareSessionSlice = createSlice({
       state.knowledgeToCodeChunkRelations = [];
       state.nodeMasteryScores = [];
       state.pinnedItems = [];
+      state.globalQASession = null;
       state.cognitiveTrace = createEmptyCognitiveTrace();
       state.initialGeneration = {
         status: "idle",
@@ -1610,6 +1639,11 @@ export const {
   addPinnedItem,
   removePinnedItem,
   clearPinnedItems,
+  startGlobalQASession,
+  addGlobalQAMessage,
+  endGlobalQASession,
+  setGlobalQASessionConverting,
+  clearGlobalQASession,
   updateInitialGenerationStatus,
   resetInitialGenerationStatus,
   addInitialGenerationError,

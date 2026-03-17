@@ -619,6 +619,20 @@ export interface PinnedItem {
   pinnedAt: number; // timestamp ms
 }
 
+// CODEAWARE: Global Q&A message (overlay conversation)
+export interface GlobalQAMessage {
+  id: string;
+  role: "user" | "assistant";
+  content: string; // Markdown
+  timestamp: number;
+}
+
+// CODEAWARE: Global Q&A session state
+export interface GlobalQASession {
+  messages: GlobalQAMessage[];
+  status: "active" | "ended" | "converting";
+}
+
 // CODEAWARE: 困惑选项
 export interface ConfusionOption {
   id: string;

@@ -3,6 +3,7 @@ import {
   CodeAwareMapping,
   CodeChunk,
   HighLevelStepItem,
+  MasteryNodeRef,
   ProgramRequirement,
   StepItem,
   StepToHighLevelMapping,
@@ -15,11 +16,14 @@ import {
   constructGenerateKnowledgeCardTestsPrompt, // 新增测试题生成prompt
   constructGeneratePrerequisiteKnowledgeCardsPrompt,
   constructGenerateStepsPrompt,
+  constructGlobalQAResponsePrompt,
   constructGlobalQuestionPrompt,
   constructParaphraseUserIntentPrompt,
   constructProcessCodeChangesPrompt,
+  constructQAToKnowledgeCardPrompt,
 } from "../../../../core/llm/codeAwarePrompts";
 import {
+  addGlobalQAMessage,
   clearAllCodeAwareMappings,
   clearAllCodeChunks,
   clearKnowledgeCardCodeMappings,
@@ -29,6 +33,7 @@ import {
   selectTestByTestId,
   setCodeAwareTitle,
   setGeneratedSteps,
+  setGlobalQASessionConverting,
   setHighLevelStepNarrative,
   setHighLevelSteps,
   setKnowledgeCardError,
@@ -3667,6 +3672,346 @@ export const processGlobalQuestion = createAsyncThunk<
       console.error("[CA:CodeGen] processGlobalQuestion failed:", error);
       throw error;
     }
+  },
+);
+
+// ─── Global Q&A: respond to user in overlay conversation ───
+export const respondToGlobalQA = createAsyncThunk<
+  { response: string },
+  { question: string; currentCode: string },
+  ThunkApiType
+>(
+  "codeAware/respondToGlobalQA",
+  async ({ question, currentCode }, { getState, dispatch, extra }) => {
+    const state = getState();
+    const defaultModel =
+      selectJsonGenerationModel(state) || selectSelectedChatModel(state);
+    if (!defaultModel) {
+      throw new Error("没有可用的默认模型");
+    }
+
+    const steps = state.codeAwareSession.steps;
+    const learningGoal = state.codeAwareSession.learningGoal || "";
+    const taskDescription =
+      state.codeAwareSession.userRequirement?.requirementDescription || "";
+    const qaSession = state.codeAwareSession.globalQASession;
+
+    // Build conversation history from session messages
+    const conversationHistory = (qaSession?.messages || []).map((msg) => ({
+      role: msg.role,
+      content: msg.content,
+    }));
+
+    // Add the current question
+    conversationHistory.push({ role: "user" as const, content: question });
+
+    const allStepsInfo = steps.map((step) => ({
+      id: step.id,
+      title: step.title,
+      abstract: step.abstract,
+    }));
+
+    const prompt = constructGlobalQAResponsePrompt(
+      conversationHistory,
+      allStepsInfo,
+      currentCode,
+      taskDescription,
+      learningGoal,
+    );
+
+    const maxRetries = 3;
+    let lastError: Error | null = null;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const result = await extra.ideMessenger.request("llm/complete", {
+          prompt,
+          completionOptions: {},
+          title: defaultModel.title,
+        });
+
+        if (
+          result.status !== "success" ||
+          !result.content ||
+          !result.content.trim()
+        ) {
+          throw new Error("LLM 返回了空响应或失败状态");
+        }
+
+        const parsed = JSON.parse(result.content);
+        const response =
+          typeof parsed.response === "string"
+            ? parsed.response
+            : String(parsed.response || "");
+
+        if (!response.trim()) {
+          throw new Error("LLM 返回了空的 response 字段");
+        }
+
+        // Dispatch assistant message
+        dispatch(
+          addGlobalQAMessage({
+            id: `qa-msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            role: "assistant",
+            content: response,
+            timestamp: Date.now(),
+          }),
+        );
+
+        await extra.ideMessenger.request("addCodeAwareLogEntry", {
+          eventType: "system_global_qa_response",
+          payload: {
+            responsePreview:
+              response.length > 200
+                ? response.substring(0, 200) + "..."
+                : response,
+            conversationLength: conversationHistory.length,
+            timestamp: new Date().toISOString(),
+          },
+        });
+
+        return { response };
+      } catch (attemptError) {
+        lastError =
+          attemptError instanceof Error
+            ? attemptError
+            : new Error(String(attemptError));
+        console.warn(
+          `[CA:CodeGen] Global QA response attempt ${attempt} failed:`,
+          lastError.message,
+        );
+        if (attempt < maxRetries) {
+          await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
+        }
+      }
+    }
+
+    throw lastError || new Error("全局问答回复生成失败");
+  },
+);
+
+// ─── Global Q&A: convert conversation to knowledge card ───
+export const convertQAToKnowledgeCard = createAsyncThunk<
+  { stepId: string; cardId: string },
+  void,
+  ThunkApiType
+>(
+  "codeAware/convertQAToKnowledgeCard",
+  async (_, { getState, dispatch, extra }) => {
+    dispatch(setGlobalQASessionConverting());
+
+    const state = getState();
+    const defaultModel =
+      selectJsonGenerationModel(state) || selectSelectedChatModel(state);
+    if (!defaultModel) {
+      throw new Error("没有可用的默认模型");
+    }
+
+    const qaSession = state.codeAwareSession.globalQASession;
+    if (!qaSession || qaSession.messages.length === 0) {
+      throw new Error("没有可转化的对话内容");
+    }
+
+    const steps = state.codeAwareSession.steps;
+    const taskDescription =
+      state.codeAwareSession.userRequirement?.requirementDescription || "";
+
+    const conversationHistory = qaSession.messages.map((msg) => ({
+      role: msg.role,
+      content: msg.content,
+    }));
+
+    const allStepsInfo = steps.map((step) => ({
+      id: step.id,
+      title: step.title,
+      abstract: step.abstract,
+    }));
+
+    // Build existing nodes list from all node types
+    const existingNodes: Array<{
+      nodeId: string;
+      nodeType: "step" | "code-chunk" | "background-knowledge" | "situation";
+      title: string;
+    }> = [];
+
+    // Add knowledge points (background-knowledge)
+    state.codeAwareSession.knowledgePoints.forEach((kp) => {
+      existingNodes.push({
+        nodeId: kp.id,
+        nodeType: "background-knowledge",
+        title: kp.title,
+      });
+    });
+
+    // Add steps
+    steps.forEach((step) => {
+      existingNodes.push({
+        nodeId: step.id,
+        nodeType: "step",
+        title: step.title,
+      });
+    });
+
+    // Add code chunks
+    state.codeAwareSession.codeChunks.forEach((chunk) => {
+      existingNodes.push({
+        nodeId: chunk.id,
+        nodeType: "code-chunk",
+        title: `${chunk.filePath}:${chunk.range[0]}-${chunk.range[1]}`,
+      });
+    });
+
+    const prompt = constructQAToKnowledgeCardPrompt(
+      conversationHistory,
+      allStepsInfo,
+      existingNodes,
+      taskDescription,
+    );
+
+    const maxRetries = 3;
+    let lastError: Error | null = null;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const result = await extra.ideMessenger.request("llm/complete", {
+          prompt,
+          completionOptions: {},
+          title: defaultModel.title,
+        });
+
+        if (
+          result.status !== "success" ||
+          !result.content ||
+          !result.content.trim()
+        ) {
+          throw new Error("LLM 返回了空响应或失败状态");
+        }
+
+        const parsed = JSON.parse(result.content);
+
+        const selectedStepId = parsed.selected_step_id;
+        if (!selectedStepId || !steps.find((s) => s.id === selectedStepId)) {
+          throw new Error(`无效的步骤ID: ${selectedStepId}`);
+        }
+
+        const title =
+          typeof parsed.title === "string" && parsed.title.trim()
+            ? parsed.title
+            : "来自问答的知识点";
+        const content =
+          typeof parsed.content === "string" && parsed.content.trim()
+            ? parsed.content
+            : "";
+
+        // Parse linked nodes
+        const linkedMasteryNodes: MasteryNodeRef[] = Array.isArray(
+          parsed.linkedMasteryNodes,
+        )
+          ? parsed.linkedMasteryNodes
+              .filter(
+                (n: any) =>
+                  typeof n === "object" &&
+                  n !== null &&
+                  typeof n.nodeId === "string" &&
+                  typeof n.nodeType === "string" &&
+                  [
+                    "step",
+                    "code-chunk",
+                    "background-knowledge",
+                    "situation",
+                  ].includes(n.nodeType),
+              )
+              .map((n: any) => ({
+                nodeId: n.nodeId.trim(),
+                nodeType: n.nodeType as MasteryNodeRef["nodeType"],
+              }))
+          : [];
+
+        const linkedKnowledgeNodeIds: string[] = Array.isArray(
+          parsed.linkedKnowledgeNodeIds,
+        )
+          ? parsed.linkedKnowledgeNodeIds
+              .filter((id: any) => typeof id === "string" && id.trim())
+              .map((id: string) => id.trim())
+          : [];
+
+        // Create card
+        const targetStep = steps.find((s) => s.id === selectedStepId);
+        const nextCardIndex = (targetStep?.knowledgeCards.length ?? 0) + 1;
+        const cardId = `${selectedStepId}-kc-qa-${nextCardIndex}`;
+
+        dispatch(
+          createKnowledgeCard({
+            stepId: selectedStepId,
+            cardId,
+            theme: title,
+            question: conversationHistory[0]?.content || "",
+            viewMode: "read",
+            linkedKnowledgeNodeIds,
+            linkedMasteryNodes,
+          }),
+        );
+
+        // Set card content directly (already generated by LLM)
+        if (content) {
+          dispatch(
+            updateKnowledgeCardContent({
+              stepId: selectedStepId,
+              cardId,
+              content,
+            }),
+          );
+        }
+
+        // Highlight the target step
+        dispatch(
+          updateHighlight({
+            sourceType: "step",
+            identifier: selectedStepId,
+          }),
+        );
+
+        await extra.ideMessenger.request("addCodeAwareLogEntry", {
+          eventType: "system_global_qa_converted_to_card",
+          payload: {
+            selectedStepId,
+            cardId,
+            title,
+            nodeCategory: parsed.node_category || "unknown",
+            theme: parsed.theme || "unknown",
+            linkedMasteryNodesCount: linkedMasteryNodes.length,
+            linkedKnowledgeNodeIdsCount: linkedKnowledgeNodeIds.length,
+            conversationLength: conversationHistory.length,
+            timestamp: new Date().toISOString(),
+          },
+        });
+
+        console.info("[CA:CodeGen][QAToCard]", {
+          selectedStepId,
+          cardId,
+          title,
+          nodeCategory: parsed.node_category,
+          linkedMasteryNodes,
+          linkedKnowledgeNodeIds,
+        });
+
+        return { stepId: selectedStepId, cardId };
+      } catch (attemptError) {
+        lastError =
+          attemptError instanceof Error
+            ? attemptError
+            : new Error(String(attemptError));
+        console.warn(
+          `[CA:CodeGen] QA to card conversion attempt ${attempt} failed:`,
+          lastError.message,
+        );
+        if (attempt < maxRetries) {
+          await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
+        }
+      }
+    }
+
+    throw lastError || new Error("问答转化为知识卡片失败");
   },
 );
 

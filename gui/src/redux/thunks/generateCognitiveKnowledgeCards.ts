@@ -102,7 +102,7 @@ function buildGenerationPrompt(args: {
     JSON.stringify(args.plans, null, 2),
     "",
     "Rules:",
-    "1. Each card title should be concise and non-duplicated.",
+    "1. Each card title MUST be phrased as a SHORT QUESTION (ending with '?') that helps a non-programmer quickly judge whether they need this card. Example: '为什么用循环能省掉重复劳动？' instead of '循环结构'. Keep titles concise and non-duplicated.",
     "2. Each card should focus on exactly one likely-unmastered core point (the topCandidate mastery node).",
     "3. Keep linkedMasteryNodes and linkedKnowledgeNodeIds aligned with the plan and avoid introducing unknown node IDs.",
     "4. assumedMasteredNodeIds can include multiple nodes and can be empty when uncertain.",

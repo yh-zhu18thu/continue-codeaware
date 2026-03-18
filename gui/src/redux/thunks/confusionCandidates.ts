@@ -1,6 +1,5 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import type { ConfusionCandidate } from "../../pages/codeaware/components/shared/ConfusionPanel";
-import { buildCodeAwareCognitiveEdges } from "../../utils/codeAwareRelationGraph";
 import {
   computeSituationGroups,
   toSituationNodeId,
@@ -10,48 +9,70 @@ import {
   selectSelectedChatModel,
 } from "../slices/configSlice";
 import { ThunkApiType } from "../store";
-import {
-  buildScoreLookup,
-  findTopNeighbors,
-  getScore,
-  type ScoredNeighbor,
-} from "./masteryNodeUtils";
+import { buildScoreLookup, getScore } from "./masteryNodeUtils";
 
-/* ─── prompt for generating confusion candidate questions ─── */
-function constructConfusionCandidatesPrompt(
-  topics: Array<{
+/* ─── Single-node prompt: generate multiple questions from one situation node ─── */
+function constructStepConfusionPrompt(
+  topic: {
     title: string;
     mastery: number;
-    nodeType: string;
     codeSnippet?: string;
-  }>,
-  stepTitle: string | null,
+  },
+  stepTitle: string,
+  stepAbstract: string,
+  learningGoal: string,
+  taskDescription: string,
+  masteredTopics: string[],
+  questionCount: number,
+): string {
+  const masteredJson =
+    masteredTopics.length > 0
+      ? `,\n    "already_mastered_topics": ${JSON.stringify(masteredTopics)}`
+      : "";
+
+  return `{
+    "task": "Generate ${questionCount} short, thought-provoking candidate questions for a non-programmer user. The questions MUST be specifically about the current step and its code — NOT about the overall project. Questions should be in the same language as the project context (Chinese if context is Chinese).",
+    "situation": {"title": ${JSON.stringify(topic.title)}, "mastery": ${topic.mastery.toFixed(2)}${topic.codeSnippet ? `, "code_snippet": ${JSON.stringify(topic.codeSnippet)}` : ""}},
+    "current_step": ${JSON.stringify(stepTitle)},
+    "step_description": ${JSON.stringify(stepAbstract)},
+    "learning_goal": ${JSON.stringify(learningGoal)},
+    "project_context": ${JSON.stringify(taskDescription)}${masteredJson},
+    "requirements": [
+      "Generate exactly ${questionCount} short questions (each 1 sentence, max 20 Chinese characters or 15 English words).",
+      "CRITICAL: Every question MUST be about THIS SPECIFIC STEP ('${stepTitle}') and its code (code_snippet). Do NOT ask questions about the overall project or other steps.",
+      "Each question must focus on a DIFFERENT aspect of this step's code — e.g. one about why this step works this way, one about a specific mechanism in the code, one about a key concept used here.",
+      "Read through the code_snippet, understand what it does in the context of step_description, then identify the KEY challenges and concepts, and ask about HOW or WHY they work.",
+      "Do NOT ask about a single line of code; focus on the overall logic of this step, the hardest parts, or the underlying concepts.",
+      ${masteredTopics.length > 0 ? '"IMPORTANT: The user has already mastered the topics listed in already_mastered_topics. Do NOT ask questions about those topics. Focus on what the user has NOT yet understood.",' : ""}
+      "Use simple language suitable for non-programmers. Avoid jargon.",
+      "Return a JSON array of objects: [{\\"id\\": \\"q-0\\", \\"label\\": \\"<question>\\"}]",
+      "Do NOT wrap in code blocks. Return raw JSON only."
+    ]
+  }`;
+}
+
+/* ─── Single-node prompt for global: generate 1 question from one situation node ─── */
+function constructSingleGlobalConfusionPrompt(
+  topic: {
+    title: string;
+    mastery: number;
+    codeSnippet?: string;
+  },
   learningGoal: string,
   taskDescription: string,
 ): string {
-  const topicsJson = topics
-    .map(
-      (t) =>
-        `{"title": ${JSON.stringify(t.title)}, "mastery": ${t.mastery.toFixed(2)}, "type": "${t.nodeType}"${t.codeSnippet ? `, "code_snippet": ${JSON.stringify(t.codeSnippet)}` : ""}}`,
-    )
-    .join(",\n    ");
-
   return `{
-    "task": "Generate short, thought-provoking candidate questions for a non-programmer user who is learning about a coding project. The question direction MUST depend on the topic type. Questions should be in the same language as the project context (Chinese if context is Chinese).",
-    "topics": [${topicsJson}],
-    "current_step": ${JSON.stringify(stepTitle || "全局概览")},
+    "task": "Generate exactly 1 short, thought-provoking question for a non-programmer user. The question should be about the provided code situation. Questions should be in the same language as the project context (Chinese if context is Chinese).",
+    "situation": {"title": ${JSON.stringify(topic.title)}, "mastery": ${topic.mastery.toFixed(2)}${topic.codeSnippet ? `, "code_snippet": ${JSON.stringify(topic.codeSnippet)}` : ""}},
+    "current_step": "全局概览",
     "learning_goal": ${JSON.stringify(learningGoal)},
     "project_context": ${JSON.stringify(taskDescription)},
     "requirements": [
-      "Generate exactly one short question per topic (1 sentence, max 20 Chinese characters or 15 English words).",
-      "CRITICAL — the question direction depends on the topic 'type' field:",
-      "  - type='step': ask about the PURPOSE or MEANING of this step — e.g. '为什么需要这一步？' or '这一步的目标是什么？'",
-      "  - type='situation': ask about HOW the code IMPLEMENTS this — e.g. '代码是如何实现…的？' or '这段代码为什么要这样写？'. When code_snippet is provided, reference the concrete code.",
-      "  - type='code-chunk': ask about WHAT a specific piece of code DOES — e.g. '这行代码的作用是什么？' or '为什么用这种方式来处理…？'. Always reference the code_snippet.",
-      "  - type='background-knowledge': ask about a foundational CONCEPT — e.g. '…是什么意思？' or '为什么…在这里很重要？'",
-      "Focus on topics with lower mastery scores — these are areas the user struggles with.",
+      "Generate exactly 1 short question (1 sentence, max 20 Chinese characters or 15 English words).",
+      "Read through the entire code block, identify the KEY challenge or the most important concept, and ask about HOW or WHY it works that way.",
+      "Do NOT ask about a single line of code; focus on the overall logic or the hardest part.",
       "Use simple language suitable for non-programmers. Avoid jargon.",
-      "Return a JSON array of objects: [{\\"id\\": \\"topic-0\\", \\"label\\": \\"<question>\\"}]",
+      "Return a JSON array with exactly one object: [{\\"id\\": \\"q-0\\", \\"label\\": \\"<question>\\"}]",
       "Do NOT wrap in code blocks. Return raw JSON only."
     ]
   }`;
@@ -68,117 +89,106 @@ export const generateStepConfusionCandidates = createAsyncThunk<
     const state = getState();
     const session = state.codeAwareSession;
 
-    const edges = buildCodeAwareCognitiveEdges(session);
     const scoreLookup = buildScoreLookup(session.nodeMasteryScores);
 
     const stepTitleById = new Map<string, string>();
     session.steps.forEach((s) => stepTitleById.set(s.id, s.title));
 
-    // Build code chunk lookup for enriching context
+    // Build full code chunk lookup
     const codeChunkById = new Map<string, string>();
     session.codeChunks.forEach((c) => {
-      codeChunkById.set(c.id, c.content.substring(0, 120));
+      codeChunkById.set(c.id, c.content);
     });
 
-    // Find top-k low-mastery neighbors from the step
-    const neighbors = findTopNeighbors(
-      stepId,
-      "step",
-      edges,
-      scoreLookup,
-      stepTitleById,
-      3,
-    );
-
-    // Also search from situation nodes connected to this step
+    // Compute situation groups and build full code context mapping
     const groups = computeSituationGroups(
       session.codeAwareMappings,
       session.codeChunks,
     );
-    // Build situation → code snippet mapping
     const sitCodeSnippets = new Map<string, string>();
     groups.forEach((g) => {
-      const snippets = g.codeChunkIds
+      const fullSnippets = g.codeChunkIds
         .map((id) => codeChunkById.get(id))
-        .filter(Boolean)
-        .slice(0, 2);
-      if (snippets.length > 0) {
+        .filter(Boolean) as string[];
+      if (fullSnippets.length > 0) {
+        let combined = fullSnippets.join("\n");
+        if (combined.length > 2000) {
+          combined = combined.substring(0, 2000) + "\n// ...";
+        }
         g.stepIds.forEach((sid) => {
           const sitId = toSituationNodeId(sid, g.groupId);
-          sitCodeSnippets.set(sitId, snippets.join("\n"));
+          sitCodeSnippets.set(sitId, combined);
         });
       }
     });
 
+    // Find the single lowest-mastery situation node for this step
+    const stepSituationNodes: Array<{
+      nodeId: string;
+      score: number;
+      codeSnippet?: string;
+    }> = [];
     groups.forEach((g) => {
       if (g.stepIds.includes(stepId)) {
         const sitNodeId = toSituationNodeId(stepId, g.groupId);
-        const sitNeighbors = findTopNeighbors(
-          sitNodeId,
-          "situation",
-          edges,
-          scoreLookup,
-          stepTitleById,
-          2,
-        );
-        // Attach code snippet context to situation neighbors
-        sitNeighbors.forEach((n) => {
-          if (n.nodeType === "code-chunk") {
-            n.contextTitle = codeChunkById.get(n.nodeId) || n.contextTitle;
-          }
+        const score = getScore(scoreLookup, sitNodeId, "situation");
+        stepSituationNodes.push({
+          nodeId: sitNodeId,
+          score,
+          codeSnippet: sitCodeSnippets.get(sitNodeId),
         });
-        neighbors.push(...sitNeighbors);
       }
     });
 
-    // De-duplicate and re-sort
-    const uniqueMap = new Map<string, ScoredNeighbor>();
-    neighbors.forEach((n) => {
-      const key = `${n.nodeType}::${n.nodeId}`;
-      const existing = uniqueMap.get(key);
-      if (!existing || n.relevance > existing.relevance) {
-        uniqueMap.set(key, n);
-      }
-    });
-    const topNeighbors = Array.from(uniqueMap.values())
-      .sort((a, b) => b.relevance - a.relevance)
-      .slice(0, 3);
+    // Sort ascending by mastery, pick the lowest one
+    stepSituationNodes.sort((a, b) => a.score - b.score);
+    const targetNode = stepSituationNodes[0];
 
-    if (topNeighbors.length === 0) {
+    if (!targetNode) {
       return [];
     }
 
-    // Call LLM to generate questions
     const defaultModel =
       selectJsonGenerationModel(state) || selectSelectedChatModel(state);
     if (!defaultModel) {
-      // Fallback: use topic titles as candidates
-      return topNeighbors.map((n, i) => ({
-        id: `step-cand-${i}`,
-        label: n.contextTitle,
-      }));
+      return [
+        { id: "step-cand-0", label: stepTitleById.get(stepId) || stepId },
+      ];
     }
 
-    const stepTitle = stepTitleById.get(stepId) || null;
+    const stepTitle = stepTitleById.get(stepId) || stepId;
+    const currentStep = session.steps.find((s) => s.id === stepId);
+    const stepAbstract = currentStep?.abstract || "";
     const taskDescription =
       session.userRequirement?.requirementDescription || "";
     const learningGoal = session.learningGoal || "";
 
-    const prompt = constructConfusionCandidatesPrompt(
-      topNeighbors.map((n) => ({
-        title: n.contextTitle,
-        mastery: n.mastery,
-        nodeType: n.nodeType,
-        codeSnippet:
-          n.nodeType === "situation"
-            ? sitCodeSnippets.get(n.nodeId)
-            : n.nodeType === "code-chunk"
-              ? codeChunkById.get(n.nodeId)
-              : undefined,
-      })),
+    // Collect already-mastered knowledge point titles to avoid repetition
+    const masteredTopics: string[] = [];
+    session.nodeMasteryScores.forEach((s) => {
+      if (s.score >= 0.7) {
+        if (s.nodeType === "background-knowledge") {
+          const kp = session.knowledgePoints.find((p) => p.id === s.nodeId);
+          if (kp) masteredTopics.push(kp.title);
+        } else if (s.nodeType === "step") {
+          const step = session.steps.find((st) => st.id === s.nodeId);
+          if (step) masteredTopics.push(step.title);
+        }
+      }
+    });
+
+    const prompt = constructStepConfusionPrompt(
+      {
+        title: stepTitle,
+        mastery: targetNode.score,
+        codeSnippet: targetNode.codeSnippet,
+      },
       stepTitle,
+      stepAbstract,
       learningGoal,
       taskDescription,
+      masteredTopics,
+      3,
     );
 
     try {
@@ -199,26 +209,22 @@ export const generateStepConfusionCandidates = createAsyncThunk<
             .map((item: any, i: number) => ({
               id: item.id || `step-cand-${i}`,
               label: item.label.trim(),
-              description: topNeighbors[i]?.contextTitle,
+              description: stepTitle,
             }));
         }
       }
     } catch (error) {
       console.warn(
-        "[CA:ConfusionCandidates] LLM generation failed, using fallback:",
+        "[CA:ConfusionCandidates] Step LLM generation failed, using fallback:",
         error,
       );
     }
 
-    // Fallback: use topic titles
-    return topNeighbors.map((n, i) => ({
-      id: `step-cand-${i}`,
-      label: n.contextTitle,
-    }));
+    return [{ id: "step-cand-0", label: stepTitle }];
   },
 );
 
-/* ─── Global-level confusion candidates ─── */
+/* ─── Global-level confusion candidates (parallel: 1 LLM call per node) ─── */
 export const generateGlobalConfusionCandidates = createAsyncThunk<
   ConfusionCandidate[],
   void,
@@ -267,12 +273,12 @@ export const generateGlobalConfusionCandidates = createAsyncThunk<
     // Sort by mastery ascending (lowest mastery first)
     situationEntries.sort((a, b) => a.score - b.score);
 
-    // De-duplicate by step (keep the lowest-mastery situation per step)
-    const seenSteps = new Set<string>();
+    // Pick top-3 lowest-mastery situation nodes (de-duplicate by nodeId)
+    const seenNodeIds = new Set<string>();
     const topEntries: SituationEntry[] = [];
     for (const entry of situationEntries) {
-      if (seenSteps.has(entry.stepId)) continue;
-      seenSteps.add(entry.stepId);
+      if (seenNodeIds.has(entry.nodeId)) continue;
+      seenNodeIds.add(entry.nodeId);
       topEntries.push(entry);
       if (topEntries.length >= 3) break;
     }
@@ -281,7 +287,6 @@ export const generateGlobalConfusionCandidates = createAsyncThunk<
       return [];
     }
 
-    // Call LLM to generate questions
     const defaultModel =
       selectJsonGenerationModel(state) || selectSelectedChatModel(state);
     if (!defaultModel) {
@@ -295,70 +300,76 @@ export const generateGlobalConfusionCandidates = createAsyncThunk<
       session.userRequirement?.requirementDescription || "";
     const learningGoal = session.learningGoal || "";
 
-    // Build code snippets for global entries
+    // Build full code context for global entries
     const globalCodeChunkById = new Map<string, string>();
     session.codeChunks.forEach((c) => {
-      globalCodeChunkById.set(c.id, c.content.substring(0, 120));
+      globalCodeChunkById.set(c.id, c.content);
     });
     const globalSitCodeSnippets = new Map<string, string>();
     groups.forEach((g) => {
-      const snippets = g.codeChunkIds
+      const fullSnippets = g.codeChunkIds
         .map((id) => globalCodeChunkById.get(id))
-        .filter(Boolean)
-        .slice(0, 2);
-      if (snippets.length > 0) {
+        .filter(Boolean) as string[];
+      if (fullSnippets.length > 0) {
+        let combined = fullSnippets.join("\n");
+        if (combined.length > 2000) {
+          combined = combined.substring(0, 2000) + "\n// ...";
+        }
         g.stepIds.forEach((sid) => {
           const sitId = toSituationNodeId(sid, g.groupId);
-          globalSitCodeSnippets.set(sitId, snippets.join("\n"));
+          globalSitCodeSnippets.set(sitId, combined);
         });
       }
     });
 
-    const prompt = constructConfusionCandidatesPrompt(
-      topEntries.map((e) => ({
-        title: e.stepTitle,
-        mastery: e.score,
-        nodeType: "situation",
-        codeSnippet: globalSitCodeSnippets.get(e.nodeId),
-      })),
-      null,
-      learningGoal,
-      taskDescription,
-    );
-
-    try {
-      const result = await extra.ideMessenger.request("llm/complete", {
-        prompt,
-        completionOptions: {},
-        title: defaultModel.title,
-      });
-
-      if (result.status === "success" && result.content) {
-        const parsed = JSON.parse(result.content);
-        if (Array.isArray(parsed)) {
-          return parsed
-            .filter(
-              (item: any) =>
-                typeof item?.label === "string" && item.label.trim(),
-            )
-            .map((item: any, i: number) => ({
-              id: item.id || `global-cand-${i}`,
-              label: item.label.trim(),
-              description: topEntries[i]?.stepTitle,
-            }));
-        }
-      }
-    } catch (error) {
-      console.warn(
-        "[CA:ConfusionCandidates] Global LLM generation failed, using fallback:",
-        error,
+    // Fire parallel LLM calls — one per situation node
+    const parallelPromises = topEntries.map(async (entry, i) => {
+      const prompt = constructSingleGlobalConfusionPrompt(
+        {
+          title: entry.stepTitle,
+          mastery: entry.score,
+          codeSnippet: globalSitCodeSnippets.get(entry.nodeId),
+        },
+        learningGoal,
+        taskDescription,
       );
-    }
 
-    // Fallback
-    return topEntries.map((e, i) => ({
-      id: `global-cand-${i}`,
-      label: e.stepTitle,
-    }));
+      try {
+        const result = await extra.ideMessenger.request("llm/complete", {
+          prompt,
+          completionOptions: {},
+          title: defaultModel.title,
+        });
+
+        if (result.status === "success" && result.content) {
+          const parsed = JSON.parse(result.content);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            const item = parsed[0];
+            if (typeof item?.label === "string" && item.label.trim()) {
+              return {
+                id: item.id || `global-cand-${i}`,
+                label: item.label.trim(),
+                description: entry.stepTitle,
+              } as ConfusionCandidate;
+            }
+          }
+        }
+      } catch (error) {
+        console.warn(
+          `[CA:ConfusionCandidates] Global LLM call ${i} failed:`,
+          error,
+        );
+      }
+
+      // Fallback for this node
+      return {
+        id: `global-cand-${i}`,
+        label: entry.stepTitle,
+        description: entry.stepTitle,
+      } as ConfusionCandidate;
+    });
+
+    const results = await Promise.all(parallelPromises);
+    return results;
   },
 );

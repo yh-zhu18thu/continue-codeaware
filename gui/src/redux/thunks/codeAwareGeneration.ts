@@ -1646,7 +1646,7 @@ export const generateKnowledgeCardThemes = createAsyncThunk<
           stepTitle,
           stepAbstract,
           learningGoal,
-          maxCards: 3,
+          maxCards: 2,
           taskDescription:
             state.codeAwareSession.userRequirement?.requirementDescription ||
             "",
@@ -1960,7 +1960,7 @@ export const generateKnowledgeCardThemesFromQuery = createAsyncThunk<
           stepTitle: currentStep.title,
           stepAbstract: currentStep.abstract,
           learningGoal,
-          maxCards: 3,
+          maxCards: 2,
           taskDescription: task,
           existingThemes,
           source: "question",
@@ -3597,7 +3597,7 @@ export const processGlobalQuestion = createAsyncThunk<
           stepTitle: preGenerationStep?.title || selectedStep.title,
           stepAbstract: preGenerationStep?.abstract || selectedStep.abstract,
           learningGoal,
-          maxCards: Math.max(1, Math.min(3, knowledge_card_themes.length || 3)),
+          maxCards: Math.max(1, Math.min(2, knowledge_card_themes.length || 2)),
           taskDescription,
           existingThemes,
           source: "question",

@@ -479,7 +479,7 @@ export function planKnowledgeCards(args: {
     return [];
   }
 
-  const maxCards = Math.max(1, Math.min(3, args.maxCards));
+  const maxCards = Math.max(1, Math.min(2, args.maxCards));
   const selected = candidates.slice(0, maxCards);
   const assumedMasteredPool = candidates
     .filter((candidate) => candidate.mastery >= 0.75)

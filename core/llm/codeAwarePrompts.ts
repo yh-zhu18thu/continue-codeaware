@@ -87,21 +87,30 @@ steps:
 
 ## ⚠️ abstract 撰写规范（严格遵守）
 
-每个 step 的 abstract 需要**清晰、详细、可读**，长度在 **100-200字** 之间，使用 Markdown 格式。abstract 必须涵盖以下三个层面：
+每个 step 的 abstract 需要**通俗、生动、可读**，长度在 **80-150字** 之间，使用 Markdown 格式。
 
-1. **做什么**：该步骤具体解决什么问题、实现什么功能、产出什么成果。
-2. **对父功能域的作用**：该步骤在其所属的高级步骤（功能域）中扮演什么角色，和同一功能域下的其他步骤有怎样的衔接关系。
-3. **对整体项目的贡献**：该步骤对实现最终用户需求有什么意义，缺少它会导致什么问题。
+### 核心原则：写给非程序员看
 
-### abstract 示例
+读者是完全没有编程基础的初学者。abstract 的目标是让他们**快速理解这一步在做什么、为什么重要、做完后会有什么效果**。
 
-假设项目是 Seam Carving 图像缩放，高级步骤是"图像能量分析"，步骤标题是"计算每个像素的梯度能量值"：
+1. **用大白话说清楚这一步干什么**：像跟朋友聊天一样，用日常类比把这步要做的事讲明白。比如"给每个像素打分，看它有多重要"比"计算梯度能量值"更易理解。
+2. **点明为什么要这一步**：一两句话说清楚缺了这步的后果，或者这步对整体目标的作用。不需要面面俱到，点到即止。
+3. **自然流畅**：不要分条罗列，不要使用"本步骤"、"对整体项目的贡献"这类书面腔。就像在口头给朋友解释一样自然地写。
 
-✅ 正确的 abstract（约 150 字）：
-"计算图像中每个像素的**梯度能量值**，量化该像素在视觉上的重要程度。具体来说，通过对每个像素的水平和垂直方向分别计算颜色差值，再取平方和得到一个标量能量值——能量越高表示该像素周围变化越剧烈（如边缘），越不适合被删除。\n\n在**图像能量分析**这个功能域中，本步骤是后续构建完整能量图矩阵的基础；而对整个 Seam Carving 项目而言，像素级别的能量计算是判断哪些区域可以安全移除的起点，没有它就无法找到最优接缝。"
+### ❌ 不好的 abstract（教条、结构化）
 
-❌ 错误的 abstract（太简短，缺少上下文）：
-"计算像素的梯度能量，用于后续步骤。"
+"本步骤计算图像中每个像素的梯度能量值。在图像能量分析功能域中，本步骤为后续构建能量图矩阵提供基础。对整个项目而言，像素能量计算是判断哪些区域可安全移除的起点。"
+→ 问题：读起来像教科书，初学者看到"梯度能量值"就会困惑。
+
+### ✅ 好的 abstract（口语化、有类比）
+
+"给图片中的每个像素'打分'，衡量它对画面有多重要——就像判断拼图里哪块最不起眼。具体来说，比较每个像素和它邻居的颜色差异：差异越大（比如轮廓边缘），说明越重要，越不适合被删除。有了这些分数，后面才能知道该从哪里下手缩小图片。"
+
+### 额外提示
+
+- 可以在关键术语首次出现时用加粗+通俗解释，比如 **梯度能量（也就是像素的"重要程度评分"）**
+- 允许用 \n\n 分段让内容更清晰
+- 避免让 abstract 读起来像三条互不相关的条目
 
 ## 数量指引
 
@@ -122,7 +131,7 @@ steps:
   "steps": [
     {
       "title": "<具体子目标，动词开头，5-15字>",
-      "abstract": "<详细的步骤描述，Markdown格式，100-200字。必须包含三个层面：①做什么（具体问题和产出）②对父功能域的作用（在高级步骤中的角色和衔接）③对整体项目的贡献（缺少它的影响）>",
+      "abstract": "<通俗的步骤描述，Markdown格式，80-150字。用大白话讲清楚这步干什么、为什么需要它、做完后有什么效果，像在跟没有编程基础的朋友聊天一样自然>",
       "task_corresponding_high_level_task": <对应的高级步骤序号，1-based>
     },
     ...
@@ -136,7 +145,7 @@ steps:
 1. 每个 high_level_step 下面是否有 ≥2 个 steps？如果不是，调整后再输出。
 2. high_level_step 和对应 steps 的标题放在一起读，是否粒度有明显区别？如果读起来像同义改写，调整后再输出。
 3. high_level_step 是否都是名词短语（无动词开头）？steps 是否都以动词开头？
-4. 每个 step 的 abstract 是否在 100-200 字之间？是否包含了「做什么」「对父功能域的作用」「对整体项目的贡献」三个层面？如果太短或缺少层面，补充后再输出。
+4. 每个 step 的 abstract 是否在 80-150 字之间？是否用大白话写清楚了这步做什么、为什么重要？如果读起来像教科书或太结构化，改口语化后再输出。
 
 现在请开始分解任务。`;
 }
@@ -623,7 +632,7 @@ export function constructGenerateKnowledgeCardDetailPrompt(
             "Treat the user as a non-programmer: assume minimal coding background and minimal terminology knowledge.",
             "Use adaptive scaffolding style: internally choose one of hinting/explaining/instructing/modeling, but DO NOT output the chosen type.",
             "Focus on one specific confusion point only. Do not expand to downstream topics or unrelated concepts.",
-            "Title must be plain and direct, avoiding obscure jargon. Prefer a concrete question-style or everyday phrase.",
+            "Title must be a SHORT QUESTION (ending with '?' in Chinese or English) that helps a non-programmer quickly judge whether they need this card. Avoid obscure jargon. Example: '为什么用循环能省掉重复劳动？' instead of '循环结构'.",
             "Content must be 2-3 short sentences only, concise and practical.",
             "Sentence 1: TLDR in plain language. Sentence 2-3: minimal explanation or next action tied to project_context and related_code.",
             "Use simple words, life-like analogies when helpful, and avoid long definitions.",
@@ -1214,7 +1223,7 @@ export function constructQAToKnowledgeCardPrompt(
         "Identify a specific theme within that category (e.g., for background-knowledge: 'Python list comprehension syntax').",
         "From the existing_knowledge_nodes list, find ALL nodes that are related to this conversation. The card can link to multiple nodes across different types.",
         "Select the step (from all_steps) that is most relevant to the conversation topic.",
-        "Generate a concise knowledge card title (plain language, 6-15 words) and content (2-3 sentences in Markdown, using adaptive scaffolding style).",
+        "Generate a concise knowledge card title that is phrased as a SHORT QUESTION (ending with '?'), 6-18 words, in plain language that helps a non-programmer quickly judge whether they need this card. Example: '为什么用循环能省掉重复劳动？' instead of '循环结构'. Also generate content (2-3 sentences in Markdown, using adaptive scaffolding style).",
         "The content should synthesize the key insight from the conversation, not just repeat the last answer.",
         "Respond in the same language as the conversation.",
         "You must follow this JSON format: {\\"selected_step_id\\": \\"(step id)\\", \\"node_category\\": \\"(background-knowledge|step|code-chunk|situation)\\", \\"theme\\": \\"(identified theme)\\", \\"linkedMasteryNodes\\": [{\\"nodeId\\": \\"(id)\\", \\"nodeType\\": \\"(type)\\"}], \\"linkedKnowledgeNodeIds\\": [\\"(knowledge node id 1)\\", ...], \\"title\\": \\"(card title)\\", \\"content\\": \\"(card content in Markdown)\\"}",
@@ -1257,7 +1266,8 @@ export function constructGlobalQuestionPrompt(
             "Select the step that best matches the topic or area of concern in the question",
           "Treat learners as non-programmers with low terminology familiarity.",
           "Generate exactly 1-2 themes that directly help answer the user's question.",
-          "Each theme must be plain, specific, and easy to understand at a glance (prefer 6-12 words).",
+          "IMPORTANT: Each theme MUST be phrased as a SHORT QUESTION (ending with '?') that helps a non-programmer quickly judge whether they need this card. Example: '为什么需要给像素打分？' instead of '像素能量计算'.",
+          "Each theme must be plain, specific, and easy to understand at a glance (prefer 6-18 words).",
           "Avoid obscure technical jargon and avoid broad future-topic expansion.",
           "The themes should be specific to the question asked and relevant to the selected step",
             "Consider the project context when generating themes",
@@ -1461,7 +1471,7 @@ export function constructGeneratePrerequisiteKnowledgeCardsPrompt(
     )
     .join("\n\n");
 
-  return `你是一个面向编程初学者的教学专家。请根据以下前置背景知识点，为每个知识点生成一张知识卡片。
+  return `你是一个面向编程初学者的教学专家。请根据以下前置背景知识点，生成**至多 2 张**知识卡片，帮助学习者快速理解当前步骤最关键的背景知识。
 
 ## 背景信息
 
@@ -1479,18 +1489,18 @@ ${knowledgePointsList}
 
 ## 任务要求
 
-为**每个**前置知识点生成一张知识卡片。每张卡片需要包含：
+从上述前置知识点中，挑选与当前步骤**最紧密相关**的主题，生成 **1-2 张** 知识卡片。允许将多个相关知识点合并为同一张卡片。每张卡片需要包含：
 
-1. **title（卡片标题）**：对初学者友好的标题，6-15字。
-   - 避免晦涩的术语，用通俗易懂的表述
-   - 让初学者一眼就能理解这张卡片讲什么
-   - 比如：将"哈希表原理" → "用'字典查找'快速存取数据"
+1. **title（卡片标题）**：必须是一个**简短的问题句**，6-18字。
+   - 标题必须是问句，让初学者看到标题就能判断"我是否需要了解这个"
+   - 用通俗语言，避免晦涩术语
+   - 比如：将"哈希表原理" → "为什么用'字典查找'能让搜索变快？"
+   - 比如：将"JWT 令牌机制" → "服务器怎样记住你已经登录了？"
 
-2. **question（引导问题）**：帮助学习者思考该知识点为什么对当前步骤重要的问题，15-40字。
+2. **question（引导问题）**：帮助学习者思考该知识为什么对当前步骤重要的问题，15-40字。
    - 问题应该引导学习者建立知识点和步骤之间的联系
-   - 比如：将"JWT 令牌机制"在"实现用户认证中间件"步骤中 → "服务器怎样验证用户身份，让后续请求不用重新登录？"
 
-3. **linkedKnowledgeNodeIds**：对应的知识点ID列表（直接使用上方知识点的 ID）
+3. **linkedKnowledgeNodeIds**：对应的知识点 ID 列表（一张卡片可以关联多个知识点 ID）
 
 ### 输出格式
 
@@ -1498,18 +1508,20 @@ ${knowledgePointsList}
 \`\`\`json
 [
   {
-    "title": "<初学者友好的标题，6-15字>",
+    "title": "<问题句式的标题，6-18字>",
     "question": "<引导思考的问题，15-40字>",
-    "linkedKnowledgeNodeIds": ["<对应的知识点ID>"]
+    "linkedKnowledgeNodeIds": ["<知识点ID1>", "<知识点ID2>"]
   }
 ]
 \`\`\`
 
 ### 规则
 
-- 每个前置知识点**恰好**对应一张卡片，卡片数量 = 知识点数量
+- **卡片数量至多 2 张**，选择对理解当前步骤最核心的 1-2 个主题
+- 如果多个知识点属于同一个主题，合并为一张卡片，linkedKnowledgeNodeIds 包含所有相关 ID
+- 标题**必须是问题句**（以"？"结尾），不能是陈述句
 - 标题要比原知识点标题**更通俗、更具体**
-- 问题要与当前步骤的上下文相关联，而不是抽象的通用问题
+- 问题要与当前步骤的上下文相关联
 - 使用与项目需求相同的语言
 - 返回纯 JSON 数组，不要使用 \`\`\`json 包裹
 

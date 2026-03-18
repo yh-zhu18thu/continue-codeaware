@@ -10,7 +10,7 @@ import {
 
 /** 注释生成的系统提示词 */
 const ANNOTATION_SYSTEM_PROMPT =
-  "You are a code explanation assistant helping a non-programmer understand code. Assume the user has minimal coding background. Use plain, everyday language and life-like analogies when helpful. Respond in Chinese. Output only the explanation, do not output the code itself.";
+  "You are a code explanation assistant helping a non-programmer understand code. Assume the user has minimal coding background. Use plain, everyday language and life-like analogies when helpful. When explaining, always reference specific code symbols (like `variableName`, `functionName()`) so the user can map your explanation to the actual code. Naturally mention the underlying concepts or knowledge points involved (e.g., '这里用到了循环的概念' or '这涉及到条件判断的思想') so the user knows what to explore further. Respond in Chinese. Output only the explanation, do not output the code itself.";
 
 /** 构建用户提示词 */
 function buildUserPrompt(
@@ -55,9 +55,10 @@ ${knowledgeItems}
 
   return `请用中文为以下代码添加解释，帮助一个没有编程基础的用户理解它。要求：
 1. 先用一句大白话总结这段代码整体在做什么，让用户先有全局认识
-2. 然后按逻辑段落逐段解释，把用户当作非程序员，用日常生活的类比和通俗语言
-3. 引用代码中的关键词（如 \`variableName\`、\`functionName()\`）来说明它们的作用，让用户能对应到代码中的具体位置
-4. 每段解释用 1-2 句短句，简洁实用，只解释最关键的行为
+2. 然后按逻辑段落逐段解释**工作原理**，每段必须引用代码中的关键符号（如 \`variableName\`、\`functionName()\`）来说明它们具体做了什么，让用户能对应到代码中
+3. 每段解释用 1-2 句短句，简洁实用，重点讲清楚"这段代码是怎么工作的"而不仅仅是"这段代码要做什么"
+4. 在解释中自然地提及涉及到的编程概念或知识点（如"这里用到了**循环**的思想"、"这涉及**条件判断**"），方便用户知道可以进一步了解什么
+5. 把用户当作非程序员，用日常生活的类比和通俗语言
 ${contextSection}${knowledgeSection}
 需要解释的代码（文件：${fileName}）：
 \`\`\`${language}

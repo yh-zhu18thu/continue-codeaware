@@ -57,7 +57,6 @@ import {
   setKnowledgeCardViewedAt,
   setKnowledgeCardViewMode,
   setNodeMasteryScores,
-  setStepAbstract,
   setStepStatus,
   setUserRequirementStatus,
   startGlobalQASession,
@@ -2149,20 +2148,6 @@ export const CodeAware = () => {
     [steps, dispatch, ideMessenger, logger],
   );
 
-  const handleStepEdit = useCallback(
-    async (stepId: string, newContent: string) => {
-      await logger.addLogEntry("user_edit_step_content", {
-        stepId,
-        newContent: newContent.substring(0, 200), // Log first 200 chars to avoid huge logs
-        timestamp: new Date().toISOString(),
-      });
-
-      // Update step abstract in Redux store
-      dispatch(setStepAbstract({ stepId, abstract: newContent }));
-    },
-    [dispatch, logger],
-  );
-
   const handleStepStatusChange = useCallback(
     async (stepId: string, newStatus: StepStatus) => {
       await logger.addLogEntry("user_change_step_status", {
@@ -2260,45 +2245,8 @@ export const CodeAware = () => {
           viewMode,
         }),
       );
-
-      if (viewMode === "read" || viewMode === "self-test") {
-        const step = codeAwareSessionState.steps.find((s) => s.id === stepId);
-        const card = step?.knowledgeCards.find((k) => k.id === cardId);
-        const linkedKnowledgeNodeIds = card?.linkedKnowledgeNodeIds || [];
-        const linkedMasteryNodes = card?.linkedMasteryNodes || [];
-
-        const interaction: KnowledgeCardInteraction = {
-          type: "view-major",
-          value: viewMode,
-        };
-
-        const result = applyKnowledgeCardInteraction({
-          linkedKnowledgeNodeIds,
-          linkedMasteryNodes,
-          interaction,
-          nodeMasteryScores: codeAwareSessionState.nodeMasteryScores,
-          cognitiveEdges: buildCodeAwareCognitiveEdges(codeAwareSessionState),
-        });
-
-        if (result.changedNodeIds.length > 0) {
-          dispatch(setNodeMasteryScores(result.updatedScores));
-          emitMasteryUpdateLogs({
-            interaction,
-            linkedKnowledgeNodeIds,
-            linkedMasteryNodes,
-            changedNodeIds: result.changedNodeIds,
-            debug: result.debug,
-            knowledgeNodeTitleById,
-          });
-        }
-      }
     },
-    [
-      codeAwareSessionState,
-      dispatch,
-      knowledgeNodeTitleById,
-      handleFlushDetailTimedView,
-    ],
+    [dispatch, handleFlushDetailTimedView],
   );
 
   const handleKnowledgeCardFeedback = useCallback(
@@ -2313,43 +2261,8 @@ export const CodeAware = () => {
           feedback,
         }),
       );
-
-      const step = codeAwareSessionState.steps.find((s) => s.id === stepId);
-      const card = step?.knowledgeCards.find((k) => k.id === cardId);
-      const linkedKnowledgeNodeIds = card?.linkedKnowledgeNodeIds || [];
-      const linkedMasteryNodes = card?.linkedMasteryNodes || [];
-
-      const interaction: KnowledgeCardInteraction = {
-        type: "feedback",
-        value: feedback,
-      };
-
-      const result = applyKnowledgeCardInteraction({
-        linkedKnowledgeNodeIds,
-        linkedMasteryNodes,
-        interaction,
-        nodeMasteryScores: codeAwareSessionState.nodeMasteryScores,
-        cognitiveEdges: buildCodeAwareCognitiveEdges(codeAwareSessionState),
-      });
-
-      if (result.changedNodeIds.length > 0) {
-        dispatch(setNodeMasteryScores(result.updatedScores));
-        emitMasteryUpdateLogs({
-          interaction,
-          linkedKnowledgeNodeIds,
-          linkedMasteryNodes,
-          changedNodeIds: result.changedNodeIds,
-          debug: result.debug,
-          knowledgeNodeTitleById,
-        });
-      }
     },
-    [
-      codeAwareSessionState,
-      dispatch,
-      knowledgeNodeTitleById,
-      handleFlushDetailTimedView,
-    ],
+    [dispatch, handleFlushDetailTimedView],
   );
 
   const handleQuestionSubmit = useCallback(
@@ -2717,10 +2630,9 @@ export const CodeAware = () => {
 
       if (messages.length === 0) return;
 
-      // Apply mastery "understood" update
+      // Apply mastery "understanding complete" update
       const interaction: KnowledgeCardInteraction = {
-        type: "feedback",
-        value: "understood",
+        type: "understanding-complete",
       };
       const masteryResult = applyKnowledgeCardInteraction({
         linkedMasteryNodes: [{ nodeId: stepId, nodeType: "step" }],
@@ -2784,6 +2696,21 @@ export const CodeAware = () => {
           (p) => p.level === "step" && p.targetId === stepId,
         );
         if (pin) dispatch(removePinnedItem(pin.id));
+
+        // Apply mastery increase (unpin = user now feels confident)
+        const interaction: KnowledgeCardInteraction = {
+          type: "pin",
+          value: "unpin",
+        };
+        const result = applyKnowledgeCardInteraction({
+          linkedMasteryNodes: [{ nodeId: stepId, nodeType: "step" }],
+          interaction,
+          nodeMasteryScores: codeAwareSessionState.nodeMasteryScores,
+          cognitiveEdges: buildCodeAwareCognitiveEdges(codeAwareSessionState),
+        });
+        if (result.changedNodeIds.length > 0) {
+          dispatch(setNodeMasteryScores(result.updatedScores));
+        }
       } else {
         const newPin: PinnedItem = {
           id: `pin-step-${stepId}-${Date.now()}`,
@@ -2835,6 +2762,22 @@ export const CodeAware = () => {
           (p) => p.level === "knowledge-card" && p.targetId === cardId,
         );
         if (pin) dispatch(removePinnedItem(pin.id));
+
+        // Apply mastery increase (unpin = user now feels confident)
+        const linkedMasteryNodes = card.linkedMasteryNodes || [];
+        const unpinInteraction: KnowledgeCardInteraction = {
+          type: "pin",
+          value: "unpin",
+        };
+        const unpinResult = applyKnowledgeCardInteraction({
+          linkedMasteryNodes,
+          interaction: unpinInteraction,
+          nodeMasteryScores: codeAwareSessionState.nodeMasteryScores,
+          cognitiveEdges: buildCodeAwareCognitiveEdges(codeAwareSessionState),
+        });
+        if (unpinResult.changedNodeIds.length > 0) {
+          dispatch(setNodeMasteryScores(unpinResult.updatedScores));
+        }
       } else {
         const newPin: PinnedItem = {
           id: `pin-kc-${cardId}-${Date.now()}`,
@@ -2939,13 +2882,12 @@ export const CodeAware = () => {
 
       if (messages.length === 0) return;
 
-      // Apply mastery "understood" update
+      // Apply mastery "understanding complete" update
       const step = steps.find((s) => s.id === stepId);
       const card = step?.knowledgeCards.find((k) => k.id === cardId);
       if (card) {
         const interaction: KnowledgeCardInteraction = {
-          type: "feedback",
-          value: "understood",
+          type: "understanding-complete",
         };
         const result = applyKnowledgeCardInteraction({
           linkedMasteryNodes: card.linkedMasteryNodes || [],
@@ -3306,7 +3248,6 @@ export const CodeAware = () => {
                   isPinned={pinnedItems.some(
                     (p) => p.level === "step" && p.targetId === step.id,
                   )}
-                  onStepEdit={handleStepEdit}
                   onStepStatusChange={handleStepStatusChange}
                   onStepExpansionChange={handleStepExpansionChange}
                   onKnowledgeCardExpansionChange={
@@ -3444,39 +3385,7 @@ export const CodeAware = () => {
                                 return;
                               }
 
-                              const linkedKnowledgeNodeIds =
-                                kc.linkedKnowledgeNodeIds || [];
-                              const linkedMasteryNodes =
-                                kc.linkedMasteryNodes || [];
-                              const interaction: KnowledgeCardInteraction = {
-                                type: "answer",
-                                correctness: submission.correctness,
-                              };
-
-                              const result = applyKnowledgeCardInteraction({
-                                linkedKnowledgeNodeIds,
-                                linkedMasteryNodes,
-                                interaction,
-                                nodeMasteryScores:
-                                  codeAwareSessionState.nodeMasteryScores,
-                                cognitiveEdges: buildCodeAwareCognitiveEdges(
-                                  codeAwareSessionState,
-                                ),
-                              });
-
-                              if (result.changedNodeIds.length > 0) {
-                                dispatch(
-                                  setNodeMasteryScores(result.updatedScores),
-                                );
-                                emitMasteryUpdateLogs({
-                                  interaction,
-                                  linkedKnowledgeNodeIds,
-                                  linkedMasteryNodes,
-                                  changedNodeIds: result.changedNodeIds,
-                                  debug: result.debug,
-                                  knowledgeNodeTitleById,
-                                });
-                              }
+                              // SAQ correctness no longer triggers mastery update
                             })
                             .catch((error) => {
                               console.error(

@@ -1,7 +1,4 @@
-import {
-  ChatBubbleLeftRightIcon,
-  WrenchIcon,
-} from "@heroicons/react/24/outline";
+import { ChatBubbleLeftRightIcon } from "@heroicons/react/24/outline";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import styled from "styled-components";
 import {
@@ -22,29 +19,6 @@ const ContentArea = styled.div`
   font-size: 12px;
   position: relative;
   user-select: text; /* 允许文本选择 */
-`;
-
-const EditButton = styled.button`
-  position: relative;
-  color: ${vscForeground};
-  cursor: pointer;
-  padding: 0px;
-  border-radius: 4px;
-  transition: background-color 0.15s ease-in-out;
-  opacity: 0.7;
-  align-self: flex-end;
-  margin-top: 0px;
-  border: none;
-  background: none;
-
-  &:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-    opacity: 1;
-  }
-
-  &:active {
-    background-color: rgba(255, 255, 255, 0.2);
-  }
 `;
 
 const QuestionButton = styled.button<{
@@ -85,14 +59,12 @@ const QuestionButton = styled.button<{
 interface StepDescriptionProps {
   markdownContent: string;
   isVisible?: boolean; // Control visibility for collapsing
-  onEdit?: () => void; // Callback for edit functionality
   onQuestionSubmit?: (selectedText: string, question: string) => void; // Callback for question submission
 }
 
 const StepAbstract: React.FC<StepDescriptionProps> = ({
   markdownContent,
   isVisible = true,
-  onEdit,
   onQuestionSubmit,
 }) => {
   const [selectedText, setSelectedText] = useState("");
@@ -237,11 +209,6 @@ const StepAbstract: React.FC<StepDescriptionProps> = ({
     return null;
   }
 
-  const handleEditClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onEdit?.();
-  };
-
   return (
     <>
       <div className="flex flex-col px-1">
@@ -250,13 +217,6 @@ const StepAbstract: React.FC<StepDescriptionProps> = ({
             source={markdownContent}
             useParentBackgroundColor={true}
           />
-          {onEdit && (
-            <div className="flex justify-end">
-              <EditButton onClick={handleEditClick} title="修改此步骤">
-                <WrenchIcon width={16} height={16} />
-              </EditButton>
-            </div>
-          )}
         </ContentArea>
       </div>
 

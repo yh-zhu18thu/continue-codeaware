@@ -5,30 +5,39 @@ import {
 } from "./masteryTrackingEngine";
 
 describe("deriveEvidenceFromInteraction", () => {
-  it("maps feedback and answer interactions to configured evidence values", () => {
+  it("maps timed-view to strong positive evidence", () => {
     expect(
-      deriveEvidenceFromInteraction({ type: "feedback", value: "understood" }),
-    ).toBe(0.8);
-    expect(
-      deriveEvidenceFromInteraction({ type: "feedback", value: "uncertain" }),
-    ).toBe(0.25);
-    expect(
-      deriveEvidenceFromInteraction({ type: "view-major", value: "read" }),
-    ).toBe(0.45);
-    expect(
-      deriveEvidenceFromInteraction({ type: "view-major", value: "self-test" }),
-    ).toBe(0.55);
-    expect(
-      deriveEvidenceFromInteraction({ type: "answer", correctness: 1 }),
+      deriveEvidenceFromInteraction({ type: "timed-view", value: "step" }),
     ).toBe(0.85);
     expect(
-      deriveEvidenceFromInteraction({ type: "answer", correctness: 0 }),
-    ).toBe(0.2);
+      deriveEvidenceFromInteraction({
+        type: "timed-view",
+        value: "knowledge-card",
+      }),
+    ).toBe(0.85);
+  });
+
+  it("maps confusion to low evidence", () => {
+    expect(
+      deriveEvidenceFromInteraction({ type: "confusion", value: "ask" }),
+    ).toBe(0.15);
+  });
+
+  it("maps pin to low evidence", () => {
+    expect(deriveEvidenceFromInteraction({ type: "pin", value: "pin" })).toBe(
+      0.15,
+    );
+  });
+
+  it("maps understanding-complete to strong positive evidence", () => {
+    expect(
+      deriveEvidenceFromInteraction({ type: "understanding-complete" }),
+    ).toBe(0.9);
   });
 });
 
 describe("applyKnowledgeCardInteraction", () => {
-  it("updates linked knowledge node mastery directly", () => {
+  it("updates linked knowledge node mastery with timed-view", () => {
     const scores: NodeMasteryScore[] = [
       {
         nodeId: "k-1",
@@ -40,7 +49,7 @@ describe("applyKnowledgeCardInteraction", () => {
 
     const result = applyKnowledgeCardInteraction({
       linkedKnowledgeNodeIds: ["k-1"],
-      interaction: { type: "feedback", value: "understood" },
+      interaction: { type: "timed-view", value: "step" },
       nodeMasteryScores: scores,
       cognitiveEdges: [],
     });
@@ -51,11 +60,12 @@ describe("applyKnowledgeCardInteraction", () => {
     );
 
     expect(updated).toBeDefined();
-    expect(updated?.score).toBeCloseTo(0.605, 5);
+    // (1 - 0.5) * 0.5 + 0.5 * 0.85 = 0.675
+    expect(updated?.score).toBeCloseTo(0.675, 5);
     expect(result.changedNodeIds).toContain("k-1");
   });
 
-  it("propagates one hop and ignores back-propagation to direct-updated nodes", () => {
+  it("propagates three hops", () => {
     const scores: NodeMasteryScore[] = [
       {
         nodeId: "k-1",
@@ -63,12 +73,83 @@ describe("applyKnowledgeCardInteraction", () => {
         score: 0.5,
         updatedAt: 1,
       },
+      { nodeId: "s-1", nodeType: "step", score: 0.3, updatedAt: 1 },
       {
-        nodeId: "s-1",
-        nodeType: "step",
-        score: 0.4,
+        nodeId: "sit-1",
+        nodeType: "situation",
+        score: 0.2,
         updatedAt: 1,
       },
+      {
+        nodeId: "c-1",
+        nodeType: "code-chunk",
+        score: 0.1,
+        updatedAt: 1,
+      },
+    ];
+
+    const edges: CodeAwareCognitiveEdge[] = [
+      {
+        id: "e1",
+        type: "dependency-forward",
+        fromNodeId: "k-1",
+        fromNodeType: "background-knowledge",
+        toNodeId: "s-1",
+        toNodeType: "step",
+        conditionalMasteryProbability: 0.9,
+        createdAt: 1,
+      },
+      {
+        id: "e2",
+        type: "inference-forward",
+        fromNodeId: "s-1",
+        fromNodeType: "step",
+        toNodeId: "sit-1",
+        toNodeType: "situation",
+        conditionalMasteryProbability: 0.86,
+        createdAt: 1,
+      },
+      {
+        id: "e3",
+        type: "inference-forward",
+        fromNodeId: "sit-1",
+        fromNodeType: "situation",
+        toNodeId: "c-1",
+        toNodeType: "code-chunk",
+        conditionalMasteryProbability: 0.86,
+        createdAt: 1,
+      },
+    ];
+
+    const result = applyKnowledgeCardInteraction({
+      linkedKnowledgeNodeIds: ["k-1"],
+      interaction: { type: "timed-view", value: "knowledge-card" },
+      nodeMasteryScores: scores,
+      cognitiveEdges: edges,
+    });
+
+    // All 4 nodes should be changed (direct + 3 hops)
+    expect(result.changedNodeIds).toEqual(
+      expect.arrayContaining(["k-1", "s-1", "sit-1", "c-1"]),
+    );
+
+    const c1 = result.updatedScores.find(
+      (item) => item.nodeId === "c-1" && item.nodeType === "code-chunk",
+    );
+    // Hop 3 should still produce a change, but attenuated
+    expect(c1).toBeDefined();
+    expect(c1!.score).not.toBe(0.1);
+  });
+
+  it("does not back-propagate to direct-updated nodes", () => {
+    const scores: NodeMasteryScore[] = [
+      {
+        nodeId: "k-1",
+        nodeType: "background-knowledge",
+        score: 0.5,
+        updatedAt: 1,
+      },
+      { nodeId: "s-1", nodeType: "step", score: 0.4, updatedAt: 1 },
     ];
 
     const edges: CodeAwareCognitiveEdge[] = [
@@ -96,7 +177,7 @@ describe("applyKnowledgeCardInteraction", () => {
 
     const result = applyKnowledgeCardInteraction({
       linkedKnowledgeNodeIds: ["k-1"],
-      interaction: { type: "feedback", value: "understood" },
+      interaction: { type: "understanding-complete" },
       nodeMasteryScores: scores,
       cognitiveEdges: edges,
     });
@@ -105,74 +186,12 @@ describe("applyKnowledgeCardInteraction", () => {
       (item) =>
         item.nodeId === "k-1" && item.nodeType === "background-knowledge",
     );
-    const s1 = result.updatedScores.find(
-      (item) => item.nodeId === "s-1" && item.nodeType === "step",
-    );
+    // Direct update: (1-0.5)*0.5 + 0.5*0.9 = 0.7
+    expect(k1?.score).toBeCloseTo(0.7, 5);
 
-    expect(k1?.score).toBeCloseTo(0.605, 5);
-    expect(s1?.score).toBeCloseTo(0.446, 5);
+    // s-1 should be propagated but k-1 should NOT be overwritten by reverse edge
     expect(result.changedNodeIds).toEqual(
       expect.arrayContaining(["k-1", "s-1"]),
     );
-  });
-
-  it("uses max candidate when multiple propagation sources target same node", () => {
-    const scores: NodeMasteryScore[] = [
-      {
-        nodeId: "k-1",
-        nodeType: "background-knowledge",
-        score: 0.5,
-        updatedAt: 1,
-      },
-      {
-        nodeId: "k-2",
-        nodeType: "background-knowledge",
-        score: 0.5,
-        updatedAt: 1,
-      },
-      {
-        nodeId: "s-1",
-        nodeType: "step",
-        score: 0.2,
-        updatedAt: 1,
-      },
-    ];
-
-    const edges: CodeAwareCognitiveEdge[] = [
-      {
-        id: "e1",
-        type: "dependency-forward",
-        fromNodeId: "k-1",
-        fromNodeType: "background-knowledge",
-        toNodeId: "s-1",
-        toNodeType: "step",
-        conditionalMasteryProbability: 0.9,
-        createdAt: 1,
-      },
-      {
-        id: "e2",
-        type: "dependency-forward",
-        fromNodeId: "k-2",
-        fromNodeType: "background-knowledge",
-        toNodeId: "s-1",
-        toNodeType: "step",
-        conditionalMasteryProbability: 0.55,
-        createdAt: 1,
-      },
-    ];
-
-    const result = applyKnowledgeCardInteraction({
-      linkedKnowledgeNodeIds: ["k-1", "k-2"],
-      interaction: { type: "feedback", value: "understood" },
-      nodeMasteryScores: scores,
-      cognitiveEdges: edges,
-    });
-
-    const s1 = result.updatedScores.find(
-      (item) => item.nodeId === "s-1" && item.nodeType === "step",
-    );
-
-    // Candidate from k-1 should win over k-2 for this setup.
-    expect(s1?.score).toBeCloseTo(0.296, 5);
   });
 });

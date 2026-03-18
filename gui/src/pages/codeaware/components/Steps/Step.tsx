@@ -29,7 +29,6 @@ import ConfusionPanel, {
   ConfusionMessage,
 } from "../shared/ConfusionPanel";
 import StepAbstract from "./StepAbstract";
-import StepEditor from "./StepEditor";
 import StepTitleBar from "./StepTitleBar";
 
 const StepContainer = styled.div<{
@@ -173,7 +172,6 @@ interface StepProps {
   stepConfusionCandidatesLoading?: boolean; // Whether candidates are loading
   onStepPin?: (stepId: string) => void; // Pin handler
   isPinned?: boolean; // Whether this step is pinned
-  onStepEdit?: (stepId: string, newContent: string) => void; // Callback for step edit
   onStepStatusChange?: (stepId: string, newStatus: StepStatus) => void; // Callback for status change
   onDisableKnowledgeCard?: (stepId: string, cardId: string) => void; // Callback for disabling knowledge card
   onQuestionSubmit?: (
@@ -229,7 +227,6 @@ const Step: React.FC<StepProps> = ({
   stepConfusionCandidatesLoading = false,
   onStepPin,
   isPinned = false,
-  onStepEdit,
   onStepStatusChange,
   onDisableKnowledgeCard,
   onQuestionSubmit,
@@ -276,9 +273,6 @@ const Step: React.FC<StepProps> = ({
     string | null
   >(null); // Track currently expanded knowledge card
   const flickerTimeoutRef = useRef<(NodeJS.Timeout | null)[]>([]);
-
-  // Check if step is in editing mode based on stepStatus
-  const isEditing = stepStatus === "editing";
 
   // Handle mouse enter/leave for hover effects only
   const handleMouseEnter = () => {
@@ -541,55 +535,6 @@ const Step: React.FC<StepProps> = ({
     }
   };
 
-  const handleEditStep = async () => {
-    if (disabled) {
-      console.warn("[CA:UI] Step editing is disabled in code edit mode");
-      return;
-    }
-
-    // Log step editing start
-    await logger.addLogEntry("user_start_edit_step_requirement", {
-      stepTitle: title || "",
-      originalContent: description
-        ? description.substring(0, 200) +
-          (description.length > 200 ? "..." : "")
-        : "",
-      timestamp: new Date().toISOString(),
-    });
-
-    // Trigger edit mode by changing status to "editing"
-    if (stepId && onStepStatusChange) {
-      onStepStatusChange(stepId, "editing");
-    }
-  };
-
-  const handleConfirmEdit = async (newContent: string) => {
-    if (disabled) {
-      console.warn("[CA:UI] Step editing is disabled in code edit mode");
-      return;
-    }
-
-    // Log step editing submission
-    await logger.addLogEntry("user_submit_step_requirement", {
-      stepTitle: title || "",
-      originalContent: description
-        ? description.substring(0, 200) +
-          (description.length > 200 ? "..." : "")
-        : "",
-      newContent: newContent
-        ? newContent.substring(0, 200) + (newContent.length > 200 ? "..." : "")
-        : "",
-      timestamp: new Date().toISOString(),
-    });
-
-    if (stepId && onStepEdit) {
-      onStepEdit(stepId, newContent);
-    }
-
-    // Note: We don't call onStepStatusChange here anymore because setStepAbstract
-    // in the Redux slice will intelligently determine the correct status based on content changes
-  };
-
   const handleKnowledgeCardExpansionChange = async (
     cardId: string,
     isExpanded: boolean,
@@ -643,30 +588,15 @@ const Step: React.FC<StepProps> = ({
         disabled={disabled}
       />
       <ContentArea isVisible={isExpanded}>
-        {isEditing ? (
-          <StepEditor
-            markdownContent={description}
-            isVisible={isExpanded}
-            onConfirm={handleConfirmEdit}
-          />
-        ) : (
-          <StepAbstract
-            markdownContent={description}
-            isVisible={isExpanded}
-            onEdit={
-              stepStatus === "confirmed" ||
-              stepStatus === "generated" ||
-              stepStatus === "step_dirty"
-                ? handleEditStep
-                : undefined
+        <StepAbstract
+          markdownContent={description}
+          isVisible={isExpanded}
+          onQuestionSubmit={(selectedText, question) => {
+            if (stepId) {
+              onQuestionSubmit?.(stepId, selectedText, question);
             }
-            onQuestionSubmit={(selectedText, question) => {
-              if (stepId) {
-                onQuestionSubmit?.(stepId, selectedText, question);
-              }
-            }}
-          />
-        )}
+          }}
+        />
         {knowledgeCards.filter((card) => !card.disabled).length > 0 && (
           <KnowledgeCardsContainer isHovered={isHovered}>
             {(() => {

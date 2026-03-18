@@ -5,23 +5,17 @@ import type {
 } from "core";
 
 const EVIDENCE_VALUES = {
-  feedback_understood: 0.8,
-  feedback_uncertain: 0.25,
-  read_major_interaction: 0.45,
-  self_test_major_interaction: 0.55,
-  answer_mode_correct: 0.85,
-  answer_mode_wrong: 0.2,
-  timed_view_step: 0.55,
-  timed_view_situation: 0.5,
-  timed_view_code: 0.55,
-  timed_view_knowledge_card: 0.55,
+  timed_view: 0.85,
+  confusion_ask: 0.15,
   pin_mark: 0.15,
-  confusion_ask: 0.2,
+  unpin_mark: 0.85,
+  understanding_complete: 0.9,
 } as const;
 
-const DEFAULT_ALPHA = 0.35;
+const DEFAULT_ALPHA = 0.5;
 const DEFAULT_BETA = 0.25;
-const SITUATION_TIMED_VIEW_ALPHA = 0.15;
+const PROPAGATION_HOPS = 3;
+const PROPAGATION_BETA_DECAY = 0.6;
 
 type ScoreKey = string;
 
@@ -49,12 +43,10 @@ function buildScoreMap(
 export type TimedViewTarget = "step" | "situation" | "code" | "knowledge-card";
 
 export type KnowledgeCardInteraction =
-  | { type: "feedback"; value: "understood" | "uncertain" }
-  | { type: "view-major"; value: "read" | "self-test" }
-  | { type: "answer"; correctness: number }
   | { type: "timed-view"; value: TimedViewTarget }
+  | { type: "confusion"; value: "ask" }
   | { type: "pin"; value: "pin" | "unpin" }
-  | { type: "confusion"; value: "ask" };
+  | { type: "understanding-complete" };
 
 interface DirectUpdateResult {
   scoreMap: Map<ScoreKey, NodeMasteryScore>;
@@ -96,42 +88,22 @@ export interface MasteryTrackingDebugInfo {
 export function deriveEvidenceFromInteraction(
   interaction: KnowledgeCardInteraction,
 ): number | undefined {
-  if (interaction.type === "feedback") {
-    return interaction.value === "understood"
-      ? EVIDENCE_VALUES.feedback_understood
-      : EVIDENCE_VALUES.feedback_uncertain;
-  }
-
-  if (interaction.type === "view-major") {
-    return interaction.value === "self-test"
-      ? EVIDENCE_VALUES.self_test_major_interaction
-      : EVIDENCE_VALUES.read_major_interaction;
-  }
-
-  if (interaction.type === "answer") {
-    return interaction.correctness >= 0.5
-      ? EVIDENCE_VALUES.answer_mode_correct
-      : EVIDENCE_VALUES.answer_mode_wrong;
-  }
-
   if (interaction.type === "timed-view") {
-    const timedViewMap: Record<TimedViewTarget, number> = {
-      step: EVIDENCE_VALUES.timed_view_step,
-      situation: EVIDENCE_VALUES.timed_view_situation,
-      code: EVIDENCE_VALUES.timed_view_code,
-      "knowledge-card": EVIDENCE_VALUES.timed_view_knowledge_card,
-    };
-    return timedViewMap[interaction.value];
-  }
-
-  if (interaction.type === "pin") {
-    // Pin signals "I don't know this well" → low evidence to decrease mastery
-    return EVIDENCE_VALUES.pin_mark;
+    return EVIDENCE_VALUES.timed_view;
   }
 
   if (interaction.type === "confusion") {
-    // Confusion ask signals user doesn't understand → low evidence
     return EVIDENCE_VALUES.confusion_ask;
+  }
+
+  if (interaction.type === "pin") {
+    return interaction.value === "unpin"
+      ? EVIDENCE_VALUES.unpin_mark
+      : EVIDENCE_VALUES.pin_mark;
+  }
+
+  if (interaction.type === "understanding-complete") {
+    return EVIDENCE_VALUES.understanding_complete;
   }
 
   return undefined;
@@ -206,8 +178,8 @@ export function updateDirectNodeMastery(args: {
 }
 
 export function propagateOneHop(args: {
-  directUpdatedNodes: NodeMasteryScore[];
-  directUpdatedKeys: Set<ScoreKey>;
+  sourceNodes: NodeMasteryScore[];
+  excludedKeys: Set<ScoreKey>;
   scoreMap: Map<ScoreKey, NodeMasteryScore>;
   cognitiveEdges: CodeAwareCognitiveEdge[];
   now?: number;
@@ -218,7 +190,7 @@ export function propagateOneHop(args: {
   const beta = args.beta ?? DEFAULT_BETA;
   const candidateMap = new Map<ScoreKey, PropagationCandidate>();
 
-  args.directUpdatedNodes.forEach((updatedNode) => {
+  args.sourceNodes.forEach((updatedNode) => {
     const outgoing = args.cognitiveEdges.filter(
       (edge) =>
         edge.fromNodeId === updatedNode.nodeId &&
@@ -229,7 +201,7 @@ export function propagateOneHop(args: {
       const targetNodeType = edge.toNodeType as NodeMasteryScore["nodeType"];
       const targetKey = toScoreKey(edge.toNodeId, targetNodeType);
 
-      if (args.directUpdatedKeys.has(targetKey)) {
+      if (args.excludedKeys.has(targetKey)) {
         return;
       }
 
@@ -265,22 +237,27 @@ export function mergePropagationCandidates(args: {
   now?: number;
 }): {
   scoreMap: Map<ScoreKey, NodeMasteryScore>;
+  updatedNodes: NodeMasteryScore[];
   propagationLogs: MasteryTrackingDebugInfo["propagationLogs"];
 } {
   const now = args.now ?? Date.now();
   const propagationLogs: MasteryTrackingDebugInfo["propagationLogs"] = [];
+  const updatedNodes: NodeMasteryScore[] = [];
 
   args.mergedCandidates.forEach((candidate, key) => {
     const current = args.scoreMap.get(key);
     const before = current?.score ?? 0.5;
     const after = candidate.candidateScore;
 
-    args.scoreMap.set(key, {
+    const node: NodeMasteryScore = {
       nodeId: candidate.nodeId,
       nodeType: candidate.nodeType,
       score: after,
       updatedAt: now,
-    });
+    };
+
+    args.scoreMap.set(key, node);
+    updatedNodes.push(node);
 
     propagationLogs.push({
       nodeId: candidate.nodeId,
@@ -295,8 +272,64 @@ export function mergePropagationCandidates(args: {
 
   return {
     scoreMap: args.scoreMap,
+    updatedNodes,
     propagationLogs,
   };
+}
+
+function propagateMultiHop(args: {
+  directUpdatedNodes: NodeMasteryScore[];
+  directUpdatedKeys: Set<ScoreKey>;
+  scoreMap: Map<ScoreKey, NodeMasteryScore>;
+  cognitiveEdges: CodeAwareCognitiveEdge[];
+  hops?: number;
+  now?: number;
+  beta?: number;
+}): {
+  scoreMap: Map<ScoreKey, NodeMasteryScore>;
+  allPropagationLogs: MasteryTrackingDebugInfo["propagationLogs"];
+} {
+  const hops = args.hops ?? PROPAGATION_HOPS;
+  const baseBeta = args.beta ?? DEFAULT_BETA;
+  const now = args.now ?? Date.now();
+
+  let currentSourceNodes = args.directUpdatedNodes;
+  const excludedKeys = new Set(args.directUpdatedKeys);
+  const allPropagationLogs: MasteryTrackingDebugInfo["propagationLogs"] = [];
+
+  for (let hop = 0; hop < hops; hop++) {
+    const hopBeta = baseBeta * Math.pow(PROPAGATION_BETA_DECAY, hop);
+
+    const hopResult = propagateOneHop({
+      sourceNodes: currentSourceNodes,
+      excludedKeys,
+      scoreMap: args.scoreMap,
+      cognitiveEdges: args.cognitiveEdges,
+      beta: hopBeta,
+      now,
+    });
+
+    if (hopResult.mergedCandidates.size === 0) {
+      break;
+    }
+
+    const mergeResult = mergePropagationCandidates({
+      scoreMap: args.scoreMap,
+      mergedCandidates: hopResult.mergedCandidates,
+      now,
+    });
+
+    allPropagationLogs.push(...mergeResult.propagationLogs);
+
+    // Add this hop's updated keys to exclusion set and use as next hop's source
+    mergeResult.updatedNodes.forEach((node) => {
+      excludedKeys.add(toScoreKey(node.nodeId, node.nodeType));
+    });
+
+    currentSourceNodes = mergeResult.updatedNodes;
+  }
+
+  return { scoreMap: args.scoreMap, allPropagationLogs };
 }
 
 export function applyKnowledgeCardInteraction(args: {
@@ -326,23 +359,15 @@ export function applyKnowledgeCardInteraction(args: {
     };
   }
 
-  // Use a smaller alpha for timed-view situation to produce a gentler update
-  const effectiveAlpha =
-    args.alpha ??
-    (args.interaction.type === "timed-view" &&
-    args.interaction.value === "situation"
-      ? SITUATION_TIMED_VIEW_ALPHA
-      : undefined);
-
   const directResult = updateDirectNodeMastery({
     linkedKnowledgeNodeIds: args.linkedKnowledgeNodeIds,
     linkedMasteryNodes: args.linkedMasteryNodes,
     evidence,
     nodeMasteryScores: args.nodeMasteryScores,
-    alpha: effectiveAlpha,
+    alpha: args.alpha,
   });
 
-  const propagationResult = propagateOneHop({
+  const { scoreMap, allPropagationLogs } = propagateMultiHop({
     directUpdatedNodes: directResult.directUpdatedNodes,
     directUpdatedKeys: directResult.directUpdatedKeys,
     scoreMap: directResult.scoreMap,
@@ -350,23 +375,16 @@ export function applyKnowledgeCardInteraction(args: {
     beta: args.beta,
   });
 
-  const mergedResult = mergePropagationCandidates({
-    scoreMap: directResult.scoreMap,
-    mergedCandidates: propagationResult.mergedCandidates,
-  });
-
   const changedNodeIdSet = new Set<string>();
   directResult.directLogs.forEach((item) => changedNodeIdSet.add(item.nodeId));
-  mergedResult.propagationLogs.forEach((item) =>
-    changedNodeIdSet.add(item.nodeId),
-  );
+  allPropagationLogs.forEach((item) => changedNodeIdSet.add(item.nodeId));
 
   return {
-    updatedScores: Array.from(mergedResult.scoreMap.values()),
+    updatedScores: Array.from(scoreMap.values()),
     changedNodeIds: Array.from(changedNodeIdSet),
     debug: {
       directLogs: directResult.directLogs,
-      propagationLogs: mergedResult.propagationLogs,
+      propagationLogs: allPropagationLogs,
     },
   };
 }

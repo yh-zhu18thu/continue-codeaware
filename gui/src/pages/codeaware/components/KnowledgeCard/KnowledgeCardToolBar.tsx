@@ -2,6 +2,7 @@ import {
   AcademicCapIcon,
   BookmarkIcon as BookmarkOutlineIcon,
   ChevronDownIcon,
+  XMarkIcon,
 } from "@heroicons/react/24/outline";
 import { BookmarkIcon as BookmarkSolidIcon } from "@heroicons/react/24/solid";
 import React from "react";
@@ -140,6 +141,36 @@ const SOURCE_LABELS: Record<string, string> = {
   question: "提问",
 };
 
+const RemoveBtn = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border: none;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--vscode-descriptionForeground);
+  cursor: pointer;
+  flex-shrink: 0;
+  margin-right: 4px;
+  padding: 0;
+  opacity: 0.5;
+  transition: all 150ms;
+  z-index: 1;
+
+  &:hover {
+    opacity: 1;
+    background: var(--vscode-toolbar-hoverBackground, rgba(90, 93, 94, 0.31));
+    color: var(--vscode-errorForeground, #f48771);
+  }
+
+  svg {
+    width: 12px;
+    height: 12px;
+  }
+`;
+
 interface KnowledgeCardToolBarProps {
   title: string;
   isExpanded?: boolean;
@@ -152,6 +183,7 @@ interface KnowledgeCardToolBarProps {
   masteryScore?: number | null;
   masteryColor?: string;
   sourceTag?: "prerequisite" | "confusion" | "question" | null;
+  onRemove?: () => void;
 }
 
 const KnowledgeCardToolBar: React.FC<KnowledgeCardToolBarProps> = ({
@@ -166,6 +198,7 @@ const KnowledgeCardToolBar: React.FC<KnowledgeCardToolBarProps> = ({
   masteryScore = null,
   masteryColor,
   sourceTag = null,
+  onRemove,
 }) => {
   const masteryPercent =
     masteryScore !== null ? Math.round(masteryScore * 100) : null;
@@ -174,6 +207,17 @@ const KnowledgeCardToolBar: React.FC<KnowledgeCardToolBarProps> = ({
     <ToolBarContainer isHighlighted={isHighlighted} isFlickering={isFlickering}>
       {/* Title section */}
       <TitleSection onClick={onToggle}>
+        {onRemove && (
+          <RemoveBtn
+            onClick={(e) => {
+              e.stopPropagation();
+              onRemove();
+            }}
+            title="移除卡片"
+          >
+            <XMarkIcon />
+          </RemoveBtn>
+        )}
         {sourceTag && (
           <SourceTag $type={sourceTag}>{SOURCE_LABELS[sourceTag]}</SourceTag>
         )}

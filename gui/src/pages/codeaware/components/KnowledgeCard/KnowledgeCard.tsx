@@ -778,6 +778,7 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
         masteryScore={kcMasteryScore}
         masteryColor={kcMasteryColor}
         sourceTag={source || null}
+        onRemove={handleDisableCard}
       />
       <ContentArea isVisible={isExpanded}>
         {currentViewMode === "read" &&

@@ -103,9 +103,45 @@ export function useTimedMasteryTracker() {
     [flushDetailView],
   );
 
+  /** Non-destructive peek: flush only slots whose reading time is met.
+   *  Called by the periodic timer — does NOT clear slots that are still pending. */
+  const peekAndFlushIfReady = useCallback((): TimedViewResult[] => {
+    const results: TimedViewResult[] = [];
+    const s = flushRef(stepRef);
+    if (s) results.push(s);
+    const d = flushRef(detailRef);
+    if (d) results.push(d);
+    return results;
+  }, [flushRef]);
+
   const clearAll = useCallback(() => {
     stepRef.current = null;
     detailRef.current = null;
+  }, []);
+
+  /** Expose raw refs for debug-level logging in periodic checks. */
+  const getTrackingStatus = useCallback(() => {
+    const now = Date.now();
+    const step = stepRef.current;
+    const detail = detailRef.current;
+    return {
+      step: step
+        ? {
+            type: step.type,
+            elapsed: now - step.startTime,
+            threshold: step.minReadingTimeMs,
+            ready: now - step.startTime >= step.minReadingTimeMs,
+          }
+        : null,
+      detail: detail
+        ? {
+            type: detail.type,
+            elapsed: now - detail.startTime,
+            threshold: detail.minReadingTimeMs,
+            ready: now - detail.startTime >= detail.minReadingTimeMs,
+          }
+        : null,
+    };
   }, []);
 
   useEffect(() => {
@@ -121,6 +157,8 @@ export function useTimedMasteryTracker() {
     flushStepView,
     flushDetailView,
     flushAllViews,
+    peekAndFlushIfReady,
+    getTrackingStatus,
     clearAll,
   };
 }

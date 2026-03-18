@@ -36,6 +36,7 @@ import { useAppDispatch, useAppSelector } from "../../redux/hooks";
 import {
   addGlobalQAMessage,
   addPinnedItem,
+  appendKnowledgeCardContent,
   clearAllCodeAndMappings,
   clearAllHighlights,
   clearGlobalQASession,
@@ -75,8 +76,12 @@ import {
   getStepCorrespondingCode,
   processSaqSubmission,
   rerunStep,
-  respondToGlobalQA,
 } from "../../redux/thunks/codeAwareGeneration";
+import {
+  generateGlobalConfusionCandidates,
+  generateStepConfusionCandidates,
+} from "../../redux/thunks/confusionCandidates";
+import { respondToConfusionQA } from "../../redux/thunks/confusionQA";
 import {
   executeInitialGeneration,
   exportKnowledgeStateArtifacts,
@@ -84,7 +89,7 @@ import {
 import {
   establishCodeToSemanticMapping,
   establishSemanticToCodeMapping,
-} from "../../redux/thunks/mappingLookup"; // 新的接口
+} from "../../redux/thunks/mappingLookup";
 import { useCodeAwareLogger } from "../../util/codeAwareWebViewLogger";
 import { buildCodeAwareCognitiveEdges } from "../../utils/codeAwareRelationGraph";
 import {
@@ -99,12 +104,12 @@ import "./CodeAware.css";
 import GlobalInteractionOverlay, {
   OverlayTab,
 } from "./components/GlobalOverlay/GlobalInteractionOverlay";
-import { ConfusionOptionType } from "./components/KnowledgeCard/ConfusionOptions";
-import RequirementDisplay from "./components/Requirements/RequirementDisplay"; // Import RequirementDisplay
-import RequirementDisplayHorizontal from "./components/Requirements/RequirementDisplayHorizontal"; // Import RequirementDisplayHorizontal
-import RequirementEditor from "./components/Requirements/RequirementEditor"; // Import RequirementEditor
-import Step from "./components/Steps/Step"; // Import Step
-import { NavigationButtons } from "./components/ToolBar/NavigationButtons"; // Import NavigationButtons
+import RequirementDisplay from "./components/Requirements/RequirementDisplay";
+import RequirementDisplayHorizontal from "./components/Requirements/RequirementDisplayHorizontal";
+import RequirementEditor from "./components/Requirements/RequirementEditor";
+import type { ConfusionMessage } from "./components/shared/ConfusionPanel";
+import Step from "./components/Steps/Step";
+import { NavigationButtons } from "./components/ToolBar/NavigationButtons";
 const CodeAwareDiv = styled.div`
   position: relative;
   background-color: transparent;
@@ -1145,8 +1150,20 @@ export const CodeAware = () => {
     useState<boolean>(false);
   const [globalOverlayTab, setGlobalOverlayTab] =
     useState<OverlayTab>("confusion");
-  const [isGlobalConfusionLoading, setIsGlobalConfusionLoading] =
-    useState<boolean>(false);
+
+  // Confusion candidates state (step & global levels)
+  const [stepConfusionCandidates, setStepConfusionCandidates] = useState<
+    { id: string; label: string; description?: string }[]
+  >([]);
+  const [stepConfusionCandidatesLoading, setStepConfusionCandidatesLoading] =
+    useState(false);
+  const [globalConfusionCandidates, setGlobalConfusionCandidates] = useState<
+    { id: string; label: string; description?: string }[]
+  >([]);
+  const [
+    globalConfusionCandidatesLoading,
+    setGlobalConfusionCandidatesLoading,
+  ] = useState(false);
 
   // Pinned items from Redux
   const pinnedItems = useAppSelector(
@@ -2406,146 +2423,109 @@ export const CodeAware = () => {
     [steps, learningGoal, task, dispatch, logger],
   );
 
-  // Handle global confusion submission — Q&A conversation mode
-  const handleGlobalConfusionSubmit = useCallback(
-    async (question: string) => {
-      console.log("[CA:UI] 全局Q&A提问:", { question });
+  // Handle global confusion ask — ConfusionPanel onAsk callback
+  const handleGlobalConfusionAsk = useCallback(
+    async (question: string): Promise<string> => {
+      await logger.addLogEntry("user_submit_global_confusion_question", {
+        question: question.substring(0, 200),
+        timestamp: new Date().toISOString(),
+      });
 
-      setIsGlobalConfusionLoading(true);
-
+      let currentCode = "";
       try {
-        // Start a new QA session if none exists
-        if (!globalQASession) {
-          dispatch(startGlobalQASession());
-        }
-
-        // Add user message to session
-        dispatch(
-          addGlobalQAMessage({
-            id: `qa-msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-            role: "user",
-            content: question,
-            timestamp: Date.now(),
-          }),
+        const currentFileResponse = await ideMessenger?.request(
+          "getCurrentFile",
+          undefined,
         );
-
-        await logger.addLogEntry("user_submit_global_qa_question", {
-          question: question.substring(0, 200),
-          conversationLength: (globalQASession?.messages.length ?? 0) + 1,
-          timestamp: new Date().toISOString(),
-        });
-
-        // Get current code for context
-        let currentCode = "";
-        try {
-          const currentFileResponse = await ideMessenger?.request(
-            "getCurrentFile",
-            undefined,
-          );
-          if (
-            currentFileResponse &&
-            currentFileResponse.status === "success" &&
-            currentFileResponse.content
-          ) {
-            currentCode = currentFileResponse.content.contents || "";
-          }
-        } catch {
-          // Continue without code context
+        if (
+          currentFileResponse &&
+          currentFileResponse.status === "success" &&
+          currentFileResponse.content
+        ) {
+          currentCode = currentFileResponse.content.contents || "";
         }
-
-        // Dispatch respondToGlobalQA thunk
-        const result = await dispatch(
-          respondToGlobalQA({ question, currentCode }),
-        );
-
-        if (respondToGlobalQA.rejected.match(result)) {
-          console.error(
-            "[CA:UI] Failed to get QA response:",
-            result.error.message,
-          );
-          ideMessenger?.post("showToast", ["error", "回复生成失败，请重试"]);
-        }
-      } catch (error) {
-        console.error("[CA:UI] Error in handleGlobalConfusionSubmit:", error);
-        ideMessenger?.post("showToast", [
-          "error",
-          "处理问题时发生错误，请重试",
-        ]);
-      } finally {
-        setIsGlobalConfusionLoading(false);
+      } catch {
+        // Continue without code context
       }
+
+      const result = await dispatch(
+        respondToConfusionQA({
+          question,
+          context: {
+            level: "global",
+            conversationHistory: [],
+            learningGoal: learningGoal || "",
+            taskDescription: task?.requirementDescription || "",
+            currentCode,
+          },
+        }),
+      ).unwrap();
+      return result.response;
     },
-    [dispatch, ideMessenger, logger, globalQASession],
+    [dispatch, ideMessenger, logger, learningGoal, task],
   );
 
-  // Handle ending the global Q&A session — convert to knowledge card
-  const handleGlobalQAEnd = useCallback(async () => {
-    if (!globalQASession || globalQASession.messages.length === 0) {
-      // No conversation to convert, just close
-      dispatch(clearGlobalQASession());
-      setIsGlobalOverlayOpen(false);
-      return;
-    }
-
-    console.log("[CA:UI] 结束全局Q&A，转化为知识卡片");
-
-    await logger.addLogEntry("user_end_global_qa", {
-      conversationLength: globalQASession.messages.length,
-      timestamp: new Date().toISOString(),
-    });
-
-    try {
-      const result = await dispatch(convertQAToKnowledgeCard());
-
-      if (convertQAToKnowledgeCard.fulfilled.match(result)) {
-        const { stepId, cardId } = result.payload;
-
-        console.log("[CA:UI] Q&A converted to card:", { stepId, cardId });
-
-        // Close overlay
+  // Handle global confusion end — convert messages to knowledge card
+  const handleGlobalConfusionEnd = useCallback(
+    async (messages: ConfusionMessage[]) => {
+      if (messages.length === 0) {
         setIsGlobalOverlayOpen(false);
+        return;
+      }
 
-        // Force expand step
+      await logger.addLogEntry("user_end_global_confusion", {
+        messageCount: messages.length,
+        timestamp: new Date().toISOString(),
+      });
+
+      // Populate globalQASession for convertQAToKnowledgeCard
+      dispatch(startGlobalQASession());
+      for (const msg of messages) {
+        dispatch(
+          addGlobalQAMessage({
+            id: msg.id,
+            role: msg.role,
+            content: msg.content,
+            timestamp: msg.timestamp,
+          }),
+        );
+      }
+
+      try {
+        const result = await dispatch(convertQAToKnowledgeCard()).unwrap();
+        const { stepId, cardId } = result;
+
+        setIsGlobalOverlayOpen(false);
         setForceExpandedSteps((prev) => new Set([...prev, stepId]));
         setGlobalQuestionExpandedSteps((prev) => new Set([...prev, stepId]));
         setCurrentlyExpandedStepId(stepId);
 
         ideMessenger?.post("showToast", ["info", "已将问答整理为知识卡片"]);
 
-        await logger.addLogEntry("user_global_qa_converted_to_card", {
+        await logger.addLogEntry("user_global_confusion_card_created", {
           stepId,
           cardId,
           timestamp: new Date().toISOString(),
         });
-      } else if (convertQAToKnowledgeCard.rejected.match(result)) {
+      } catch (error) {
         console.error(
-          "[CA:UI] Failed to convert QA to card:",
-          result.error.message,
+          "[CA:UI] Failed to convert global confusion to card:",
+          error,
         );
-        ideMessenger?.post("showToast", [
-          "warning",
-          "问答转化为知识卡片失败，但对话内容已保留",
-        ]);
-        // Don't clear session on failure so user can retry
+        ideMessenger?.post("showToast", ["warning", "问答转化为知识卡片失败"]);
         setIsGlobalOverlayOpen(false);
-        return;
+      } finally {
+        dispatch(clearGlobalQASession());
       }
-
-      // Clear session on success
-      dispatch(clearGlobalQASession());
-    } catch (error) {
-      console.error("[CA:UI] Error in handleGlobalQAEnd:", error);
-      ideMessenger?.post("showToast", ["warning", "问答转化过程中发生错误"]);
-      setIsGlobalOverlayOpen(false);
-    }
-  }, [
-    dispatch,
-    globalQASession,
-    ideMessenger,
-    logger,
-    setForceExpandedSteps,
-    setCurrentlyExpandedStepId,
-  ]);
+    },
+    [
+      dispatch,
+      ideMessenger,
+      logger,
+      setForceExpandedSteps,
+      setCurrentlyExpandedStepId,
+    ],
+  );
 
   // Global overlay open/close
   const handleOpenGlobalOverlay = useCallback(
@@ -2556,25 +2536,36 @@ export const CodeAware = () => {
         tab,
         timestamp: new Date().toISOString(),
       });
+
+      // Generate global confusion candidates when confusion tab opens
+      if (tab === "confusion") {
+        setGlobalConfusionCandidatesLoading(true);
+        setGlobalConfusionCandidates([]);
+        void dispatch(generateGlobalConfusionCandidates())
+          .unwrap()
+          .then((result) => {
+            setGlobalConfusionCandidates(result);
+          })
+          .catch((error) => {
+            console.warn(
+              "[CA:UI] Failed to generate global confusion candidates:",
+              error,
+            );
+          })
+          .finally(() => {
+            setGlobalConfusionCandidatesLoading(false);
+          });
+      }
     },
-    [logger],
+    [dispatch, logger],
   );
 
   const handleCloseGlobalOverlay = useCallback(() => {
-    // If there's an active QA session with messages, auto-end and convert
-    if (
-      globalQASession &&
-      globalQASession.messages.length > 0 &&
-      globalQASession.status === "active"
-    ) {
-      void handleGlobalQAEnd();
-      return;
-    }
     setIsGlobalOverlayOpen(false);
     void logger.addLogEntry("user_close_global_overlay", {
       timestamp: new Date().toISOString(),
     });
-  }, [logger, globalQASession, handleGlobalQAEnd]);
+  }, [logger]);
 
   // Pin navigation: scroll to target item
   const handlePinNavigate = useCallback(
@@ -2619,17 +2610,115 @@ export const CodeAware = () => {
     [dispatch, logger],
   );
 
-  // Step-level confusion handler
+  // Step-level confusion handler — opens panel and generates mastery-based candidates
   const handleStepConfusion = useCallback(
     async (stepId: string) => {
       await logger.addLogEntry("user_step_confusion", {
         stepId,
         timestamp: new Date().toISOString(),
       });
-      // Generate prerequisite knowledge cards for this step
-      await dispatch(generatePrerequisiteKnowledgeCards({ stepId }));
+      // Generate mastery-based candidates asynchronously
+      setStepConfusionCandidatesLoading(true);
+      setStepConfusionCandidates([]);
+      try {
+        const result = await dispatch(
+          generateStepConfusionCandidates({ stepId }),
+        ).unwrap();
+        setStepConfusionCandidates(result);
+      } catch (error) {
+        console.warn(
+          "[CA:UI] Failed to generate step confusion candidates:",
+          error,
+        );
+      } finally {
+        setStepConfusionCandidatesLoading(false);
+      }
     },
     [dispatch, logger],
+  );
+
+  // Step-level confusion Q&A ask handler
+  const handleStepConfusionAsk = useCallback(
+    async (stepId: string, question: string): Promise<string> => {
+      const step = steps.find((s) => s.id === stepId);
+      const result = await dispatch(
+        respondToConfusionQA({
+          question,
+          context: {
+            level: "step",
+            stepId,
+            conversationHistory: [],
+            learningGoal: learningGoal || "",
+            taskDescription: task?.requirementDescription || "",
+          },
+        }),
+      ).unwrap();
+      return result.response;
+    },
+    [dispatch, steps, learningGoal, task],
+  );
+
+  // Step-level confusion Q&A end handler — creates new knowledge card
+  const handleStepConfusionEnd = useCallback(
+    async (stepId: string, messages: ConfusionMessage[]) => {
+      await logger.addLogEntry("user_step_confusion_end", {
+        stepId,
+        messageCount: messages.length,
+        timestamp: new Date().toISOString(),
+      });
+
+      if (messages.length === 0) return;
+
+      // Apply mastery "understood" update
+      const interaction: KnowledgeCardInteraction = {
+        type: "feedback",
+        value: "understood",
+      };
+      const masteryResult = applyKnowledgeCardInteraction({
+        linkedMasteryNodes: [{ nodeId: stepId, nodeType: "step" }],
+        interaction,
+        nodeMasteryScores: codeAwareSessionState.nodeMasteryScores,
+        cognitiveEdges: buildCodeAwareCognitiveEdges(codeAwareSessionState),
+      });
+      if (masteryResult.changedNodeIds.length > 0) {
+        dispatch(setNodeMasteryScores(masteryResult.updatedScores));
+      }
+
+      // Convert Q&A to knowledge card via existing thunk
+      // First populate globalQASession so convertQAToKnowledgeCard can pick it up
+      dispatch(startGlobalQASession());
+      for (const msg of messages) {
+        dispatch(
+          addGlobalQAMessage({
+            id: msg.id,
+            role: msg.role,
+            content: msg.content,
+            timestamp: msg.timestamp,
+          }),
+        );
+      }
+
+      try {
+        const result = await dispatch(convertQAToKnowledgeCard()).unwrap();
+        const { stepId: targetStepId, cardId } = result;
+        setForceExpandedSteps((prev) => new Set([...prev, targetStepId]));
+        setCurrentlyExpandedStepId(targetStepId);
+        dispatch(clearGlobalQASession());
+
+        await logger.addLogEntry("user_step_confusion_card_created", {
+          stepId: targetStepId,
+          cardId,
+          timestamp: new Date().toISOString(),
+        });
+      } catch (error) {
+        console.error(
+          "[CA:UI] Failed to convert step confusion to card:",
+          error,
+        );
+        dispatch(clearGlobalQASession());
+      }
+    },
+    [dispatch, logger, codeAwareSessionState],
   );
 
   // Step-level self-test handler
@@ -2777,30 +2866,109 @@ export const CodeAware = () => {
     [dispatch, logger],
   );
 
-  // Knowledge card level confusion handler
-  const handleKnowledgeCardConfusion = useCallback(
+  // Knowledge card level confusion ask handler
+  const handleKCConfusionAsk = useCallback(
     async (
       stepId: string,
       cardId: string,
-      type: ConfusionOptionType,
-      customQuestion?: string,
-    ) => {
-      await logger.addLogEntry("user_kc_confusion", {
+      question: string,
+    ): Promise<string> => {
+      const step = steps.find((s) => s.id === stepId);
+      const card = step?.knowledgeCards.find((k) => k.id === cardId);
+
+      await logger.addLogEntry("user_kc_confusion_ask", {
         stepId,
         cardId,
-        type,
-        customQuestion,
+        question: question.substring(0, 200),
         timestamp: new Date().toISOString(),
       });
-      // For now, log the action. Deep-dive content generation thunk to be added later.
-      console.log("[CA:UI] Knowledge card confusion:", {
+
+      // Apply mastery decrease for confusion
+      if (card) {
+        const interaction: KnowledgeCardInteraction = {
+          type: "confusion",
+          value: "ask",
+        };
+        const result = applyKnowledgeCardInteraction({
+          linkedMasteryNodes: card.linkedMasteryNodes || [],
+          linkedKnowledgeNodeIds: card.linkedKnowledgeNodeIds || [],
+          interaction,
+          nodeMasteryScores: codeAwareSessionState.nodeMasteryScores,
+          cognitiveEdges: buildCodeAwareCognitiveEdges(codeAwareSessionState),
+        });
+        if (result.changedNodeIds.length > 0) {
+          dispatch(setNodeMasteryScores(result.updatedScores));
+        }
+      }
+
+      const result = await dispatch(
+        respondToConfusionQA({
+          question,
+          context: {
+            level: "knowledge-card",
+            stepId,
+            cardId,
+            currentContent: card?.content || "",
+            conversationHistory: [],
+            learningGoal: learningGoal || "",
+            taskDescription: task?.requirementDescription || "",
+          },
+        }),
+      ).unwrap();
+      return result.response;
+    },
+    [dispatch, steps, logger, learningGoal, task, codeAwareSessionState],
+  );
+
+  // Knowledge card level confusion end handler — updates the current card content
+  const handleKCConfusionEnd = useCallback(
+    async (stepId: string, cardId: string, messages: ConfusionMessage[]) => {
+      await logger.addLogEntry("user_kc_confusion_end", {
         stepId,
         cardId,
-        type,
-        customQuestion,
+        messageCount: messages.length,
+        timestamp: new Date().toISOString(),
       });
+
+      if (messages.length === 0) return;
+
+      // Apply mastery "understood" update
+      const step = steps.find((s) => s.id === stepId);
+      const card = step?.knowledgeCards.find((k) => k.id === cardId);
+      if (card) {
+        const interaction: KnowledgeCardInteraction = {
+          type: "feedback",
+          value: "understood",
+        };
+        const result = applyKnowledgeCardInteraction({
+          linkedMasteryNodes: card.linkedMasteryNodes || [],
+          linkedKnowledgeNodeIds: card.linkedKnowledgeNodeIds || [],
+          interaction,
+          nodeMasteryScores: codeAwareSessionState.nodeMasteryScores,
+          cognitiveEdges: buildCodeAwareCognitiveEdges(codeAwareSessionState),
+        });
+        if (result.changedNodeIds.length > 0) {
+          dispatch(setNodeMasteryScores(result.updatedScores));
+        }
+      }
+
+      // Summarize the Q&A and append to card content
+      const qaSnippets = messages
+        .filter((m) => m.role === "assistant")
+        .map((m) => m.content)
+        .join("\n\n");
+
+      if (qaSnippets.trim()) {
+        dispatch(
+          appendKnowledgeCardContent({
+            stepId,
+            cardId,
+            additionalContent: `**补充说明**\n\n${qaSnippets}`,
+          }),
+        );
+      }
     },
-    [logger],
+    [dispatch, steps, logger, codeAwareSessionState],
   );
 
   // Add webview listener for questions from code selection
@@ -3122,6 +3290,12 @@ export const CodeAware = () => {
                   onHighlightEvent={handleHighlightEvent}
                   onClearHighlight={removeHighlightEvent}
                   onStepConfusion={handleStepConfusion}
+                  onStepConfusionAsk={handleStepConfusionAsk}
+                  onStepConfusionEnd={handleStepConfusionEnd}
+                  stepConfusionCandidates={stepConfusionCandidates}
+                  stepConfusionCandidatesLoading={
+                    stepConfusionCandidatesLoading
+                  }
                   onStepSelfTest={handleStepSelfTest}
                   onStepPin={handleStepPin}
                   isPinned={pinnedItems.some(
@@ -3214,17 +3388,18 @@ export const CodeAware = () => {
                             p.targetId ===
                               (kc.id || `${step.id}-card-${kcIndex}`),
                         ),
-                        onConfusion: (
-                          cardId: string,
-                          type: ConfusionOptionType,
-                          customQuestion?: string,
-                        ) => {
-                          void handleKnowledgeCardConfusion(
+                        onConfusionAsk: (cardId: string, question: string) => {
+                          return handleKCConfusionAsk(
                             step.id,
                             cardId,
-                            type,
-                            customQuestion,
+                            question,
                           );
+                        },
+                        onConfusionEnd: (
+                          cardId: string,
+                          messages: ConfusionMessage[],
+                        ) => {
+                          void handleKCConfusionEnd(step.id, cardId, messages);
                         },
                         onSelfTest: (cardId: string) => {
                           handleKnowledgeCardSelfTest(step.id, cardId);
@@ -3389,11 +3564,10 @@ export const CodeAware = () => {
         isOpen={isGlobalOverlayOpen}
         initialTab={globalOverlayTab}
         onClose={handleCloseGlobalOverlay}
-        onConfusionSubmit={handleGlobalConfusionSubmit}
-        confusionLoading={isGlobalConfusionLoading}
-        qaMessages={globalQASession?.messages ?? []}
-        qaStatus={globalQASession?.status ?? null}
-        onQAEnd={handleGlobalQAEnd}
+        onConfusionAsk={handleGlobalConfusionAsk}
+        onConfusionEnd={handleGlobalConfusionEnd}
+        confusionCandidates={globalConfusionCandidates}
+        confusionCandidatesLoading={globalConfusionCandidatesLoading}
         onRequestSelfTest={() => {
           // TODO: implement global self-test generation
           console.log("[CA:UI] Global self-test requested");

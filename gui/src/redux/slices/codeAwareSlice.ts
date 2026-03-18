@@ -975,6 +975,25 @@ export const codeAwareSessionSlice = createSlice({
         }
       }
     },
+    // 追加内容到知识卡片（用于 confusion Q&A 结束后更新当前卡片）
+    appendKnowledgeCardContent: (
+      state,
+      action: PayloadAction<{
+        stepId: string;
+        cardId: string;
+        additionalContent: string;
+      }>,
+    ) => {
+      const { stepId, cardId, additionalContent } = action.payload;
+      const step = state.steps.find((s) => s.id === stepId);
+      if (step) {
+        const card = step.knowledgeCards.find((c) => c.id === cardId);
+        if (card && additionalContent.trim()) {
+          const separator = card.content ? "\n\n---\n\n" : "";
+          card.content = (card.content || "") + separator + additionalContent;
+        }
+      }
+    },
     // 设置知识卡片内容加载失败
     setKnowledgeCardError: (
       state,
@@ -1660,6 +1679,7 @@ export const {
   resetIdeCommFlags,
   setKnowledgeCardLoading,
   updateKnowledgeCardContent,
+  appendKnowledgeCardContent,
   updateKnowledgeCardTests,
   setKnowledgeCardTestsLoading,
   updateKnowledgeCardTitle,

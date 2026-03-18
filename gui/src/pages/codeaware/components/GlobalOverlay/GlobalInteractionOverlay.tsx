@@ -1,14 +1,11 @@
 import {
   AcademicCapIcon,
   BookmarkIcon,
-  ChatBubbleLeftIcon,
-  CheckCircleIcon,
   QuestionMarkCircleIcon,
   XMarkIcon,
 } from "@heroicons/react/24/outline";
-import { PaperAirplaneIcon } from "@heroicons/react/24/solid";
-import type { GlobalQAMessage, GlobalQASession, PinnedItem } from "core";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import type { PinnedItem } from "core";
+import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import styled from "styled-components";
 import {
@@ -18,7 +15,10 @@ import {
   vscInputBackground,
   vscInputBorder,
 } from "../../../../components";
-import StyledMarkdownPreview from "../../../../components/StyledMarkdownPreview";
+import ConfusionPanel, {
+  ConfusionCandidate,
+  ConfusionMessage,
+} from "../shared/ConfusionPanel";
 
 /* ─── types ─── */
 export type OverlayTab = "confusion" | "self-test" | "pins";
@@ -27,13 +27,13 @@ export interface GlobalInteractionOverlayProps {
   isOpen: boolean;
   initialTab?: OverlayTab;
   onClose: () => void;
-  /** Confusion tab: submit a free-text question (Q&A mode) */
-  onConfusionSubmit: (question: string) => void;
-  confusionLoading?: boolean;
-  /** Q&A conversation data */
-  qaMessages?: GlobalQAMessage[];
-  qaStatus?: GlobalQASession["status"] | null;
-  onQAEnd?: () => void;
+  /** Confusion tab: ConfusionPanel onAsk callback */
+  onConfusionAsk: (question: string) => Promise<string>;
+  /** Confusion tab: called when user confirms understanding */
+  onConfusionEnd: (messages: ConfusionMessage[]) => void;
+  /** Confusion tab: mastery-based candidates */
+  confusionCandidates?: ConfusionCandidate[];
+  confusionCandidatesLoading?: boolean;
   /** Self-test tab: request generation */
   onRequestSelfTest: () => void;
   selfTestLoading?: boolean;
@@ -523,11 +523,10 @@ export const GlobalInteractionOverlay: React.FC<
   isOpen,
   initialTab = "confusion",
   onClose,
-  onConfusionSubmit,
-  confusionLoading = false,
-  qaMessages = [],
-  qaStatus = null,
-  onQAEnd,
+  onConfusionAsk,
+  onConfusionEnd,
+  confusionCandidates = [],
+  confusionCandidatesLoading = false,
   onRequestSelfTest,
   selfTestLoading = false,
   selfTestContent,
@@ -536,71 +535,13 @@ export const GlobalInteractionOverlay: React.FC<
   onPinRemove,
 }) => {
   const [activeTab, setActiveTab] = useState<OverlayTab>(initialTab);
-  const [question, setQuestion] = useState("");
-  const inputRef = useRef<HTMLTextAreaElement>(null);
-  const conversationEndRef = useRef<HTMLDivElement>(null);
 
   // Sync initial tab when prop changes while overlay opens
   useEffect(() => {
     if (isOpen) {
       setActiveTab(initialTab);
-      setQuestion("");
     }
   }, [isOpen, initialTab]);
-
-  // Auto-focus input when confusion tab is active
-  useEffect(() => {
-    if (isOpen && activeTab === "confusion") {
-      setTimeout(() => inputRef.current?.focus(), 100);
-    }
-  }, [isOpen, activeTab]);
-
-  // Auto-scroll to bottom when new messages arrive
-  useEffect(() => {
-    if (qaMessages.length > 0) {
-      setTimeout(() => {
-        conversationEndRef.current?.scrollIntoView({ behavior: "smooth" });
-      }, 50);
-    }
-  }, [qaMessages.length]);
-
-  const handleSubmit = useCallback(() => {
-    const q = question.trim();
-    if (!q || confusionLoading) return;
-    onConfusionSubmit(q);
-    setQuestion("");
-  }, [question, confusionLoading, onConfusionSubmit]);
-
-  const handleStillConfused = useCallback(() => {
-    if (confusionLoading) return;
-    onConfusionSubmit("我还是不太理解，能换一种方式解释吗？");
-  }, [confusionLoading, onConfusionSubmit]);
-
-  const handleEnd = useCallback(() => {
-    onQAEnd?.();
-  }, [onQAEnd]);
-
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-        e.preventDefault();
-        handleSubmit();
-      }
-    },
-    [handleSubmit],
-  );
-
-  const hasConversation = qaMessages.length > 0;
-  const isConversationActive = qaStatus === "active";
-  const isConverting = qaStatus === "converting";
-  // Find the last assistant message index for action buttons
-  const lastAssistantIdx = qaMessages.reduce(
-    (acc, msg, idx) => (msg.role === "assistant" ? idx : acc),
-    -1,
-  );
-  // Max 5 rounds (10 messages) to prevent overly long conversations
-  const MAX_ROUNDS = 10;
-  const reachedMaxRounds = qaMessages.length >= MAX_ROUNDS;
 
   if (!isOpen) return null;
 
@@ -644,112 +585,13 @@ export const GlobalInteractionOverlay: React.FC<
         {/* content */}
         <TabContent>
           {activeTab === "confusion" && (
-            <QuestionArea>
-              {/* Conversation messages */}
-              {hasConversation && (
-                <ConversationArea>
-                  {qaMessages.map((msg, idx) => (
-                    <React.Fragment key={msg.id}>
-                      <MessageBubble $role={msg.role}>
-                        {msg.role === "assistant" ? (
-                          <StyledMarkdownPreview
-                            source={msg.content}
-                            isRenderingInStepContainer={true}
-                          />
-                        ) : (
-                          msg.content
-                        )}
-                      </MessageBubble>
-                      {/* Action buttons after the LAST assistant message */}
-                      {msg.role === "assistant" &&
-                        idx === lastAssistantIdx &&
-                        isConversationActive &&
-                        !confusionLoading && (
-                          <ActionRow>
-                            <ActionBtn
-                              onClick={() => inputRef.current?.focus()}
-                            >
-                              <ChatBubbleLeftIcon />
-                              继续追问
-                            </ActionBtn>
-                            <ActionBtn
-                              onClick={handleStillConfused}
-                              disabled={confusionLoading}
-                            >
-                              <QuestionMarkCircleIcon />
-                              还不懂
-                            </ActionBtn>
-                            <ActionBtn $variant="primary" onClick={handleEnd}>
-                              <CheckCircleIcon />
-                              结束提问
-                            </ActionBtn>
-                          </ActionRow>
-                        )}
-                    </React.Fragment>
-                  ))}
-                  {/* Loading indicator */}
-                  {confusionLoading && (
-                    <LoadingBubble>
-                      <Spinner />
-                      正在思考…
-                    </LoadingBubble>
-                  )}
-                  {/* Converting indicator */}
-                  {isConverting && (
-                    <LoadingBubble>
-                      <Spinner />
-                      正在整理为知识卡片…
-                    </LoadingBubble>
-                  )}
-                  {/* Max rounds hint */}
-                  {reachedMaxRounds && isConversationActive && (
-                    <ActionRow>
-                      <ActionBtn $variant="primary" onClick={handleEnd}>
-                        <CheckCircleIcon />
-                        已达最大对话轮次，点击结束提问
-                      </ActionBtn>
-                    </ActionRow>
-                  )}
-                  <div ref={conversationEndRef} />
-                </ConversationArea>
-              )}
-
-              {/* Input area: show when conversation is active or not started */}
-              {(!hasConversation ||
-                (isConversationActive && !reachedMaxRounds)) && (
-                <>
-                  <QuestionInput
-                    ref={inputRef}
-                    value={question}
-                    onChange={(e) => setQuestion(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder={
-                      hasConversation
-                        ? "继续提问… (⌘ + Enter 发送)"
-                        : "输入你的疑问… (⌘ + Enter 发送)"
-                    }
-                    disabled={confusionLoading || isConverting}
-                  />
-                  <SendRow>
-                    <SendBtn
-                      onClick={handleSubmit}
-                      disabled={
-                        !question.trim() || confusionLoading || isConverting
-                      }
-                    >
-                      {confusionLoading && !hasConversation ? (
-                        <Spinner />
-                      ) : (
-                        <>
-                          <PaperAirplaneIcon />
-                          发送
-                        </>
-                      )}
-                    </SendBtn>
-                  </SendRow>
-                </>
-              )}
-            </QuestionArea>
+            <ConfusionPanel
+              isOpen={true}
+              candidates={confusionCandidates}
+              candidatesLoading={confusionCandidatesLoading}
+              onAsk={onConfusionAsk}
+              onEnd={onConfusionEnd}
+            />
           )}
 
           {activeTab === "self-test" && (

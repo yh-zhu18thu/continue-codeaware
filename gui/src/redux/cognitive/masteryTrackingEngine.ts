@@ -16,6 +16,7 @@ const EVIDENCE_VALUES = {
   timed_view_code: 0.55,
   timed_view_knowledge_card: 0.55,
   pin_mark: 0.15,
+  confusion_ask: 0.2,
 } as const;
 
 const DEFAULT_ALPHA = 0.35;
@@ -52,7 +53,8 @@ export type KnowledgeCardInteraction =
   | { type: "view-major"; value: "read" | "self-test" }
   | { type: "answer"; correctness: number }
   | { type: "timed-view"; value: TimedViewTarget }
-  | { type: "pin"; value: "pin" | "unpin" };
+  | { type: "pin"; value: "pin" | "unpin" }
+  | { type: "confusion"; value: "ask" };
 
 interface DirectUpdateResult {
   scoreMap: Map<ScoreKey, NodeMasteryScore>;
@@ -125,6 +127,11 @@ export function deriveEvidenceFromInteraction(
   if (interaction.type === "pin") {
     // Pin signals "I don't know this well" → low evidence to decrease mastery
     return EVIDENCE_VALUES.pin_mark;
+  }
+
+  if (interaction.type === "confusion") {
+    // Confusion ask signals user doesn't understand → low evidence
+    return EVIDENCE_VALUES.confusion_ask;
   }
 
   return undefined;

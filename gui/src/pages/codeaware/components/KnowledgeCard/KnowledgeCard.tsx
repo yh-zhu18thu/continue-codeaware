@@ -1,4 +1,8 @@
-import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
+import {
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  QuestionMarkCircleIcon,
+} from "@heroicons/react/24/outline";
 import type { MasteryNodeRef } from "core";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import styled from "styled-components";
@@ -11,7 +15,10 @@ import { useAppSelector } from "../../../../redux/hooks";
 import { selectKnowledgeCardMastery } from "../../../../redux/selectors/masterySelectors";
 import { useCodeAwareLogger } from "../../../../util/codeAwareWebViewLogger";
 import { masteryScoreToColor } from "../../../../utils/masteryColor";
-import ConfusionOptions, { ConfusionOptionType } from "./ConfusionOptions";
+import ConfusionPanel, {
+  ConfusionMessage,
+  DEEPDIVE_CANDIDATES,
+} from "../shared/ConfusionPanel";
 import KnowledgeCardContent from "./KnowledgeCardContent";
 import KnowledgeCardLoader from "./KnowledgeCardLoader";
 import KnowledgeCardMCQ from "./KnowledgeCardMCQ";
@@ -57,9 +64,41 @@ const ContentArea = styled.div<{ isVisible: boolean }>`
 
 const ConfusionFooter = styled.div`
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
   padding: 6px 8px 8px;
   border-top: 1px solid ${lightGray}22;
+`;
+
+const ConfusionTriggerBtn = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  color: var(--vscode-descriptionForeground);
+  border: 1px dashed
+    var(--vscode-editorWidget-border, rgba(128, 128, 128, 0.35));
+  border-radius: 6px;
+  padding: 4px 12px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 150ms;
+
+  &:hover:not(:disabled) {
+    color: ${vscForeground};
+    border-color: var(--vscode-focusBorder, #007acc);
+    background: rgba(0, 122, 204, 0.06);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  svg {
+    width: 14px;
+    height: 14px;
+  }
 `;
 
 const QuestionPanel = styled.div`
@@ -210,11 +249,8 @@ export interface KnowledgeCardProps {
   onFeedback?: (cardId: string, feedback: "understood" | "uncertain") => void;
 
   // Unified action callbacks
-  onConfusion?: (
-    cardId: string,
-    type: ConfusionOptionType,
-    customQuestion?: string,
-  ) => void;
+  onConfusionAsk?: (cardId: string, question: string) => Promise<string>;
+  onConfusionEnd?: (cardId: string, messages: ConfusionMessage[]) => void;
   onSelfTest?: (cardId: string) => void;
   onPin?: (cardId: string) => void;
   isPinned?: boolean;
@@ -268,7 +304,8 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
   onExpansionChange,
   onViewModeChange,
   onFeedback,
-  onConfusion,
+  onConfusionAsk,
+  onConfusionEnd,
   onSelfTest,
   onPin,
   isPinned = false,
@@ -294,6 +331,7 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
   >(feedback);
   const [currentTestIndex, setCurrentTestIndex] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
+  const [isConfusionOpen, setIsConfusionOpen] = useState(false);
   const [isContentLoadingLocal, setIsContentLoadingLocal] = useState(false);
   const hasTriggeredInitialContentLoadRef = useRef(false);
   const hasStartedTimedViewRef = useRef(false);
@@ -933,18 +971,35 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
             </TestContainer>
           )}
 
-        {/* Confusion button at bottom of card */}
+        {/* Confusion panel at bottom of card */}
         {isExpanded && markdownContent && markdownContent !== "::LOADING::" && (
           <ConfusionFooter>
-            <ConfusionOptions
-              onSelect={(type, customQuestion) => {
-                if (cardId && onConfusion) {
-                  onConfusion(cardId, type, customQuestion);
+            <ConfusionPanel
+              isOpen={isConfusionOpen}
+              candidates={DEEPDIVE_CANDIDATES}
+              onAsk={async (q) => {
+                if (cardId && onConfusionAsk) {
+                  return onConfusionAsk(cardId, q);
                 }
+                return "暂不可用";
               }}
-              loading={confusionLoading}
-              disabled={disabled}
+              onEnd={(msgs) => {
+                if (cardId && onConfusionEnd) {
+                  onConfusionEnd(cardId, msgs);
+                }
+                setIsConfusionOpen(false);
+              }}
+              onClose={() => setIsConfusionOpen(false)}
             />
+            {!isConfusionOpen && (
+              <ConfusionTriggerBtn
+                onClick={() => setIsConfusionOpen(true)}
+                disabled={disabled}
+              >
+                <QuestionMarkCircleIcon />
+                我有疑惑
+              </ConfusionTriggerBtn>
+            )}
           </ConfusionFooter>
         )}
       </ContentArea>

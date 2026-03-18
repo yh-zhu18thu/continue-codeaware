@@ -24,6 +24,10 @@ import KnowledgeCard, {
   KnowledgeCardProps,
 } from "../KnowledgeCard/KnowledgeCard";
 import KnowledgeCardLoader from "../KnowledgeCard/KnowledgeCardLoader";
+import ConfusionPanel, {
+  ConfusionCandidate,
+  ConfusionMessage,
+} from "../shared/ConfusionPanel";
 import StepAbstract from "./StepAbstract";
 import StepEditor from "./StepEditor";
 import StepTitleBar from "./StepTitleBar";
@@ -141,7 +145,11 @@ interface StepProps {
   knowledgeCardGenerationStatus?: KnowledgeCardGenerationStatus; // Add knowledge card generation status
   onHighlightEvent?: (event: HighlightEvent) => void;
   onClearHighlight?: () => void;
-  onStepConfusion?: (stepId: string) => void; // Confusion button handler
+  onStepConfusion?: (stepId: string) => void; // Confusion button handler (opens panel & generates candidates)
+  onStepConfusionAsk?: (stepId: string, question: string) => Promise<string>; // Ask question in confusion panel
+  onStepConfusionEnd?: (stepId: string, messages: ConfusionMessage[]) => void; // End confusion Q&A
+  stepConfusionCandidates?: ConfusionCandidate[]; // Mastery-based candidates
+  stepConfusionCandidatesLoading?: boolean; // Whether candidates are loading
   onStepSelfTest?: (stepId: string) => void; // Self-test handler
   onStepPin?: (stepId: string) => void; // Pin handler
   isPinned?: boolean; // Whether this step is pinned
@@ -194,6 +202,10 @@ const Step: React.FC<StepProps> = ({
   onHighlightEvent,
   onClearHighlight,
   onStepConfusion,
+  onStepConfusionAsk,
+  onStepConfusionEnd,
+  stepConfusionCandidates = [],
+  stepConfusionCandidatesLoading = false,
   onStepSelfTest,
   onStepPin,
   isPinned = false,
@@ -235,6 +247,7 @@ const Step: React.FC<StepProps> = ({
   );
   const [isFlickering, setIsFlickering] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const [isStepConfusionOpen, setIsStepConfusionOpen] = useState(false);
   const [shouldKeepHighlighted, setShouldKeepHighlighted] = useState(false);
   const [isUserExpanding, setIsUserExpanding] = useState(false); // Track if user is actively expanding this step
   const [shouldCollapseCards, setShouldCollapseCards] = useState(false); // Signal to collapse all knowledge cards
@@ -492,8 +505,12 @@ const Step: React.FC<StepProps> = ({
   };
 
   const handleConfusionClick = async () => {
-    if (stepId && onStepConfusion) {
-      onStepConfusion(stepId);
+    if (stepId) {
+      setIsStepConfusionOpen(true);
+      // trigger candidate generation in parent
+      if (onStepConfusion) {
+        onStepConfusion(stepId);
+      }
     }
   };
 
@@ -678,13 +695,34 @@ const Step: React.FC<StepProps> = ({
           </KnowledgeCardLoaderContainer>
         )}
 
-        {/* Confusion Button - replaces old AddQuestionButton */}
+        {/* Confusion Panel - replaces old ConfusionButton */}
         {knowledgeCardGenerationStatus !== "generating" && isExpanded && (
           <ConfusionButtonContainer>
-            <ConfusionButton onClick={handleConfusionClick}>
-              <QuestionMarkCircleIcon />
-              我有疑惑
-            </ConfusionButton>
+            {isStepConfusionOpen ? (
+              <ConfusionPanel
+                isOpen={isStepConfusionOpen}
+                candidates={stepConfusionCandidates}
+                candidatesLoading={stepConfusionCandidatesLoading}
+                onAsk={async (q) => {
+                  if (stepId && onStepConfusionAsk) {
+                    return onStepConfusionAsk(stepId, q);
+                  }
+                  return "暂不可用";
+                }}
+                onEnd={(msgs) => {
+                  if (stepId && onStepConfusionEnd) {
+                    onStepConfusionEnd(stepId, msgs);
+                  }
+                  setIsStepConfusionOpen(false);
+                }}
+                onClose={() => setIsStepConfusionOpen(false)}
+              />
+            ) : (
+              <ConfusionButton onClick={handleConfusionClick}>
+                <QuestionMarkCircleIcon />
+                我有疑惑
+              </ConfusionButton>
+            )}
           </ConfusionButtonContainer>
         )}
       </ContentArea>

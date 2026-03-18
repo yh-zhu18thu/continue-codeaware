@@ -603,6 +603,8 @@ const Step: React.FC<StepProps> = ({
               const enabledCards = knowledgeCards.filter((c) => !c.disabled);
 
               // Sort: viewed cards first (by viewedAt asc), then unviewed
+              // Use a single flat list so React can track components by key
+              // across section changes (prevents unmount/remount on viewedAt update)
               const viewed = enabledCards
                 .filter((c) => (c as any).viewedAt)
                 .sort(
@@ -610,15 +612,42 @@ const Step: React.FC<StepProps> = ({
                     ((a as any).viewedAt || 0) - ((b as any).viewedAt || 0),
                 );
               const unviewed = enabledCards.filter((c) => !(c as any).viewedAt);
+              const sortedCards = [...viewed, ...unviewed];
 
-              const renderCard = (cardProps: any, index: number) => {
-                const cardId = cardProps.cardId || `card-${index}`;
+              const elements: React.ReactNode[] = [];
+
+              // Insert section dividers at appropriate positions
+              if (viewed.length > 0) {
+                elements.push(
+                  <SectionDivider key="divider-viewed">
+                    <DividerLine />
+                    <DividerLabel>已查看</DividerLabel>
+                    <DividerLine />
+                  </SectionDivider>,
+                );
+              }
+
+              sortedCards.forEach((cardProps: any, idx: number) => {
+                // Insert "未查看" divider at the boundary
+                if (idx === viewed.length && unviewed.length > 0) {
+                  elements.push(
+                    <SectionDivider key="divider-unviewed">
+                      <DividerLine />
+                      <DividerLabel>
+                        {viewed.length > 0 ? "未查看" : "知识卡片"}
+                      </DividerLabel>
+                      <DividerLine />
+                    </SectionDivider>,
+                  );
+                }
+
+                const cardId = cardProps.cardId || `card-${idx}`;
                 const shouldCollapseThisCard =
                   shouldCollapseCards ||
                   (currentlyExpandedCardId !== null &&
                     currentlyExpandedCardId !== cardId);
 
-                return (
+                elements.push(
                   <KnowledgeCard
                     key={cardId}
                     {...cardProps}
@@ -650,36 +679,11 @@ const Step: React.FC<StepProps> = ({
                         );
                       }
                     }}
-                  />
+                  />,
                 );
-              };
+              });
 
-              return (
-                <>
-                  {viewed.length > 0 && (
-                    <>
-                      <SectionDivider>
-                        <DividerLine />
-                        <DividerLabel>已查看</DividerLabel>
-                        <DividerLine />
-                      </SectionDivider>
-                      {viewed.map(renderCard)}
-                    </>
-                  )}
-                  {unviewed.length > 0 && (
-                    <>
-                      <SectionDivider>
-                        <DividerLine />
-                        <DividerLabel>
-                          {viewed.length > 0 ? "未查看" : "知识卡片"}
-                        </DividerLabel>
-                        <DividerLine />
-                      </SectionDivider>
-                      {unviewed.map(renderCard)}
-                    </>
-                  )}
-                </>
-              );
+              return <>{elements}</>;
             })()}
           </KnowledgeCardsContainer>
         )}

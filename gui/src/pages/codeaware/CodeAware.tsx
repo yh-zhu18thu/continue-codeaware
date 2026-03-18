@@ -108,6 +108,9 @@ import GlobalInteractionOverlay, {
 import RequirementDisplay from "./components/Requirements/RequirementDisplay";
 import RequirementDisplayHorizontal from "./components/Requirements/RequirementDisplayHorizontal";
 import RequirementEditor from "./components/Requirements/RequirementEditor";
+import ActionToast, {
+  type ActionToastAction,
+} from "./components/shared/ActionToast";
 import type { ConfusionMessage } from "./components/shared/ConfusionPanel";
 import Step from "./components/Steps/Step";
 import { NavigationButtons } from "./components/ToolBar/NavigationButtons";
@@ -1341,6 +1344,20 @@ export const CodeAware = () => {
   const autoScrollDisableTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isAutoScrollDisabledRef = useRef<boolean>(false); // Immediate ref for sync access
 
+  // ActionToast state for pin reminders (Phase D & E)
+  const [activeToast, setActiveToast] = useState<{
+    key: number;
+    message: string;
+    actions: ActionToastAction[];
+  } | null>(null);
+  // Track steps already suggested for pinning (avoid repeated prompts)
+  const pinSuggestedStepsRef = useRef<Set<string>>(new Set());
+  // Track pinned KCs already prompted for unpin on collapse (avoid repeated prompts)
+  const unpinPromptedKCsRef = useRef<Set<string>>(new Set());
+  // Refs for pin handlers (avoid TDZ — these are defined later in the render)
+  const handleStepPinRef = useRef<(stepId: string) => void>(() => {});
+  const handlePinRemoveRef = useRef<(itemId: string) => void>(() => {});
+
   // Global overlay state (replaces old GlobalQuestionModal)
   const [isGlobalOverlayOpen, setIsGlobalOverlayOpen] =
     useState<boolean>(false);
@@ -2358,6 +2375,30 @@ export const CodeAware = () => {
           await dispatch(generatePrerequisiteKnowledgeCards({ stepId }));
         }
 
+        // Phase E: suggest pinning if step was viewed before and is not pinned
+        if (
+          expandedStep &&
+          !isFirstExpansion &&
+          !pinSuggestedStepsRef.current.has(stepId) &&
+          !latestPinnedItemsRef.current.some(
+            (p) => p.level === "step" && p.targetId === stepId,
+          )
+        ) {
+          pinSuggestedStepsRef.current.add(stepId);
+          setActiveToast({
+            key: Date.now(),
+            message: "这块是不是有点难，要不要码住待会儿再学？",
+            actions: [
+              {
+                label: "码住",
+                variant: "primary",
+                onClick: () => handleStepPinRef.current(stepId),
+              },
+              { label: "不用了", onClick: () => {} },
+            ],
+          });
+        }
+
         // 检查知识卡片是否有代码映射，如果没有则生成映射
         try {
           await dispatch(checkAndMapKnowledgeCardsToCode({ stepId }));
@@ -2383,6 +2424,25 @@ export const CodeAware = () => {
           newSet.delete(stepId);
           return newSet;
         });
+
+        // Phase D: remind to unpin if step is currently pinned
+        const pinnedStep = latestPinnedItemsRef.current.find(
+          (p) => p.level === "step" && p.targetId === stepId,
+        );
+        if (pinnedStep) {
+          setActiveToast({
+            key: Date.now(),
+            message: "这块弄清楚了吗？可以取消码住哦",
+            actions: [
+              {
+                label: "取消码住",
+                variant: "primary",
+                onClick: () => handlePinRemoveRef.current(pinnedStep.id),
+              },
+              { label: "还没弄懂", onClick: () => {} },
+            ],
+          });
+        }
       }
     },
     [
@@ -2396,9 +2456,31 @@ export const CodeAware = () => {
   );
 
   const handleKnowledgeCardExpansionChange = useCallback(
-    (_stepId: string, _cardId: string, _isExpanded: boolean) => {
+    (_stepId: string, cardId: string, isExpanded: boolean) => {
       // Flush only detail-level view (step tracking stays alive)
       handleFlushDetailTimedView();
+
+      // Phase D: remind to unpin when a pinned knowledge card is collapsed
+      if (!isExpanded && !unpinPromptedKCsRef.current.has(cardId)) {
+        const pinnedKC = latestPinnedItemsRef.current.find(
+          (p) => p.level === "knowledge-card" && p.targetId === cardId,
+        );
+        if (pinnedKC) {
+          unpinPromptedKCsRef.current.add(cardId);
+          setActiveToast({
+            key: Date.now(),
+            message: "这块弄清楚了吗？可以取消码住哦",
+            actions: [
+              {
+                label: "取消码住",
+                variant: "primary",
+                onClick: () => handlePinRemoveRef.current(pinnedKC.id),
+              },
+              { label: "还没弄懂", onClick: () => {} },
+            ],
+          });
+        }
+      }
     },
     [handleFlushDetailTimedView],
   );
@@ -2590,8 +2672,10 @@ export const CodeAware = () => {
   // Handle global confusion end — convert messages to knowledge card
   const handleGlobalConfusionEnd = useCallback(
     async (messages: ConfusionMessage[]) => {
+      // Close overlay immediately so user can continue learning
+      setIsGlobalOverlayOpen(false);
+
       if (messages.length === 0) {
-        setIsGlobalOverlayOpen(false);
         return;
       }
 
@@ -2617,12 +2701,11 @@ export const CodeAware = () => {
         const result = await dispatch(convertQAToKnowledgeCard()).unwrap();
         const { stepId, cardId } = result;
 
-        setIsGlobalOverlayOpen(false);
-        setForceExpandedSteps((prev) => new Set([...prev, stepId]));
-        setGlobalQuestionExpandedSteps((prev) => new Set([...prev, stepId]));
-        setCurrentlyExpandedStepId(stepId);
-
-        ideMessenger?.post("showToast", ["info", "已将问答整理为知识卡片"]);
+        setActiveToast({
+          key: Date.now(),
+          message: "知识卡片已添加到相关步骤",
+          actions: [{ label: "知道了", onClick: () => {} }],
+        });
 
         await logger.addLogEntry("user_global_confusion_card_created", {
           stepId,
@@ -2634,19 +2717,16 @@ export const CodeAware = () => {
           "[CA:UI] Failed to convert global confusion to card:",
           error,
         );
-        ideMessenger?.post("showToast", ["warning", "问答转化为知识卡片失败"]);
-        setIsGlobalOverlayOpen(false);
+        setActiveToast({
+          key: Date.now(),
+          message: "问答转化为知识卡片失败",
+          actions: [{ label: "知道了", onClick: () => {} }],
+        });
       } finally {
         dispatch(clearGlobalQASession());
       }
     },
-    [
-      dispatch,
-      ideMessenger,
-      logger,
-      setForceExpandedSteps,
-      setCurrentlyExpandedStepId,
-    ],
+    [dispatch, logger],
   );
 
   // Global overlay open/close
@@ -2899,9 +2979,12 @@ export const CodeAware = () => {
       try {
         const result = await dispatch(convertQAToKnowledgeCard()).unwrap();
         const { stepId: targetStepId, cardId } = result;
-        setForceExpandedSteps((prev) => new Set([...prev, targetStepId]));
-        setCurrentlyExpandedStepId(targetStepId);
-        dispatch(clearGlobalQASession());
+
+        setActiveToast({
+          key: Date.now(),
+          message: "知识卡片已添加到相关步骤",
+          actions: [{ label: "知道了", onClick: () => {} }],
+        });
 
         await logger.addLogEntry("user_step_confusion_card_created", {
           stepId: targetStepId,
@@ -2913,6 +2996,12 @@ export const CodeAware = () => {
           "[CA:UI] Failed to convert step confusion to card:",
           error,
         );
+        setActiveToast({
+          key: Date.now(),
+          message: "问答转化为知识卡片失败",
+          actions: [{ label: "知道了", onClick: () => {} }],
+        });
+      } finally {
         dispatch(clearGlobalQASession());
       }
     },
@@ -2988,6 +3077,10 @@ export const CodeAware = () => {
     },
     [dispatch, logger, steps],
   );
+
+  // Sync pin handler refs (avoids TDZ in earlier useCallbacks)
+  handleStepPinRef.current = handleStepPin;
+  handlePinRemoveRef.current = handlePinRemove;
 
   // Knowledge card level pin handler (uses refs to avoid stale closure)
   const handleKnowledgeCardPin = useCallback(
@@ -3748,6 +3841,16 @@ export const CodeAware = () => {
         onPinNavigate={handlePinNavigate}
         onPinRemove={handlePinRemove}
       />
+
+      {/* ActionToast for pin reminders */}
+      {activeToast && (
+        <ActionToast
+          key={activeToast.key}
+          message={activeToast.message}
+          actions={activeToast.actions}
+          onDismiss={() => setActiveToast(null)}
+        />
+      )}
 
       {/* Edge Navigation Buttons - 贴在 webview 靠近编辑器的边缘，垂直居中 */}
       {userRequirementStatus === "finalized" && steps.length > 0 && (

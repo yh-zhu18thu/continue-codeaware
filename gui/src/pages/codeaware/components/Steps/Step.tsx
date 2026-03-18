@@ -171,7 +171,6 @@ interface StepProps {
   onStepConfusionEnd?: (stepId: string, messages: ConfusionMessage[]) => void; // End confusion Q&A
   stepConfusionCandidates?: ConfusionCandidate[]; // Mastery-based candidates
   stepConfusionCandidatesLoading?: boolean; // Whether candidates are loading
-  onStepSelfTest?: (stepId: string) => void; // Self-test handler
   onStepPin?: (stepId: string) => void; // Pin handler
   isPinned?: boolean; // Whether this step is pinned
   onStepEdit?: (stepId: string, newContent: string) => void; // Callback for step edit
@@ -228,7 +227,6 @@ const Step: React.FC<StepProps> = ({
   onStepConfusionEnd,
   stepConfusionCandidates = [],
   stepConfusionCandidatesLoading = false,
-  onStepSelfTest,
   onStepPin,
   isPinned = false,
   onStepEdit,
@@ -537,12 +535,6 @@ const Step: React.FC<StepProps> = ({
     }
   };
 
-  const handleSelfTestClick = () => {
-    if (stepId && onStepSelfTest) {
-      onStepSelfTest(stepId);
-    }
-  };
-
   const handlePinClick = () => {
     if (stepId && onStepPin) {
       onStepPin(stepId);
@@ -647,7 +639,6 @@ const Step: React.FC<StepProps> = ({
         masteryColor={masteryColor}
         isPinned={isPinned}
         onToggle={handleToggle}
-        onSelfTest={handleSelfTestClick}
         onPin={handlePinClick}
         disabled={disabled}
       />
@@ -679,8 +670,9 @@ const Step: React.FC<StepProps> = ({
         {knowledgeCards.filter((card) => !card.disabled).length > 0 && (
           <KnowledgeCardsContainer isHovered={isHovered}>
             {(() => {
-              // Sort: viewed cards first (by viewedAt asc), then unviewed (original order)
               const enabledCards = knowledgeCards.filter((c) => !c.disabled);
+
+              // Sort: viewed cards first (by viewedAt asc), then unviewed
               const viewed = enabledCards
                 .filter((c) => (c as any).viewedAt)
                 .sort(

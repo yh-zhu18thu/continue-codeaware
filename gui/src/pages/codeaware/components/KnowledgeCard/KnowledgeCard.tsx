@@ -759,14 +759,6 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
         title={title}
         isExpanded={isExpanded}
         onToggle={handleToggle}
-        onSelfTest={() => {
-          if (cardId && onSelfTest) {
-            onSelfTest(cardId);
-          } else {
-            // Fallback: switch to answer view
-            void switchViewMode("answer");
-          }
-        }}
         onPin={() => {
           if (cardId && onPin) {
             onPin(cardId);

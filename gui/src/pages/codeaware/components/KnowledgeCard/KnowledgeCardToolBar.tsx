@@ -1,5 +1,4 @@
 import {
-  AcademicCapIcon,
   BookmarkIcon as BookmarkOutlineIcon,
   ChevronDownIcon,
   XMarkIcon,
@@ -175,7 +174,6 @@ interface KnowledgeCardToolBarProps {
   title: string;
   isExpanded?: boolean;
   onToggle?: () => void;
-  onSelfTest?: () => void;
   onPin?: () => void;
   isPinned?: boolean;
   isHighlighted?: boolean;
@@ -190,7 +188,6 @@ const KnowledgeCardToolBar: React.FC<KnowledgeCardToolBarProps> = ({
   title,
   isExpanded = true,
   onToggle,
-  onSelfTest,
   onPin,
   isPinned = false,
   isHighlighted = false,
@@ -224,17 +221,8 @@ const KnowledgeCardToolBar: React.FC<KnowledgeCardToolBarProps> = ({
         <Title title={title}>{title}</Title>
       </TitleSection>
 
-      {/* Self-test and Pin buttons */}
+      {/* Pin button */}
       <ActionButtonsContainer>
-        <ActionBtn
-          onClick={(e) => {
-            e.stopPropagation();
-            onSelfTest?.();
-          }}
-          title="自我测试"
-        >
-          <AcademicCapIcon />
-        </ActionBtn>
         <ActionBtn
           $active={isPinned}
           onClick={(e) => {

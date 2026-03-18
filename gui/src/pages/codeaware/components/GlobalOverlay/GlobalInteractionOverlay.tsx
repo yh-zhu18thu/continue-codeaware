@@ -1,5 +1,4 @@
 import {
-  AcademicCapIcon,
   BookmarkIcon,
   QuestionMarkCircleIcon,
   XMarkIcon,
@@ -21,7 +20,7 @@ import ConfusionPanel, {
 } from "../shared/ConfusionPanel";
 
 /* ─── types ─── */
-export type OverlayTab = "confusion" | "self-test" | "pins";
+export type OverlayTab = "confusion" | "pins";
 
 export interface GlobalInteractionOverlayProps {
   isOpen: boolean;
@@ -34,11 +33,6 @@ export interface GlobalInteractionOverlayProps {
   /** Confusion tab: mastery-based candidates */
   confusionCandidates?: ConfusionCandidate[];
   confusionCandidatesLoading?: boolean;
-  /** Self-test tab: request generation */
-  onRequestSelfTest: () => void;
-  selfTestLoading?: boolean;
-  /** Self-test content rendered by parent (quiz cards etc.) */
-  selfTestContent?: React.ReactNode;
   /** Pin tab data */
   pinnedItems: PinnedItem[];
   onPinNavigate: (item: PinnedItem) => void;
@@ -375,58 +369,6 @@ const SendBtn = styled.button`
   }
 `;
 
-const Spinner = styled.div`
-  width: 14px;
-  height: 14px;
-  border: 2px solid currentColor;
-  border-top-color: transparent;
-  border-radius: 50%;
-  animation: gio-spin 0.8s linear infinite;
-  @keyframes gio-spin {
-    to {
-      transform: rotate(360deg);
-    }
-  }
-`;
-
-/* self-test tab */
-const CenteredHint = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  padding: 24px 0;
-  color: var(--vscode-descriptionForeground);
-  font-size: 12px;
-  text-align: center;
-`;
-
-const GenerateBtn = styled.button`
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  padding: 6px 14px;
-  border: 1px solid var(--vscode-button-border, transparent);
-  border-radius: 6px;
-  background: var(--vscode-button-secondaryBackground);
-  color: var(--vscode-button-secondaryForeground);
-  font-size: 12px;
-  cursor: pointer;
-  transition: background 150ms;
-
-  &:hover:not(:disabled) {
-    background: var(--vscode-button-secondaryHoverBackground);
-  }
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-  svg {
-    width: 14px;
-    height: 14px;
-  }
-`;
-
 /* pin tab */
 const PinList = styled.div`
   display: flex;
@@ -527,9 +469,6 @@ export const GlobalInteractionOverlay: React.FC<
   onConfusionEnd,
   confusionCandidates = [],
   confusionCandidatesLoading = false,
-  onRequestSelfTest,
-  selfTestLoading = false,
-  selfTestContent,
   pinnedItems,
   onPinNavigate,
   onPinRemove,
@@ -547,13 +486,11 @@ export const GlobalInteractionOverlay: React.FC<
 
   const tabIcons: Record<OverlayTab, React.ReactNode> = {
     confusion: <QuestionMarkCircleIcon />,
-    "self-test": <AcademicCapIcon />,
     pins: <BookmarkIcon />,
   };
 
   const tabLabels: Record<OverlayTab, string> = {
     confusion: "困惑",
-    "self-test": "自测",
     pins: `标记 (${pinnedItems.length})`,
   };
 
@@ -570,7 +507,7 @@ export const GlobalInteractionOverlay: React.FC<
 
         {/* tabs */}
         <TabRow>
-          {(["confusion", "self-test", "pins"] as OverlayTab[]).map((tab) => (
+          {(["confusion", "pins"] as OverlayTab[]).map((tab) => (
             <Tab
               key={tab}
               $active={activeTab === tab}
@@ -592,33 +529,6 @@ export const GlobalInteractionOverlay: React.FC<
               onAsk={onConfusionAsk}
               onEnd={onConfusionEnd}
             />
-          )}
-
-          {activeTab === "self-test" && (
-            <>
-              {selfTestContent ? (
-                selfTestContent
-              ) : (
-                <CenteredHint>
-                  <span>
-                    根据当前掌握情况生成自测题目，帮助检测你的理解水平。
-                  </span>
-                  <GenerateBtn
-                    onClick={onRequestSelfTest}
-                    disabled={selfTestLoading}
-                  >
-                    {selfTestLoading ? (
-                      <Spinner />
-                    ) : (
-                      <>
-                        <AcademicCapIcon />
-                        生成自测题
-                      </>
-                    )}
-                  </GenerateBtn>
-                </CenteredHint>
-              )}
-            </>
           )}
 
           {activeTab === "pins" && (

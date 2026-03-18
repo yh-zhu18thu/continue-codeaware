@@ -1,5 +1,4 @@
 import {
-  AcademicCapIcon,
   BookmarkIcon,
   QuestionMarkCircleIcon,
 } from "@heroicons/react/24/outline";
@@ -11,7 +10,6 @@ export interface PageHeaderProps {
   rightContent?: React.ReactNode;
   /** Unified action callbacks (replace old onGlobalQuestion) */
   onGlobalConfusion?: () => void;
-  onGlobalSelfTest?: () => void;
   onGlobalPins?: () => void;
   showActionButtons?: boolean;
   pinCount?: number;
@@ -22,7 +20,6 @@ export function PageHeader({
   title,
   rightContent,
   onGlobalConfusion,
-  onGlobalSelfTest,
   onGlobalPins,
   showActionButtons = false,
   pinCount = 0,
@@ -54,15 +51,6 @@ export function PageHeader({
                 title="我有疑惑"
               >
                 <QuestionMarkCircleIcon className="h-3.5 w-3.5" />
-              </button>
-            )}
-            {onGlobalSelfTest && (
-              <button
-                onClick={onGlobalSelfTest}
-                className={actionBtnClass}
-                title="自我测试"
-              >
-                <AcademicCapIcon className="h-3.5 w-3.5" />
               </button>
             )}
             {onGlobalPins && (

@@ -2730,32 +2730,6 @@ export const CodeAware = () => {
     [dispatch, logger, codeAwareSessionState],
   );
 
-  // Step-level self-test handler
-  const handleStepSelfTest = useCallback(
-    async (stepId: string) => {
-      await logger.addLogEntry("user_step_self_test", {
-        stepId,
-        timestamp: new Date().toISOString(),
-      });
-      // Switch all knowledge cards in this step to self-test/answer view
-      const step = steps.find((s) => s.id === stepId);
-      if (step) {
-        step.knowledgeCards.forEach((kc) => {
-          if (!kc.disabled) {
-            dispatch(
-              setKnowledgeCardViewMode({
-                stepId,
-                cardId: kc.id,
-                viewMode: "answer",
-              }),
-            );
-          }
-        });
-      }
-    },
-    [dispatch, logger, steps],
-  );
-
   // Step-level pin handler
   const handleStepPin = useCallback(
     (stepId: string) => {
@@ -2858,21 +2832,6 @@ export const CodeAware = () => {
       });
     },
     [dispatch, logger, steps, pinnedItems, codeAwareSessionState],
-  );
-
-  // Knowledge card level self-test handler
-  const handleKnowledgeCardSelfTest = useCallback(
-    (stepId: string, cardId: string) => {
-      dispatch(
-        setKnowledgeCardViewMode({ stepId, cardId, viewMode: "answer" }),
-      );
-      void logger.addLogEntry("user_kc_self_test", {
-        stepId,
-        cardId,
-        timestamp: new Date().toISOString(),
-      });
-    },
-    [dispatch, logger],
   );
 
   // Knowledge card level confusion ask handler
@@ -3208,7 +3167,6 @@ export const CodeAware = () => {
       <PageHeader
         title={displayTitle}
         onGlobalConfusion={() => handleOpenGlobalOverlay("confusion")}
-        onGlobalSelfTest={() => handleOpenGlobalOverlay("self-test")}
         onGlobalPins={() => handleOpenGlobalOverlay("pins")}
         showActionButtons={
           userRequirementStatus === "finalized" && steps.length > 0
@@ -3305,7 +3263,6 @@ export const CodeAware = () => {
                   stepConfusionCandidatesLoading={
                     stepConfusionCandidatesLoading
                   }
-                  onStepSelfTest={handleStepSelfTest}
                   onStepPin={handleStepPin}
                   isPinned={pinnedItems.some(
                     (p) => p.level === "step" && p.targetId === step.id,
@@ -3415,9 +3372,6 @@ export const CodeAware = () => {
                         ) => {
                           void handleKCConfusionEnd(step.id, cardId, messages);
                         },
-                        onSelfTest: (cardId: string) => {
-                          handleKnowledgeCardSelfTest(step.id, cardId);
-                        },
                         onPin: (cardId: string) => {
                           handleKnowledgeCardPin(step.id, cardId);
                         },
@@ -3503,7 +3457,7 @@ export const CodeAware = () => {
                         learningGoal: learningGoal,
                         codeContext: kc.codeContext || "",
                         onGenerateContent: handleGenerateKnowledgeCardContent,
-                        onGenerateTests: handleGenerateKnowledgeCardTests, // 新增：测试题生成回调
+                        onGenerateTests: handleGenerateKnowledgeCardTests,
                       };
                     },
                   )}
@@ -3582,10 +3536,6 @@ export const CodeAware = () => {
         onConfusionEnd={handleGlobalConfusionEnd}
         confusionCandidates={globalConfusionCandidates}
         confusionCandidatesLoading={globalConfusionCandidatesLoading}
-        onRequestSelfTest={() => {
-          // TODO: implement global self-test generation
-          console.log("[CA:UI] Global self-test requested");
-        }}
         pinnedItems={pinnedItems}
         onPinNavigate={handlePinNavigate}
         onPinRemove={handlePinRemove}

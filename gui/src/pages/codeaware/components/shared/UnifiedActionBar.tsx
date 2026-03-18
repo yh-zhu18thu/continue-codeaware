@@ -1,5 +1,4 @@
 import {
-  AcademicCapIcon,
   BookmarkIcon as BookmarkOutlineIcon,
   QuestionMarkCircleIcon,
 } from "@heroicons/react/24/outline";
@@ -9,7 +8,6 @@ import styled from "styled-components";
 
 export interface UnifiedActionBarProps {
   onConfusion?: () => void;
-  onSelfTest?: () => void;
   onPin?: () => void;
   isPinned?: boolean;
   disabled?: boolean;
@@ -17,11 +15,9 @@ export interface UnifiedActionBarProps {
   layout?: "horizontal" | "vertical";
   /** Hide specific buttons */
   hideConfusion?: boolean;
-  hideSelfTest?: boolean;
   hidePin?: boolean;
   /** Loading states for individual buttons */
   confusionLoading?: boolean;
-  selfTestLoading?: boolean;
 }
 
 const BarContainer = styled.div<{
@@ -89,22 +85,18 @@ const SmallSpinner = styled.div<{ $size: "sm" | "md" }>`
  * Unified 3-button action bar shared across all CodeAware levels.
  *
  * - **困惑** (QuestionMarkCircle): "I'm confused / dig deeper"
- * - **自测** (AcademicCap): "Test my understanding"
  * - **Pin** (Bookmark): "Mark for later review"
  */
 export const UnifiedActionBar: React.FC<UnifiedActionBarProps> = ({
   onConfusion,
-  onSelfTest,
   onPin,
   isPinned = false,
   disabled = false,
   size = "md",
   layout = "horizontal",
   hideConfusion = false,
-  hideSelfTest = false,
   hidePin = false,
   confusionLoading = false,
-  selfTestLoading = false,
 }) => {
   return (
     <BarContainer $layout={layout}>
@@ -119,21 +111,6 @@ export const UnifiedActionBar: React.FC<UnifiedActionBarProps> = ({
             <SmallSpinner $size={size} />
           ) : (
             <QuestionMarkCircleIcon />
-          )}
-        </ActionButton>
-      )}
-
-      {!hideSelfTest && (
-        <ActionButton
-          $size={size}
-          onClick={onSelfTest}
-          disabled={disabled || selfTestLoading}
-          title="自我测试"
-        >
-          {selfTestLoading ? (
-            <SmallSpinner $size={size} />
-          ) : (
-            <AcademicCapIcon />
           )}
         </ActionButton>
       )}

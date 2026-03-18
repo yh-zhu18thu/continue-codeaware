@@ -1,5 +1,4 @@
 import {
-  AcademicCapIcon,
   BookmarkIcon as BookmarkOutlineIcon,
   ChevronDownIcon,
 } from "@heroicons/react/24/outline";
@@ -196,11 +195,10 @@ interface StepTitleBarProps {
   isViewed?: boolean; // 新增：是否已查看过
   masteryScore?: number | null; // 掌握度分数 (0-1)，null 表示暂无数据
   masteryColor?: string; // 掌握度对应的颜色
-  isPinned?: boolean; // 是否已标记
-  onToggle?: () => void; // Optional callback for toggle functionality
-  onSelfTest?: () => void; // Callback for self-test
-  onPin?: () => void; // Callback for pin/bookmark
-  disabled?: boolean; // Optional disabled state for code edit mode
+  isPinned?: boolean;
+  onToggle?: () => void;
+  onPin?: () => void;
+  disabled?: boolean;
 }
 
 const StepTitleBar: React.FC<StepTitleBarProps> = ({
@@ -216,17 +214,9 @@ const StepTitleBar: React.FC<StepTitleBarProps> = ({
   masteryColor,
   isPinned = false,
   onToggle,
-  onSelfTest,
   onPin,
   disabled = false,
 }) => {
-  const handleSelfTestClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!disabled && onSelfTest) {
-      onSelfTest();
-    }
-  };
-
   const handlePinClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!disabled && onPin) {
@@ -258,14 +248,6 @@ const StepTitleBar: React.FC<StepTitleBarProps> = ({
         <span>{title}</span>
       </TitleContent>
       <IconContainer>
-        <IconButton
-          onClick={handleSelfTestClick}
-          disabled={disabled}
-          stepStatus={stepStatus}
-          title="自我测试"
-        >
-          <AcademicCapIcon width={15} height={15} />
-        </IconButton>
         <IconButton
           onClick={handlePinClick}
           disabled={disabled}

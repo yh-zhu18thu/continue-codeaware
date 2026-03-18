@@ -344,17 +344,20 @@
       {
         "command": "continue.deleteCodeAnnotation",
         "category": "Continue",
-        "title": "删除注释"
+        "title": "删除注释",
+        "icon": "$(chrome-close)"
       },
       {
         "command": "continue.askFollowUpAnnotation",
         "category": "Continue",
-        "title": "深入提问"
+        "title": "深入提问",
+        "icon": "$(question)"
       },
       {
         "command": "continue.pinCodeAnnotation",
         "category": "Continue",
-        "title": "标记/取消标记"
+        "title": "标记/取消标记",
+        "icon": "$(bookmark)"
       },
       {
         "command": "continue.focusContinueSessionId",

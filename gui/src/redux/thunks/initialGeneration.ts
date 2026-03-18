@@ -12,6 +12,7 @@ import type {
   StepToHighLevelMapping,
 } from "core";
 import {
+  constructDeepenKnowledgePointsPrompt,
   constructExtractKnowledgePointsPrompt,
   constructGenerateHighLevelStepNarrativePrompt,
   constructGenerateStepsPrompt,
@@ -1237,24 +1238,123 @@ export const extractAndLinkKnowledge = createAsyncThunk<
 
     const uniqueKnowledgePoints =
       deduplicateKnowledgePoints(allKnowledgePoints);
-    dispatch(setKnowledgePoints(uniqueKnowledgePoints));
 
-    const knowledgeExamples = uniqueKnowledgePoints
-      .slice(0, 3)
-      .map((point) => ({
-        id: point.id,
-        title: point.title,
-        contentExample:
-          point.content.length > 180
-            ? `${point.content.slice(0, 180)}...`
-            : point.content,
-        category: point.category,
-        difficulty: point.difficulty,
-        relatedStepIds: point.relatedStepIds,
-      }));
+    // Phase 5 deepening: extract further prerequisite knowledge points
+    let deepenedPoints: KnowledgePoint[] = [];
+    if (uniqueKnowledgePoints.length > 0) {
+      try {
+        const deepenPrompt = constructDeepenKnowledgePointsPrompt(
+          uniqueKnowledgePoints.map((kp) => ({
+            id: kp.id,
+            title: kp.title,
+            content: kp.content,
+            category: kp.category,
+            difficulty: kp.difficulty,
+          })),
+        );
+        const deepenContent = await completeJson(
+          deepenPrompt,
+          modelTitle,
+          extra,
+        );
+        const deepenParsed = parseJsonFromLlm<{
+          deepened_knowledge_points?: Array<{
+            title?: string;
+            description?: string;
+            category?: "syntax" | "algorithm" | "framework" | "concept";
+            difficulty?: "easy" | "medium" | "hard";
+            scope?: "code" | "step";
+            depends_on_existing_ids?: string[];
+          }>;
+        }>(deepenContent);
+
+        const existingTitles = new Set(
+          uniqueKnowledgePoints.map((kp) => kp.title.toLowerCase().trim()),
+        );
+        const validExistingIds = new Set(
+          uniqueKnowledgePoints.map((kp) => kp.id),
+        );
+
+        (deepenParsed.deepened_knowledge_points || []).forEach(
+          (point, index) => {
+            if (!point.title || !point.description) {
+              return;
+            }
+            // Skip if already exists
+            if (existingTitles.has(point.title.toLowerCase().trim())) {
+              return;
+            }
+
+            let scope: "code" | "step" = point.scope || "step";
+            if (!point.scope) {
+              const isCategoryCodeScoped =
+                point.category === "syntax" || point.category === "algorithm";
+              scope = isCategoryCodeScoped ? "code" : "step";
+            }
+
+            // Derive relatedStepIds from the existing knowledge points this one supports
+            const relatedStepIds = new Set<string>();
+            (point.depends_on_existing_ids || []).forEach((existingId) => {
+              if (!validExistingIds.has(existingId)) return;
+              const existing = uniqueKnowledgePoints.find(
+                (kp) => kp.id === existingId,
+              );
+              existing?.relatedStepIds.forEach((sid) =>
+                relatedStepIds.add(sid),
+              );
+            });
+
+            // Fallback: if no related steps found, use all steps from the first existing point
+            if (relatedStepIds.size === 0 && uniqueKnowledgePoints.length > 0) {
+              uniqueKnowledgePoints[0].relatedStepIds.forEach((sid) =>
+                relatedStepIds.add(sid),
+              );
+            }
+
+            deepenedPoints.push({
+              id: `k-deep-${index + 1}`,
+              title: point.title,
+              content: point.description,
+              relatedStepIds: Array.from(relatedStepIds),
+              category: point.category,
+              difficulty: point.difficulty || "easy",
+              scope,
+            });
+
+            existingTitles.add(point.title.toLowerCase().trim());
+          },
+        );
+
+        console.log(
+          `[CA:InitGen:Phase5] Deepened knowledge: +${deepenedPoints.length} points`,
+        );
+      } catch (error) {
+        console.warn(
+          "[CA:InitGen:Phase5] Knowledge deepening failed (non-blocking)",
+          error,
+        );
+      }
+    }
+
+    // Merge deepened points with original set
+    const finalKnowledgePoints = [...uniqueKnowledgePoints, ...deepenedPoints];
+    dispatch(setKnowledgePoints(finalKnowledgePoints));
+
+    const knowledgeExamples = finalKnowledgePoints.slice(0, 3).map((point) => ({
+      id: point.id,
+      title: point.title,
+      contentExample:
+        point.content.length > 180
+          ? `${point.content.slice(0, 180)}...`
+          : point.content,
+      category: point.category,
+      difficulty: point.difficulty,
+      relatedStepIds: point.relatedStepIds,
+    }));
 
     console.log("[CA:InitGen:Phase5] Knowledge points extracted", {
-      count: uniqueKnowledgePoints.length,
+      count: finalKnowledgePoints.length,
+      deepenedCount: deepenedPoints.length,
       examples: knowledgeExamples,
     });
 
@@ -1273,7 +1373,7 @@ export const extractAndLinkKnowledge = createAsyncThunk<
         );
       });
 
-    uniqueKnowledgePoints.forEach((point) => {
+    finalKnowledgePoints.forEach((point) => {
       const scope =
         point.scope || (isCodeScopedKnowledge(point) ? "code" : "step");
 
@@ -1321,7 +1421,7 @@ export const extractAndLinkKnowledge = createAsyncThunk<
     dispatch(setKnowledgeToStepRelations(dedupKnowledgeToStep));
     dispatch(setKnowledgeToCodeChunkRelations(dedupKnowledgeToCodeChunk));
 
-    if (uniqueKnowledgePoints.length < 2) {
+    if (finalKnowledgePoints.length < 2) {
       dispatch(setKnowledgeRelations([]));
       return;
     }
@@ -1332,7 +1432,7 @@ export const extractAndLinkKnowledge = createAsyncThunk<
 
     try {
       const depPrompt = constructKnowledgeDependencyPrompt(
-        uniqueKnowledgePoints.map((kp) => ({
+        finalKnowledgePoints.map((kp) => ({
           id: kp.id,
           title: kp.title,
           content: kp.content,
@@ -1348,7 +1448,7 @@ export const extractAndLinkKnowledge = createAsyncThunk<
         }>;
       }>(depContent);
 
-      const validIds = new Set(uniqueKnowledgePoints.map((kp) => kp.id));
+      const validIds = new Set(finalKnowledgePoints.map((kp) => kp.id));
 
       (depParsed.dependencies || []).forEach((dep) => {
         if (
@@ -1394,13 +1494,13 @@ export const extractAndLinkKnowledge = createAsyncThunk<
 
     // Phase 5b: Semantic similarity for remaining non-dependency pairs
     const vectors = await embedTexts(
-      uniqueKnowledgePoints.map((point) => `${point.title}\n${point.content}`),
+      finalKnowledgePoints.map((point) => `${point.title}\n${point.content}`),
       extra,
     );
 
     const validEmbeddings = vectors
       .map((embedding, index) => ({
-        knowledgeId: uniqueKnowledgePoints[index]?.id,
+        knowledgeId: finalKnowledgePoints[index]?.id,
         embedding,
       }))
       .filter(
@@ -1449,7 +1549,7 @@ export const extractAndLinkKnowledge = createAsyncThunk<
     await extra.ideMessenger.request("addCodeAwareLogEntry", {
       eventType: "initial_generation_phase5_completed",
       payload: {
-        knowledgePointsCount: uniqueKnowledgePoints.length,
+        knowledgePointsCount: finalKnowledgePoints.length,
         relationsCount: relations.length,
         knowledgeToStepCount: dedupKnowledgeToStep.length,
         knowledgeToCodeChunkCount: dedupKnowledgeToCodeChunk.length,

@@ -426,6 +426,28 @@ const getCommandsMap: (
           token.onCancellationRequested(() => abortController.abort());
 
           try {
+            // 获取代码关联的背景知识和掌握度
+            let knowledgeContext: Array<{
+              title: string;
+              content: string;
+              masteryScore: number;
+            }> = [];
+            try {
+              const knowledgeResult = await sidebar.webviewProtocol.request(
+                "queryCodeKnowledgeContext",
+                {
+                  filePath: editor.document.uri.fsPath,
+                  startLine: selection.start.line + 1,
+                  endLine: selection.end.line + 1,
+                },
+              );
+              if (knowledgeResult?.knowledgePoints) {
+                knowledgeContext = knowledgeResult.knowledgePoints;
+              }
+            } catch (e) {
+              console.warn("[CodeAware] Failed to query knowledge context:", e);
+            }
+
             const response: ChatMessage = await llm.chat(
               [
                 {
@@ -439,6 +461,7 @@ const getCommandsMap: (
                     language,
                     fileName,
                     contextCode,
+                    knowledgeContext,
                   ),
                 },
               ],

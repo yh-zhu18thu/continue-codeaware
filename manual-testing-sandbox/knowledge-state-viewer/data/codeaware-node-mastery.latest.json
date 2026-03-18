@@ -1,1034 +1,818 @@
 {
   "schemaVersion": 1,
-  "sessionId": "eec5270b-550d-421a-b58e-c583999bc6c9",
-  "generatedAt": "2026-03-18T13:29:36.363Z",
-  "scoreCount": 171,
+  "sessionId": "5020d4cf-643e-44ad-ac80-c0ec3b6dff32",
+  "generatedAt": "2026-03-18T14:35:04.149Z",
+  "scoreCount": 135,
   "nodeMasteryScores": [
     {
       "nodeId": "r-1",
       "nodeType": "step",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
       "nodeId": "r-2",
       "nodeType": "step",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
       "nodeId": "r-3",
       "nodeType": "step",
       "score": 0,
-      "updatedAt": 1773840491638
-    },
-    {
-      "nodeId": "r-4",
-      "nodeType": "step",
-      "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
       "nodeId": "s-1",
       "nodeType": "step",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
       "nodeId": "s-2",
       "nodeType": "step",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
       "nodeId": "s-3",
       "nodeType": "step",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
       "nodeId": "s-4",
       "nodeType": "step",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
       "nodeId": "s-5",
       "nodeType": "step",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
       "nodeId": "s-6",
       "nodeType": "step",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
       "nodeId": "s-7",
       "nodeType": "step",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "s-8",
-      "nodeType": "step",
-      "score": 0,
-      "updatedAt": 1773840491638
-    },
-    {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-0",
-      "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773840491638
-    },
-    {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-1",
-      "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773840491638
-    },
-    {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-2",
-      "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773840491638
-    },
-    {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-3",
-      "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773840491638
-    },
-    {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-4",
-      "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773840491638
-    },
-    {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-5",
-      "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773840491638
-    },
-    {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-6",
-      "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773840491638
-    },
-    {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-7",
-      "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773840491638
-    },
-    {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-8",
-      "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773840491638
-    },
-    {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-9",
-      "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773840491638
-    },
-    {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-10",
-      "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773840491638
-    },
-    {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-11",
-      "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773840491638
-    },
-    {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-12",
-      "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773840491638
-    },
-    {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-13",
-      "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773840491638
-    },
-    {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-14",
-      "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773840491638
-    },
-    {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-15",
-      "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773840491638
-    },
-    {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-16",
-      "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773840491638
-    },
-    {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-17",
-      "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773840491638
-    },
-    {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-18",
-      "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773840491638
-    },
-    {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-19",
-      "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773840491638
-    },
-    {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-20",
-      "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773840491638
-    },
-    {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-21",
-      "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773840491638
-    },
-    {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-22",
-      "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773840491638
-    },
-    {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-23",
-      "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773840491638
-    },
-    {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-24",
-      "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773840491638
-    },
-    {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-25",
-      "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773840491638
-    },
-    {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-26",
-      "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773840491638
-    },
-    {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-27",
-      "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773840491638
-    },
-    {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-28",
-      "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773840491638
-    },
-    {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-29",
-      "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773840491638
-    },
-    {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-30",
-      "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773840491638
-    },
-    {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-31",
-      "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773840491638
-    },
-    {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-32",
-      "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773840491638
-    },
-    {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-33",
-      "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773840491638
-    },
-    {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-34",
-      "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773840491638
-    },
-    {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-35",
-      "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773840491638
-    },
-    {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-36",
-      "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773840491638
-    },
-    {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-37",
-      "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773840491638
-    },
-    {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-38",
-      "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773840491638
-    },
-    {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-39",
-      "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773840491638
-    },
-    {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-40",
-      "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773840491638
-    },
-    {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-41",
-      "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773840491638
-    },
-    {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-42",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-0",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-43",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-1",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-44",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-2",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-45",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-3",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-46",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-4",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-47",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-5",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-48",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-6",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-49",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-7",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-50",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-8",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-51",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-9",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-52",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-10",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-53",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-11",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-54",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-12",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-55",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-13",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-56",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-14",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-57",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-15",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-58",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-16",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-59",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-17",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-60",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-18",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-61",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-19",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-62",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-20",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-63",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-21",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-64",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-22",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-65",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-23",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-66",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-24",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-67",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-25",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-68",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-26",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-69",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-27",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-70",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-28",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-71",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-29",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-72",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-30",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-73",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-31",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-74",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-32",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-75",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-33",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-76",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-34",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-77",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-35",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-78",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-36",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-79",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-37",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-80",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-38",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-81",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-39",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-82",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-40",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-83",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-41",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-84",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-42",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-85",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-43",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-86",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-44",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-87",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-45",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-88",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-46",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-89",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-47",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-90",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-48",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-91",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-49",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-92",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-50",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-93",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-51",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-94",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-52",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-95",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-53",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-96",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-54",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-97",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-55",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-98",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-56",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-99",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-57",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-100",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-58",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-101",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-59",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-102",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-60",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-103",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-61",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-104",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-62",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-105",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-63",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-106",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-64",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-107",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-65",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-108",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-66",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-109",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-67",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-110",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-68",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-111",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-69",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-112",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-70",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-113",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-71",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-114",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-72",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-115",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-73",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-116",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-74",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-117",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-75",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
       "nodeId": "k-s-1-1",
       "nodeType": "background-knowledge",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
       "nodeId": "k-s-1-2",
       "nodeType": "background-knowledge",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
       "nodeId": "k-s-1-3",
       "nodeType": "background-knowledge",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
       "nodeId": "k-s-1-4",
       "nodeType": "background-knowledge",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
       "nodeId": "k-s-2-1",
       "nodeType": "background-knowledge",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
       "nodeId": "k-s-2-2",
       "nodeType": "background-knowledge",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
       "nodeId": "k-s-2-3",
       "nodeType": "background-knowledge",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
       "nodeId": "k-s-2-4",
       "nodeType": "background-knowledge",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
       "nodeId": "k-s-3-1",
       "nodeType": "background-knowledge",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
       "nodeId": "k-s-3-2",
       "nodeType": "background-knowledge",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
       "nodeId": "k-s-3-3",
       "nodeType": "background-knowledge",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
       "nodeId": "k-s-3-4",
       "nodeType": "background-knowledge",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
       "nodeId": "k-s-4-1",
       "nodeType": "background-knowledge",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
       "nodeId": "k-s-4-2",
       "nodeType": "background-knowledge",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
       "nodeId": "k-s-4-3",
       "nodeType": "background-knowledge",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
       "nodeId": "k-s-4-4",
       "nodeType": "background-knowledge",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
       "nodeId": "k-s-5-1",
       "nodeType": "background-knowledge",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
       "nodeId": "k-s-5-2",
       "nodeType": "background-knowledge",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
       "nodeId": "k-s-5-3",
       "nodeType": "background-knowledge",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
       "nodeId": "k-s-5-4",
       "nodeType": "background-knowledge",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
+    },
+    {
+      "nodeId": "k-s-6-1",
+      "nodeType": "background-knowledge",
+      "score": 0,
+      "updatedAt": 1773844451238
     },
     {
       "nodeId": "k-s-6-2",
       "nodeType": "background-knowledge",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
       "nodeId": "k-s-6-3",
       "nodeType": "background-knowledge",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
       "nodeId": "k-s-6-4",
       "nodeType": "background-knowledge",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
       "nodeId": "k-s-7-1",
       "nodeType": "background-knowledge",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
       "nodeId": "k-s-7-2",
       "nodeType": "background-knowledge",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
       "nodeId": "k-s-7-3",
       "nodeType": "background-knowledge",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
       "nodeId": "k-s-7-4",
       "nodeType": "background-knowledge",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "k-s-8-1",
+      "nodeId": "k-deep-1",
       "nodeType": "background-knowledge",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "k-s-8-2",
+      "nodeId": "k-deep-2",
       "nodeType": "background-knowledge",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "k-s-8-3",
+      "nodeId": "k-deep-3",
       "nodeType": "background-knowledge",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "k-s-8-4",
+      "nodeId": "k-deep-4",
       "nodeType": "background-knowledge",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "sit-s-1-grp-L5",
-      "nodeType": "situation",
+      "nodeId": "k-deep-5",
+      "nodeType": "background-knowledge",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "sit-s-2-grp-L34",
+      "nodeId": "sit-s-1-grp-L10",
       "nodeType": "situation",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "sit-s-4-grp-L51",
+      "nodeId": "sit-s-4-grp-L17",
       "nodeType": "situation",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "sit-s-6-grp-L71",
+      "nodeId": "sit-s-1-grp-L35",
       "nodeType": "situation",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "sit-s-2-grp-L92",
+      "nodeId": "sit-s-2-grp-L52",
       "nodeType": "situation",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "sit-s-3-grp-L103",
+      "nodeId": "sit-s-1-grp-L56",
       "nodeType": "situation",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "sit-s-4-grp-L109",
+      "nodeId": "sit-s-1-grp-L57",
       "nodeType": "situation",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "sit-s-5-grp-L113",
+      "nodeId": "sit-s-2-grp-L57",
       "nodeType": "situation",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "sit-s-7-grp-L119",
+      "nodeId": "sit-s-3-grp-L65",
       "nodeType": "situation",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
     },
     {
-      "nodeId": "sit-s-8-grp-L123",
+      "nodeId": "sit-s-4-grp-L72",
       "nodeType": "situation",
       "score": 0,
-      "updatedAt": 1773840491638
+      "updatedAt": 1773844451238
+    },
+    {
+      "nodeId": "sit-s-5-grp-L76",
+      "nodeType": "situation",
+      "score": 0,
+      "updatedAt": 1773844451238
+    },
+    {
+      "nodeId": "sit-s-5-grp-L78",
+      "nodeType": "situation",
+      "score": 0,
+      "updatedAt": 1773844451238
+    },
+    {
+      "nodeId": "sit-s-6-grp-L78",
+      "nodeType": "situation",
+      "score": 0,
+      "updatedAt": 1773844451238
+    },
+    {
+      "nodeId": "sit-s-6-grp-L79",
+      "nodeType": "situation",
+      "score": 0,
+      "updatedAt": 1773844451238
+    },
+    {
+      "nodeId": "sit-s-5-grp-L80",
+      "nodeType": "situation",
+      "score": 0,
+      "updatedAt": 1773844451238
+    },
+    {
+      "nodeId": "sit-s-6-grp-L80",
+      "nodeType": "situation",
+      "score": 0,
+      "updatedAt": 1773844451238
+    },
+    {
+      "nodeId": "sit-s-7-grp-L84",
+      "nodeType": "situation",
+      "score": 0,
+      "updatedAt": 1773844451238
     }
   ]
 }

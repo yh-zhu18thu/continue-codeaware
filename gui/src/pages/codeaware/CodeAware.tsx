@@ -434,6 +434,56 @@ export const CodeAware = () => {
   const steps = useAppSelector((state) => state.codeAwareSession.steps); // Get steps data
   const codeAwareSessionState = useAppSelector(selectCodeAwareSessionState);
 
+  // CodeAware: 响应 IDE 查询代码相关背景知识和掌握度
+  useWebviewListener(
+    "queryCodeKnowledgeContext",
+    async (data) => {
+      const { filePath, startLine, endLine } = data;
+      const codeChunks = codeAwareSessionState.codeChunks;
+      const knowledgeToCodeChunkRelations =
+        codeAwareSessionState.knowledgeToCodeChunkRelations;
+      const knowledgePoints = codeAwareSessionState.knowledgePoints;
+      const nodeMasteryScores = codeAwareSessionState.nodeMasteryScores;
+
+      // Find code chunks that overlap with the selected lines
+      const matchedChunkIds = new Set<string>();
+      codeChunks.forEach((chunk) => {
+        if (chunk.filePath !== filePath) return;
+        const [chunkStart, chunkEnd] = chunk.range;
+        if (chunkStart <= endLine && chunkEnd >= startLine) {
+          matchedChunkIds.add(chunk.id);
+        }
+      });
+
+      // Find knowledge points linked to matched code chunks
+      const linkedKnowledgeIds = new Set<string>();
+      knowledgeToCodeChunkRelations.forEach((rel) => {
+        if (matchedChunkIds.has(rel.codeChunkId)) {
+          linkedKnowledgeIds.add(rel.knowledgeId);
+        }
+      });
+
+      // Build response with mastery scores
+      const masteryMap = new Map(
+        nodeMasteryScores.map((s) => [s.nodeId, s.score]),
+      );
+
+      const result = knowledgePoints
+        .filter((kp) => linkedKnowledgeIds.has(kp.id))
+        .map((kp) => ({
+          id: kp.id,
+          title: kp.title,
+          content: kp.content,
+          category: kp.category,
+          difficulty: kp.difficulty,
+          masteryScore: masteryMap.get(kp.id) ?? 0,
+        }));
+
+      return { knowledgePoints: result };
+    },
+    [codeAwareSessionState],
+  );
+
   // Get high level steps for navigation
   const highLevelSteps = useAppSelector(
     (state) => state.codeAwareSession.highLevelSteps,

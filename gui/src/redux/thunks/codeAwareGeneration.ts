@@ -1701,7 +1701,7 @@ export const generatePrerequisiteKnowledgeCards = createAsyncThunk<
         throw new Error("Default model not defined");
       }
 
-      // 1. 找到该步骤关联的前置知识点
+      // 1. 找到该步骤关联的前置知识点（仅 step-scoped 知识）
       const stepKnowledgeRelations =
         state.codeAwareSession.knowledgeToStepRelations.filter(
           (rel) => rel.stepId === stepId,
@@ -1710,9 +1710,18 @@ export const generatePrerequisiteKnowledgeCards = createAsyncThunk<
         stepKnowledgeRelations.map((rel) => rel.knowledgeId),
       );
 
-      // 同时查找 relatedStepIds 中包含该步骤的知识点
+      // 同时查找 relatedStepIds 中包含该步骤的知识点，但只包含 step-scoped 的
       state.codeAwareSession.knowledgePoints.forEach((kp) => {
-        if (kp.relatedStepIds.includes(stepId)) {
+        if (!kp.relatedStepIds.includes(stepId)) {
+          return;
+        }
+        // Only include step-scoped knowledge; skip code-scoped ones
+        const scope =
+          kp.scope ||
+          (kp.category === "syntax" || kp.category === "algorithm"
+            ? "code"
+            : "step");
+        if (scope === "step") {
           knowledgePointIds.add(kp.id);
         }
       });

@@ -18,17 +18,47 @@ function buildUserPrompt(
   language: string,
   fileName: string,
   contextCode?: string,
+  knowledgeContext?: Array<{
+    title: string;
+    content: string;
+    masteryScore: number;
+  }>,
 ): string {
   const contextSection = contextCode
     ? `\n以下是选中代码的上下文（帮助你理解语境，但不需要解释这部分）：\n\`\`\`${language}\n${contextCode}\n\`\`\`\n`
     : "";
+
+  let knowledgeSection = "";
+  if (knowledgeContext && knowledgeContext.length > 0) {
+    const knowledgeItems = knowledgeContext
+      .map((kp) => {
+        const masteryLabel =
+          kp.masteryScore < 0.3
+            ? "❗用户不熟悉"
+            : kp.masteryScore < 0.6
+              ? "❓用户略知"
+              : "✅用户已掌握";
+        return `- **${kp.title}** (${masteryLabel}): ${kp.content}`;
+      })
+      .join("\n");
+    knowledgeSection = `\n
+## 用户背景知识掌握情况
+
+以下是与这段代码相关的背景知识点及用户当前的掌握程度：
+${knowledgeItems}
+
+请根据用户的掌握情况调整解释策略：
+- 对于用户不熟悉的知识点，请着重解释相关的代码符号和语法，用类比和通俗语言让用户理解
+- 对于用户已掌握的知识点，可以简要提及或跳过
+`;
+  }
 
   return `请用中文为以下代码添加解释，帮助一个没有编程基础的用户理解它。要求：
 1. 先用一句大白话总结这段代码整体在做什么，让用户先有全局认识
 2. 然后按逻辑段落逐段解释，把用户当作非程序员，用日常生活的类比和通俗语言
 3. 引用代码中的关键词（如 \`variableName\`、\`functionName()\`）来说明它们的作用，让用户能对应到代码中的具体位置
 4. 每段解释用 1-2 句短句，简洁实用，只解释最关键的行为
-${contextSection}
+${contextSection}${knowledgeSection}
 需要解释的代码（文件：${fileName}）：
 \`\`\`${language}
 ${code}
@@ -372,8 +402,19 @@ export class CodeAnnotationController implements vscode.Disposable {
     language: string,
     fileName: string,
     contextCode?: string,
+    knowledgeContext?: Array<{
+      title: string;
+      content: string;
+      masteryScore: number;
+    }>,
   ): string {
-    return buildUserPrompt(code, language, fileName, contextCode);
+    return buildUserPrompt(
+      code,
+      language,
+      fileName,
+      contextCode,
+      knowledgeContext,
+    );
   }
 
   dispose(): void {

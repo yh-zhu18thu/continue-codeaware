@@ -182,6 +182,24 @@ export type ToWebviewFromIdeProtocol = ToWebviewFromIdeOrCoreProtocol & {
     },
     void,
   ];
+  // CodeAware: 查询代码行关联的背景知识点和掌握度
+  queryCodeKnowledgeContext: [
+    {
+      filePath: string;
+      startLine: number;
+      endLine: number;
+    },
+    {
+      knowledgePoints: Array<{
+        id: string;
+        title: string;
+        content: string;
+        category?: string;
+        difficulty?: string;
+        masteryScore: number;
+      }>;
+    },
+  ];
   // CodeAware: 代码补全事件
   codeCompletionGenerated: [
     {

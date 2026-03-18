@@ -1,1033 +1,817 @@
 {
   "schemaVersion": 1,
-  "sessionId": "eec5270b-550d-421a-b58e-c583999bc6c9",
-  "generatedAt": "2026-03-18T13:29:36.354Z",
-  "nodeCount": 171,
+  "sessionId": "5020d4cf-643e-44ad-ac80-c0ec3b6dff32",
+  "generatedAt": "2026-03-18T14:35:04.144Z",
+  "nodeCount": 135,
   "nodes": [
     {
       "id": "r-1",
       "nodeType": "step",
-      "title": "[Framework] 三维场景与视图建模",
+      "title": "[Framework] 三维场景与摄像机建模",
       "abstract": ""
     },
     {
       "id": "r-2",
       "nodeType": "step",
-      "title": "[Framework] 光线投射与交点计算",
+      "title": "[Framework] 光线-物体求交与颜色着色",
       "abstract": ""
     },
     {
       "id": "r-3",
       "nodeType": "step",
-      "title": "[Framework] Phong光照模型实现",
-      "abstract": ""
-    },
-    {
-      "id": "r-4",
-      "nodeType": "step",
-      "title": "[Framework] 像素着色与图像输出",
+      "title": "[Framework] 像素级图像输出生成",
       "abstract": ""
     },
     {
       "id": "s-1",
       "nodeType": "step",
-      "title": "定义相机和视窗参数",
-      "abstract": "在三维空间中，确定观察者（相机）的空间位置和投影窗口的尺寸与分辨率。这一步需设置相机的原点、视线方向以及图像平面的像素网格，实现方式通常包括设置相机坐标系、投影平面等。作为“三维场景与视图建模”的基础，这为后续计算每条像素射线的起点方向提供了精确依据。如果省略此步，整个渲染流程将缺乏空间参考，无法保证结果的生成和场景视觉一致性。"
+      "title": "定义球体与摄像机参数",
+      "abstract": "本步骤需建立三维场景的基本数据结构，包括定义球体（如位置、半径）以及摄像机（如位置、观察方向、投影视野）的参数。具体产出为数值或对象，可供光线发射与相交检测使用。本步骤是“三维场景与摄像机建模”功能域的起点，为整个渲染流程提供了描述场景与观察者视角的基准。缺失此步骤将导致后续计算无法进行，渲染目标的属性与观察关系都无从谈起。"
     },
     {
       "id": "s-2",
       "nodeType": "step",
-      "title": "设定球体物体与光源属性",
-      "abstract": "在三维空间中，明确定义球体的几何参数（如中心坐标、半径）、其材质属性（如漫反射系数、镜面系数、环境光比例）及场景中一个或多个点光源的位置与颜色。此步骤在“三维场景与视图建模”中为后续物理求交和光照计算创建具体对象信息。如果漏掉这部分，场景将无内容参与光照交互，无法实际演示ray tracing效果。"
+      "title": "设定图像分辨率与投影视平面",
+      "abstract": "在本步骤中，确定输出图像的宽度与高度像素数目，并在摄像机前方设定一虚拟投影视平面。每个像素将对应该平面上的一个采样点，用于发射光线。此举为“三维场景与摄像机建模”中的空间映射提供粒度控制，使后续光线追踪操作有明确的分辨基础。若忽略此步骤，生成图像将无法准确对应三维内容，像素排布与场景元素间的映射关系混乱，影响最终可视化成果。"
     },
     {
       "id": "s-3",
       "nodeType": "step",
-      "title": "生成每像素射线并计算参数",
-      "abstract": "针对输出图像的每个像素，从相机中心投射一条穿过对应像素点的射线，计算这些射线在三维世界中的数学表达（起点和方向向量）。这一步在“光线投射与交点计算”中充当起点，决定哪些射线需要测试和后续色彩赋值。如果忽略这步，就无法确定每个像素采样场景的哪一部分，从而导致图像无法生成或成像错误。"
+      "title": "生成每个像素对应的视线",
+      "abstract": "此步骤为输出图像的每个像素点，计算出一条从摄像机出发、穿过投影视平面上对应像素中心的光线（射线）。这些光线代表了从观察者视角出发，探索三维场景的途径。作为“光线-物体求交与颜色着色”功能域的前置环节，它为后续光线与物体的相交检测提供必需的数据。省略本步骤将无法建立像素与场景间的映射，致使渲染面出现空白或混乱的数据输出。"
     },
     {
       "id": "s-4",
       "nodeType": "step",
-      "title": "计算射线与球体的交点",
-      "abstract": "对于每条像素射线，通过解析解或公式，求解其是否与球体表面发生交点以及最近的交点坐标（如一元二次方程判别）。此步骤是“光线投射与交点计算”中的关键环节，关系到是否对某像素进行下一步着色。缺少这一步，所有像素都无法判断与球体的物理关联，场景渲染将毫无输出或完全异常。"
+      "title": "检测光线与球体的相交点",
+      "abstract": "针对每条像素视线，计算其与场景中球体的相交情况（若有则求出交点）。这一过程涉及解一元二次方程，判定光线是否击中球体及其距离信息。在“光线-物体求交与颜色着色”功能域中，本环节是区分前景（球体）与背景、为像素分配内容的关键。去除此步骤，像素无法判断是否显示球体内容，渲染结果失真失意，无法表达任何立体结构。"
     },
     {
       "id": "s-5",
       "nodeType": "step",
-      "title": "计算交点法向量与视向量",
-      "abstract": "在球体表面交点处，计算法向量（指向外的垂线）以及从交点指向观察者的视向量，为后续Phong模型中的各分量（环境、漫反射、镜面反射）做准备。作为“Phong光照模型实现”的第一步，该环节为精确模拟光线与材质特性的交互提供几何基础。不进行此步骤，将无法分析光照分布及表面反应，渲染会显得极不真实。"
+      "title": "为像素赋予基础着色效果",
+      "abstract": "对与球体相交的每个像素，依据表面法线与设定光源，使用简单着色（如法线映射色或者 Lambert 漫反射）获得颜色；未命中球体则赋予背景色。它在“光线-物体求交与颜色着色”功能域中负责将三维信息转化为二维可视信号。缺乏此步骤则像素仅有命中与否、缺少空间与立体感的表达，渲染效果将平淡或不可用。"
     },
     {
       "id": "s-6",
       "nodeType": "step",
-      "title": "应用Phong模型计算光照强度",
-      "abstract": "依据交点物理量（法向量、视线、光源方向等）、球体材质参数及光源信息，分别计算环境光、漫反射、镜面反射强度，最终合成得到每个交点的表面亮度和颜色。此步骤在“Phong光照模型实现”中是物理模拟的核心，直接决定真实感和材质表现力。缺失本步骤时，渲染无法体现立体感，无法观察不同光照情况下的物体特征。"
+      "title": "将像素颜色写入到图像缓冲区",
+      "abstract": "本步骤负责将所有像素的最终颜色依照图像分辨率顺序填充到图像数组或缓冲区结构中，为后续保存操作做准备。此行为“像素级图像输出生成”功能域实现像素内容完整性的核心。这一过程若被省略，虽已完成了颜色计算但最终不能得到实际的图片结果，导致算法成果无法以图片形式直观呈现给用户。"
     },
     {
       "id": "s-7",
       "nodeType": "step",
-      "title": "为每像素分配最终颜色值",
-      "abstract": "结合Phong模型计算得到的光照强度信息，将结果映射为规范的RGB颜色，并为当前像素赋值。该流程在“像素着色与图像输出”功能域内将物理模拟结果转化为实际可见色彩。如果省略此环节，即使物理计算完成，也无法让用户获得图片效果，项目核心目标落空。"
+      "title": "保存或显示最终渲染图片",
+      "abstract": "最后一步是将图像缓冲区中的像素数据输出为标准图像文件（如 PNG、BMP 等），或直接在窗口中显示，为用户呈现渲染成果。它在“像素级图像输出生成”功能域中实现了数据到可见内容的最后转化。若跳过该步骤，所有计算只存在于内存，不可供观察与评估，项目最终目标无法实现。"
     },
     {
-      "id": "s-8",
-      "nodeType": "step",
-      "title": "输出并保存渲染结果图像",
-      "abstract": "对所有像素的颜色汇总成完整图片，通过图像库等方式将结果保存为标准图像格式(如PNG)。这一步在“像素着色与图像输出”功能域中实现最终用户可见、可分享的渲染成果。如果不保存图像，则所有上游处理结果都无法被观测和验证，整个项目体验和完整性大打折扣。"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-0",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-0",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:1-1",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:1-1",
       "abstract": "import numpy as np"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-1",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-1",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:2-2",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:2-2",
       "abstract": "from PIL import Image"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-2",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-2",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:4-4",
-      "abstract": "# Step 1: Define camera and viewport parameters"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:4-4",
+      "abstract": "def normalize(v):"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-3",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-3",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:5-5",
-      "abstract": "def setup_camera(width, height):"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:5-5",
+      "abstract": "norm = np.linalg.norm(v)"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-4",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-4",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:6-6",
-      "abstract": "camera_origin = np.array([0.0, 0.0, 1.0])  # Camera position"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:6-6",
+      "abstract": "if norm == 0:"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-5",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-5",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:7-7",
-      "abstract": "look_at = np.array([0.0, 0.0, 0.0])       # Look at point"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:7-7",
+      "abstract": "return v"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-6",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-6",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:8-8",
-      "abstract": "up = np.array([0.0, 1.0, 0.0])"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:8-8",
+      "abstract": "return v / norm"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-7",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-7",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:10-10",
-      "abstract": "viewport_height = 2.0"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:10-10",
+      "abstract": "# 1. 定义球体与摄像机参数"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-8",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-8",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:11-11",
-      "abstract": "viewport_width = (width / height) * viewport_height"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-9",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:12-12",
-      "abstract": "focal_length = 1.0"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-10",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:14-14",
-      "abstract": "w = (camera_origin - look_at)"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-11",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:15-15",
-      "abstract": "w = w / np.linalg.norm(w)"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-12",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:16-16",
-      "abstract": "u = np.cross(up, w)"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-13",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:17-17",
-      "abstract": "u = u / np.linalg.norm(u)"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-14",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:18-18",
-      "abstract": "v = np.cross(w, u)"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-15",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:20-20",
-      "abstract": "viewport_center = camera_origin - w * focal_length"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-16",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:21-21",
-      "abstract": "horizontal = u * viewport_width"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-17",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:22-22",
-      "abstract": "vertical = v * viewport_height"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-18",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:23-23",
-      "abstract": "lower_left = viewport_center - horizontal / 2 - vertical / 2"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-19",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:24-24",
-      "abstract": "return {"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-20",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:25-25",
-      "abstract": "'origin': camera_origin,"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-21",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:26-26",
-      "abstract": "'lower_left': lower_left,"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-22",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:27-27",
-      "abstract": "'horizontal': horizontal,"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-23",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:28-28",
-      "abstract": "'vertical': vertical,"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-24",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:29-29",
-      "abstract": "'width': width,"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-25",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:30-30",
-      "abstract": "'height': height"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-26",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:31-31",
-      "abstract": "}"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-27",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:33-33",
-      "abstract": "# Step 2: Set sphere and light properties"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-28",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:34-34",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:11-11",
       "abstract": "class Sphere:"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-29",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-9",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:35-35",
-      "abstract": "def __init__(self, center, radius, color, ka, kd, ks, shininess):"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:12-12",
+      "abstract": "def __init__(self, center, radius, color):"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-30",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-10",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:36-36",
-      "abstract": "self.center = np.array(center, dtype=np.float32)"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:13-13",
+      "abstract": "self.center = np.array(center, dtype=float)"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-31",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-11",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:37-37",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:14-14",
       "abstract": "self.radius = radius"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-32",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-12",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:38-38",
-      "abstract": "self.color = np.array(color, dtype=np.float32)  # base color"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:15-15",
+      "abstract": "self.color = np.array(color, dtype=float)"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-33",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-13",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:39-39",
-      "abstract": "self.ka = ka  # ambient coefficient"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:17-17",
+      "abstract": "def intersect(self, origin, direction):"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-34",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-14",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:40-40",
-      "abstract": "self.kd = kd  # diffuse coefficient"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:18-18",
+      "abstract": "# 返回最近相交的t和法线（如无相交返回None）"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-35",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-15",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:41-41",
-      "abstract": "self.ks = ks  # specular coefficient"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:19-19",
+      "abstract": "L = self.center - origin"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-36",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-16",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:42-42",
-      "abstract": "self.shininess = shininess"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:20-20",
+      "abstract": "t_ca = np.dot(L, direction)"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-37",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-17",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:44-44",
-      "abstract": "class Light:"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:21-21",
+      "abstract": "d2 = np.dot(L, L) - t_ca * t_ca"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-38",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-18",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:45-45",
-      "abstract": "def __init__(self, position, color):"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:22-22",
+      "abstract": "r2 = self.radius * self.radius"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-39",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-19",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:46-46",
-      "abstract": "self.position = np.array(position, dtype=np.float32)"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:23-23",
+      "abstract": "if d2 > r2:"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-40",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-20",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:47-47",
-      "abstract": "self.color = np.array(color, dtype=np.float32)"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-41",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:49-49",
-      "abstract": "# Step 4: Ray-sphere intersection"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-42",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:50-50",
-      "abstract": "def ray_sphere_intersect(origin, direction, sphere):"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-43",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:51-51",
-      "abstract": "oc = origin - sphere.center"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-44",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:52-52",
-      "abstract": "a = np.dot(direction, direction)"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-45",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:53-53",
-      "abstract": "b = 2.0 * np.dot(oc, direction)"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-46",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:54-54",
-      "abstract": "c = np.dot(oc, oc) - sphere.radius * sphere.radius"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-47",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:55-55",
-      "abstract": "discriminant = b * b - 4 * a * c"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-48",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:56-56",
-      "abstract": "if discriminant < 0:"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-49",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:57-57",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:24-24",
       "abstract": "return None"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-50",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-21",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:58-58",
-      "abstract": "t1 = (-b - np.sqrt(discriminant)) / (2 * a)"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:25-25",
+      "abstract": "thc = np.sqrt(r2 - d2)"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-51",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-22",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:59-59",
-      "abstract": "t2 = (-b + np.sqrt(discriminant)) / (2 * a)"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:26-26",
+      "abstract": "t0 = t_ca - thc"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-52",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-23",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:60-60",
-      "abstract": "t = None"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:27-27",
+      "abstract": "t1 = t_ca + thc"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-53",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-24",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:61-61",
-      "abstract": "if t1 > 1e-4 and (t1 < t2 or t2 < 1e-4):"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:28-28",
+      "abstract": "if t1 < 0:"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-54",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-25",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:62-62",
-      "abstract": "t = t1"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-55",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:63-63",
-      "abstract": "elif t2 > 1e-4:"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-56",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:64-64",
-      "abstract": "t = t2"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-57",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:65-65",
-      "abstract": "if t is not None:"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-58",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:66-66",
-      "abstract": "point = origin + t * direction"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-59",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:67-67",
-      "abstract": "return point, t"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-60",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:68-68",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:29-29",
       "abstract": "return None"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-61",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-26",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:70-70",
-      "abstract": "# Step 5/6: Phong shading model"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:30-30",
+      "abstract": "t = t0 if t0 > 0 else t1"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-62",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-27",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:71-71",
-      "abstract": "def compute_color(point, normal, view_dir, sphere, lights, ambient_light):"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:31-31",
+      "abstract": "hit_point = origin + t * direction"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-63",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-28",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:72-72",
-      "abstract": "ka, kd, ks = sphere.ka, sphere.kd, sphere.ks"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:32-32",
+      "abstract": "normal = normalize(hit_point - self.center)"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-64",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-29",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:73-73",
-      "abstract": "sphere_color = sphere.color"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:33-33",
+      "abstract": "return t, hit_point, normal"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-65",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-30",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:74-74",
-      "abstract": "color = ka * ambient_light * sphere_color  # ambient"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:35-35",
+      "abstract": "class Camera:"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-66",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-31",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:75-75",
-      "abstract": "for light in lights:"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:36-36",
+      "abstract": "def __init__(self, eye, target, up, fov, aspect):"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-67",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-32",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:76-76",
-      "abstract": "light_dir = light.position - point"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:37-37",
+      "abstract": "self.eye = np.array(eye, dtype=float)"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-68",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-33",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:77-77",
-      "abstract": "light_dir = light_dir / np.linalg.norm(light_dir)"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:38-38",
+      "abstract": "self.target = np.array(target, dtype=float)"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-69",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-34",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:78-78",
-      "abstract": "# Shadow check would be here if multiple objects"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:39-39",
+      "abstract": "self.up = np.array(up, dtype=float)"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-70",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-35",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:79-79",
-      "abstract": "# Diffuse"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:40-40",
+      "abstract": "self.fov = fov"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-71",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-36",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:80-80",
-      "abstract": "diff = max(np.dot(normal, light_dir), 0.0)"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:41-41",
+      "abstract": "self.aspect = aspect"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-72",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-37",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:81-81",
-      "abstract": "diffuse = kd * diff * light.color * sphere_color"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:42-42",
+      "abstract": "self._setup()"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-73",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-38",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:82-82",
-      "abstract": "# Specular"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:44-44",
+      "abstract": "def _setup(self):"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-74",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-39",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:83-83",
-      "abstract": "reflect_dir = 2 * np.dot(normal, light_dir) * normal - light_dir"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:45-45",
+      "abstract": "self.forward = normalize(self.target - self.eye)"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-75",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-40",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:84-84",
-      "abstract": "reflect_dir = reflect_dir / np.linalg.norm(reflect_dir)"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:46-46",
+      "abstract": "self.right = normalize(np.cross(self.forward, self.up))"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-76",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-41",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:85-85",
-      "abstract": "spec = max(np.dot(reflect_dir, view_dir), 0.0) ** sphere.shininess"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:47-47",
+      "abstract": "self.up = normalize(np.cross(self.right, self.forward))"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-77",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-42",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:86-86",
-      "abstract": "specular = ks * spec * light.color"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:48-48",
+      "abstract": "self.h = np.tan(self.fov / 2)"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-78",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-43",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:87-87",
-      "abstract": "color += diffuse + specular"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:49-49",
+      "abstract": "self.w = self.h * self.aspect"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-79",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-44",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:88-88",
-      "abstract": "return np.clip(color, 0, 1)"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:51-51",
+      "abstract": "# 2. 设定图像分辨率与投影视平面"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-80",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-45",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:90-90",
-      "abstract": "def render(width, height):"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:52-52",
+      "abstract": "WIDTH = 400"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-81",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-46",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:91-91",
-      "abstract": "camera = setup_camera(width, height)"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:53-53",
+      "abstract": "HEIGHT = 400"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-82",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-47",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:92-92",
-      "abstract": "sphere = Sphere(center=[0, 0, -2], radius=0.8, color=[0.3, 0.6, 1.0],"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:54-54",
+      "abstract": "FOV = np.radians(60)"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-83",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-48",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:93-93",
-      "abstract": "ka=0.2, kd=0.7, ks=0.5, shininess=32)"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:56-56",
+      "abstract": "sphere = Sphere(center=[0, 0, -3], radius=1.0, color=[1, 0, 0])"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-84",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-49",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:94-94",
-      "abstract": "lights = ["
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:57-57",
+      "abstract": "camera = Camera(eye=[0, 0, 0], target=[0, 0, -1], up=[0, 1, 0], fov=FOV, aspect=WIDTH/HEIGHT)"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-85",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-50",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:95-95",
-      "abstract": "Light(position=[2, 4, 0], color=[1.0, 1.0, 1.0])"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:59-59",
+      "abstract": "background_color = np.array([0.2, 0.7, 1.0])  # 天空蓝"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-86",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-51",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:96-96",
-      "abstract": "]"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:60-60",
+      "abstract": "light_dir = normalize(np.array([1, -1, -1]))  # 5. 法线映射简单光源"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-87",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-52",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:97-97",
-      "abstract": "ambient_light = 0.2"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:62-62",
+      "abstract": "image = np.zeros((HEIGHT, WIDTH, 3), dtype=np.float32)"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-88",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-53",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:98-98",
-      "abstract": "image = np.zeros((height, width, 3), dtype=np.float32)"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:64-64",
+      "abstract": "# 3. 生成每个像素对应的视线"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-89",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-54",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:100-100",
-      "abstract": "# Step 3: For each pixel, cast ray"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:65-65",
+      "abstract": "for j in range(HEIGHT):"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-90",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-55",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:101-101",
-      "abstract": "for y in range(height):"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:66-66",
+      "abstract": "for i in range(WIDTH):"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-91",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-56",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:102-102",
-      "abstract": "for x in range(width):"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:67-67",
+      "abstract": "# 归一化像素坐标到[-1, 1]"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-92",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-57",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:103-103",
-      "abstract": "u = x / (width - 1)"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:68-68",
+      "abstract": "x = (2 * (i + 0.5) / WIDTH - 1) * camera.w"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-93",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-58",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:104-104",
-      "abstract": "v = 1.0 - y / (height - 1)"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:69-69",
+      "abstract": "y = (1 - 2 * (j + 0.5) / HEIGHT) * camera.h"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-94",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-59",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:105-105",
-      "abstract": "pixel = (camera['lower_left'] + u * camera['horizontal'] + v * camera['vertical'])"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:70-70",
+      "abstract": "direction = normalize(x * camera.right + y * camera.up + camera.forward)"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-95",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-60",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:106-106",
-      "abstract": "ray_origin = camera['origin']"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:71-71",
+      "abstract": "# 4. 检测光线与球体的相交点"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-96",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-61",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:107-107",
-      "abstract": "direction = pixel - ray_origin"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:72-72",
+      "abstract": "hit = sphere.intersect(camera.eye, direction)"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-97",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-62",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:108-108",
-      "abstract": "direction = direction / np.linalg.norm(direction)"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:73-73",
+      "abstract": "if hit is not None:"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-98",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-63",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:109-109",
-      "abstract": "res = ray_sphere_intersect(ray_origin, direction, sphere)"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:74-74",
+      "abstract": "t, point, normal = hit"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-99",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-64",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:110-110",
-      "abstract": "if res is not None:"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:75-75",
+      "abstract": "# 5. 为像素赋予基础着色效果"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-100",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-65",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:111-111",
-      "abstract": "point, _ = res"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:76-76",
+      "abstract": "diffuse = max(np.dot(normal, -light_dir), 0)"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-101",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-66",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:112-112",
-      "abstract": "# Step 5: Compute normal and view dir"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:77-77",
+      "abstract": "color = sphere.color * diffuse"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-102",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-67",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:113-113",
-      "abstract": "normal = point - sphere.center"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:78-78",
+      "abstract": "image[j, i] = np.clip(color, 0, 1)"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-103",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-68",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:114-114",
-      "abstract": "normal = normal / np.linalg.norm(normal)"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-104",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:115-115",
-      "abstract": "view_dir = ray_origin - point"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-105",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:116-116",
-      "abstract": "view_dir = view_dir / np.linalg.norm(view_dir)"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-106",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:117-117",
-      "abstract": "# Step 6: Phong shading"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-107",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:118-118",
-      "abstract": "color = compute_color(point, normal, view_dir, sphere, lights, ambient_light)"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-108",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:119-119",
-      "abstract": "image[y, x] = color"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-109",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:120-120",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:79-79",
       "abstract": "else:"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-110",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-69",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:121-121",
-      "abstract": "image[y, x] = np.array([0,0,0], dtype=np.float32)"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:80-80",
+      "abstract": "image[j, i] = background_color"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-111",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-70",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:122-122",
-      "abstract": "# Step 8: Save image"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:82-82",
+      "abstract": "# 6. 将像素颜色写入到图像缓冲区 (已在上面填充image数组)"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-112",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-71",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:123-123",
-      "abstract": "img_arr = np.clip(image * 255, 0, 255).astype(np.uint8)"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:83-83",
+      "abstract": "# 7. 保存或显示最终渲染图片"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-113",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-72",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:124-124",
-      "abstract": "img = Image.fromarray(img_arr, mode='RGB')"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:84-84",
+      "abstract": "image_out = (image * 255).astype(np.uint8)"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-114",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-73",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:125-125",
-      "abstract": "img.save('phong_sphere.png')"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:85-85",
+      "abstract": "img = Image.fromarray(image_out, 'RGB')"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-115",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-74",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:126-126",
-      "abstract": "print('Rendered to phong_sphere.png')"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:86-86",
+      "abstract": "img.save('raytraced_sphere.png')"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-116",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-75",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:128-128",
-      "abstract": "if __name__ == '__main__':"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py-chunk-117",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/phong_ray_tracing.py:129-129",
-      "abstract": "render(512, 512)"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:87-87",
+      "abstract": "print('渲染完成，图片已保存为 raytraced_sphere.png')"
     },
     {
       "id": "k-s-1-1",
       "nodeType": "background-knowledge",
-      "title": "三维空间坐标系",
-      "abstract": "理解三维空间中点的位置如何用坐标轴（如 X、Y、Z）表示，是进行三维场景建模和相机定位的基础。掌握坐标系转换、点之间的相对关系有助于理解视图投影和相机方向的设置。"
+      "title": "三维空间坐标表示",
+      "abstract": "在三维计算机图形中，使用三维坐标系（x, y, z）来描述对象的空间位置。理解如何通过向量表示位置与方向是实现三维场景建模和后续渲染计算的基础。"
     },
     {
       "id": "k-s-1-2",
       "nodeType": "background-knowledge",
-      "title": "相机视图变换原理",
-      "abstract": "了解虚拟相机在三维图形中的作用，包括参数如相机原点、观察方向（Look At）、上方向（Up）、投影平面。掌握相机坐标系的建立及其对渲染结果的影响，是正确配置三维视窗的前提。"
+      "title": "摄像机参数与视图建模",
+      "abstract": "摄像机在三维渲染中定义观察者的视点、目标方向、上方向、视野（FOV）和宽高比等参数。这些参数决定了最终图像的构图和投影，理解这些参数对于正确设置场景观察关系至关重要。"
     },
     {
       "id": "k-s-1-3",
       "nodeType": "background-knowledge",
-      "title": "NumPy 向量与矩阵操作",
-      "abstract": "理解并能使用 NumPy 处理多维数组，进行如减法、归一化（norm）、向量叉乘（cross）等操作。NumPy 是 Python 科学计算中的基础库，本代码大量用其操作三维向量。"
+      "title": "Python 类定义与构造方法",
+      "abstract": "Python 使用 class 关键字定义类，并通过 __init__ 方法设置对象的初始属性。理解如何声明类、初始化成员变量，以及如何实例化对象，是面向对象建模的基础。"
     },
     {
       "id": "k-s-1-4",
       "nodeType": "background-knowledge",
-      "title": "向量归一化与叉乘",
-      "abstract": "熟练掌握向量的归一化（将向量长度调整为1）和向量叉乘（用于计算正交基/法线等）。本步骤中靠归一化和叉乘得到相机所在空间的正交坐标基，是像素射线生成的基础。"
+      "title": "NumPy 数组基本用法",
+      "abstract": "NumPy 是 Python 常用的科学计算库。代码中 np.array 用于创建高效的数值向量，支持算术运算和广播操作。在三维计算中，NumPy 数组常用来表示向量和颜色等属性。"
     },
     {
       "id": "k-s-2-1",
       "nodeType": "background-knowledge",
-      "title": "向量与三维坐标表示",
-      "abstract": "三维图形中，物体的位置、光源的位置通常用三维向量表示（如 center=[x, y, z]）。理解空间向量是必要前提，否则很难正确设定物体位置和场景构造。涉及基础线性代数知识。"
+      "title": "投影视平面概念",
+      "abstract": "投影视平面是三维计算机图形学中一个虚拟平面，通常放在摄像机前方，用于将三维场景内容投影成二维图像。理解该概念有助于明白像素如何与场景中的点对应，是光线追踪和渲染算法的基础。"
     },
     {
       "id": "k-s-2-2",
       "nodeType": "background-knowledge",
-      "title": "漫反射与镜面反射系数",
-      "abstract": "光照模型定义了表面对不同类型光照（环境光、漫反射、镜面反射）的响应强度。ka、kd、ks 分别表示各自系数，决定物体在渲染时的表现。正确理解这些参数是设定材质属性的基础。"
+      "title": "图像分辨率定义",
+      "abstract": "图像分辨率描述了输出图像的宽度和高度的像素数量，直接影响渲染精度和粒度。掌握分辨率的定义有助于合理设置图像清晰度，权衡渲染速度与效果。"
     },
     {
       "id": "k-s-2-3",
       "nodeType": "background-knowledge",
-      "title": "Python 类与构造方法",
-      "abstract": "类（class）用于创建自定义类型，构造方法 __init__ 定义了对象初始化属性。理解如何定义和实例化类对象，是正确阅读和修改 Sphere、Light 类的前提。"
+      "title": "视场角（FOV）原理",
+      "abstract": "视场角（FOV）决定了摄像机看到的场景范围，影响投影变形和透视效果。在三维图像渲染中，正确设置 FOV 可使输出画面契合视觉预期。理解其与摄像机参数的关联至关重要。"
     },
     {
       "id": "k-s-2-4",
       "nodeType": "background-knowledge",
-      "title": "NumPy 数组用法基础",
-      "abstract": "NumPy 是 Python 数值计算的核心库。np.array 用于高效处理向量和颜色数据，在三维几何和渲染中常见。理解其构造、类型等基本用法有助于正确读懂数据的组织和后续操作。"
+      "title": "Python 列表与数组表达",
+      "abstract": "在 Python 中，方括号如 [0, 0, 0] 表示列表结构，常用来表达三维坐标、向量等数据。在构建摄像机参数如 eye、target、up 时，需能正确读写和传递此类数据。"
     },
     {
       "id": "k-s-3-1",
       "nodeType": "background-knowledge",
-      "title": "三维向量基本运算",
-      "abstract": "三维向量是描述空间中点和方向的数学对象。基本运算包括加法、减法、数乘和向量归一化等。这些操作是计算射线方向和像素位置的基础，例如 pixel - ray_origin 表示两个三维点的差，得到方向向量，归一化确保长度为 1。"
+      "title": "光线生成与几何原理",
+      "abstract": "在光线追踪渲染中，每个像素对应一条光线，这需要理解摄像机、投影视平面以及三维空间中光线的数学表达方式。此原理实现像素到场景的空间映射，是后续光线与场景交互的基础。理解这一概念有助于理解为什么要计算特定方向的射线。"
     },
     {
       "id": "k-s-3-2",
       "nodeType": "background-knowledge",
-      "title": "射线与相机投影模型",
-      "abstract": "射线投射是将二维像素映射到三维空间的核心步骤。理解如何根据相机参数（像机原点、视口四角和维度等）生成每个像素的射线，决定每个像素‘看’向场景的哪个部分，是图像渲染和光线追踪的基础。"
+      "title": "向量运算与归一化",
+      "abstract": "代码中涉及向量加减和归一化（normalize）操作。掌握向量在空间中的表述和归一化（长度变为1）对于理解光线方向如何从摄像机出发并穿越像素中心至关重要。缺乏此知识无法正确实现和理解射线的生成过程。"
     },
     {
       "id": "k-s-3-3",
       "nodeType": "background-knowledge",
-      "title": "Numpy 向量运算与归一化",
-      "abstract": "Numpy 提供的 np.linalg.norm 和基础数组运算使得三维向量操作高效便捷，如 direction / np.linalg.norm(direction) 用于归一化。正确使用 Numpy 的向量运算是实现射线计算的关键。"
+      "title": "像素坐标归一化技术",
+      "abstract": "像素坐标需从二维图像空间转换为[-1,1]的标准空间，再映射到三维空间。这种归一化处理保证每个像素能正确对应投影视平面上的位置，是光线方向计算的基础，需要理解坐标系统及归一化的算法方法。"
     },
     {
       "id": "k-s-3-4",
       "nodeType": "background-knowledge",
-      "title": "像素坐标归一化",
-      "abstract": "图像像素的 (x, y) 需要归一化为 [0, 1] 区间的 (u, v) 坐标，以实现无关分辨率的屏幕映射。理解为何进行归一化、归一化后的取值范围及其对射线生成的意义，是理解像素和视口映射关系的基础。"
+      "title": "右手坐标系与摄像机姿态",
+      "abstract": "光线追踪通常采用右手坐标系，并通过摄像机的 right、up、forward 向量来定义视角和方向。理解坐标系和摄像机姿态的表示方法对于解析方向向量和空间映射非常重要，是实现多视角渲染的基础。"
     },
     {
       "id": "k-s-4-1",
       "nodeType": "background-knowledge",
-      "title": "射线与球体求交原理",
-      "abstract": "射线与球体的求交问题是计算机图形学中的基础知识。它涉及将射线方程代入球体方程组合成一元二次方程，通过判别式判断交点是否存在及求最近的交点距离。理解此原理是判断像素是否与物体发生交互渲染的前提。"
+      "title": "一元二次方程求解",
+      "abstract": "在检测光线与球体的相交点时，需要通过求解一元二次方程来判断交点的位置。这涉及判别式的使用和根的筛选，对于判断光线是否与球体相交至关重要。"
     },
     {
       "id": "k-s-4-2",
       "nodeType": "background-knowledge",
-      "title": "一元二次方程求解与判别式",
-      "abstract": "通过一元二次方程的判别式（b²-4ac）判断射线与球体是否有交点。判别式小于0无解，等于0有一个交点，大于0有两个交点。理解并能根据判别式选取合理根（最小正根）是实现物理正确渲染的必要基础。"
+      "title": "三维向量运算基础",
+      "abstract": "代码中多次涉及三维向量的加减、点积和归一化操作（如 np.dot、normalize）。熟练掌握这些运算对于理解空间坐标、方向向量和法向量的计算是必须的。"
     },
     {
       "id": "k-s-4-3",
       "nodeType": "background-knowledge",
-      "title": "NumPy 向量运算",
-      "abstract": "代码中大量用到 np.dot 表示向量点积运算，NumPy 是 Python 科学运算常用库。掌握向量减法、点积、标量乘法等运算是理解代码和调试向量交互的前提。"
+      "title": "光线-球体相交原理",
+      "abstract": "在光线追踪算法中，判定光线是否与球体相交及求解交点，是实现基础渲染的关键。理解相交检测的几何原理有助于掌握渲染流程的核心环节。"
     },
     {
       "id": "k-s-4-4",
       "nodeType": "background-knowledge",
-      "title": "射线参数方程及参数t的意义",
-      "abstract": "射线以参数方程表示，t为参数标量，t>0表示射线正向，t为交点到原点的距离。正确理解t的物理意义决定如何选择最近且有效的交点，防止渲染后退交或浮点误差带来的伪交点。"
+      "title": "NumPy 数组运算",
+      "abstract": "代码中调用如 np.dot、矢量加减法等 NumPy 函数，这要求理解 Python 中如何利用 NumPy 进行高效的数组和向量操作，是正确读懂代码实现的前提。"
     },
     {
       "id": "k-s-5-1",
       "nodeType": "background-knowledge",
-      "title": "三维向量运算基础",
-      "abstract": "理解三维空间中向量的定义、加减方法及归一化是进行碰撞检测和光照计算的前提。归一化操作用于标准化方向，便于后续运算，例如在计算法向量和视向量时，需要对向量进行归一化处理，以保证其长度为1。"
+      "title": "Lambert 漫反射原理",
+      "abstract": "Lambert 漫反射模型是计算物体表面在光照下产生的颜色的基础方法，其反射强度与表面法线和光线方向夹角的余弦成正比。理解该原理有助于解释为什么用法线和光源方向的点积求得漫反射效果，以及如何让三维物体具备立体感。"
     },
     {
       "id": "k-s-5-2",
       "nodeType": "background-knowledge",
-      "title": "NumPy 向量操作",
-      "abstract": "NumPy 是 Python 的科学计算库，提供高效的多维数组和向量操作方法。在代码中，np.linalg.norm 用于计算向量的欧氏长度，实现向量归一化。理解 NumPy 的数组运算及常用API是读懂和正确实现该代码的基础。"
+      "title": "法线映射颜色",
+      "abstract": "法线映射通过将表面法线方向映射为颜色值，可以用来直观展示物体表面空间结构。它是一种基础着色方法，通常用于调试或表现空间感，理解这一点有助于掌握像素着色的视觉效果来源。"
     },
     {
       "id": "k-s-5-3",
       "nodeType": "background-knowledge",
-      "title": "Phong光照模型原理",
-      "abstract": "Phong光照模型是一种经典的着色方法，依赖法向量和视向量来计算环境光、漫反射和镜面反射效果。理解该模型的基本原理与其对几何信息（如法向量、视向量）的需求，是掌握为什么要先计算这些向量的关键。"
+      "title": "NumPy 数组操作",
+      "abstract": "NumPy 是 Python 的科学计算库，广泛用于高效处理多维数组。像素赋色通常涉及二维数组操作，如 image[j, i]=...，需要理解如何用 NumPy 操作和赋值，实现图像存储和访问。"
     },
     {
       "id": "k-s-5-4",
       "nodeType": "background-knowledge",
-      "title": "面法向量的几何意义",
-      "abstract": "在3D图形处理中，法向量表示物体表面某点的方向（垂直于表面）。它被用于确定光线与表面的相互作用（如反射、散射），理解法向量的几何意义和其在光照计算中的作用，是准确实现渲染算法的关键。"
+      "title": "点积（内积）计算",
+      "abstract": "向量点积（内积）是计算两个向量夹角关系的常用方法，在图形学中用于光照算法（如漫反射）判断表面朝向与光线方向的关系。理解 np.dot 用法及其在物理建模中的意义是实现着色的关键。"
+    },
+    {
+      "id": "k-s-6-1",
+      "nodeType": "background-knowledge",
+      "title": "NumPy 数组操作基本方法",
+      "abstract": "NumPy 是 Python 中处理多维数组和数值计算的常用库。理解如何使用下标 image[j, i] 访问和修改数组元素，是正确填充图像缓冲区所必须的基础操作。这涉及数组的索引方式、切片等。"
     },
     {
       "id": "k-s-6-2",
       "nodeType": "background-knowledge",
-      "title": "向量点积与反射公式",
-      "abstract": "向量点积用于计算表面法向量与光照/视线方向间的夹角，决定漫反射和镜面反射的强度。反射公式（reflect_dir）通过法向量和光源方向得到镜面反射方向，这些运算是物理模拟光照时的基础数学工具。"
+      "title": "像素与图像缓冲区结构",
+      "abstract": "图像缓冲区是用于按二维像素坐标存储颜色数据的数组结构。了解缓冲区如何与实际图像分辨率对应，以及填充像素数据的必要性，是理解像素级图像生成流程的核心。"
     },
     {
       "id": "k-s-6-3",
       "nodeType": "background-knowledge",
-      "title": "NumPy数组操作与归一化",
-      "abstract": "NumPy是Python中处理多维数组和数学运算的常用库。代码中多次使用数组操作（如相减、除法）、归一化（通过 np.linalg.norm），这些语法和操作是理解相关向量运算的基础。"
+      "title": "颜色值归一化与截断",
+      "abstract": "颜色值通常被限制在一定范围（如 0-1）。np.clip 能将数组中的元素限制在指定最小、最大值之间，这对于确保生成的像素不会超出合法颜色空间范围很重要。"
     },
     {
       "id": "k-s-6-4",
       "nodeType": "background-knowledge",
-      "title": "Python函数定义及参数传递",
-      "abstract": "理解Python中函数的定义、参数传递和返回值是读懂该代码结构的前提。特别是如何在函数内部操作输入参数，实现复杂的流程控制与结果计算。"
+      "title": "逐像素渲染思想",
+      "abstract": "逐像素渲染是指对每个像素单独计算颜色并写入图像缓冲区。这是光栅化渲染、图像生成等领域的基本处理方法，有助于理解本步骤为何需要依照分辨率顺序输出所有像素点数据。"
     },
     {
       "id": "k-s-7-1",
       "nodeType": "background-knowledge",
-      "title": "RGB颜色空间原理",
-      "abstract": "RGB是广泛使用的颜色模型，将色彩分为红、绿、蓝三基色，每个通道用数值表示像素的最终颜色。理解RGB规范及其数值范围（如0-255或0-1）是将物理模拟结果转化为实际图像的前提，在图像输出和像素着色环节至关重要。"
+      "title": "NumPy 数组类型转换",
+      "abstract": "NumPy 提供 astype 方法用于将数组元素的数据类型进行转换。在图像处理等场景中，常需要将浮点型像素值（0~1）缩放并转为 8 位无符号整型以适应常规图像格式的存储要求。理解其原理和用法有助于正确处理数值类型和防止数据丢失。"
     },
     {
       "id": "k-s-7-2",
       "nodeType": "background-knowledge",
-      "title": "Phong光照模型",
-      "abstract": "Phong照明模型是一种经典的光照计算方法，用以模拟三维表面光照，包括环境光、漫反射和镜面反射成分。了解其工作原理和输出含义，有助于把光照强度信息映射到色彩，理解为何和如何转换为可见像素值。"
+      "title": "Pillow 图像创建与保存",
+      "abstract": "Pillow 库是 Python 处理图像的主流库。fromarray 方法可将 NumPy 数组转换为 Image 对象，save 方法用于将 Image 对象输出为 PNG、BMP 等标准图像文件。理解这些 API 的使用方式对于实现自定义像素数据的可视化和持久化是必要的。"
     },
     {
       "id": "k-s-7-3",
       "nodeType": "background-knowledge",
-      "title": "NumPy数组操作",
-      "abstract": "NumPy是Python科学计算常用库，提供高效的多维数组操作。像`image[y, x] = color`这样的赋值语句，涉及二维数组的访问和修改，理解其dtype设置（如float32），有助于确保像素数据正确存储和后续处理。"
+      "title": "像素与图像文件格式",
+      "abstract": "像素是构成图像的最小单位，标准图像文件（如 PNG、BMP）存储的本质是像素数据及其编码方式。理解像素值范围（如 RGB 0-255）、文件格式与内存图像缓冲区的转换，有助于正确输出计算所得图像内容，避免色彩失真或文件损坏。"
     },
     {
       "id": "k-s-7-4",
       "nodeType": "background-knowledge",
-      "title": "像素着色与图像输出流程",
-      "abstract": "像素着色是将物理或数学模型产出的光照数据，映射到具体颜色并写入输出图像的过程。理解此流程，可掌握为什么只有赋值颜色后用户才能看到结果、项目目标才能达成，与其他图像生成环节区分清楚。"
+      "title": "数据可视化与验证在渲染流程中的作用",
+      "abstract": "渲染步骤中的像素数据只有通过保存或显示为图像文件，才能转化为可观察成果，便于调试和质量评估。理解这一环节的重要性，有助于认识到输出环节不仅是用户查看的出口，也是渲染算法正确性的验证手段。"
     },
     {
-      "id": "k-s-8-1",
+      "id": "k-deep-1",
       "nodeType": "background-knowledge",
-      "title": "NumPy 数组操作",
-      "abstract": "NumPy 是 Python 的科学计算库，支持高效的多维数组操作。在代码中，通过 NumPy 的 clip 函数和类型转换将浮点像素值处理为适合图像保存的数据格式，理解这些函数和数组的用法是读懂代码的基础。"
+      "title": "变量与赋值概念",
+      "abstract": "变量是存储数据的命名空间，用于在程序中保存和引用信息。理解变量的定义和赋值过程是解释如数组、对象、数值等元素如何在代码中传递和修改的前提。没有变量概念，无法理解如何操作数组、图像数据或函数返回值、参数。"
     },
     {
-      "id": "k-s-8-2",
+      "id": "k-deep-2",
       "nodeType": "background-knowledge",
-      "title": "Pillow 图像处理库",
-      "abstract": "Pillow (PIL) 是 Python 的图像处理库，提供了创建、编辑以及保存图像的功能。在本步骤，使用 Image.fromarray 和 Image.save 等 API把数组转换成图片并导出到硬盘，需要掌握 Pillow 基本操作方法。"
+      "title": "函数定义与调用",
+      "abstract": "函数是具有特定功能可复用的代码块，通过参数实现输入输出。理解函数的声明、参数传递和调用结果，有助于正确阅读如 normalize, np.dot 及自定义方法等逻辑，否则难以理解数据如何在模块间流转。"
     },
     {
-      "id": "k-s-8-3",
+      "id": "k-deep-3",
       "nodeType": "background-knowledge",
-      "title": "像素数据到标准图像格式转换",
-      "abstract": "渲染结果通常以像素矩阵形式存在，需要将其转换为标准图像文件（如 PNG、JPEG）才能被用户查看和分享。这涉及像素数据格式、色彩空间、编码规范，以及保存为常用图像格式的必要步骤。"
+      "title": "数组与数列基础概念",
+      "abstract": "数组（或数列）是由一组有序的数据构成的数据结构。理解数组的本质，有助于掌握 Python 列表、NumPy 数组等操作，这对于像素、坐标、图像缓冲区等涉及多元素集合的处理至关重要。"
     },
     {
-      "id": "k-s-8-4",
+      "id": "k-deep-4",
       "nodeType": "background-knowledge",
-      "title": "渲染流程输出与验证",
-      "abstract": "图像保存是渲染流程的最后环节，也是用户获取和验证渲染结果的唯一标准形式。理解为什么不能只停留在内存处理、而要输出物理文件，有助于认识项目完整性和用户体验的重要性。"
+      "title": "坐标系与平面几何基础",
+      "abstract": "坐标系用于描述空间中点的位置，是解析三维空间坐标、像素与投影视平面关系、三维向量和摄像机姿态的基础。没有此基础，将难以理解空间映射、光线追踪等核心原理。"
     },
     {
-      "id": "sit-s-1-grp-L5",
-      "nodeType": "situation",
-      "title": "Situation s-1 -> lines 5-31",
-      "abstract": "Bridge connecting step to 24 code chunks."
+      "id": "k-deep-5",
+      "nodeType": "background-knowledge",
+      "title": "循环与顺序执行",
+      "abstract": "循环是程序中实现批量、重复操作的基本结构，用于遍历像素点、赋值数组。只有理解循环和顺序结构，才能明白逐像素渲染、逐步计算图像数据的实现方式。"
     },
     {
-      "id": "sit-s-2-grp-L34",
+      "id": "sit-s-1-grp-L10",
       "nodeType": "situation",
-      "title": "Situation s-2 -> lines 34-47",
-      "abstract": "Bridge connecting step to 13 code chunks."
-    },
-    {
-      "id": "sit-s-4-grp-L51",
-      "nodeType": "situation",
-      "title": "Situation s-4 -> lines 51-68",
-      "abstract": "Bridge connecting step to 18 code chunks."
-    },
-    {
-      "id": "sit-s-6-grp-L71",
-      "nodeType": "situation",
-      "title": "Situation s-6 -> lines 71-88",
-      "abstract": "Bridge connecting step to 18 code chunks."
-    },
-    {
-      "id": "sit-s-2-grp-L92",
-      "nodeType": "situation",
-      "title": "Situation s-2 -> lines 92-95",
-      "abstract": "Bridge connecting step to 3 code chunks."
-    },
-    {
-      "id": "sit-s-3-grp-L103",
-      "nodeType": "situation",
-      "title": "Situation s-3 -> lines 103-108",
+      "title": "Situation s-1 -> lines 10-15",
       "abstract": "Bridge connecting step to 6 code chunks."
     },
     {
-      "id": "sit-s-4-grp-L109",
+      "id": "sit-s-4-grp-L17",
       "nodeType": "situation",
-      "title": "Situation s-4 -> lines 109-109",
-      "abstract": "Bridge connecting step to 1 code chunks."
+      "title": "Situation s-4 -> lines 17-33",
+      "abstract": "Bridge connecting step to 17 code chunks."
     },
     {
-      "id": "sit-s-5-grp-L113",
+      "id": "sit-s-1-grp-L35",
       "nodeType": "situation",
-      "title": "Situation s-5 -> lines 113-116",
-      "abstract": "Bridge connecting step to 4 code chunks."
+      "title": "Situation s-1 -> lines 35-42",
+      "abstract": "Bridge connecting step to 8 code chunks."
     },
     {
-      "id": "sit-s-7-grp-L119",
+      "id": "sit-s-2-grp-L52",
       "nodeType": "situation",
-      "title": "Situation s-7 -> lines 119-121",
+      "title": "Situation s-2 -> lines 52-54",
       "abstract": "Bridge connecting step to 3 code chunks."
     },
     {
-      "id": "sit-s-8-grp-L123",
+      "id": "sit-s-1-grp-L56",
       "nodeType": "situation",
-      "title": "Situation s-8 -> lines 123-126",
+      "title": "Situation s-1 -> lines 56-56",
+      "abstract": "Bridge connecting step to 1 code chunks."
+    },
+    {
+      "id": "sit-s-1-grp-L57",
+      "nodeType": "situation",
+      "title": "Situation s-1 -> lines 57-57",
+      "abstract": "Bridge connecting step to 1 code chunks."
+    },
+    {
+      "id": "sit-s-2-grp-L57",
+      "nodeType": "situation",
+      "title": "Situation s-2 -> lines 57-57",
+      "abstract": "Bridge connecting step to 1 code chunks."
+    },
+    {
+      "id": "sit-s-3-grp-L65",
+      "nodeType": "situation",
+      "title": "Situation s-3 -> lines 65-70",
+      "abstract": "Bridge connecting step to 6 code chunks."
+    },
+    {
+      "id": "sit-s-4-grp-L72",
+      "nodeType": "situation",
+      "title": "Situation s-4 -> lines 72-72",
+      "abstract": "Bridge connecting step to 1 code chunks."
+    },
+    {
+      "id": "sit-s-5-grp-L76",
+      "nodeType": "situation",
+      "title": "Situation s-5 -> lines 76-77",
+      "abstract": "Bridge connecting step to 2 code chunks."
+    },
+    {
+      "id": "sit-s-5-grp-L78",
+      "nodeType": "situation",
+      "title": "Situation s-5 -> lines 78-78",
+      "abstract": "Bridge connecting step to 1 code chunks."
+    },
+    {
+      "id": "sit-s-6-grp-L78",
+      "nodeType": "situation",
+      "title": "Situation s-6 -> lines 78-78",
+      "abstract": "Bridge connecting step to 1 code chunks."
+    },
+    {
+      "id": "sit-s-6-grp-L79",
+      "nodeType": "situation",
+      "title": "Situation s-6 -> lines 79-79",
+      "abstract": "Bridge connecting step to 1 code chunks."
+    },
+    {
+      "id": "sit-s-5-grp-L80",
+      "nodeType": "situation",
+      "title": "Situation s-5 -> lines 80-80",
+      "abstract": "Bridge connecting step to 1 code chunks."
+    },
+    {
+      "id": "sit-s-6-grp-L80",
+      "nodeType": "situation",
+      "title": "Situation s-6 -> lines 80-80",
+      "abstract": "Bridge connecting step to 1 code chunks."
+    },
+    {
+      "id": "sit-s-7-grp-L84",
+      "nodeType": "situation",
+      "title": "Situation s-7 -> lines 84-87",
       "abstract": "Bridge connecting step to 4 code chunks."
     }
   ]

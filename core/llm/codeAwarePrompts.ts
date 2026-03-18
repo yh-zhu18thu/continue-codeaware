@@ -541,6 +541,72 @@ ${knowledgeList}
 现在请分析上述知识点的依赖关系。`;
 }
 
+/**
+ * 构造知识点深挖 prompt
+ * 给定已提取的知识点列表，让 LLM 识别这些知识点进一步依赖的、尚未被列出的前置知识点
+ */
+export function constructDeepenKnowledgePointsPrompt(
+  existingKnowledgePoints: Array<{
+    id: string;
+    title: string;
+    content: string;
+    category?: string;
+    difficulty?: string;
+  }>,
+): string {
+  const knowledgeList = existingKnowledgePoints
+    .map(
+      (kp) =>
+        `- **${kp.id}**: ${kp.title} (${kp.category || "unknown"}, ${kp.difficulty || "medium"}) — ${kp.content}`,
+    )
+    .join("\n");
+
+  return `你是一个编程教育专家。以下是从一段代码项目中提取的背景知识点列表。请分析这些知识点，找出它们**进一步依赖但尚未被列出的前置知识点**。
+
+## 已有知识点
+
+${knowledgeList}
+
+## 任务要求
+
+请找出理解上述知识点所需要、但尚未出现在列表中的**更基础的前置知识点**。
+
+### 判断依据
+
+- **深层前置**: 如果已有知识点 A 的理解需要先理解知识点 X，但 X 不在上述列表中，则 X 是需要补充的深层前置知识
+- 重点关注非程序员可能完全不了解的**基础概念**，例如：
+  - 数学概念（一元二次方程、向量点积、坐标系等）
+  - 逻辑概念（条件判断、循环的日常类比等）
+  - 计算机基础概念（变量是什么、函数是什么等）
+- 只补充**真正缺失且对理解有价值**的知识点，不要重复已有的
+- 不要补充过于宽泛的知识（如"数学基础"、"编程基础"）
+- 粒度与已有知识点保持一致
+
+### 输出格式
+
+返回严格的 JSON 格式：
+\`\`\`json
+{
+    "deepened_knowledge_points": [
+        {
+            "title": "<知识点标题，5-10字>",
+            "description": "<详细描述，说明这个知识点是什么、为什么需要它，50-150字>",
+            "category": "syntax|algorithm|framework|concept",
+            "difficulty": "easy|medium|hard",
+            "scope": "code|step",
+            "depends_on_existing_ids": ["<依赖此知识点的已有知识点ID>"]
+        }
+    ]
+}
+\`\`\`
+
+### 数量要求
+- 只补充真正缺失的关键前置知识，通常 0-5 个
+- 如果已有知识点已经足够基础，可以返回空数组
+
+现在请分析并补充深层前置知识点。`;
+}
+
 export function constructGenerateKnowledgeCardDetailPrompt(
   knowledgeCardTheme: string,
   learningGoal: string,

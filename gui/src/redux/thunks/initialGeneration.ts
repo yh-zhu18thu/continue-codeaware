@@ -15,6 +15,7 @@ import {
   constructExtractKnowledgePointsPrompt,
   constructGenerateHighLevelStepNarrativePrompt,
   constructGenerateStepsPrompt,
+  constructKnowledgeDependencyPrompt,
 } from "core/llm/codeAwarePrompts";
 import { buildCodeAwareCognitiveEdges } from "../../utils/codeAwareRelationGraph";
 import { generateCodeChunks } from "../../utils/codeChunkUtils";
@@ -400,15 +401,40 @@ function cosineSimilarity(vec1: number[], vec2: number[]): number {
   return dotProduct / denom;
 }
 
-function inferRelationType(
-  kp1: KnowledgePoint,
-  kp2: KnowledgePoint,
-  similarity: number,
-): "prerequisite" | "related" {
-  if (kp1.difficulty !== kp2.difficulty && similarity > 0.85) {
-    return "prerequisite";
+/**
+ * 将代码内容 tokenize 为标识符/符号 token 集合。
+ * 模拟 non-programmer “识字” 而非 “理解” 的认知行为。
+ */
+function tokenizeCode(code: string): Set<string> {
+  const tokens = code.match(/[a-zA-Z_]\w+|[^\s\w]/g);
+  return new Set(tokens || []);
+}
+
+/**
+ * 计算两段代码的符号级 Jaccard 相似度。
+ * 比语义嵌入更严格，用于减少代码块之间不必要的连接。
+ */
+function computeSymbolJaccard(code1: string, code2: string): number {
+  const set1 = tokenizeCode(code1);
+  const set2 = tokenizeCode(code2);
+
+  if (set1.size === 0 && set2.size === 0) {
+    return 0;
   }
-  return "related";
+
+  let intersectionSize = 0;
+  for (const token of set1) {
+    if (set2.has(token)) {
+      intersectionSize++;
+    }
+  }
+
+  const unionSize = set1.size + set2.size - intersectionSize;
+  if (unionSize === 0) {
+    return 0;
+  }
+
+  return intersectionSize / unionSize;
 }
 
 function isCodeScopedKnowledge(point: KnowledgePoint): boolean {
@@ -1086,47 +1112,31 @@ export const analyzeCodeChunkRelations = createAsyncThunk<
 
     dispatch(
       updateInitialGenerationStatus({
-        currentPhase: "正在计算代码块向量与相似度...",
+        currentPhase: "正在计算代码块符号相似度...",
         progress: 80,
       }),
     );
 
-    const vectors = await embedTexts(
-      codeChunks.map((chunk) => chunk.content),
-      extra,
-    );
-    console.log(`[CA:InitGen:Phase4] 获取 embeddings: ${vectors.length}`);
-
-    const validEmbeddings = vectors
-      .map((embedding, index) => ({
-        chunkId: codeChunks[index]?.id,
-        embedding,
-      }))
-      .filter(
-        (item): item is { chunkId: string; embedding: number[] } =>
-          !!item.chunkId && Array.isArray(item.embedding),
-      );
-
     const relations: CodeChunkRelation[] = [];
-    const threshold = 0.6;
+    const threshold = 0.45;
 
-    for (let i = 0; i < validEmbeddings.length; i++) {
-      for (let j = i + 1; j < validEmbeddings.length; j++) {
-        const similarity = cosineSimilarity(
-          validEmbeddings[i].embedding,
-          validEmbeddings[j].embedding,
+    for (let i = 0; i < codeChunks.length; i++) {
+      for (let j = i + 1; j < codeChunks.length; j++) {
+        const similarity = computeSymbolJaccard(
+          codeChunks[i].content,
+          codeChunks[j].content,
         );
 
         if (similarity >= threshold) {
           relations.push({
-            fromChunkId: validEmbeddings[i].chunkId,
-            toChunkId: validEmbeddings[j].chunkId,
+            fromChunkId: codeChunks[i].id,
+            toChunkId: codeChunks[j].id,
             similarity,
             createdAt: Date.now(),
           });
           relations.push({
-            fromChunkId: validEmbeddings[j].chunkId,
-            toChunkId: validEmbeddings[i].chunkId,
+            fromChunkId: codeChunks[j].id,
+            toChunkId: codeChunks[i].id,
             similarity,
             createdAt: Date.now(),
           });
@@ -1193,12 +1203,21 @@ export const extractAndLinkKnowledge = createAsyncThunk<
             description?: string;
             category?: "syntax" | "algorithm" | "framework" | "concept";
             difficulty?: "easy" | "medium" | "hard";
+            scope?: "code" | "step";
           }>;
         }>(content);
 
         (parsed.knowledge_points || []).forEach((point, index) => {
           if (!point.title || !point.description) {
             return;
+          }
+
+          // Determine scope: use LLM-provided scope, fallback to category-based heuristic
+          let scope: "code" | "step" = point.scope || "step";
+          if (!point.scope) {
+            const isCategoryCodeScoped =
+              point.category === "syntax" || point.category === "algorithm";
+            scope = isCategoryCodeScoped ? "code" : "step";
           }
 
           allKnowledgePoints.push({
@@ -1208,6 +1227,7 @@ export const extractAndLinkKnowledge = createAsyncThunk<
             relatedStepIds: [step.id],
             category: point.category,
             difficulty: point.difficulty || "medium",
+            scope,
           });
         });
       } catch (error) {
@@ -1254,26 +1274,29 @@ export const extractAndLinkKnowledge = createAsyncThunk<
       });
 
     uniqueKnowledgePoints.forEach((point) => {
-      const codeScoped = isCodeScopedKnowledge(point);
+      const scope =
+        point.scope || (isCodeScopedKnowledge(point) ? "code" : "step");
 
       point.relatedStepIds.forEach((stepId) => {
-        if (!codeScoped) {
+        if (scope === "step") {
+          // Step-scoped: only link to step, NOT to code chunks
           knowledgeToStepRelations.push({
             knowledgeId: point.id,
             stepId,
             createdAt: Date.now(),
           });
-        }
-
-        const chunkIds = stepToChunkIds.get(stepId) || [];
-        chunkIds.forEach((chunkId) => {
-          knowledgeToCodeChunkRelations.push({
-            knowledgeId: point.id,
-            codeChunkId: chunkId,
-            viaStepId: stepId,
-            createdAt: Date.now(),
+        } else {
+          // Code-scoped: only link to code chunks, NOT to step
+          const chunkIds = stepToChunkIds.get(stepId) || [];
+          chunkIds.forEach((chunkId) => {
+            knowledgeToCodeChunkRelations.push({
+              knowledgeId: point.id,
+              codeChunkId: chunkId,
+              viaStepId: stepId,
+              createdAt: Date.now(),
+            });
           });
-        });
+        }
       });
     });
 
@@ -1303,6 +1326,73 @@ export const extractAndLinkKnowledge = createAsyncThunk<
       return;
     }
 
+    // Phase 5a: LLM-driven dependency detection
+    const relations: KnowledgeRelation[] = [];
+    const dependencyPairKeys = new Set<string>();
+
+    try {
+      const depPrompt = constructKnowledgeDependencyPrompt(
+        uniqueKnowledgePoints.map((kp) => ({
+          id: kp.id,
+          title: kp.title,
+          content: kp.content,
+          category: kp.category,
+        })),
+      );
+      const depContent = await completeJson(depPrompt, modelTitle, extra);
+      const depParsed = parseJsonFromLlm<{
+        dependencies?: Array<{
+          from_id?: string;
+          to_id?: string;
+          reason?: string;
+        }>;
+      }>(depContent);
+
+      const validIds = new Set(uniqueKnowledgePoints.map((kp) => kp.id));
+
+      (depParsed.dependencies || []).forEach((dep) => {
+        if (
+          !dep.from_id ||
+          !dep.to_id ||
+          !validIds.has(dep.from_id) ||
+          !validIds.has(dep.to_id) ||
+          dep.from_id === dep.to_id
+        ) {
+          return;
+        }
+
+        const forwardKey = `${dep.from_id}-${dep.to_id}`;
+        const reverseKey = `${dep.to_id}-${dep.from_id}`;
+        dependencyPairKeys.add(forwardKey);
+        dependencyPairKeys.add(reverseKey);
+
+        relations.push({
+          fromKnowledgeId: dep.from_id,
+          toKnowledgeId: dep.to_id,
+          similarity: 1.0,
+          relationType: "prerequisite",
+          createdAt: Date.now(),
+        });
+        relations.push({
+          fromKnowledgeId: dep.to_id,
+          toKnowledgeId: dep.from_id,
+          similarity: 1.0,
+          relationType: "prerequisite",
+          createdAt: Date.now(),
+        });
+      });
+
+      console.log(
+        `[CA:InitGen:Phase5] LLM dependency edges: ${relations.length}`,
+      );
+    } catch (error) {
+      console.warn(
+        "[CA:InitGen:Phase5] LLM dependency detection failed, falling back to semantic only",
+        error,
+      );
+    }
+
+    // Phase 5b: Semantic similarity for remaining non-dependency pairs
     const vectors = await embedTexts(
       uniqueKnowledgePoints.map((point) => `${point.title}\n${point.content}`),
       extra,
@@ -1318,14 +1408,16 @@ export const extractAndLinkKnowledge = createAsyncThunk<
           !!item.knowledgeId && Array.isArray(item.embedding),
       );
 
-    const knowledgeById = new Map(
-      uniqueKnowledgePoints.map((point) => [point.id, point]),
-    );
-    const relations: KnowledgeRelation[] = [];
     const threshold = 0.65;
 
     for (let i = 0; i < validEmbeddings.length; i++) {
       for (let j = i + 1; j < validEmbeddings.length; j++) {
+        const pairKey = `${validEmbeddings[i].knowledgeId}-${validEmbeddings[j].knowledgeId}`;
+        // Skip pairs already covered by LLM dependency
+        if (dependencyPairKeys.has(pairKey)) {
+          continue;
+        }
+
         const similarity = cosineSimilarity(
           validEmbeddings[i].embedding,
           validEmbeddings[j].embedding,
@@ -1335,26 +1427,18 @@ export const extractAndLinkKnowledge = createAsyncThunk<
           continue;
         }
 
-        const kp1 = knowledgeById.get(validEmbeddings[i].knowledgeId);
-        const kp2 = knowledgeById.get(validEmbeddings[j].knowledgeId);
-        if (!kp1 || !kp2) {
-          continue;
-        }
-
-        const relationType = inferRelationType(kp1, kp2, similarity);
-
         relations.push({
-          fromKnowledgeId: kp1.id,
-          toKnowledgeId: kp2.id,
+          fromKnowledgeId: validEmbeddings[i].knowledgeId,
+          toKnowledgeId: validEmbeddings[j].knowledgeId,
           similarity,
-          relationType,
+          relationType: "related",
           createdAt: Date.now(),
         });
         relations.push({
-          fromKnowledgeId: kp2.id,
-          toKnowledgeId: kp1.id,
+          fromKnowledgeId: validEmbeddings[j].knowledgeId,
+          toKnowledgeId: validEmbeddings[i].knowledgeId,
           similarity,
-          relationType,
+          relationType: "related",
           createdAt: Date.now(),
         });
       }

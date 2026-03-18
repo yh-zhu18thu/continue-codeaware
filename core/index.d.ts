@@ -706,6 +706,7 @@ export interface KnowledgePoint {
   relatedStepIds: string[]; // 关联的步骤ID列表
   category?: "syntax" | "algorithm" | "framework" | "concept"; // 知识类型
   difficulty?: "easy" | "medium" | "hard"; // 难度级别
+  scope?: "code" | "step"; // 关联目标: code=与代码块连边, step=与步骤连边
 }
 
 // CODEAWARE: 知识点之间的关联关系

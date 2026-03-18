@@ -407,6 +407,17 @@ ${codeContext || "(该步骤暂无对应代码)"}
 - **medium**: 需要一定经验才能理解的知识
 - **hard**: 高级概念或复杂技术
 
+### 关联目标（scope）
+
+每个知识点必须指定 \`scope\` 字段，说明它应该关联到代码还是步骤：
+
+- **"code"**: 语法类、算法类知识——与具体代码行直接相关。non-programmer 需要先认识这些符号/结构才能读懂代码。
+  - 例如：列表推导式语法、装饰器语法、特定 API 调用方式
+- **"step"**: 概念类、框架类知识——与步骤的思想/设计意图相关，不直接对应具体代码行。
+  - 例如：REST API 设计理念、MVC 架构思想、认证授权机制
+
+**判断依据**: 如果一个知识点描述的是"代码里某个符号/语法/表达式怎么读"，选 \`"code"\`；如果描述的是"为什么要这么做、这个步骤背后的思想"，选 \`"step"\`。
+
 ### 输出格式
 
 返回严格的 JSON 格式：
@@ -417,7 +428,8 @@ ${codeContext || "(该步骤暂无对应代码)"}
             "title": "<知识点标题，5-10字>",
             "description": "<详细描述，说明这个知识点是什么、为什么需要它，50-150字>",
             "category": "syntax|algorithm|framework|concept",
-            "difficulty": "easy|medium|hard"
+            "difficulty": "easy|medium|hard",
+            "scope": "code|step"
         }
     ]
 }
@@ -439,25 +451,94 @@ ${codeContext || "(该步骤暂无对应代码)"}
             "title": "JWT 令牌机制",
             "description": "JSON Web Token 是一种用于在客户端和服务器之间安全传输信息的标准。它由头部、载荷和签名三部分组成，可以验证令牌的真实性和完整性。在认证场景中，服务器生成 JWT 返回给客户端，客户端在后续请求中携带 JWT 进行身份验证。",
             "category": "concept",
-            "difficulty": "medium"
+            "difficulty": "medium",
+            "scope": "step"
         },
         {
             "title": "密码哈希与加salt",
             "description": "为了安全存储用户密码，需要使用单向哈希函数（如 bcrypt）将明文密码转换为哈希值。加 salt（随机字符串）可以防止彩虹表攻击。bcrypt 还提供了可调节的计算成本，增加破解难度。",
             "category": "concept",
-            "difficulty": "medium"
+            "difficulty": "medium",
+            "scope": "step"
         },
         {
             "title": "Express 中间件机制",
             "description": "Express 中间件是一些函数，它们可以访问请求对象、响应对象和下一个中间件函数。中间件可以执行代码、修改请求和响应对象、结束请求-响应循环或调用下一个中间件。认证中间件通常在路由处理之前验证用户身份。",
             "category": "framework",
-            "difficulty": "easy"
+            "difficulty": "easy",
+            "scope": "step"
         }
     ]
 }
 \`\`\`
 
 现在请为上述步骤提取知识点。`;
+}
+
+/**
+ * 构造知识点依赖关系识别的 prompt
+ * 给定全部知识点，让 LLM 识别其中存在的前置依赖关系
+ */
+export function constructKnowledgeDependencyPrompt(
+  knowledgePoints: Array<{
+    id: string;
+    title: string;
+    content: string;
+    category?: string;
+  }>,
+): string {
+  const knowledgeList = knowledgePoints
+    .map(
+      (kp) =>
+        `- **${kp.id}**: ${kp.title} (${kp.category || "unknown"}) — ${kp.content}`,
+    )
+    .join("\n");
+
+  return `你是一个编程教育专家。请分析以下知识点列表，找出其中存在**前置依赖关系**的知识点对。
+
+## 知识点列表
+
+${knowledgeList}
+
+## 任务要求
+
+请找出所有存在"理解 A 是理解 B 的前提条件"的知识点对。
+
+### 判断依据
+
+- **前置依赖**: 如果不先理解知识点 A，就无法理解知识点 B，则 A 是 B 的前置依赖
+- 只标注**直接依赖**，不要标注传递依赖（如 A→B→C，不需要标 A→C）
+- 如果两个知识点之间没有明确的前后依赖关系，则**不要**标注
+- 宁可少标也不要错标——只标注你非常确定的依赖关系
+
+### 示例
+
+如果有知识点 "k-s-1-1: Python 变量类型" 和 "k-s-2-1: 字典推导式"，
+则 "Python 变量类型" 是 "字典推导式" 的前置依赖。
+
+### 输出格式
+
+返回严格的 JSON 格式：
+\`\`\`json
+{
+    "dependencies": [
+        {
+            "from_id": "<前置知识点ID>",
+            "to_id": "<依赖知识点ID>",
+            "reason": "<一句话说明为什么 from 是 to 的前提>"
+        }
+    ]
+}
+\`\`\`
+
+如果没有找到任何依赖关系，返回空数组：
+\`\`\`json
+{
+    "dependencies": []
+}
+\`\`\`
+
+现在请分析上述知识点的依赖关系。`;
 }
 
 export function constructGenerateKnowledgeCardDetailPrompt(

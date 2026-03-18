@@ -96,6 +96,27 @@ const KnowledgeCardLoaderContainer = styled.div`
   align-items: center;
 `;
 
+const SectionDivider = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 0 2px;
+`;
+
+const DividerLine = styled.div`
+  flex: 1;
+  height: 1px;
+  background: var(--vscode-editorWidget-border, rgba(128, 128, 128, 0.2));
+`;
+
+const DividerLabel = styled.span`
+  font-size: 10px;
+  color: var(--vscode-descriptionForeground);
+  white-space: nowrap;
+  flex-shrink: 0;
+`;
+
 const ConfusionButtonContainer = styled.div`
   width: 100%;
   display: flex;
@@ -667,9 +688,8 @@ const Step: React.FC<StepProps> = ({
                     ((a as any).viewedAt || 0) - ((b as any).viewedAt || 0),
                 );
               const unviewed = enabledCards.filter((c) => !(c as any).viewedAt);
-              const sortedCards = [...viewed, ...unviewed];
 
-              return sortedCards.map((cardProps, index) => {
+              const renderCard = (cardProps: any, index: number) => {
                 const cardId = cardProps.cardId || `card-${index}`;
                 const shouldCollapseThisCard =
                   shouldCollapseCards ||
@@ -685,24 +705,59 @@ const Step: React.FC<StepProps> = ({
                     onDisable={onDisableKnowledgeCard}
                     onExpansionChange={handleKnowledgeCardExpansionChange}
                     onStartTimedView={onStartTimedView}
-                    onFirstView={(cId) => {
+                    onFirstView={(cId: string) => {
                       if (stepId && onKnowledgeCardFirstView) {
                         onKnowledgeCardFirstView(stepId, cId);
                       }
                     }}
-                    onViewModeChange={(cardId, viewMode) => {
+                    onViewModeChange={(cardId: string, viewMode: string) => {
                       if (stepId && onKnowledgeCardViewModeChange) {
-                        onKnowledgeCardViewModeChange(stepId, cardId, viewMode);
+                        onKnowledgeCardViewModeChange(
+                          stepId,
+                          cardId,
+                          viewMode as any,
+                        );
                       }
                     }}
-                    onFeedback={(cardId, feedback) => {
+                    onFeedback={(cardId: string, feedback: string) => {
                       if (stepId && onKnowledgeCardFeedback) {
-                        onKnowledgeCardFeedback(stepId, cardId, feedback);
+                        onKnowledgeCardFeedback(
+                          stepId,
+                          cardId,
+                          feedback as any,
+                        );
                       }
                     }}
                   />
                 );
-              });
+              };
+
+              return (
+                <>
+                  {viewed.length > 0 && (
+                    <>
+                      <SectionDivider>
+                        <DividerLine />
+                        <DividerLabel>已查看</DividerLabel>
+                        <DividerLine />
+                      </SectionDivider>
+                      {viewed.map(renderCard)}
+                    </>
+                  )}
+                  {unviewed.length > 0 && (
+                    <>
+                      <SectionDivider>
+                        <DividerLine />
+                        <DividerLabel>
+                          {viewed.length > 0 ? "未查看" : "知识卡片"}
+                        </DividerLabel>
+                        <DividerLine />
+                      </SectionDivider>
+                      {unviewed.map(renderCard)}
+                    </>
+                  )}
+                </>
+              );
             })()}
           </KnowledgeCardsContainer>
         )}

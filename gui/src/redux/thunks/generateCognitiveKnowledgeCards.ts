@@ -120,6 +120,7 @@ export const generateCognitiveKnowledgeCards = createAsyncThunk<
     maxCards: number;
     taskDescription?: string;
     existingThemes?: string[];
+    source?: "prerequisite" | "confusion" | "question";
   },
   ThunkApiType
 >(
@@ -133,6 +134,7 @@ export const generateCognitiveKnowledgeCards = createAsyncThunk<
       maxCards,
       taskDescription,
       existingThemes,
+      source = "prerequisite",
     },
     { dispatch, getState, extra },
   ) => {
@@ -382,6 +384,7 @@ export const generateCognitiveKnowledgeCards = createAsyncThunk<
             linkedKnowledgeNodeIds: generated.linkedKnowledgeNodeIds,
             linkedMasteryNodes: generated.linkedMasteryNodes,
             assumedMasteredNodeIds: generated.assumedMasteredNodeIds,
+            source,
           }),
         );
 

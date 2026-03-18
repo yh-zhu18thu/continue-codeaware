@@ -275,6 +275,10 @@ export interface KnowledgeCardProps {
   // Loading states
   isTestsLoading?: boolean; // 新增：测试题加载状态
 
+  // Source tag and first-view tracking
+  source?: "prerequisite" | "confusion" | "question";
+  onFirstView?: (cardId: string) => void;
+
   // Timed mastery tracking
   linkedMasteryNodes?: MasteryNodeRef[];
   linkedKnowledgeNodeIds?: string[];
@@ -317,6 +321,8 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
   disabled = false,
   onDisable,
   isTestsLoading = false, // 新增：测试题加载状态
+  source,
+  onFirstView,
   linkedMasteryNodes,
   linkedKnowledgeNodeIds,
   onStartTimedView,
@@ -537,6 +543,11 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
     const wasExpanded = isExpanded;
 
     setIsExpanded(!isExpanded);
+
+    // Track first view
+    if (!wasExpanded && cardId && onFirstView) {
+      onFirstView(cardId);
+    }
 
     // Log knowledge card expansion/collapse events
     if (cardId) {
@@ -766,6 +777,7 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
         isFlickering={false}
         masteryScore={kcMasteryScore}
         masteryColor={kcMasteryColor}
+        sourceTag={source || null}
       />
       <ContentArea isVisible={isExpanded}>
         {currentViewMode === "read" &&

@@ -415,12 +415,11 @@ const ConfusionPanel: React.FC<ConfusionPanelProps> = ({
     void doAsk(question);
   }, [question, doAsk]);
 
-  const handleCandidateClick = useCallback(
-    (candidate: ConfusionCandidate) => {
-      void doAsk(candidate.label);
-    },
-    [doAsk],
-  );
+  const handleCandidateClick = useCallback((candidate: ConfusionCandidate) => {
+    // Fill the input for user to review/edit before sending
+    setQuestion(candidate.label);
+    setTimeout(() => inputRef.current?.focus(), 50);
+  }, []);
 
   const handleStillConfused = useCallback(() => {
     void doAsk("我还是不太理解，能换一种方式解释吗？");

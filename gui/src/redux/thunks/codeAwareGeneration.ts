@@ -1862,6 +1862,7 @@ export const generatePrerequisiteKnowledgeCards = createAsyncThunk<
             viewMode: "read",
             linkedKnowledgeNodeIds: generated.linkedKnowledgeNodeIds,
             linkedMasteryNodes,
+            source: "prerequisite",
           }),
         );
 
@@ -1953,6 +1954,7 @@ export const generateKnowledgeCardThemesFromQuery = createAsyncThunk<
           maxCards: 3,
           taskDescription: task,
           existingThemes,
+          source: "question",
         }),
       );
 
@@ -3589,6 +3591,7 @@ export const processGlobalQuestion = createAsyncThunk<
           maxCards: Math.max(1, Math.min(3, knowledge_card_themes.length || 3)),
           taskDescription,
           existingThemes,
+          source: "question",
         }),
       );
 
@@ -3949,6 +3952,7 @@ export const convertQAToKnowledgeCard = createAsyncThunk<
             viewMode: "read",
             linkedKnowledgeNodeIds,
             linkedMasteryNodes,
+            source: "confusion",
           }),
         );
 

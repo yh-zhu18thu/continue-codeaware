@@ -585,6 +585,9 @@ export interface StepItem {
   highlightType?: "primary" | "related"; // 区分主要高亮和关联高亮
 }
 
+// CODEAWARE: 知识卡片来源
+export type KnowledgeCardSource = "prerequisite" | "confusion" | "question";
+
 // CODEAWARE: 知识卡片
 export interface KnowledgeCardItem {
   id: string;
@@ -603,6 +606,8 @@ export interface KnowledgeCardItem {
   highlightType?: "primary" | "related"; // 区分主要高亮和关联高亮
   disabled: boolean;
   codeContext?: string; // 代码上下文，在触发knowledge card item生成时一并存储。
+  source?: KnowledgeCardSource; // 卡片来源
+  viewedAt?: number; // 首次查看时间戳
 }
 
 // CODEAWARE: Pin/待学列表项

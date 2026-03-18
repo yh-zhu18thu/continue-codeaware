@@ -178,6 +178,7 @@ interface StepProps {
     cardId: string,
     feedback: "understood" | "uncertain",
   ) => void;
+  onKnowledgeCardFirstView?: (stepId: string, cardId: string) => void;
   onStartTimedView?: (args: {
     type: "step" | "knowledge-card";
     masteryNodeRefs: MasteryNodeRef[];
@@ -218,6 +219,7 @@ const Step: React.FC<StepProps> = ({
   onKnowledgeCardExpansionChange,
   onKnowledgeCardViewModeChange,
   onKnowledgeCardFeedback,
+  onKnowledgeCardFirstView,
   onStartTimedView,
   disabled = false,
 }) => {
@@ -655,9 +657,19 @@ const Step: React.FC<StepProps> = ({
         )}
         {knowledgeCards.filter((card) => !card.disabled).length > 0 && (
           <KnowledgeCardsContainer isHovered={isHovered}>
-            {knowledgeCards
-              .filter((cardProps) => !cardProps.disabled)
-              .map((cardProps, index) => {
+            {(() => {
+              // Sort: viewed cards first (by viewedAt asc), then unviewed (original order)
+              const enabledCards = knowledgeCards.filter((c) => !c.disabled);
+              const viewed = enabledCards
+                .filter((c) => (c as any).viewedAt)
+                .sort(
+                  (a, b) =>
+                    ((a as any).viewedAt || 0) - ((b as any).viewedAt || 0),
+                );
+              const unviewed = enabledCards.filter((c) => !(c as any).viewedAt);
+              const sortedCards = [...viewed, ...unviewed];
+
+              return sortedCards.map((cardProps, index) => {
                 const cardId = cardProps.cardId || `card-${index}`;
                 const shouldCollapseThisCard =
                   shouldCollapseCards ||
@@ -669,10 +681,15 @@ const Step: React.FC<StepProps> = ({
                     key={cardId}
                     {...cardProps}
                     cardId={cardId}
-                    shouldCollapse={shouldCollapseThisCard} // Pass collapse signal with auto-collapse logic
+                    shouldCollapse={shouldCollapseThisCard}
                     onDisable={onDisableKnowledgeCard}
-                    onExpansionChange={handleKnowledgeCardExpansionChange} // Pass expansion change handler
+                    onExpansionChange={handleKnowledgeCardExpansionChange}
                     onStartTimedView={onStartTimedView}
+                    onFirstView={(cId) => {
+                      if (stepId && onKnowledgeCardFirstView) {
+                        onKnowledgeCardFirstView(stepId, cId);
+                      }
+                    }}
                     onViewModeChange={(cardId, viewMode) => {
                       if (stepId && onKnowledgeCardViewModeChange) {
                         onKnowledgeCardViewModeChange(stepId, cardId, viewMode);
@@ -685,7 +702,8 @@ const Step: React.FC<StepProps> = ({
                     }}
                   />
                 );
-              })}
+              });
+            })()}
           </KnowledgeCardsContainer>
         )}
         {/* Show loading animation when generating knowledge card themes */}

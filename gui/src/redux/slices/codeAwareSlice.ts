@@ -994,6 +994,20 @@ export const codeAwareSessionSlice = createSlice({
         }
       }
     },
+    // 记录知识卡片首次查看时间
+    setKnowledgeCardViewedAt: (
+      state,
+      action: PayloadAction<{ stepId: string; cardId: string }>,
+    ) => {
+      const { stepId, cardId } = action.payload;
+      const step = state.steps.find((s) => s.id === stepId);
+      if (step) {
+        const card = step.knowledgeCards.find((c) => c.id === cardId);
+        if (card && !card.viewedAt) {
+          card.viewedAt = Date.now();
+        }
+      }
+    },
     // 设置知识卡片内容加载失败
     setKnowledgeCardError: (
       state,
@@ -1196,6 +1210,7 @@ export const codeAwareSessionSlice = createSlice({
         linkedKnowledgeNodeIds?: string[];
         linkedMasteryNodes?: MasteryNodeRef[];
         assumedMasteredNodeIds?: string[];
+        source?: "prerequisite" | "confusion" | "question";
       }>,
     ) => {
       const {
@@ -1207,6 +1222,7 @@ export const codeAwareSessionSlice = createSlice({
         linkedKnowledgeNodeIds,
         linkedMasteryNodes,
         assumedMasteredNodeIds,
+        source,
       } = action.payload;
       const step = state.steps.find((s) => s.id === stepId);
       if (step) {
@@ -1222,6 +1238,7 @@ export const codeAwareSessionSlice = createSlice({
           tests: [],
           isHighlighted: false,
           disabled: false,
+          source,
         };
         step.knowledgeCards.push(newCard);
       }
@@ -1680,6 +1697,7 @@ export const {
   setKnowledgeCardLoading,
   updateKnowledgeCardContent,
   appendKnowledgeCardContent,
+  setKnowledgeCardViewedAt,
   updateKnowledgeCardTests,
   setKnowledgeCardTestsLoading,
   updateKnowledgeCardTitle,

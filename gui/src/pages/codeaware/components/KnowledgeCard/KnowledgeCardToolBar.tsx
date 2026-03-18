@@ -111,6 +111,35 @@ const MasteryBackgroundFill = styled.div<{
     background-color 0.4s ease-in-out;
 `;
 
+const SourceTag = styled.span<{ $type: string }>`
+  font-size: 9px;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 3px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  margin-right: 6px;
+  z-index: 1;
+  background: ${(p) =>
+    p.$type === "prerequisite"
+      ? "rgba(59,130,246,0.15)"
+      : p.$type === "confusion"
+        ? "rgba(245,158,11,0.15)"
+        : "rgba(16,185,129,0.15)"};
+  color: ${(p) =>
+    p.$type === "prerequisite"
+      ? "#60a5fa"
+      : p.$type === "confusion"
+        ? "#fbbf24"
+        : "#34d399"};
+`;
+
+const SOURCE_LABELS: Record<string, string> = {
+  prerequisite: "背景",
+  confusion: "提问",
+  question: "提问",
+};
+
 interface KnowledgeCardToolBarProps {
   title: string;
   isExpanded?: boolean;
@@ -122,6 +151,7 @@ interface KnowledgeCardToolBarProps {
   isFlickering?: boolean;
   masteryScore?: number | null;
   masteryColor?: string;
+  sourceTag?: "prerequisite" | "confusion" | "question" | null;
 }
 
 const KnowledgeCardToolBar: React.FC<KnowledgeCardToolBarProps> = ({
@@ -135,6 +165,7 @@ const KnowledgeCardToolBar: React.FC<KnowledgeCardToolBarProps> = ({
   isFlickering = false,
   masteryScore = null,
   masteryColor,
+  sourceTag = null,
 }) => {
   const masteryPercent =
     masteryScore !== null ? Math.round(masteryScore * 100) : null;
@@ -143,6 +174,9 @@ const KnowledgeCardToolBar: React.FC<KnowledgeCardToolBarProps> = ({
     <ToolBarContainer isHighlighted={isHighlighted} isFlickering={isFlickering}>
       {/* Title section */}
       <TitleSection onClick={onToggle}>
+        {sourceTag && (
+          <SourceTag $type={sourceTag}>{SOURCE_LABELS[sourceTag]}</SourceTag>
+        )}
         <Title title={title}>{title}</Title>
       </TitleSection>
 

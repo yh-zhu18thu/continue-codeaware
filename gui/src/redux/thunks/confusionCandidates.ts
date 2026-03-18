@@ -90,7 +90,12 @@ function findTopNeighbors(
 
 /* ─── prompt for generating confusion candidate questions ─── */
 function constructConfusionCandidatesPrompt(
-  topics: Array<{ title: string; mastery: number; nodeType: string }>,
+  topics: Array<{
+    title: string;
+    mastery: number;
+    nodeType: string;
+    codeSnippet?: string;
+  }>,
   stepTitle: string | null,
   learningGoal: string,
   taskDescription: string,
@@ -98,21 +103,25 @@ function constructConfusionCandidatesPrompt(
   const topicsJson = topics
     .map(
       (t) =>
-        `{"title": ${JSON.stringify(t.title)}, "mastery": ${t.mastery.toFixed(2)}, "type": "${t.nodeType}"}`,
+        `{"title": ${JSON.stringify(t.title)}, "mastery": ${t.mastery.toFixed(2)}, "type": "${t.nodeType}"${t.codeSnippet ? `, "code_snippet": ${JSON.stringify(t.codeSnippet)}` : ""}}`,
     )
     .join(",\n    ");
 
   return `{
-    "task": "Generate short, thought-provoking questions for a non-programmer user who is learning about a coding project. Each question should help the user reflect on their understanding of the topic. Questions should be in the same language as the project context (Chinese if context is Chinese).",
+    "task": "Generate short, thought-provoking candidate questions for a non-programmer user who is learning about a coding project. The question direction MUST depend on the topic type. Questions should be in the same language as the project context (Chinese if context is Chinese).",
     "topics": [${topicsJson}],
     "current_step": ${JSON.stringify(stepTitle || "全局概览")},
     "learning_goal": ${JSON.stringify(learningGoal)},
     "project_context": ${JSON.stringify(taskDescription)},
     "requirements": [
-      "Generate exactly one short question per topic (1 sentence, max 15 words).",
-      "Questions should be easy to understand but thought-provoking.",
+      "Generate exactly one short question per topic (1 sentence, max 20 Chinese characters or 15 English words).",
+      "CRITICAL — the question direction depends on the topic 'type' field:",
+      "  - type='step': ask about the PURPOSE or MEANING of this step — e.g. '为什么需要这一步？' or '这一步的目标是什么？'",
+      "  - type='situation': ask about HOW the code IMPLEMENTS this — e.g. '代码是如何实现…的？' or '这段代码为什么要这样写？'. When code_snippet is provided, reference the concrete code.",
+      "  - type='code-chunk': ask about WHAT a specific piece of code DOES — e.g. '这行代码的作用是什么？' or '为什么用这种方式来处理…？'. Always reference the code_snippet.",
+      "  - type='background-knowledge': ask about a foundational CONCEPT — e.g. '…是什么意思？' or '为什么…在这里很重要？'",
       "Focus on topics with lower mastery scores — these are areas the user struggles with.",
-      "Use simple language suitable for non-programmers.",
+      "Use simple language suitable for non-programmers. Avoid jargon.",
       "Return a JSON array of objects: [{\\"id\\": \\"topic-0\\", \\"label\\": \\"<question>\\"}]",
       "Do NOT wrap in code blocks. Return raw JSON only."
     ]
@@ -136,6 +145,12 @@ export const generateStepConfusionCandidates = createAsyncThunk<
     const stepTitleById = new Map<string, string>();
     session.steps.forEach((s) => stepTitleById.set(s.id, s.title));
 
+    // Build code chunk lookup for enriching context
+    const codeChunkById = new Map<string, string>();
+    session.codeChunks.forEach((c) => {
+      codeChunkById.set(c.id, c.content.substring(0, 120));
+    });
+
     // Find top-k low-mastery neighbors from the step
     const neighbors = findTopNeighbors(
       stepId,
@@ -143,7 +158,7 @@ export const generateStepConfusionCandidates = createAsyncThunk<
       edges,
       scoreLookup,
       stepTitleById,
-      5,
+      3,
     );
 
     // Also search from situation nodes connected to this step
@@ -151,6 +166,21 @@ export const generateStepConfusionCandidates = createAsyncThunk<
       session.codeAwareMappings,
       session.codeChunks,
     );
+    // Build situation → code snippet mapping
+    const sitCodeSnippets = new Map<string, string>();
+    groups.forEach((g) => {
+      const snippets = g.codeChunkIds
+        .map((id) => codeChunkById.get(id))
+        .filter(Boolean)
+        .slice(0, 2);
+      if (snippets.length > 0) {
+        g.stepIds.forEach((sid) => {
+          const sitId = toSituationNodeId(sid, g.groupId);
+          sitCodeSnippets.set(sitId, snippets.join("\n"));
+        });
+      }
+    });
+
     groups.forEach((g) => {
       if (g.stepIds.includes(stepId)) {
         const sitNodeId = toSituationNodeId(stepId, g.groupId);
@@ -160,8 +190,14 @@ export const generateStepConfusionCandidates = createAsyncThunk<
           edges,
           scoreLookup,
           stepTitleById,
-          3,
+          2,
         );
+        // Attach code snippet context to situation neighbors
+        sitNeighbors.forEach((n) => {
+          if (n.nodeType === "code-chunk") {
+            n.contextTitle = codeChunkById.get(n.nodeId) || n.contextTitle;
+          }
+        });
         neighbors.push(...sitNeighbors);
       }
     });
@@ -177,7 +213,7 @@ export const generateStepConfusionCandidates = createAsyncThunk<
     });
     const topNeighbors = Array.from(uniqueMap.values())
       .sort((a, b) => b.relevance - a.relevance)
-      .slice(0, 5);
+      .slice(0, 3);
 
     if (topNeighbors.length === 0) {
       return [];
@@ -204,6 +240,12 @@ export const generateStepConfusionCandidates = createAsyncThunk<
         title: n.contextTitle,
         mastery: n.mastery,
         nodeType: n.nodeType,
+        codeSnippet:
+          n.nodeType === "situation"
+            ? sitCodeSnippets.get(n.nodeId)
+            : n.nodeType === "code-chunk"
+              ? codeChunkById.get(n.nodeId)
+              : undefined,
       })),
       stepTitle,
       learningGoal,
@@ -303,7 +345,7 @@ export const generateGlobalConfusionCandidates = createAsyncThunk<
       if (seenSteps.has(entry.stepId)) continue;
       seenSteps.add(entry.stepId);
       topEntries.push(entry);
-      if (topEntries.length >= 5) break;
+      if (topEntries.length >= 3) break;
     }
 
     if (topEntries.length === 0) {
@@ -324,11 +366,31 @@ export const generateGlobalConfusionCandidates = createAsyncThunk<
       session.userRequirement?.requirementDescription || "";
     const learningGoal = session.learningGoal || "";
 
+    // Build code snippets for global entries
+    const globalCodeChunkById = new Map<string, string>();
+    session.codeChunks.forEach((c) => {
+      globalCodeChunkById.set(c.id, c.content.substring(0, 120));
+    });
+    const globalSitCodeSnippets = new Map<string, string>();
+    groups.forEach((g) => {
+      const snippets = g.codeChunkIds
+        .map((id) => globalCodeChunkById.get(id))
+        .filter(Boolean)
+        .slice(0, 2);
+      if (snippets.length > 0) {
+        g.stepIds.forEach((sid) => {
+          const sitId = toSituationNodeId(sid, g.groupId);
+          globalSitCodeSnippets.set(sitId, snippets.join("\n"));
+        });
+      }
+    });
+
     const prompt = constructConfusionCandidatesPrompt(
       topEntries.map((e) => ({
         title: e.stepTitle,
         mastery: e.score,
         nodeType: "situation",
+        codeSnippet: globalSitCodeSnippets.get(e.nodeId),
       })),
       null,
       learningGoal,

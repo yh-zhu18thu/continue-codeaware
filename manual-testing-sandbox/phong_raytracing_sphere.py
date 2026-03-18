@@ -1,109 +1,154 @@
 import numpy as np
 from PIL import Image
 
-# Step 1: Define camera and view plane parameters
-WIDTH, HEIGHT = 400, 400
-FOV = np.pi / 3  # 60 degrees in radians
-CAMERA_POS = np.array([0.0, 0.0, 1.0])
-LOOK_AT = np.array([0.0, 0.0, 0.0])
-UP = np.array([0.0, 1.0, 0.0])
+# 1. 定义球体几何参数
+class Sphere:
+    def __init__(self, center, radius, color, ambient, diffuse, specular, shininess):
+        self.center = np.array(center, dtype=np.float32)
+        self.radius = radius
+        self.color = np.array(color, dtype=np.float32)  # Base color
+        self.ambient = np.array(ambient, dtype=np.float32)
+        self.diffuse = np.array(diffuse, dtype=np.float32)
+        self.specular = np.array(specular, dtype=np.float32)
+        self.shininess = shininess
 
-# Step 2: Define the sphere geometry and material (Phong parameters)
-SPHERE_CENTER = np.array([0.0, 0.0, -3.0])
-SPHERE_RADIUS = 1.0
-KA = np.array([0.1, 0.1, 0.1])  # Ambient coefficient
-KD = np.array([0.6, 0.2, 0.2])  # Diffuse color (red-pinkish)
-KS = np.array([0.8, 0.8, 0.8])  # Specular color
-SHININESS = 50  # Shininess exponent
+    def intersect(self, ray_origin, ray_dir):
+        # Returns (t, point, normal) or (None, None, None) if no intersection
+        oc = ray_origin - self.center
+        a = np.dot(ray_dir, ray_dir)
+        b = 2.0 * np.dot(oc, ray_dir)
+        c = np.dot(oc, oc) - self.radius * self.radius
+        discriminant = b * b - 4 * a * c
+        if discriminant < 0:
+            return None, None, None
+        sqrt_disc = np.sqrt(discriminant)
+        t1 = (-b - sqrt_disc) / (2 * a)
+        t2 = (-b + sqrt_disc) / (2 * a)
+        t = None
+        if t1 > 1e-4:
+            t = t1
+        elif t2 > 1e-4:
+            t = t2
+        if t is None:
+            return None, None, None
+        point = ray_origin + t * ray_dir
+        normal = (point - self.center) / self.radius
+        return t, point, normal
 
-# Light source
-diffuse_light_pos = np.array([2.0, 2.0, 0.0])
-light_intensity = np.array([1.0, 1.0, 1.0])  # White light
-ambient_light = np.array([1.0, 1.0, 1.0])
+# 2. 设置光源属性
+class Light:
+    def __init__(self, position, color, intensity):
+        self.position = np.array(position, dtype=np.float32)
+        self.color = np.array(color, dtype=np.float32)
+        self.intensity = intensity
 
-# Step 1 (continued): Calculate camera basis vectors
-def get_camera_basis():
-    forward = (LOOK_AT - CAMERA_POS)
-    forward = forward / np.linalg.norm(forward)
-    left = np.cross(UP, forward)
-    left = left / np.linalg.norm(left)
-    true_up = np.cross(forward, left)
-    return forward, left, true_up
+# 3. 构建摄像机与视平面
+class Camera:
+    def __init__(self, lookfrom, lookat, up, fov, width, height):
+        self.position = np.array(lookfrom, dtype=np.float32)
+        self.lookat = np.array(lookat, dtype=np.float32)
+        self.up = np.array(up, dtype=np.float32)
+        self.fov = fov
+        self.width = width
+        self.height = height
+        self._setup()
 
-forward, left, true_up = get_camera_basis()
+    def _setup(self):
+        w = self.position - self.lookat
+        w = w / np.linalg.norm(w)
+        u = np.cross(self.up, w)
+        u = u / np.linalg.norm(u)
+        v = np.cross(w, u)
+        self.u = u
+        self.v = v
+        self.w = w
+        aspect = self.width / self.height
+        self.screen_height = 2 * np.tan(np.radians(self.fov) / 2)
+        self.screen_width = aspect * self.screen_height
 
-# Step 2: Sphere class for intersection
-def intersect_sphere(ray_origin, ray_dir, center, radius):
-    L = center - ray_origin
-    tca = np.dot(L, ray_dir)
-    d2 = np.dot(L, L) - tca * tca
-    r2 = radius ** 2
-    if d2 > r2:
-        return None
-    thc = np.sqrt(r2 - d2)
-    t0 = tca - thc
-    t1 = tca + thc
-    if t0 < 1e-4 and t1 < 1e-4:
-        return None
-    t = t0 if t0 > 1e-4 else t1
-    hit_point = ray_origin + t * ray_dir
-    normal = (hit_point - center) / radius
-    return hit_point, normal, t
+    def get_ray(self, x, y):
+        # x, y in [0, width-1], [0, height-1]
+        px = (x + 0.5) / self.width - 0.5
+        py = 0.5 - (y + 0.5) / self.height
+        dir = -self.w + self.u * px * self.screen_width + self.v * py * self.screen_height
+        dir = dir / np.linalg.norm(dir)
+        return self.position, dir
 
-# Step 5: Phong lighting
+# 12 steps - main raytracing
 
-def phong_illumination(point, normal, view_dir, ka, kd, ks, shininess, light_pos, light_intensity, ambient_light, shadow):
-    # Ambient
-    Ia = ka * ambient_light
-    # Diffuse
-    light_dir = light_pos - point
-    light_dir = light_dir / np.linalg.norm(light_dir)
-    diff = max(np.dot(normal, light_dir), 0.0)
-    Id = kd * light_intensity * diff if not shadow else 0.0
-    # Specular
-    reflect_dir = 2 * np.dot(normal, light_dir) * normal - light_dir
-    reflect_dir /= np.linalg.norm(reflect_dir)
-    spec = max(np.dot(view_dir, reflect_dir), 0.0) if not shadow else 0.0
-    Is = ks * light_intensity * (spec ** shininess) if not shadow else 0.0
-    return Ia + Id + Is
+def clamp01(x):
+    return np.clip(x, 0, 1)
 
-# Step 3 & 7: Ray generation and color buffer
-def render():
-    aspect_ratio = WIDTH / HEIGHT
-    image = np.zeros((HEIGHT, WIDTH, 3))
-    scale = np.tan(FOV / 2)
-    for y in range(HEIGHT):
-        for x in range(WIDTH):
-            # Step 3: Generate ray for each pixel
-            px = (2 * (x + 0.5) / WIDTH - 1) * aspect_ratio * scale
-            py = (1 - 2 * (y + 0.5) / HEIGHT) * scale
-            ray_dir = px * left + py * true_up + forward
-            ray_dir = ray_dir / np.linalg.norm(ray_dir)
-            # Step 4: Intersection
-            result = intersect_sphere(CAMERA_POS, ray_dir, SPHERE_CENTER, SPHERE_RADIUS)
-            if result is None:
-                image[y, x] = np.array([0.0, 0.0, 0.0])  # Black background
+def render(width, height):
+    # Scene
+    sphere = Sphere(
+        center=[0, 0, -3],
+        radius=1.0,
+        color=[0.6, 0.9, 0.2],  # base (diffuse) color
+        ambient=[0.1, 0.1, 0.1],
+        diffuse=[0.7, 0.7, 0.7],
+        specular=[1.0, 1.0, 1.0],
+        shininess=32
+    )
+    # 2. 光源参数
+    light = Light(
+        position=[2.5, 1.5, -1],
+        color=[1.0, 1.0, 1.0],
+        intensity=2.0
+    )
+    # 3. 摄像机参数
+    cam = Camera(
+        lookfrom=[0, 0, 1],
+        lookat=[0, 0, -3],
+        up=[0, 1, 0],
+        fov=45,
+        width=width,
+        height=height
+    )
+    # 11. 背景色
+    bg_color = np.array([0.05, 0.08, 0.13])
+    # 7. 环境光分量
+    ambient_light = np.array([0.15, 0.15, 0.15])
+
+    img = np.zeros((height, width, 3), dtype=np.float32)
+    for y in range(height):
+        for x in range(width):
+            # 4. 生成像素射线
+            ray_origin, ray_dir = cam.get_ray(x, y)
+
+            # 5. 计算射线和球体交点
+            t, point, normal = sphere.intersect(ray_origin, ray_dir)
+            if t is None:
+                # 11. 填充背景色
+                img[y, x] = bg_color
                 continue
-            hit_pt, normal, t = result
-            # Step 6: Shadow
-            to_light = diffuse_light_pos - hit_pt
-            to_light /= np.linalg.norm(to_light)
-            shadow_ray_origin = hit_pt + normal * 1e-4
-            shadow_result = intersect_sphere(shadow_ray_origin, to_light, SPHERE_CENTER, SPHERE_RADIUS)
-            shadow = shadow_result is not None and shadow_result[2] > 1e-4
-            # Step 5: Phong shading
-            view_dir = -ray_dir
-            color = phong_illumination(hit_pt, normal, view_dir, KA, KD, KS, SHININESS, diffuse_light_pos, light_intensity, ambient_light, shadow)
-            image[y, x] = np.clip(color, 0, 1)
-    return image
+            # 6. 判断阴影遮蔽关系
+            to_light = light.position - point
+            to_light_dir = to_light / np.linalg.norm(to_light)
+            shadow_origin = point + normal * 1e-4
+            t_shadow, _, _ = sphere.intersect(shadow_origin, to_light_dir)
+            shadow = (t_shadow is not None) and (t_shadow < np.linalg.norm(to_light))
+            # 7. 环境光
+            ambient = sphere.ambient * ambient_light
+            # 8. 漫反射
+            diff = 0.0
+            if not shadow:
+                diff = max(np.dot(normal, to_light_dir), 0.0)
+            diffuse = sphere.diffuse * diff * light.intensity * light.color
+            # 9. 镜面反射
+            spec = 0.0
+            if not shadow and diff > 0.0:
+                reflect_dir = 2 * np.dot(normal, to_light_dir) * normal - to_light_dir
+                view_dir = -ray_dir
+                spec = max(np.dot(view_dir, reflect_dir), 0.0) ** sphere.shininess
+            specular = sphere.specular * spec * light.intensity * light.color
+            # 10. 合成像素颜色
+            color = sphere.color * (ambient + diffuse) + specular
+            color = clamp01(color)
+            img[y, x] = color
+    # 12. 保存图片
+    to_img = (img * 255).astype(np.uint8)
+    Image.fromarray(to_img).save("output.png")
 
-# Step 8: Output the image
-def main():
-    img_arr = render()
-    img_arr = (img_arr * 255).astype(np.uint8)
-    img = Image.fromarray(img_arr, mode='RGB')
-    img.save('phong_sphere.png')
-    img.show()
-
-if __name__ == '__main__':
-    main()
+if __name__ == "__main__":
+    render(512, 512)

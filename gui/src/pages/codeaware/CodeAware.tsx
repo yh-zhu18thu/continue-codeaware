@@ -54,6 +54,7 @@ import {
   setKnowledgeCardDisabled,
   setKnowledgeCardFeedback,
   setKnowledgeCardGenerationStatus,
+  setKnowledgeCardViewedAt,
   setKnowledgeCardViewMode,
   setNodeMasteryScores,
   setStepAbstract,
@@ -1778,6 +1779,14 @@ export const CodeAware = () => {
     [dispatch],
   );
 
+  // 记录知识卡片首次查看
+  const handleKnowledgeCardFirstView = useCallback(
+    (stepId: string, cardId: string) => {
+      dispatch(setKnowledgeCardViewedAt({ stepId, cardId }));
+    },
+    [dispatch],
+  );
+
   const handleHighlightEvent = useCallback(
     async (e: HighlightEvent) => {
       // Normal highlight logic for other types
@@ -3311,6 +3320,7 @@ export const CodeAware = () => {
                     handleKnowledgeCardViewModeChange
                   }
                   onKnowledgeCardFeedback={handleKnowledgeCardFeedback}
+                  onKnowledgeCardFirstView={handleKnowledgeCardFirstView}
                   onDisableKnowledgeCard={handleDisableKnowledgeCard}
                   onQuestionSubmit={handleQuestionSubmit}
                   onRegisterRef={registerStepRef}
@@ -3373,6 +3383,10 @@ export const CodeAware = () => {
 
                         // Disabled state
                         disabled: kc.disabled,
+
+                        // Source and viewed state
+                        source: kc.source,
+                        viewedAt: kc.viewedAt,
 
                         // Loading states
                         isTestsLoading: (kc as any).isTestsLoading || false, // 获取测试题加载状态

@@ -486,6 +486,21 @@ const getCommandsMap: (
         await annotationController.deleteAnnotation(thread);
       }
     },
+    "continue.pinCodeAnnotation": async (thread: vscode.CommentThread) => {
+      if (!annotationController) {
+        return;
+      }
+      const info = annotationController.getAnnotationInfo(thread);
+      if (!info) {
+        return;
+      }
+      void sidebar.webviewProtocol.request("codeAnnotationPinToggle", {
+        annotationId: info.annotationId,
+        filePath: info.filePath,
+        lineRange: info.lineRange,
+        title: info.title,
+      });
+    },
     "continue.askFollowUpAnnotation": async (thread: vscode.CommentThread) => {
       if (!annotationController) {
         return;
@@ -546,23 +561,7 @@ const getCommandsMap: (
         },
       );
     },
-    "continue.editCodeAnnotation": async (thread: vscode.CommentThread) => {
-      if (annotationController) {
-        annotationController.editAnnotation(thread);
-      }
-    },
-    "continue.saveCodeAnnotationEdit": async (thread: vscode.CommentThread) => {
-      if (annotationController) {
-        await annotationController.saveEdit(thread);
-      }
-    },
-    "continue.cancelCodeAnnotationEdit": async (
-      thread: vscode.CommentThread,
-    ) => {
-      if (annotationController) {
-        annotationController.cancelEdit(thread);
-      }
-    },
+
     "continue.writeDocstringForCode": async () => {
       captureCommandTelemetry("writeDocstringForCode");
 

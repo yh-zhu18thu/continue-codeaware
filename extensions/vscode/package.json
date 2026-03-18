@@ -352,19 +352,9 @@
         "title": "深入提问"
       },
       {
-        "command": "continue.editCodeAnnotation",
+        "command": "continue.pinCodeAnnotation",
         "category": "Continue",
-        "title": "编辑注释"
-      },
-      {
-        "command": "continue.saveCodeAnnotationEdit",
-        "category": "Continue",
-        "title": "保存"
-      },
-      {
-        "command": "continue.cancelCodeAnnotationEdit",
-        "category": "Continue",
-        "title": "取消"
+        "title": "标记/取消标记"
       },
       {
         "command": "continue.focusContinueSessionId",
@@ -605,30 +595,18 @@
       ],
       "comments/commentThread/title": [
         {
-          "command": "continue.editCodeAnnotation",
+          "command": "continue.askFollowUpAnnotation",
           "group": "inline@1",
           "when": "commentController == codeaware-annotations"
         },
         {
-          "command": "continue.askFollowUpAnnotation",
+          "command": "continue.pinCodeAnnotation",
           "group": "inline@2",
           "when": "commentController == codeaware-annotations"
         },
         {
           "command": "continue.deleteCodeAnnotation",
           "group": "inline@3",
-          "when": "commentController == codeaware-annotations"
-        }
-      ],
-      "comments/comment/context": [
-        {
-          "command": "continue.saveCodeAnnotationEdit",
-          "group": "inline@1",
-          "when": "commentController == codeaware-annotations"
-        },
-        {
-          "command": "continue.cancelCodeAnnotationEdit",
-          "group": "inline@2",
           "when": "commentController == codeaware-annotations"
         }
       ],

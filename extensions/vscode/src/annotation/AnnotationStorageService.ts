@@ -106,16 +106,6 @@ export class AnnotationStorageService {
     return null;
   }
 
-  /** 更新已保存注释的文字内容 */
-  async updateText(id: string, newText: string): Promise<void> {
-    const all = this.getAll();
-    const annotation = all.find((a) => a.id === id);
-    if (annotation) {
-      annotation.annotationText = newText;
-      await this.saveAll(all);
-    }
-  }
-
   /** 清理已不存在文件的注释 */
   async cleanupStaleAnnotations(): Promise<number> {
     const all = this.getAll();

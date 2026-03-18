@@ -563,6 +563,19 @@ export class VsCodeExtension {
     );
     context.subscriptions.push(annotationController);
 
+    // CodeAware: 注册 revealCodeAnnotation webview 消息处理（从 pin 导航触发）
+    this.sidebar.webviewProtocol.on("revealCodeAnnotation", async (msg) => {
+      const { annotationId, filePath, lineRange } = msg.data;
+      // 跳转到对应文件和行
+      await this.ide.showLines(
+        vscode.Uri.file(filePath).toString(),
+        lineRange[0] - 1,
+        lineRange[1] - 1,
+      );
+      // 展开对应的 CommentThread
+      annotationController.revealAnnotation(annotationId);
+    });
+
     registerAllCommands(
       context,
       this.ide,

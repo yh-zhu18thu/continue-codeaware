@@ -63,6 +63,7 @@ import {
   startGlobalQASession,
   submitRequirementContent,
   toggleMasteryIndicators,
+  togglePinnedItem,
   updateHighlight,
 } from "../../redux/slices/codeAwareSlice";
 import {
@@ -383,6 +384,31 @@ export const CodeAware = () => {
         });
       }
     }
+  });
+
+  // CodeAware: 监听代码注释 pin 切换事件（从 IDE CommentThread 标题栏触发）
+  useWebviewListener("codeAnnotationPinToggle", async (data) => {
+    console.log("[CA:UI] 代码注释 pin 切换:", data);
+    const { annotationId, filePath, lineRange, title } = data;
+
+    dispatch(
+      togglePinnedItem({
+        id: `pin-code-${annotationId}-${Date.now()}`,
+        level: "code",
+        targetId: annotationId,
+        title,
+        filePath,
+        lineRange,
+        pinnedAt: Date.now(),
+      }),
+    );
+
+    void logger.addLogEntry("user_toggle_annotation_pin", {
+      annotationId,
+      filePath,
+      lineRange,
+      timestamp: new Date().toISOString(),
+    });
   });
 
   //CodeAware: 增加一个指令，使得可以发送当前所选择的知识卡片id
@@ -2595,6 +2621,13 @@ export const CodeAware = () => {
         );
         setForceExpandedSteps((prev) => new Set([...prev, item.stepId!]));
         setCurrentlyExpandedStepId(item.stepId);
+      } else if (item.level === "code" && item.filePath && item.lineRange) {
+        // 跳转到 IDE 中对应文件/行并展开注释 CommentThread
+        ideMessenger?.post("revealCodeAnnotation", {
+          annotationId: item.targetId,
+          filePath: item.filePath,
+          lineRange: item.lineRange,
+        });
       }
 
       void logger.addLogEntry("user_navigate_to_pinned_item", {
@@ -2604,7 +2637,13 @@ export const CodeAware = () => {
         timestamp: new Date().toISOString(),
       });
     },
-    [dispatch, logger, setForceExpandedSteps, setCurrentlyExpandedStepId],
+    [
+      dispatch,
+      logger,
+      ideMessenger,
+      setForceExpandedSteps,
+      setCurrentlyExpandedStepId,
+    ],
   );
 
   // Pin removal

@@ -114,6 +114,15 @@ export type ToIdeFromWebviewProtocol = ToIdeFromWebviewOrCoreProtocol & {
   ];
   addCodeAwareLogEntry: [{ eventType: string; payload: any }, void];
   endCodeAwareLogSession: [undefined, void];
+  // CodeAware: 跳转并展开代码注释
+  revealCodeAnnotation: [
+    {
+      annotationId: string;
+      filePath: string;
+      lineRange: [number, number];
+    },
+    void,
+  ];
 };
 
 export type ToWebviewFromIdeProtocol = ToWebviewFromIdeOrCoreProtocol & {
@@ -190,6 +199,16 @@ export type ToWebviewFromIdeProtocol = ToWebviewFromIdeOrCoreProtocol & {
     {
       completionId?: string;
       outcome?: any;
+    },
+    void,
+  ];
+  // CodeAware: 代码注释 pin 切换事件
+  codeAnnotationPinToggle: [
+    {
+      annotationId: string;
+      filePath: string;
+      lineRange: [number, number];
+      title: string;
     },
     void,
   ];

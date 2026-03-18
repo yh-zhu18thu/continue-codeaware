@@ -758,6 +758,19 @@ export const codeAwareSessionSlice = createSlice({
         (item) => item.id !== action.payload,
       );
     },
+    /** 切换 pin 状态（用于从 IDE 侧触发的 pin 操作） */
+    togglePinnedItem: (state, action: PayloadAction<PinnedItem>) => {
+      const idx = state.pinnedItems.findIndex(
+        (item) =>
+          item.level === action.payload.level &&
+          item.targetId === action.payload.targetId,
+      );
+      if (idx >= 0) {
+        state.pinnedItems.splice(idx, 1);
+      } else {
+        state.pinnedItems.push(action.payload);
+      }
+    },
     clearPinnedItems: (state) => {
       state.pinnedItems = [];
     },
@@ -1674,6 +1687,7 @@ export const {
   toggleMasteryIndicators,
   addPinnedItem,
   removePinnedItem,
+  togglePinnedItem,
   clearPinnedItems,
   startGlobalQASession,
   addGlobalQAMessage,

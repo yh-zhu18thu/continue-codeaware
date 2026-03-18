@@ -75,8 +75,6 @@ class AnnotationComment implements vscode.Comment {
   body: string | vscode.MarkdownString;
   mode: vscode.CommentMode;
   author: vscode.CommentAuthorInformation;
-  /** 关联的 StoredAnnotation ID */
-  savedBody?: string;
 
   constructor(
     body: string,
@@ -86,7 +84,6 @@ class AnnotationComment implements vscode.Comment {
     this.body = new vscode.MarkdownString(body);
     this.mode = mode;
     this.author = ANNOTATION_AUTHOR;
-    this.savedBody = body;
   }
 }
 
@@ -202,6 +199,37 @@ export class CodeAnnotationController implements vscode.Disposable {
     thread.dispose();
   }
 
+  /** 从 CommentThread 中提取注释信息（用于 pin 等操作） */
+  getAnnotationInfo(thread: vscode.CommentThread): {
+    annotationId: string;
+    filePath: string;
+    lineRange: [number, number];
+    title: string;
+  } | null {
+    const comment = thread.comments[0] as AnnotationComment | undefined;
+    if (!comment?.annotationId) {
+      return null;
+    }
+    const bodyText =
+      typeof comment.body === "string" ? comment.body : comment.body.value;
+    // 取注释正文前 30 个字符作为标题
+    const title = bodyText.length > 30 ? bodyText.slice(0, 30) + "…" : bodyText;
+    return {
+      annotationId: comment.annotationId,
+      filePath: thread.uri.fsPath,
+      lineRange: [thread.range.start.line + 1, thread.range.end.line + 1],
+      title,
+    };
+  }
+
+  /** 展开指定注释的 CommentThread（用于 pin 导航） */
+  revealAnnotation(annotationId: string): void {
+    const thread = this.threads.get(annotationId);
+    if (thread) {
+      thread.collapsibleState = vscode.CommentThreadCollapsibleState.Expanded;
+    }
+  }
+
   /** 深入提问：用户对已有注释追问，LLM 回答后追加为新 comment */
   async askFollowUp(
     thread: vscode.CommentThread,
@@ -281,52 +309,6 @@ export class CodeAnnotationController implements vscode.Disposable {
     question: string,
   ): string {
     return buildFollowUpPrompt(code, language, existingAnnotation, question);
-  }
-
-  /** 保存用户编辑后的注释文字 */
-  async saveEdit(thread: vscode.CommentThread): Promise<void> {
-    const comment = thread.comments[0] as AnnotationComment;
-    if (!comment) {
-      return;
-    }
-
-    const bodyText =
-      typeof comment.body === "string" ? comment.body : comment.body.value;
-
-    comment.savedBody = bodyText;
-    comment.mode = vscode.CommentMode.Preview;
-    // 重新包装为 MarkdownString 以正确渲染
-    comment.body = new vscode.MarkdownString(bodyText);
-    thread.comments = [comment];
-
-    await this.storage.updateText(comment.annotationId, bodyText);
-  }
-
-  /** 取消编辑，恢复原文 */
-  cancelEdit(thread: vscode.CommentThread): void {
-    const comment = thread.comments[0] as AnnotationComment;
-    if (!comment || !comment.savedBody) {
-      return;
-    }
-    comment.body = new vscode.MarkdownString(comment.savedBody);
-    comment.mode = vscode.CommentMode.Preview;
-    thread.comments = [comment];
-  }
-
-  /** 进入编辑模式 */
-  editAnnotation(thread: vscode.CommentThread): void {
-    const comment = thread.comments[0] as AnnotationComment;
-    if (!comment) {
-      return;
-    }
-
-    const bodyText =
-      typeof comment.body === "string" ? comment.body : comment.body.value;
-
-    comment.savedBody = bodyText;
-    comment.body = bodyText; // 编辑模式需要纯文本
-    comment.mode = vscode.CommentMode.Editing;
-    thread.comments = [comment];
   }
 
   /** 恢复指定文件的持久注释 */

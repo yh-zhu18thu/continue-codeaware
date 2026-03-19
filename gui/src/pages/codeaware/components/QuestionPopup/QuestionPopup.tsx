@@ -1,14 +1,14 @@
-import { XMarkIcon } from '@heroicons/react/24/outline';
-import { PaperAirplaneIcon } from '@heroicons/react/24/solid';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
-import styled from 'styled-components';
+import { XMarkIcon } from "@heroicons/react/24/outline";
+import { PaperAirplaneIcon } from "@heroicons/react/24/solid";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import styled from "styled-components";
 import {
   defaultBorderRadius,
   vscBackground,
   vscForeground,
   vscInputBackground,
-  vscInputBorder
+  vscInputBorder,
 } from "../../../../components";
 import { useCodeAwareLogger } from "../../../../util/codeAwareWebViewLogger";
 
@@ -87,7 +87,7 @@ const ButtonGroup = styled.div`
   gap: 8px;
 `;
 
-const Button = styled.button<{ variant: 'primary' | 'secondary' }>`
+const Button = styled.button<{ variant: "primary" | "secondary" }>`
   padding: 4px 8px;
   border-radius: ${defaultBorderRadius};
   font-size: 12px;
@@ -99,8 +99,10 @@ const Button = styled.button<{ variant: 'primary' | 'secondary' }>`
   justify-content: center;
   min-width: 32px;
   height: 28px;
-  
-  ${({ variant }) => variant === 'primary' ? `
+
+  ${({ variant }) =>
+    variant === "primary"
+      ? `
     background-color: #007acc;
     color: white;
     border: 1px solid #007acc;
@@ -114,7 +116,8 @@ const Button = styled.button<{ variant: 'primary' | 'secondary' }>`
       background-color: #004578;
       border-color: #004578;
     }
-  ` : `
+  `
+      : `
     background-color: transparent;
     color: ${vscForeground};
     border: 1px solid ${vscInputBorder};
@@ -145,7 +148,7 @@ const QuestionPopup: React.FC<QuestionPopupProps> = ({
   onSubmit,
   onCancel,
 }) => {
-  const [question, setQuestion] = useState('');
+  const [question, setQuestion] = useState("");
   const questionInputRef = useRef<HTMLTextAreaElement>(null);
   const hasStartedEditingRef = useRef(false);
   const logger = useCodeAwareLogger();
@@ -159,7 +162,7 @@ const QuestionPopup: React.FC<QuestionPopupProps> = ({
       }, 0);
     }
     // Debug: log the selected text
-    console.log('QuestionPopup selectedText:', selectedText);
+    console.log("QuestionPopup selectedText:", selectedText);
   }, [selectedText]);
 
   const handleQuestionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -171,8 +174,11 @@ const QuestionPopup: React.FC<QuestionPopupProps> = ({
     if (!hasStartedEditingRef.current) {
       hasStartedEditingRef.current = true;
       await logger.addLogEntry("user_start_edit_reference_question", {
-        selectedText: selectedText ? (selectedText.length > 200 ? selectedText.substring(0, 200) + "..." : selectedText) : '',
-        timestamp: new Date().toISOString()
+        selectedText: selectedText
+          ? selectedText.length > 200
+            ? selectedText.substring(0, 200) + "..."
+            : selectedText
+          : "",
       });
     }
   };
@@ -181,11 +187,17 @@ const QuestionPopup: React.FC<QuestionPopupProps> = ({
     if (question.trim()) {
       // 记录用户提交引用提问的日志
       await logger.addLogEntry("user_submit_reference_question", {
-        selectedText: selectedText ? (selectedText.length > 200 ? selectedText.substring(0, 200) + "..." : selectedText) : '',
-        question: question.trim().length > 300 ? question.trim().substring(0, 300) + "..." : question.trim(),
-        timestamp: new Date().toISOString()
+        selectedText: selectedText
+          ? selectedText.length > 200
+            ? selectedText.substring(0, 200) + "..."
+            : selectedText
+          : "",
+        question:
+          question.trim().length > 300
+            ? question.trim().substring(0, 300) + "..."
+            : question.trim(),
       });
-      
+
       onSubmit(question.trim());
     }
   }, [question, onSubmit, selectedText, logger]);
@@ -194,29 +206,33 @@ const QuestionPopup: React.FC<QuestionPopupProps> = ({
     onCancel();
   }, [onCancel]);
 
-  const handleOverlayClick = useCallback((e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) {
-      handleCancel();
-    }
-  }, [handleCancel]);
+  const handleOverlayClick = useCallback(
+    (e: React.MouseEvent) => {
+      if (e.target === e.currentTarget) {
+        handleCancel();
+      }
+    },
+    [handleCancel],
+  );
 
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Escape') {
-      handleCancel();
-    } else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-      e.preventDefault();
-      handleSubmit();
-    }
-  }, [handleCancel, handleSubmit]);
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === "Escape") {
+        handleCancel();
+      } else if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        handleSubmit();
+      }
+    },
+    [handleCancel, handleSubmit],
+  );
 
   // Render the popup using React Portal to ensure it appears above all other content
   const popupContent = (
     <PopupOverlay onClick={handleOverlayClick}>
       <PopupContainer onKeyDown={handleKeyDown}>
         {selectedText && selectedText.trim() && (
-          <SelectedTextContainer>
-            {selectedText}
-          </SelectedTextContainer>
+          <SelectedTextContainer>{selectedText}</SelectedTextContainer>
         )}
 
         <QuestionInput
@@ -232,8 +248,8 @@ const QuestionPopup: React.FC<QuestionPopupProps> = ({
           <Button variant="secondary" onClick={handleCancel} title="取消">
             <XMarkIcon width={14} height={14} />
           </Button>
-          <Button 
-            variant="primary" 
+          <Button
+            variant="primary"
             onClick={handleSubmit}
             disabled={!question.trim()}
             title="提问"

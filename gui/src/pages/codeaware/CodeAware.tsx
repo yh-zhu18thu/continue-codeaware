@@ -355,6 +355,14 @@ export const CodeAware = () => {
   useWebviewListener("codeExplanationEvent", async (data) => {
     console.log("[CA:UI] 代码注释事件:", data);
 
+    void logger.addLogEntry("user_code_explanation_event", {
+      action: data.action,
+      filePath: data.filePath,
+      selectedLines: data.selectedLines,
+      language: data.language,
+      question: data.question ? data.question.substring(0, 200) : undefined,
+    });
+
     // Flush any existing pending view
     handleFlushTimedViewMastery();
 
@@ -468,8 +476,8 @@ export const CodeAware = () => {
       annotationId,
       filePath,
       lineRange,
+      title,
       action: wasPinned ? "unpin" : "pin",
-      timestamp: new Date().toISOString(),
     });
   });
 
@@ -768,13 +776,6 @@ export const CodeAware = () => {
           previousStep.knowledgeCardGenerationStatus === "generating" &&
           currentStep.knowledgeCardGenerationStatus === "ready"
         ) {
-          void logger.addLogEntry("system_knowledge_card_themes_generated", {
-            stepId: currentStep.id,
-            stepTitle: currentStep.title,
-            knowledgeCardCount: currentStep.knowledgeCards.length,
-            timestamp: new Date().toISOString(),
-          });
-
           const themeExamples = currentStep.knowledgeCards
             .slice(0, 3)
             .map((card) => card.title);
@@ -831,7 +832,6 @@ export const CodeAware = () => {
       await logger.addLogEntry("user_create_new_session", {
         username,
         sessionName,
-        timestamp: new Date().toISOString(),
       });
 
       // CodeAware: Create and open a new Python file with session name
@@ -846,24 +846,8 @@ export const CodeAware = () => {
         console.log(
           ` [CA:UI] Created and opened Python file: ${pythonFilename}`,
         );
-
-        // Log file creation
-        await logger.addLogEntry("system_create_session_file", {
-          filename: pythonFilename,
-          username,
-          sessionName,
-          timestamp: new Date().toISOString(),
-        });
       } catch (error) {
         console.error(" [CA:UI] Failed to create and open Python file:", error);
-
-        // Log the error but don't prevent session creation
-        await logger.addLogEntry("system_create_session_file_error", {
-          error: error instanceof Error ? error.message : String(error),
-          username,
-          sessionName,
-          timestamp: new Date().toISOString(),
-        });
       }
 
       // Close dialog
@@ -881,9 +865,7 @@ export const CodeAware = () => {
     "newSession",
     async () => {
       // Log new session request
-      await logger.addLogEntry("user_request_new_session", {
-        timestamp: new Date().toISOString(),
-      });
+      await logger.addLogEntry("user_request_new_session", {});
 
       // Show dialog to get user info
       setIsSessionDialogOpen(true);
@@ -948,7 +930,6 @@ export const CodeAware = () => {
         requirement.length > 300
           ? `${requirement.substring(0, 300)}...`
           : requirement,
-      timestamp: new Date().toISOString(),
     });
 
     dispatch(resetSessionExceptRequirement());
@@ -956,9 +937,13 @@ export const CodeAware = () => {
     void dispatch(executeInitialGeneration({ userRequirement: requirement }))
       .unwrap()
       .catch(async (error) => {
-        await logger.addLogEntry("user_retry_initial_generation_failed", {
+        await logger.addLogEntry("user_retry_initial_generation", {
+          result: "error",
+          requirement:
+            requirement.length > 300
+              ? `${requirement.substring(0, 300)}...`
+              : requirement,
           error: error instanceof Error ? error.message : String(error),
-          timestamp: new Date().toISOString(),
         });
       });
   }, [dispatch, logger, userRequirement]);
@@ -977,7 +962,6 @@ export const CodeAware = () => {
         edgesPath: result.edgesPath,
         nodeMasteryPath: result.nodeMasteryPath,
         nodeIndexPath: result.nodeIndexPath,
-        timestamp: new Date().toISOString(),
       });
     } catch (error) {
       console.error("[CA:UI] 导出知识状态失败:", error);
@@ -1003,7 +987,6 @@ export const CodeAware = () => {
       await logger.addLogEntry("user_export_preset", {
         presetName: result.presetName,
         snapshotPath: result.snapshotPath,
-        timestamp: new Date().toISOString(),
       });
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
@@ -1064,9 +1047,10 @@ export const CodeAware = () => {
       // 1. 获取当前选中的代码
       if (!currentCodeSelection) {
         console.warn("[CA:UI] 未选中代码");
-        await logger.addLogEntry("user_click_jump_to_semantic_no_selection", {
-          timestamp: new Date().toISOString(),
-        });
+        await logger.addLogEntry(
+          "user_click_jump_to_semantic_no_selection",
+          {},
+        );
         return;
       }
 
@@ -1087,9 +1071,13 @@ export const CodeAware = () => {
 
       if (!result || result.mappings.length === 0) {
         console.warn("[CA:UI] 未找到对应的语义元素");
-        await logger.addLogEntry("user_click_jump_to_semantic_no_result", {
-          codeSelection: currentCodeSelection,
-          timestamp: new Date().toISOString(),
+        await logger.addLogEntry("user_click_jump_to_semantic", {
+          result: "no_result",
+          selectedCodeText: currentCodeSelection.selectedContent
+            ? currentCodeSelection.selectedContent.substring(0, 300)
+            : "",
+          filePath: currentCodeSelection.filePath,
+          selectedLines: currentCodeSelection.selectedLines,
         });
         return;
       }
@@ -1133,14 +1121,23 @@ export const CodeAware = () => {
         element.scrollIntoView({ behavior: "smooth", block: "center" });
       }
 
-      await logger.addLogEntry("user_click_jump_to_semantic_success", {
+      await logger.addLogEntry("user_click_jump_to_semantic", {
+        result: "success",
         codeChunkId: result.chunk.id,
+        selectedCodeText: result.chunk.content
+          ? result.chunk.content.substring(0, 300)
+          : "",
         semanticElementIds: uniqueSemanticMappings.map(
           (mapping) =>
             `${mapping.semanticElementType}:${mapping.semanticElementId}`,
         ),
+        matchedStepTitles: uniqueSemanticMappings
+          .filter((m) => m.semanticElementType === "step")
+          .map((m) => {
+            const step = steps.find((s) => s.id === m.semanticElementId);
+            return step?.title || m.semanticElementId;
+          }),
         matchedCount: uniqueSemanticMappings.length,
-        timestamp: new Date().toISOString(),
       });
 
       // Start situation tracking for the matched step(s)
@@ -1198,9 +1195,9 @@ export const CodeAware = () => {
       }
     } catch (error) {
       console.error("[CA:UI] 跳转失败:", error);
-      await logger.addLogEntry("user_click_jump_to_semantic_error", {
+      await logger.addLogEntry("user_click_jump_to_semantic", {
+        result: "error",
         error: error instanceof Error ? error.message : String(error),
-        timestamp: new Date().toISOString(),
       });
     } finally {
       setIsMappingLookupInProgress(false);
@@ -1242,9 +1239,7 @@ export const CodeAware = () => {
 
       if (!focusedElement) {
         console.warn("[CA:UI] 未选中语义元素");
-        await logger.addLogEntry("user_click_jump_to_code_no_selection", {
-          timestamp: new Date().toISOString(),
-        });
+        await logger.addLogEntry("user_click_jump_to_code_no_selection", {});
         return;
       }
 
@@ -1262,10 +1257,16 @@ export const CodeAware = () => {
 
       if (!result || result.mappings.length === 0) {
         console.warn("[CA:UI] 未找到对应的代码块");
-        await logger.addLogEntry("user_click_jump_to_code_no_result", {
+        await logger.addLogEntry("user_click_jump_to_code", {
+          result: "no_result",
           semanticElementId: focusedElement.id,
           semanticElementType: focusedElement.type,
-          timestamp: new Date().toISOString(),
+          semanticElementTitle: (() => {
+            const step = steps.find((s) => s.id === focusedElement!.id);
+            if (step) return step.title;
+            const hls = highLevelSteps.find((h) => h.id === focusedElement!.id);
+            return hls?.content || focusedElement!.id;
+          })(),
         });
         return;
       }
@@ -1304,12 +1305,23 @@ export const CodeAware = () => {
         ]),
       );
 
-      await logger.addLogEntry("user_click_jump_to_code_success", {
+      await logger.addLogEntry("user_click_jump_to_code", {
+        result: "success",
         semanticElementId: focusedElement.id,
         semanticElementType: focusedElement.type,
-        codeChunkIds: matchedChunks.map((chunk) => chunk.id),
+        semanticElementTitle: (() => {
+          const step = steps.find((s) => s.id === focusedElement!.id);
+          if (step) return step.title;
+          const hls = highLevelSteps.find((h) => h.id === focusedElement!.id);
+          return hls?.content || focusedElement!.id;
+        })(),
+        matchedCodeChunks: matchedChunks.map((chunk) => ({
+          id: chunk.id,
+          content: chunk.content ? chunk.content.substring(0, 200) : "",
+          filePath: chunk.filePath,
+          lineRange: chunk.range,
+        })),
         matchedCount: matchedChunks.length,
-        timestamp: new Date().toISOString(),
       });
 
       // Start situation tracking for the focused step
@@ -1346,9 +1358,9 @@ export const CodeAware = () => {
       }
     } catch (error) {
       console.error("[CA:UI] 跳转失败:", error);
-      await logger.addLogEntry("user_click_jump_to_code_error", {
+      await logger.addLogEntry("user_click_jump_to_code", {
+        result: "error",
         error: error instanceof Error ? error.message : String(error),
-        timestamp: new Date().toISOString(),
       });
     } finally {
       setIsMappingLookupInProgress(false);
@@ -1649,7 +1661,6 @@ export const CodeAware = () => {
         console.log(`[CA:UI] 检测到预设密语: ${presetName}`);
         await logger.addLogEntry("user_load_preset", {
           presetName,
-          timestamp: new Date().toISOString(),
         });
         dispatch(resetSessionExceptRequirement());
         dispatch(submitRequirementContent(requirement));
@@ -1658,14 +1669,15 @@ export const CodeAware = () => {
           .unwrap()
           .then(async () => {
             console.log(`[CA:UI] 预设 "${presetName}" 加载完成`);
-            await logger.addLogEntry("user_load_preset_completed", {
+            await logger.addLogEntry("user_load_preset_result", {
+              result: "success",
               presetName,
-              timestamp: new Date().toISOString(),
             });
           })
           .catch(async (error) => {
             console.error(`[CA:UI] 预设 "${presetName}" 加载失败`, error);
-            await logger.addLogEntry("user_load_preset_failed", {
+            await logger.addLogEntry("user_load_preset_result", {
+              result: "error",
               presetName,
               error: error instanceof Error ? error.message : String(error),
             });
@@ -1683,7 +1695,6 @@ export const CodeAware = () => {
           userRequirement.requirementDescription.length > 300
             ? userRequirement.requirementDescription.substring(0, 300) + "..."
             : userRequirement.requirementDescription,
-        timestamp: new Date().toISOString(),
       });
 
       // 检查是否有修改：比较新的requirement和原来的requirementDescription
@@ -1717,13 +1728,15 @@ export const CodeAware = () => {
         .unwrap()
         .then(async () => {
           console.log("[CA:UI] Initial generation flow completed");
-          await logger.addLogEntry("user_regenerate_steps_completed", {
+          await logger.addLogEntry("user_regenerate_steps_result", {
+            result: "success",
             requirement: requirement.trim(),
           });
         })
         .catch(async (error) => {
           console.error("[CA:UI] Initial generation flow failed", error);
-          await logger.addLogEntry("user_regenerate_steps_failed", {
+          await logger.addLogEntry("user_regenerate_steps_result", {
+            result: "error",
             requirement: requirement.trim(),
             error: error instanceof Error ? error.message : String(error),
           });
@@ -1745,9 +1758,7 @@ export const CodeAware = () => {
   }, [dispatch, logger, userRequirement]);
 
   const handleRegenerateCode = useCallback(async () => {
-    await logger.addLogEntry("user_request_regenerate_code", {
-      timestamp: new Date().toISOString(),
-    });
+    await logger.addLogEntry("user_request_regenerate_code", {});
 
     try {
       console.log("[CA:UI] Starting code regeneration...");
@@ -1755,9 +1766,7 @@ export const CodeAware = () => {
       // 1. Clear all code chunks and mappings
       dispatch(clearAllCodeAndMappings());
 
-      await logger.addLogEntry("user_clear_code_and_mappings", {
-        timestamp: new Date().toISOString(),
-      });
+      await logger.addLogEntry("user_clear_code_and_mappings", {});
 
       // 2. Get current file content
       const currentFileResponse = await ideMessenger?.request(
@@ -1785,7 +1794,6 @@ export const CodeAware = () => {
 
         await logger.addLogEntry("user_clear_file_content", {
           filePath: currentFile.path,
-          timestamp: new Date().toISOString(),
         });
       } catch (error) {
         console.warn("[CA:UI] Failed to clear file content:", error);
@@ -1804,8 +1812,8 @@ export const CodeAware = () => {
           "没有已生成的步骤需要重新生成代码。",
         ]);
 
-        await logger.addLogEntry("user_regenerate_code_no_steps", {
-          timestamp: new Date().toISOString(),
+        await logger.addLogEntry("user_regenerate_code_result", {
+          result: "no_steps",
         });
         return;
       }
@@ -1857,10 +1865,10 @@ export const CodeAware = () => {
           `成功重新生成了 ${generatedSteps.length} 个步骤的代码！`,
         ]);
 
-        await logger.addLogEntry("user_regenerate_code_completed", {
+        await logger.addLogEntry("user_regenerate_code_result", {
+          result: "success",
           stepsCount: generatedSteps.length,
           stepIds: generatedSteps.map((s) => s.id),
-          timestamp: new Date().toISOString(),
         });
       } else if (generateCodeFromSteps.rejected.match(result)) {
         console.error(
@@ -1878,10 +1886,10 @@ export const CodeAware = () => {
           "代码重新生成失败，请重试。",
         ]);
 
-        await logger.addLogEntry("user_regenerate_code_error", {
+        await logger.addLogEntry("user_regenerate_code_result", {
+          result: "error",
           error: result.error.message || "Code regeneration failed",
           stepsCount: generatedSteps.length,
-          timestamp: new Date().toISOString(),
         });
       }
     } catch (error) {
@@ -1900,9 +1908,9 @@ export const CodeAware = () => {
         "代码重新生成过程中发生错误，请重试。",
       ]);
 
-      await logger.addLogEntry("user_regenerate_code_error", {
+      await logger.addLogEntry("user_regenerate_code_result", {
+        result: "error",
         error: error instanceof Error ? error.message : String(error),
-        timestamp: new Date().toISOString(),
       });
     }
   }, [steps, ideMessenger, dispatch, logger]);
@@ -1929,6 +1937,7 @@ export const CodeAware = () => {
       // Log knowledge card generation
       await logger.addLogEntry("user_start_view_knowledge_card", {
         stepId,
+        stepTitle: steps.find((s) => s.id === stepId)?.title || stepId,
         cardId,
         theme,
         learningGoal,
@@ -2007,6 +2016,7 @@ export const CodeAware = () => {
       // Log test generation
       await logger.addLogEntry("user_start_generate_knowledge_card_tests", {
         stepId,
+        stepTitle: steps.find((s) => s.id === stepId)?.title || stepId,
         cardId,
         title,
         theme,
@@ -2108,9 +2118,7 @@ export const CodeAware = () => {
   );
 
   const removeHighlightEvent = useCallback(async () => {
-    await logger.addLogEntry("user_clear_all_highlights", {
-      timestamp: new Date().toISOString(),
-    });
+    await logger.addLogEntry("user_clear_all_highlights", {});
 
     // Re-enable auto-scroll when highlights are cleared
     setIsAutoScrollDisabled(false);
@@ -2131,7 +2139,7 @@ export const CodeAware = () => {
       // Log step execution
       await logger.addLogEntry("user_start_execute_steps", {
         stepId,
-        timestamp: new Date().toISOString(),
+        stepTitle: steps.find((s) => s.id === stepId)?.title || stepId,
       });
 
       try {
@@ -2139,7 +2147,8 @@ export const CodeAware = () => {
         const targetStepIndex = steps.findIndex((step) => step.id === stepId);
         if (targetStepIndex === -1) {
           console.error(`[CA:UI] Step with id ${stepId} not found`);
-          await logger.addLogEntry("user_execute_steps_error", {
+          await logger.addLogEntry("user_execute_steps_result", {
+            result: "error",
             stepId,
             error: "Step not found",
           });
@@ -2177,7 +2186,8 @@ export const CodeAware = () => {
 
         if (unexecutedSteps.length === 0) {
           console.log("[CA:UI] All steps up to target already executed");
-          await logger.addLogEntry("user_execute_steps_completed", {
+          await logger.addLogEntry("user_execute_steps_result", {
+            result: "success",
             stepId,
             message: "All steps already executed",
           });
@@ -2213,7 +2223,8 @@ export const CodeAware = () => {
             isUntitled: true,
             contents: "", // 从空文件开始
           };
-          await logger.addLogEntry("user_execute_steps_no_file", {
+          await logger.addLogEntry("user_execute_steps_result", {
+            result: "no_file",
             stepId,
             message: "No current file, agent will create one via tool calling",
           });
@@ -2298,7 +2309,8 @@ export const CodeAware = () => {
         }
       } catch (error) {
         console.error("[CA:UI] 执行到步骤时发生错误:", error);
-        await logger.addLogEntry("user_execute_steps_error", {
+        await logger.addLogEntry("user_execute_steps_result", {
+          result: "error",
           stepId,
           error: error instanceof Error ? error.message : String(error),
         });
@@ -2329,7 +2341,7 @@ export const CodeAware = () => {
 
       await logger.addLogEntry("user_start_rerun_step", {
         stepId,
-        timestamp: new Date().toISOString(),
+        stepTitle: steps.find((s) => s.id === stepId)?.title || stepId,
       });
 
       try {
@@ -2337,7 +2349,8 @@ export const CodeAware = () => {
         const step = steps.find((s) => s.id === stepId);
         if (!step) {
           console.error(`[CA:UI] Step with id ${stepId} not found`);
-          await logger.addLogEntry("user_rerun_step_error", {
+          await logger.addLogEntry("user_rerun_step_result", {
+            result: "error",
             stepId,
             error: "Step not found",
           });
@@ -2349,7 +2362,8 @@ export const CodeAware = () => {
           console.warn(
             `[CA:UI] Step ${stepId} is not in step_dirty status, current status: ${step.stepStatus}`,
           );
-          await logger.addLogEntry("user_rerun_step_error", {
+          await logger.addLogEntry("user_rerun_step_result", {
+            result: "error",
             stepId,
             error: `Invalid step status: ${step.stepStatus}, expected: step_dirty`,
           });
@@ -2399,13 +2413,14 @@ export const CodeAware = () => {
         console.log("[CA:UI] 步骤重新运行成功");
         ideMessenger?.post("showToast", ["info", "步骤重新运行成功！"]);
 
-        await logger.addLogEntry("user_rerun_step_completed", {
+        await logger.addLogEntry("user_rerun_step_result", {
+          result: "success",
           stepId,
-          timestamp: new Date().toISOString(),
         });
       } catch (error) {
         console.error("[CA:UI] 重新运行步骤时发生错误:", error);
-        await logger.addLogEntry("user_rerun_step_error", {
+        await logger.addLogEntry("user_rerun_step_result", {
+          result: "error",
           stepId,
           error: error instanceof Error ? error.message : String(error),
         });
@@ -2424,14 +2439,14 @@ export const CodeAware = () => {
     async (stepId: string, newStatus: StepStatus) => {
       await logger.addLogEntry("user_change_step_status", {
         stepId,
+        stepTitle: steps.find((s) => s.id === stepId)?.title || stepId,
         newStatus,
-        timestamp: new Date().toISOString(),
       });
 
       // Update step status in Redux store
       dispatch(setStepStatus({ stepId, status: newStatus }));
     },
-    [dispatch, logger],
+    [dispatch, logger, steps],
   );
 
   const handleStepExpansionChange = useCallback(
@@ -2614,14 +2629,14 @@ export const CodeAware = () => {
         stepId,
         selectedText: selectedText.substring(0, 200), // Log first 200 chars
         question: question.substring(0, 200), // Log first 200 chars
-        timestamp: new Date().toISOString(),
       });
 
       // 通过stepId查找对应的步骤信息
       const step = steps.find((s) => s.id === stepId);
       if (!step) {
         console.error("[CA:UI] 未找到对应的步骤:", stepId);
-        await logger.addLogEntry("user_submit_question_error", {
+        await logger.addLogEntry("user_submit_question_result", {
+          result: "error",
           stepId,
           error: "Step not found",
         });
@@ -2666,9 +2681,9 @@ export const CodeAware = () => {
             "[CA:UI]  Knowledge card themes generated successfully, status set to checked",
           );
 
-          await logger.addLogEntry("user_submit_question_completed", {
+          await logger.addLogEntry("user_submit_question_result", {
+            result: "success",
             stepId,
-            timestamp: new Date().toISOString(),
           });
         } else if (
           generateKnowledgeCardThemesFromQuery.rejected.match(result)
@@ -2677,7 +2692,8 @@ export const CodeAware = () => {
             "[CA:UI]  Failed to generate knowledge card themes:",
             result.error.message,
           );
-          await logger.addLogEntry("user_submit_question_error", {
+          await logger.addLogEntry("user_submit_question_result", {
+            result: "error",
             stepId,
             error:
               result.error.message ||
@@ -2693,7 +2709,8 @@ export const CodeAware = () => {
         }
       } catch (error) {
         console.error("[CA:UI] Error in handleQuestionSubmit:", error);
-        await logger.addLogEntry("user_submit_question_error", {
+        await logger.addLogEntry("user_submit_question_result", {
+          result: "error",
           stepId,
           error: error instanceof Error ? error.message : String(error),
         });
@@ -2713,7 +2730,6 @@ export const CodeAware = () => {
     async (question: string): Promise<string> => {
       await logger.addLogEntry("user_submit_global_confusion_question", {
         question: question.substring(0, 200),
-        timestamp: new Date().toISOString(),
       });
 
       let currentCode = "";
@@ -2762,7 +2778,13 @@ export const CodeAware = () => {
 
       await logger.addLogEntry("user_end_global_confusion", {
         messageCount: messages.length,
-        timestamp: new Date().toISOString(),
+        conversation: messages.map((m) => ({
+          role: m.role,
+          content:
+            m.content.length > 500
+              ? m.content.substring(0, 500) + "..."
+              : m.content,
+        })),
       });
 
       // Populate globalQASession for convertQAToKnowledgeCard
@@ -2790,8 +2812,8 @@ export const CodeAware = () => {
 
         await logger.addLogEntry("user_global_confusion_card_created", {
           stepId,
+          stepTitle: steps.find((s) => s.id === stepId)?.title || stepId,
           cardId,
-          timestamp: new Date().toISOString(),
         });
       } catch (error) {
         console.error(
@@ -2807,7 +2829,7 @@ export const CodeAware = () => {
         dispatch(clearGlobalQASession());
       }
     },
-    [dispatch, logger],
+    [dispatch, logger, steps],
   );
 
   // Global overlay open/close
@@ -2817,7 +2839,6 @@ export const CodeAware = () => {
       setIsGlobalOverlayOpen(true);
       void logger.addLogEntry("user_open_global_overlay", {
         tab,
-        timestamp: new Date().toISOString(),
       });
 
       // Generate global confusion candidates when confusion tab opens
@@ -2845,9 +2866,7 @@ export const CodeAware = () => {
 
   const handleCloseGlobalOverlay = useCallback(() => {
     setIsGlobalOverlayOpen(false);
-    void logger.addLogEntry("user_close_global_overlay", {
-      timestamp: new Date().toISOString(),
-    });
+    void logger.addLogEntry("user_close_global_overlay", {});
   }, [logger]);
 
   // Pin navigation: scroll to target item
@@ -2882,7 +2901,7 @@ export const CodeAware = () => {
         pinnedItemId: item.id,
         level: item.level,
         targetId: item.targetId,
-        timestamp: new Date().toISOString(),
+        itemTitle: item.title || item.targetId,
       });
     },
     [
@@ -2957,7 +2976,7 @@ export const CodeAware = () => {
         pinnedItemId: itemId,
         level: item?.level,
         targetId: item?.targetId,
-        timestamp: new Date().toISOString(),
+        itemTitle: item?.title || item?.targetId,
       });
     },
     [dispatch, logger, steps],
@@ -2968,7 +2987,7 @@ export const CodeAware = () => {
     async (stepId: string) => {
       await logger.addLogEntry("user_step_confusion", {
         stepId,
-        timestamp: new Date().toISOString(),
+        stepTitle: steps.find((s) => s.id === stepId)?.title || stepId,
       });
       // Generate mastery-based candidates asynchronously
       setStepConfusionCandidatesLoading(true);
@@ -2987,7 +3006,7 @@ export const CodeAware = () => {
         setStepConfusionCandidatesLoading(false);
       }
     },
-    [dispatch, logger],
+    [dispatch, logger, steps],
   );
 
   // Step-level confusion Q&A ask handler
@@ -3016,8 +3035,15 @@ export const CodeAware = () => {
     async (stepId: string, messages: ConfusionMessage[]) => {
       await logger.addLogEntry("user_step_confusion_end", {
         stepId,
+        stepTitle: steps.find((s) => s.id === stepId)?.title || stepId,
         messageCount: messages.length,
-        timestamp: new Date().toISOString(),
+        conversation: messages.map((m) => ({
+          role: m.role,
+          content:
+            m.content.length > 500
+              ? m.content.substring(0, 500) + "..."
+              : m.content,
+        })),
       });
 
       if (messages.length === 0) return;
@@ -3069,8 +3095,9 @@ export const CodeAware = () => {
 
         await logger.addLogEntry("user_step_confusion_card_created", {
           stepId: targetStepId,
+          stepTitle:
+            steps.find((s) => s.id === targetStepId)?.title || targetStepId,
           cardId,
-          timestamp: new Date().toISOString(),
         });
       } catch (error) {
         console.error(
@@ -3086,7 +3113,7 @@ export const CodeAware = () => {
         dispatch(clearGlobalQASession());
       }
     },
-    [dispatch, logger, codeAwareSessionState],
+    [dispatch, logger, steps, codeAwareSessionState],
   );
 
   // Debounce ref for pin handlers — prevents stale closure issues on rapid clicks
@@ -3152,8 +3179,8 @@ export const CodeAware = () => {
 
       void logger.addLogEntry("user_toggle_step_pin", {
         stepId,
+        stepTitle: step.title,
         action: alreadyPinned ? "unpin" : "pin",
-        timestamp: new Date().toISOString(),
       });
     },
     [dispatch, logger, steps],
@@ -3223,8 +3250,8 @@ export const CodeAware = () => {
       void logger.addLogEntry("user_toggle_kc_pin", {
         stepId,
         cardId,
+        cardTitle: card.title,
         action: alreadyPinned ? "unpin" : "pin",
-        timestamp: new Date().toISOString(),
       });
     },
     [dispatch, logger, steps],
@@ -3243,8 +3270,8 @@ export const CodeAware = () => {
       await logger.addLogEntry("user_kc_confusion_ask", {
         stepId,
         cardId,
+        cardTitle: card?.title || cardId,
         question: question.substring(0, 200),
-        timestamp: new Date().toISOString(),
       });
 
       // Apply mastery decrease for confusion
@@ -3297,17 +3324,25 @@ export const CodeAware = () => {
   // Knowledge card level confusion end handler — updates the current card content
   const handleKCConfusionEnd = useCallback(
     async (stepId: string, cardId: string, messages: ConfusionMessage[]) => {
+      const step = steps.find((s) => s.id === stepId);
       await logger.addLogEntry("user_kc_confusion_end", {
         stepId,
         cardId,
+        cardTitle:
+          step?.knowledgeCards.find((k) => k.id === cardId)?.title || cardId,
         messageCount: messages.length,
-        timestamp: new Date().toISOString(),
+        conversation: messages.map((m) => ({
+          role: m.role,
+          content:
+            m.content.length > 500
+              ? m.content.substring(0, 500) + "..."
+              : m.content,
+        })),
       });
 
       if (messages.length === 0) return;
 
       // Apply mastery "understanding complete" update
-      const step = steps.find((s) => s.id === stepId);
       const card = step?.knowledgeCards.find((k) => k.id === cardId);
       if (card) {
         const interaction: KnowledgeCardInteraction = {
@@ -3377,7 +3412,6 @@ export const CodeAware = () => {
         selectedLines: data.selectedLines,
         fileName: data.contextInfo.fileName,
         language: data.contextInfo.language,
-        timestamp: new Date().toISOString(),
       });
 
       try {
@@ -3446,6 +3480,11 @@ export const CodeAware = () => {
           await logger.addLogEntry("user_check_code_step_mappings", {
             result: "no_direct_mapping",
             selectedStepId: stepIdToUse,
+            selectedStepTitle:
+              steps.find((s) => s.id === stepIdToUse)?.title || stepIdToUse,
+            selectedCodeText: data.selectedCode
+              ? data.selectedCode.substring(0, 300)
+              : "",
           });
         } else {
           stepIdToUse = targetStepId;
@@ -3454,6 +3493,11 @@ export const CodeAware = () => {
           await logger.addLogEntry("user_check_code_step_mappings", {
             result: "direct_mapping_found",
             selectedStepId: stepIdToUse,
+            selectedStepTitle:
+              steps.find((s) => s.id === stepIdToUse)?.title || stepIdToUse,
+            selectedCodeText: data.selectedCode
+              ? data.selectedCode.substring(0, 300)
+              : "",
           });
         }
 
@@ -3481,7 +3525,6 @@ export const CodeAware = () => {
           "user_trigger_question_from_code_selection_completed",
           {
             stepId: stepIdToUse,
-            timestamp: new Date().toISOString(),
           },
         );
       } catch (error) {

@@ -587,7 +587,6 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
               : markdownContent
             : "",
           testItemsCount: testItems.length,
-          timestamp: new Date().toISOString(),
         });
       } else {
         // Log knowledge card viewing end
@@ -599,7 +598,6 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
               : markdownContent
             : "",
           testItemsCount: testItems.length,
-          timestamp: new Date().toISOString(),
         });
       }
     }
@@ -645,7 +643,6 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
     await logger.addLogEntry("user_switch_knowledge_card_view_mode", {
       cardTitle: title,
       viewMode: nextMode,
-      timestamp: new Date().toISOString(),
     });
   };
 
@@ -661,7 +658,6 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
     await logger.addLogEntry("user_knowledge_card_feedback", {
       cardTitle: title,
       feedback: value,
-      timestamp: new Date().toISOString(),
     });
   };
 
@@ -692,7 +688,6 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
                   : testItems[newIndex].saqQuestion,
             }
           : null,
-        timestamp: new Date().toISOString(),
       });
       setCurrentTestIndex(newIndex);
     }
@@ -725,7 +720,6 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
                   : testItems[newIndex].saqQuestion,
             }
           : null,
-        timestamp: new Date().toISOString(),
       });
       setCurrentTestIndex(newIndex);
     }
@@ -741,7 +735,6 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
   const handleDisableCard = async () => {
     await logger.addLogEntry("user_disable_knowledge_card", {
       cardTitle: title,
-      timestamp: new Date().toISOString(),
     });
 
     if (stepId && cardId && onDisable) {

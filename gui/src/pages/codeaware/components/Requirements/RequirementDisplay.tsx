@@ -560,7 +560,6 @@ export default function RequirementDisplay({
       isFromHighLevelSteps: !!step,
       isFromHighlightChunks: false,
       sourceComponent: "RequirementDisplay",
-      timestamp: new Date().toISOString(),
     });
 
     // 阶段2修改：只高亮 high-level step，不触发代码高亮
@@ -595,7 +594,6 @@ export default function RequirementDisplay({
         activeHighLevelSteps: highLevelSteps.filter(
           (step) => step.isHighlighted,
         ).length,
-        timestamp: new Date().toISOString(),
       });
 
       if (onClearHighlight) {

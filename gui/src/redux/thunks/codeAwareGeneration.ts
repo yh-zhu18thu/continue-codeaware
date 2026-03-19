@@ -893,7 +893,6 @@ export const generateStepsFromRequirement = createAsyncThunk<
         eventType: "user_order_steps_generation",
         payload: {
           userRequirement,
-          timestamp: new Date().toISOString(),
         },
       });
 
@@ -1157,7 +1156,6 @@ export const generateStepsFromRequirement = createAsyncThunk<
             index: index + 1,
             content: step,
           })),
-          timestamp: new Date().toISOString(),
         },
       });
 
@@ -1231,7 +1229,6 @@ export const generateKnowledgeCardDetail = createAsyncThunk<
         payload: {
           knowledgeCardTheme,
           learningGoal,
-          timestamp: new Date().toISOString(),
         },
       });
 
@@ -1343,7 +1340,6 @@ export const generateKnowledgeCardDetail = createAsyncThunk<
                 contentSummary:
                   content.substring(0, 200) +
                   (content.length > 200 ? "..." : ""),
-                timestamp: new Date().toISOString(),
               },
             });
 
@@ -1446,7 +1442,6 @@ export const generateKnowledgeCardTests = createAsyncThunk<
         payload: {
           knowledgeCardTitle,
           knowledgeCardTheme,
-          timestamp: new Date().toISOString(),
         },
       });
 
@@ -1554,7 +1549,6 @@ export const generateKnowledgeCardTests = createAsyncThunk<
                   standardAnswer: test.question.standard_answer,
                   options: test.question.options || [],
                 })),
-                timestamp: new Date().toISOString(),
               },
             });
 
@@ -1648,7 +1642,6 @@ export const generateKnowledgeCardThemes = createAsyncThunk<
               (stepAbstract.length > 200 ? "..." : "")
             : "",
           learningGoal,
-          timestamp: new Date().toISOString(),
         },
       });
       const state = getState();
@@ -1906,18 +1899,6 @@ export const generatePrerequisiteKnowledgeCards = createAsyncThunk<
         cardTitles: generatedCards.map((c) => c.title),
       });
 
-      // Log
-      await extra.ideMessenger.request("addCodeAwareLogEntry", {
-        eventType: "system_prerequisite_knowledge_cards_generated",
-        payload: {
-          stepId,
-          stepTitle: step.title,
-          prerequisiteCount: prerequisiteKnowledgePoints.length,
-          createdCount,
-          timestamp: new Date().toISOString(),
-        },
-      });
-
       dispatch(setKnowledgeCardGenerationStatus({ stepId, status: "ready" }));
       return { createdCount };
     } catch (error) {
@@ -1969,7 +1950,6 @@ export const generateKnowledgeCardThemesFromQuery = createAsyncThunk<
           existingThemesDetails: existingThemes.map((theme) => ({
             title: theme,
           })),
-          timestamp: new Date().toISOString(),
         },
       });
       const state = getState();
@@ -1997,7 +1977,6 @@ export const generateKnowledgeCardThemesFromQuery = createAsyncThunk<
           "user_get_knowledge_card_themes_from_query_generation_result",
         payload: {
           query: queryContext.query,
-          timestamp: new Date().toISOString(),
         },
       });
     } catch (error) {
@@ -2110,7 +2089,6 @@ export const generateCodeFromSteps = createAsyncThunk<
                 (step.abstract.length > 200 ? "..." : "")
               : "",
           })),
-          timestamp: new Date().toISOString(),
         },
       });
 
@@ -2201,7 +2179,6 @@ export const generateCodeFromSteps = createAsyncThunk<
         payload: {
           filepath,
           stepsCount: orderedSteps.length,
-          timestamp: new Date().toISOString(),
         },
       });
 
@@ -2253,7 +2230,6 @@ export const rerunStep = createAsyncThunk<
             : "",
           existingCodeLength: existingCode.length,
           filepath,
-          timestamp: new Date().toISOString(),
         },
       });
 
@@ -2720,7 +2696,6 @@ export const rerunStep = createAsyncThunk<
               (changedStepAbstract.length > 200 ? "..." : "")
             : "",
           createdCodeChunksCount: allCreatedCodeChunks.length,
-          timestamp: new Date().toISOString(),
         },
       });
 
@@ -3226,7 +3201,6 @@ export const processSaqSubmission = createAsyncThunk<
         payload: {
           testId,
           userAnswer,
-          timestamp: new Date().toISOString(),
         },
       });
 
@@ -3323,7 +3297,6 @@ export const processSaqSubmission = createAsyncThunk<
                 userAnswer,
                 isCorrect: evaluationResult.isCorrect,
                 remarks: evaluationResult.remarks,
-                timestamp: new Date().toISOString(),
               },
             });
 
@@ -3457,7 +3430,6 @@ export const processGlobalQuestion = createAsyncThunk<
         payload: {
           question,
           currentCodeLength: currentCode.length,
-          timestamp: new Date().toISOString(),
         },
       });
 
@@ -3663,7 +3635,6 @@ export const processGlobalQuestion = createAsyncThunk<
           llmSuggestedThemes: knowledge_card_themes,
           createdThemes,
           knowledgeCardIds: createdCardIds,
-          timestamp: new Date().toISOString(),
         },
       });
 
@@ -3788,18 +3759,6 @@ export const respondToGlobalQA = createAsyncThunk<
             timestamp: Date.now(),
           }),
         );
-
-        await extra.ideMessenger.request("addCodeAwareLogEntry", {
-          eventType: "system_global_qa_response",
-          payload: {
-            responsePreview:
-              response.length > 200
-                ? response.substring(0, 200) + "..."
-                : response,
-            conversationLength: conversationHistory.length,
-            timestamp: new Date().toISOString(),
-          },
-        });
 
         return { response };
       } catch (attemptError) {
@@ -4002,21 +3961,6 @@ export const convertQAToKnowledgeCard = createAsyncThunk<
             identifier: selectedStepId,
           }),
         );
-
-        await extra.ideMessenger.request("addCodeAwareLogEntry", {
-          eventType: "system_global_qa_converted_to_card",
-          payload: {
-            selectedStepId,
-            cardId,
-            title,
-            nodeCategory: parsed.node_category || "unknown",
-            theme: parsed.theme || "unknown",
-            linkedMasteryNodesCount: linkedMasteryNodes.length,
-            linkedKnowledgeNodeIdsCount: linkedKnowledgeNodeIds.length,
-            conversationLength: conversationHistory.length,
-            timestamp: new Date().toISOString(),
-          },
-        });
 
         console.info("[CA:CodeGen][QAToCard]", {
           selectedStepId,

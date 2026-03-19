@@ -228,7 +228,6 @@ const KnowledgeCardSAQ: React.FC<KnowledgeCardSAQProps> = ({
             question.length > 200
               ? question.substring(0, 200) + "..."
               : question,
-          timestamp: new Date().toISOString(),
         });
       }
     },
@@ -275,7 +274,6 @@ const KnowledgeCardSAQ: React.FC<KnowledgeCardSAQProps> = ({
         question:
           question.length > 200 ? question.substring(0, 200) + "..." : question,
         answer: answer.length > 500 ? answer.substring(0, 500) + "..." : answer,
-        timestamp: new Date().toISOString(),
       });
 
       onSubmitAnswer(answer);

@@ -274,7 +274,6 @@ export default function RequirementDisplayHorizontal({
         isFromHighLevelSteps: true,
         isFromHighlightChunks: false,
         sourceComponent: "RequirementSummary",
-        timestamp: new Date().toISOString(),
       });
 
       // 直接调用 setHighlightedElement，与 RequirementDisplay 保持一致

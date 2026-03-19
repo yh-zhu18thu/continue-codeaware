@@ -60,7 +60,6 @@ export class CodeSelectionHandler {
                 ] as [number, number],
                 fileName: editor.document.fileName,
                 language: editor.document.languageId,
-                timestamp: new Date().toISOString(),
               });
             } catch (error) {
               console.error(
@@ -92,7 +91,6 @@ export class CodeSelectionHandler {
         ],
         fileName: editor.document.fileName,
         language: editor.document.languageId,
-        timestamp: new Date().toISOString(),
       });
 
       // 准备发送给CodeAware的数据

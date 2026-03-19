@@ -1,13 +1,13 @@
 import { PaperAirplaneIcon, XMarkIcon } from "@heroicons/react/24/solid";
-import { useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import styled from "styled-components";
 import {
-    defaultBorderRadius,
-    vscBackground,
-    vscForeground,
-    vscInputBackground,
-    vscInputBorder
+  defaultBorderRadius,
+  vscBackground,
+  vscForeground,
+  vscInputBackground,
+  vscInputBorder,
 } from "../../../../components";
 import { useCodeAwareLogger } from "../../../../util/codeAwareWebViewLogger";
 
@@ -27,7 +27,7 @@ const PopupOverlay = styled.div`
   pointer-events: auto;
   /* 添加淡入动画 */
   animation: overlayFadeIn 0.2s ease-out;
-  
+
   @keyframes overlayFadeIn {
     from {
       opacity: 0;
@@ -54,7 +54,7 @@ const PopupContainer = styled.div`
   pointer-events: auto;
   /* 添加动画效果 */
   animation: modalFadeIn 0.25s ease-out;
-  
+
   @keyframes modalFadeIn {
     from {
       opacity: 0;
@@ -100,7 +100,7 @@ const ButtonGroup = styled.div`
   gap: 8px;
 `;
 
-const Button = styled.button<{ variant: 'primary' | 'secondary' }>`
+const Button = styled.button<{ variant: "primary" | "secondary" }>`
   padding: 4px 8px;
   border-radius: ${defaultBorderRadius};
   font-size: 12px;
@@ -112,8 +112,10 @@ const Button = styled.button<{ variant: 'primary' | 'secondary' }>`
   justify-content: center;
   min-width: 32px;
   height: 28px;
-  
-  ${({ variant }) => variant === 'primary' ? `
+
+  ${({ variant }) =>
+    variant === "primary"
+      ? `
     background-color: #007acc;
     color: white;
     border: 1px solid #007acc;
@@ -127,7 +129,8 @@ const Button = styled.button<{ variant: 'primary' | 'secondary' }>`
       background-color: #004578;
       border-color: #004578;
     }
-  ` : `
+  `
+      : `
     background-color: transparent;
     color: ${vscForeground};
     border: 1px solid ${vscInputBorder};
@@ -154,10 +157,14 @@ const SpinnerDiv = styled.div`
   border-top: 2px solid transparent;
   border-radius: 50%;
   animation: spin 1s linear infinite;
-  
+
   @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
   }
 `;
 
@@ -172,9 +179,9 @@ export default function GlobalQuestionModal({
   isOpen,
   onClose,
   onSubmit,
-  isLoading = false
+  isLoading = false,
 }: GlobalQuestionModalProps) {
-  const [question, setQuestion] = useState('');
+  const [question, setQuestion] = useState("");
   const hasStartedEditingRef = useRef(false);
   const logger = useCodeAwareLogger();
 
@@ -188,9 +195,7 @@ export default function GlobalQuestionModal({
     // Log when user first focuses on the global question input
     if (!hasStartedEditingRef.current) {
       hasStartedEditingRef.current = true;
-      await logger.addLogEntry("user_start_edit_global_question", {
-        timestamp: new Date().toISOString()
-      });
+      await logger.addLogEntry("user_start_edit_global_question", {});
     }
   };
 
@@ -198,14 +203,14 @@ export default function GlobalQuestionModal({
     e.preventDefault();
     if (question.trim() && !isLoading) {
       onSubmit(question.trim());
-      setQuestion('');
+      setQuestion("");
       hasStartedEditingRef.current = false; // Reset editing state
     }
   };
 
   const handleClose = () => {
     if (!isLoading) {
-      setQuestion('');
+      setQuestion("");
       hasStartedEditingRef.current = false; // Reset editing state
       onClose();
     }
@@ -218,13 +223,13 @@ export default function GlobalQuestionModal({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Escape') {
+    if (e.key === "Escape") {
       handleClose();
-    } else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+    } else if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
       if (question.trim() && !isLoading) {
         onSubmit(question.trim());
-        setQuestion('');
+        setQuestion("");
       }
     }
   };
@@ -244,16 +249,16 @@ export default function GlobalQuestionModal({
         />
 
         <ButtonGroup>
-          <Button 
-            variant="secondary" 
+          <Button
+            variant="secondary"
             onClick={handleClose}
             disabled={isLoading}
             title="取消"
           >
             <XMarkIcon width={14} height={14} />
           </Button>
-          <Button 
-            variant="primary" 
+          <Button
+            variant="primary"
             onClick={handleSubmit}
             disabled={!question.trim() || isLoading}
             title={isLoading ? "处理中..." : "提问"}

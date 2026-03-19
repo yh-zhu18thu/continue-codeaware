@@ -432,7 +432,6 @@ const Step: React.FC<StepProps> = ({
           stepStatus,
           knowledgeCardsCount: knowledgeCards.filter((card) => !card.disabled)
             .length,
-          timestamp: new Date().toISOString(),
         });
       } else if (wasExpanded && !willBeExpanded) {
         // Log step viewing end
@@ -447,7 +446,6 @@ const Step: React.FC<StepProps> = ({
           stepStatus,
           knowledgeCardsCount: knowledgeCards.filter((card) => !card.disabled)
             .length,
-          timestamp: new Date().toISOString(),
         });
       }
     }

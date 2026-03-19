@@ -568,18 +568,6 @@ export const exportKnowledgeStateArtifacts = createAsyncThunk<
       extra,
     );
 
-    await extra.ideMessenger.request("addCodeAwareLogEntry", {
-      eventType: "knowledge_state_exported",
-      payload: {
-        edgesCount: unifiedEdges.length,
-        nodeMasteryCount: nodeMasteryScores.length,
-        edgesPath: persistedFiles.edgesPath,
-        nodeMasteryPath: persistedFiles.nodeMasteryPath,
-        nodeIndexPath: persistedFiles.nodeIndexPath,
-        timestamp: new Date().toISOString(),
-      },
-    });
-
     return persistedFiles;
   },
 );
@@ -877,16 +865,6 @@ export const generateTaskDecomposition = createAsyncThunk<
         narrativeError,
       );
     }
-
-    await extra.ideMessenger.request("addCodeAwareLogEntry", {
-      eventType: "initial_generation_phase1_completed",
-      payload: {
-        title: parsed.title || "",
-        highLevelStepsCount: highLevelSteps.length,
-        stepsCount: generatedSteps.length,
-        timestamp: new Date().toISOString(),
-      },
-    });
   },
 );
 
@@ -956,15 +934,6 @@ export const generateCompleteCode = createAsyncThunk<
       }
     }
 
-    await extra.ideMessenger.request("addCodeAwareLogEntry", {
-      eventType: "initial_generation_phase2_completed",
-      payload: {
-        filepath,
-        stepsCount: steps.length,
-        timestamp: new Date().toISOString(),
-      },
-    });
-
     return filepath;
   },
 );
@@ -1017,13 +986,6 @@ export const createCodeToStepMappings = createAsyncThunk<
       console.warn("[CA:InitGen:Phase3] 代码为空，无法建立映射");
       dispatch(setCodeChunks([]));
       dispatch(clearAllCodeAwareMappings());
-      await extra.ideMessenger.request("addCodeAwareLogEntry", {
-        eventType: "initial_generation_phase3_skipped_empty_code",
-        payload: {
-          filePath: effectiveFilePath,
-          timestamp: new Date().toISOString(),
-        },
-      });
       return;
     }
 
@@ -1068,17 +1030,6 @@ export const createCodeToStepMappings = createAsyncThunk<
       `[CA:InitGen:Phase3] 映射: ${mappings.length}, situation groups: ${groups.length}`,
     );
 
-    await extra.ideMessenger.request("addCodeAwareLogEntry", {
-      eventType: "initial_generation_phase3_completed",
-      payload: {
-        filePath: effectiveFilePath,
-        codeChunksCount: codeChunks.length,
-        mappingsCount: mappings.length,
-        situationGroupsCount: groups.length,
-        timestamp: new Date().toISOString(),
-      },
-    });
-
     console.log("[CA:InitGen:Phase3] 映射建立完成");
   },
 );
@@ -1100,14 +1051,6 @@ export const analyzeCodeChunkRelations = createAsyncThunk<
         `[CA:InitGen]  [Phase 4] 代码块数量不足 (${codeChunks.length})，跳过关系分析`,
       );
       dispatch(setCodeChunkRelations([]));
-      await extra.ideMessenger.request("addCodeAwareLogEntry", {
-        eventType: "initial_generation_phase4_skipped",
-        payload: {
-          reason: "insufficient_code_chunks",
-          codeChunksCount: codeChunks.length,
-          timestamp: new Date().toISOString(),
-        },
-      });
       return;
     }
 
@@ -1147,15 +1090,6 @@ export const analyzeCodeChunkRelations = createAsyncThunk<
 
     dispatch(setCodeChunkRelations(relations));
     console.log(`[CA:InitGen:Phase4] 关系数量: ${relations.length}`);
-
-    await extra.ideMessenger.request("addCodeAwareLogEntry", {
-      eventType: "initial_generation_phase4_completed",
-      payload: {
-        codeChunksCount: codeChunks.length,
-        relationsCount: relations.length,
-        timestamp: new Date().toISOString(),
-      },
-    });
 
     console.log("[CA:InitGen:Phase4] 关系分析完成");
   },
@@ -1545,17 +1479,6 @@ export const extractAndLinkKnowledge = createAsyncThunk<
     }
 
     dispatch(setKnowledgeRelations(relations));
-
-    await extra.ideMessenger.request("addCodeAwareLogEntry", {
-      eventType: "initial_generation_phase5_completed",
-      payload: {
-        knowledgePointsCount: finalKnowledgePoints.length,
-        relationsCount: relations.length,
-        knowledgeToStepCount: dedupKnowledgeToStep.length,
-        knowledgeToCodeChunkCount: dedupKnowledgeToCodeChunk.length,
-        timestamp: new Date().toISOString(),
-      },
-    });
   },
 );
 
@@ -1641,14 +1564,6 @@ export const executeInitialGeneration = createAsyncThunk<
 
       const finalState = getState().codeAwareSession;
       const unifiedEdges = buildCodeAwareCognitiveEdges(finalState);
-
-      await extra.ideMessenger.request("addCodeAwareLogEntry", {
-        eventType: "initial_generation_unified_graph_built",
-        payload: {
-          edgesCount: unifiedEdges.length,
-          timestamp: new Date().toISOString(),
-        },
-      });
 
       dispatch(
         updateInitialGenerationStatus({

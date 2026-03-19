@@ -279,20 +279,6 @@ export const exportPresetSnapshot = createAsyncThunk<
 
     const snapshotPath = presetDir;
 
-    // 记录日志
-    await extra.ideMessenger.request("addCodeAwareLogEntry", {
-      eventType: "preset_exported",
-      payload: {
-        presetName: sanitizedName,
-        snapshotPath,
-        stepsCount: snapshot.steps.length,
-        codeChunksCount: snapshot.codeChunks.length,
-        knowledgePointsCount: snapshot.knowledgePoints.length,
-        cognitiveEdgesCount: cognitiveEdges.length,
-        timestamp: new Date().toISOString(),
-      },
-    });
-
     console.log(`[CA:Preset] 预设 "${sanitizedName}" 已导出到 ${snapshotPath}`);
 
     return { snapshotPath, presetName: sanitizedName };
@@ -434,21 +420,6 @@ export const loadPresetSnapshot = createAsyncThunk<
           resolvedCodeFilePath: codeFilePath,
         }),
       );
-
-      // 记录日志
-      await extra.ideMessenger.request("addCodeAwareLogEntry", {
-        eventType: "preset_loaded",
-        payload: {
-          presetName,
-          presetDir,
-          stepsCount: snapshot.steps.length,
-          codeChunksCount: snapshot.codeChunks.length,
-          knowledgePointsCount: snapshot.knowledgePoints.length,
-          cognitiveEdgesCount: snapshot.cognitiveEdges.length,
-          codeFilePath,
-          timestamp: new Date().toISOString(),
-        },
-      });
 
       console.log(
         `[CA:Preset] 预设 "${presetName}" 加载完成 — ${snapshot.steps.length} 步骤, ${snapshot.codeChunks.length} 代码块, ${snapshot.knowledgePoints.length} 知识点`,

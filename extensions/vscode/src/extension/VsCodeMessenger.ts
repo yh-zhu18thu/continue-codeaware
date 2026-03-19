@@ -696,6 +696,21 @@ export class VsCodeMessenger {
       return result;
     });
 
+    this.onWebview("readFileUnlimited", async (msg) => {
+      try {
+        const uri = vscode.Uri.file(msg.data.filepath);
+        const bytes = await vscode.workspace.fs.readFile(uri);
+        return new TextDecoder().decode(bytes);
+      } catch (e) {
+        console.error(
+          "[CA:Ext] readFileUnlimited failed:",
+          msg.data.filepath,
+          e,
+        );
+        return "";
+      }
+    });
+
     /** PASS THROUGH FROM WEBVIEW TO CORE AND BACK **/
     WEBVIEW_TO_CORE_PASS_THROUGH.forEach((messageType) => {
       this.onWebview(messageType, async (msg) => {

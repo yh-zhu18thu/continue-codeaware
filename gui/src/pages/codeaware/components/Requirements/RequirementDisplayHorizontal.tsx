@@ -5,12 +5,14 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import styled, { css, keyframes } from "styled-components";
 import { defaultBorderRadius } from "../../../../components";
 import { useAppDispatch, useAppSelector } from "../../../../redux/hooks";
+import { selectAllHighLevelStepMasteries } from "../../../../redux/selectors/masterySelectors";
 import {
   clearElementHighlight,
   selectHighLevelSteps,
   setHighlightedElement,
 } from "../../../../redux/slices/codeAwareSlice";
 import { useCodeAwareLogger } from "../../../../util/codeAwareWebViewLogger";
+import { masteryScoreToColor } from "../../../../utils/masteryColor";
 
 // Flickering animation for highlight state changes
 const flicker = keyframes`
@@ -176,6 +178,8 @@ const SummaryItem = styled.div<{ isHighlighted: boolean }>`
   transition: all 0.3s ease;
   flex-shrink: 0;
   white-space: nowrap;
+  position: relative;
+  overflow: hidden;
 
   &:hover {
     background-color: rgba(255, 255, 255, 0.1);
@@ -189,6 +193,25 @@ const SummaryItem = styled.div<{ isHighlighted: boolean }>`
       transform: scale(1.02); /* 轻微放大高亮项 */
       box-shadow: 0 2px 8px rgba(0, 191, 255, 0.3); /* 添加蓝色阴影 */
     `}
+`;
+
+const MasteryBackgroundFill = styled.div<{
+  percent: number;
+  masteryColor: string;
+}>`
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: ${({ percent }) => percent}%;
+  background-color: ${({ masteryColor }) => masteryColor};
+  opacity: 0.18;
+  border-radius: ${defaultBorderRadius};
+  pointer-events: none;
+  z-index: 0;
+  transition:
+    width 0.5s ease-in-out,
+    background-color 0.4s ease-in-out;
 `;
 
 const SummaryText = styled(Typography)<{
@@ -223,6 +246,10 @@ export default function RequirementDisplayHorizontal({
 }: RequirementSummaryProps) {
   const dispatch = useAppDispatch();
   const highLevelSteps = useAppSelector(selectHighLevelSteps);
+  const showMasteryIndicators = useAppSelector(
+    (state) => state.codeAwareSession.showMasteryIndicators,
+  );
+  const hlMasteries = useAppSelector(selectAllHighLevelStepMasteries);
   const containerRef = useRef<HTMLDivElement>(null);
   const highlightedItemRef = useRef<HTMLDivElement>(null);
 
@@ -412,6 +439,15 @@ export default function RequirementDisplayHorizontal({
         {steps.map((step) => {
           const isFlickering = flickeringSteps.has(step.id);
           const isHighlighted = step.isHighlighted;
+          const mastery = showMasteryIndicators
+            ? hlMasteries.get(step.id)
+            : undefined;
+          const masteryPercent = mastery
+            ? Math.round(mastery.score * 100)
+            : null;
+          const masteryColor = mastery
+            ? masteryScoreToColor(mastery.score)
+            : undefined;
 
           return (
             <SummaryItem
@@ -435,6 +471,12 @@ export default function RequirementDisplayHorizontal({
               >
                 {step.content}
               </SummaryText>
+              {masteryColor && masteryPercent !== null && (
+                <MasteryBackgroundFill
+                  percent={masteryPercent}
+                  masteryColor={masteryColor}
+                />
+              )}
             </SummaryItem>
           );
         })}

@@ -119,6 +119,8 @@ export type ToIdeFromWebviewProtocol = ToIdeFromWebviewOrCoreProtocol & {
     { prompt: string; placeholder?: string; value?: string },
     string | undefined,
   ];
+  //CodeAware: 无大小限制地读取文件（用于预设快照等大文件）
+  readFileUnlimited: [{ filepath: string }, string];
   // CodeAware: 跳转并展开代码注释
   revealCodeAnnotation: [
     {

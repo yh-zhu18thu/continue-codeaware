@@ -1,0 +1,6 @@
+{"timestamp":"2026-03-19T05:32:09.642Z","codeAwareSessionId":"b7723303-be29-48e1-b520-b6f282186eb6","eventType":"session_start","payload":{"username":"zyh","sessionName":"test","codeAwareSessionId":"b7723303-be29-48e1-b520-b6f282186eb6"}}
+{"timestamp":"2026-03-19T05:32:09.658Z","codeAwareSessionId":"b7723303-be29-48e1-b520-b6f282186eb6","eventType":"user_start_editing_requirement","payload":{"initialContent":"","timestamp":"2026-03-19T05:32:09.657Z"}}
+{"timestamp":"2026-03-19T05:32:09.666Z","codeAwareSessionId":"b7723303-be29-48e1-b520-b6f282186eb6","eventType":"user_create_new_session","payload":{"username":"zyh","sessionName":"test","timestamp":"2026-03-19T05:32:09.665Z"}}
+{"timestamp":"2026-03-19T05:32:09.676Z","codeAwareSessionId":"b7723303-be29-48e1-b520-b6f282186eb6","eventType":"system_create_session_file","payload":{"filename":"test.py","username":"zyh","sessionName":"test","timestamp":"2026-03-19T05:32:09.675Z"}}
+{"timestamp":"2026-03-19T05:32:16.784Z","codeAwareSessionId":"b7723303-be29-48e1-b520-b6f282186eb6","eventType":"user_load_preset","payload":{"presetName":"boids","timestamp":"2026-03-19T05:32:16.782Z"}}
+{"timestamp":"2026-03-19T05:39:48.832Z","codeAwareSessionId":"b7723303-be29-48e1-b520-b6f282186eb6","eventType":"user_request_new_session","payload":{"timestamp":"2026-03-19T05:39:48.831Z"}}

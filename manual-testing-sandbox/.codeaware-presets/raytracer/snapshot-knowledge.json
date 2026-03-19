@@ -1,0 +1,4972 @@
+{
+  "knowledgePoints": [
+    {
+      "id": "k-s-1-1",
+      "title": "三维向量基础",
+      "content": "三维向量（vec3）用于表示空间中的坐标和方向。例如球的中心点和位置、平面法向量等都用向量表达。理解向量及其基本操作（如加减、点乘）是构建和操作几何物体、场景必不可少的前提。",
+      "relatedStepIds": ["s-1"],
+      "category": "concept",
+      "difficulty": "easy",
+      "scope": "step"
+    },
+    {
+      "id": "k-s-1-2",
+      "title": "几何体抽象与建模",
+      "content": "球和平面是三维图形学中常见的几何体。理解如何用数学模型（如球的中心和半径，平面的点和法向量）去描述和抽象这些物体，是场景建模的基础。此知识点关乎如何将物理场景转化为可编程对象。",
+      "relatedStepIds": ["s-1"],
+      "category": "concept",
+      "difficulty": "medium",
+      "scope": "step"
+    },
+    {
+      "id": "k-s-1-3",
+      "title": "对象列表定义语法",
+      "content": "代码中 objects 变量是一个列表，包含了不同类型的对象实例。这种列表定义和实例化方式是 Python（或类似语言）中用于批量管理和操作一组对象的常用语法结构，有助于程序组织和循环处理。",
+      "relatedStepIds": ["s-1"],
+      "category": "syntax",
+      "difficulty": "easy",
+      "scope": "code"
+    },
+    {
+      "id": "k-s-1-4",
+      "title": "类实例化与构造方法",
+      "content": "代码通过 Sphere() 和 Plane() 等构造函数创建对象实例。掌握类的构造方法（对象初始化参数传递）可以理解如何为每个物体指定属性，如位置、大小、材质等，以及后续如何操作这些对象。",
+      "relatedStepIds": ["s-1"],
+      "category": "syntax",
+      "difficulty": "easy",
+      "scope": "code"
+    },
+    {
+      "id": "k-s-2-1",
+      "title": "材质属性在渲染中的作用",
+      "content": "材质属性（如颜色、反光度、折射率等）决定了场景中的物体如何与光线互动，影响最终渲染效果。理解这些属性如何影响物体外观，是正确设置和使用材质的关键，也是三维渲染和光线追踪的基础。",
+      "relatedStepIds": ["s-2"],
+      "category": "concept",
+      "difficulty": "medium",
+      "scope": "step"
+    },
+    {
+      "id": "k-s-2-2",
+      "title": "Python 类与属性定义",
+      "content": "在 Python 中，类用于描述具有相同属性和行为的事物。理解类声明、构造方法、属性赋值与类型注释（如 np.ndarray、Tuple）对于读懂 Material 类和对象实例化十分重要。",
+      "relatedStepIds": ["s-2"],
+      "category": "syntax",
+      "difficulty": "easy",
+      "scope": "code"
+    },
+    {
+      "id": "k-s-2-3",
+      "title": "三维向量与 np.ndarray 用法",
+      "content": "三维渲染中常用向量表示空间位置与颜色等信息，numpy 的 ndarray 是高性能数组库。理解向量（如 vec3）和 np.ndarray 在存储和处理三维数据中的作用，是理解场景描述与属性分配的基础。",
+      "relatedStepIds": ["s-2"],
+      "category": "framework",
+      "difficulty": "medium",
+      "scope": "code"
+    },
+    {
+      "id": "k-s-2-4",
+      "title": "albedo 物理意义及参数分解",
+      "content": "albedo 指表面的反射系数，在此表示漫反射、镜面反射、反射和折射四个分量。辨析每一个分量的物理意义，有助于理解如何用数值配置物体在光照下的表现效果。",
+      "relatedStepIds": ["s-2"],
+      "category": "concept",
+      "difficulty": "hard",
+      "scope": "step"
+    },
+    {
+      "id": "k-s-3-1",
+      "title": "三维场景光源类型",
+      "content": "在三维场景中，光源有多种类型，如点光源、平行光和环境光等。不同光源类型决定照明效果和阴影表现。理解这些类型及其参数可以帮助合理设计场景照明，使最终画面呈现理想的明暗对比。",
+      "relatedStepIds": ["s-3"],
+      "category": "concept",
+      "difficulty": "medium",
+      "scope": "step"
+    },
+    {
+      "id": "k-s-3-2",
+      "title": "摄像机视角与参数",
+      "content": "三维场景中的摄像机包括位置、指向（朝向）、投影方式（透视/正交）、视野角度等参数。合理设置摄像机决定观察画面的范围和效果，如俯视、平视、近景或远景。理解这些概念是场景设计的基础。",
+      "relatedStepIds": ["s-3"],
+      "category": "concept",
+      "difficulty": "medium",
+      "scope": "step"
+    },
+    {
+      "id": "k-s-3-3",
+      "title": "光照与渲染基本原理",
+      "content": "光照涉及场景中物体如何与光交互，影响画面的明暗、阴影和颜色表现。渲染引擎依赖光源参数和材质特性进行计算。基本光照模型（如Phong模型）是理解如何设置灯光与摄像机的理论基础。",
+      "relatedStepIds": ["s-3"],
+      "category": "concept",
+      "difficulty": "medium",
+      "scope": "step"
+    },
+    {
+      "id": "k-s-4-1",
+      "title": "射线投射原理",
+      "content": "射线投射是计算机图形学中的一种技术，通过从摄像机发射射线，判断其与场景中的物体是否相交，以确定图像中每个像素应该显示什么。理解这一原理有助于掌握如何生成三维场景的二维图像，尤其是在光线追踪渲染中。",
+      "relatedStepIds": ["s-4"],
+      "category": "concept",
+      "difficulty": "medium",
+      "scope": "step"
+    },
+    {
+      "id": "k-s-4-2",
+      "title": "自定义类和对象方法",
+      "content": "代码中对象如 Ray 和场景物体通常为自定义类，并通过方法（如 intersect）进行行为封装。理解如何定义和使用类，以及如何实现用于“交点检测”的方法，是理解代码逻辑的基础。",
+      "relatedStepIds": ["s-4"],
+      "category": "syntax",
+      "difficulty": "easy",
+      "scope": "code"
+    },
+    {
+      "id": "k-s-4-3",
+      "title": "向量与矩阵运算",
+      "content": "三维图形编程中，向量加法、点乘、缩放（如 ray.origin + ray.direction * dist）等基础运算用于描述空间中的位置、方向与距离，掌握这些运算是实现碰撞检测、法线计算等核心操作的前提。",
+      "relatedStepIds": ["s-4"],
+      "category": "algorithm",
+      "difficulty": "medium",
+      "scope": "code"
+    },
+    {
+      "id": "k-s-4-4",
+      "title": "递归函数调用",
+      "content": "渲染过程中可能涉及递归（如 cast_ray 的 depth 控制），以处理光线的多次反射/折射。理解递归函数的结构、递归深度的限制以及递归何时终止，对阅读和维护光线追踪相关的代码至关重要。",
+      "relatedStepIds": ["s-4"],
+      "category": "algorithm",
+      "difficulty": "medium",
+      "scope": "code"
+    },
+    {
+      "id": "k-s-5-1",
+      "title": "光线与表面交互模型",
+      "content": "光线在三维场景中与物体表面相遇时，可能发生反射、折射、吸收或散射等物理现象。正确理解这些交互机制对于实现真实感渲染（如阴影、反光、透明度）至关重要，也是渲染算法的基础核心。",
+      "relatedStepIds": ["s-5"],
+      "category": "concept",
+      "difficulty": "medium",
+      "scope": "step"
+    },
+    {
+      "id": "k-s-5-2",
+      "title": "反射与折射向量计算",
+      "content": "反射向量和折射向量在三维空间中的数学计算是理解光线追踪等渲染技术的关键。通过法向量和入射方向可利用公式计算出新的光线路径，用以模拟镜面反射、透明材料等视觉效果。",
+      "relatedStepIds": ["s-5"],
+      "category": "algorithm",
+      "difficulty": "medium",
+      "scope": "code"
+    },
+    {
+      "id": "k-s-5-3",
+      "title": "向量运算与点积",
+      "content": "向量归一化、点积等基础向量运算用于判断光线方向、表面法线方向，并在光照计算、阴影检测等操作中大量应用。理解这些操作对全面读懂光线处理逻辑至关重要。",
+      "relatedStepIds": ["s-5"],
+      "category": "algorithm",
+      "difficulty": "easy",
+      "scope": "code"
+    },
+    {
+      "id": "k-s-5-4",
+      "title": "阴影与光照模型",
+      "content": "阴影检测与光照强度计算是三维渲染中决定物体真实感的重要环节。需要掌握漫反射、镜面高光、阴影遮罩等基本光照模型原理，才能结合代码正确实现类似现实世界的明暗表现。",
+      "relatedStepIds": ["s-5"],
+      "category": "concept",
+      "difficulty": "medium",
+      "scope": "step"
+    },
+    {
+      "id": "k-s-5-5",
+      "title": "Python 元组解包语法",
+      "content": "在Python中，支持将多个返回值通过元组解包方式赋值给多个变量，例如 point, normal, material, _ = result，可提升代码可读性和效率。理解这一语法有助于读懂代码中的变量赋值逻辑。",
+      "relatedStepIds": ["s-5"],
+      "category": "syntax",
+      "difficulty": "easy",
+      "scope": "code"
+    },
+    {
+      "id": "k-s-6-1",
+      "title": "光线反射与折射原理",
+      "content": "反射和折射是描述光线遇到不同介质时运动方式的基本物理原理。理解这些规律可以帮助解释为何光在遇到镜面或玻璃等物体时会发生方向改变或穿透。这是实现真实效果如倒影和透视的理论基础。",
+      "relatedStepIds": ["s-6"],
+      "category": "concept",
+      "difficulty": "medium",
+      "scope": "step"
+    },
+    {
+      "id": "k-s-6-2",
+      "title": "递归调用机制",
+      "content": "递归是一种函数在自身内部再次调用自身的编程结构。在本步骤中，递归用于处理光线的多次反射和折射，求解复杂场景下的最终颜色。这需要理解递归的出口条件和递归深度的实际意义。",
+      "relatedStepIds": ["s-6"],
+      "category": "algorithm",
+      "difficulty": "medium",
+      "scope": "code"
+    },
+    {
+      "id": "k-s-6-3",
+      "title": "向量点积与法向量应用",
+      "content": "向量点积通常用于判断两个方向的相对关系（如是否朝同一侧），法向量用于描述表面方向。本代码中分别利用点积和法向量来决定新光线路径的起点，防止自相交和计算错误。",
+      "relatedStepIds": ["s-6"],
+      "category": "algorithm",
+      "difficulty": "medium",
+      "scope": "code"
+    },
+    {
+      "id": "k-s-6-4",
+      "title": "材质属性与折射率",
+      "content": "材质的反射率、折射率和漫反射等属性决定了光与表面交互后的结果。理解这些参数可以帮助设置 realistic 的场景，用于决定何时采用反射或折射路径。",
+      "relatedStepIds": ["s-6"],
+      "category": "concept",
+      "difficulty": "medium",
+      "scope": "step"
+    },
+    {
+      "id": "k-s-7-1",
+      "title": "像素颜色合成原理",
+      "content": "在计算机图形学中，每个像素的最终颜色通常由多种光照、反射和材质属性综合而来。理解如何通过对每条光线的路径与相交点材质进行汇总，得到每个像素的渲染色，是准确生成图像的关键。",
+      "relatedStepIds": ["s-7"],
+      "category": "concept",
+      "difficulty": "medium",
+      "scope": "step"
+    },
+    {
+      "id": "k-s-7-2",
+      "title": "材质属性及反射模型",
+      "content": "材质属性（如颜色、反射率、折射率、漫反射/镜面反射系数等）决定了物体表面对光线的响应方式。反射模型用于计算光照和物体表面交互后的像素色彩，常见如 Phong 模型、Blinn-Phong 模型。",
+      "relatedStepIds": ["s-7"],
+      "category": "concept",
+      "difficulty": "medium",
+      "scope": "step"
+    },
+    {
+      "id": "k-s-7-3",
+      "title": "向量运算与颜色混合",
+      "content": "代码中出现了向量与标量相乘及向量加法（例如 color 合成）。理解如何用向量表示RGB颜色，并进行相关运算，是实现和解读像素色彩混合的基础。",
+      "relatedStepIds": ["s-7"],
+      "category": "syntax",
+      "difficulty": "easy",
+      "scope": "code"
+    },
+    {
+      "id": "k-s-7-4",
+      "title": "光线追踪递归实现",
+      "content": "光线追踪算法往往采用递归方式处理多级反射和折射。代码中的 cast_ray 函数使用递归深度参数，需理解递归调用的原因以及其对像素色彩结果的影响。",
+      "relatedStepIds": ["s-7"],
+      "category": "algorithm",
+      "difficulty": "medium",
+      "scope": "code"
+    },
+    {
+      "id": "k-s-8-1",
+      "title": "NumPy 数组操作",
+      "content": "NumPy 是 Python 的科学计算库，广泛用于处理多维数组。理解如何用 NumPy 进行数组变换、类型转换（如用 np.clip 限定数值范围），对于将像素数据准备成图像尤为重要。",
+      "relatedStepIds": ["s-8"],
+      "category": "framework",
+      "difficulty": "medium",
+      "scope": "code"
+    },
+    {
+      "id": "k-s-8-2",
+      "title": "Pillow 图像处理库",
+      "content": "Pillow（即 PIL）是 Python 的主流图像处理库，用于图像的创建、读取、保存和格式转换。掌握 Image.fromarray 和 img.save 方法，能将数值矩阵转换为可视化图片并输出到文件。",
+      "relatedStepIds": ["s-8"],
+      "category": "framework",
+      "difficulty": "medium",
+      "scope": "code"
+    },
+    {
+      "id": "k-s-8-3",
+      "title": "像素与图像格式",
+      "content": "像素是图像的基本单位，每个像素通常用 RGB（三原色）数值表示。理解如何将像素矩阵按标准格式组合，才能正确生成图片及在不同平台显示、保存为主流格式如 PNG。",
+      "relatedStepIds": ["s-8"],
+      "category": "concept",
+      "difficulty": "easy",
+      "scope": "step"
+    },
+    {
+      "id": "k-s-8-4",
+      "title": "数据归一化与类型转换",
+      "content": "处理图像时，像素数值通常需归一化（如 0-1），再转换为整数（0-255）以适应文件格式或显示窗口。理解为何要 clip、乘以 255，并用 astype(uint8)，是图像输出的基础。",
+      "relatedStepIds": ["s-8"],
+      "category": "concept",
+      "difficulty": "medium",
+      "scope": "code"
+    },
+    {
+      "id": "k-deep-1",
+      "title": "变量概念与赋值",
+      "content": "变量是存储信息的基本单位，用于保存数值、对象、数组等。理解变量如何声明和赋值，是理解对象列表、类属性、向量操作等代码结构的前提。如果不明白变量是什么，就无法理解对列表、对象的初始化和赋值过程。",
+      "relatedStepIds": ["s-1", "s-2", "s-5"],
+      "category": "syntax",
+      "difficulty": "easy",
+      "scope": "code"
+    },
+    {
+      "id": "k-deep-2",
+      "title": "函数定义与调用",
+      "content": "函数是将一系列操作封装为可重复使用的代码块。理解如何定义、调用函数以及参数如何传递，是读懂递归调用、对象方法、和光线追踪递归实现等相关代码的基础。如果不了解函数机制，很难理解 cast_ray 等递归结构或对象方法的用途。",
+      "relatedStepIds": ["s-4", "s-6", "s-7"],
+      "category": "syntax",
+      "difficulty": "easy",
+      "scope": "code"
+    },
+    {
+      "id": "k-deep-3",
+      "title": "坐标系与空间概念",
+      "content": "三维空间由 x、y、z 三个轴组成，坐标系用于描述物体和点的位置。没有对坐标系的直观理解，难以掌握向量、几何体建模、摄像机朝向等空间相关知识，是三维场景建模与理解空间关系的核心基础。",
+      "relatedStepIds": ["s-1", "s-3"],
+      "category": "concept",
+      "difficulty": "easy",
+      "scope": "step"
+    },
+    {
+      "id": "k-deep-4",
+      "title": "条件判断与布尔逻辑",
+      "content": "条件判断用于选择代码流程，布尔逻辑决定语句是否执行。理解判断语句（如 if）、真假值的表达，是递归出口、光线与物体相交判定、阴影检测等运行逻辑的前提。如果没有该基础，很难追踪渲染相关流程。",
+      "relatedStepIds": ["s-4", "s-5", "s-6"],
+      "category": "syntax",
+      "difficulty": "easy",
+      "scope": "code"
+    },
+    {
+      "id": "k-deep-5",
+      "title": "数组与列表结构",
+      "content": "数组和列表是管理一组数据的基本数据结构。它们在批量保存对象、像素、颜色等场景中都不可或缺。必须理解数组/列表是什么、如何访问和修改，才能理解 objects 变量、像素矩阵、NumPy数组的使用。",
+      "relatedStepIds": ["s-1", "s-8"],
+      "category": "syntax",
+      "difficulty": "easy",
+      "scope": "code"
+    }
+  ],
+  "knowledgeRelations": [
+    {
+      "fromKnowledgeId": "k-deep-1",
+      "toKnowledgeId": "k-s-1-3",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773898953846
+    },
+    {
+      "fromKnowledgeId": "k-s-1-3",
+      "toKnowledgeId": "k-deep-1",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773898953846
+    },
+    {
+      "fromKnowledgeId": "k-deep-1",
+      "toKnowledgeId": "k-s-1-4",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773898953846
+    },
+    {
+      "fromKnowledgeId": "k-s-1-4",
+      "toKnowledgeId": "k-deep-1",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773898953846
+    },
+    {
+      "fromKnowledgeId": "k-deep-1",
+      "toKnowledgeId": "k-s-2-2",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773898953846
+    },
+    {
+      "fromKnowledgeId": "k-s-2-2",
+      "toKnowledgeId": "k-deep-1",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773898953846
+    },
+    {
+      "fromKnowledgeId": "k-deep-1",
+      "toKnowledgeId": "k-deep-5",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773898953846
+    },
+    {
+      "fromKnowledgeId": "k-deep-5",
+      "toKnowledgeId": "k-deep-1",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773898953846
+    },
+    {
+      "fromKnowledgeId": "k-deep-5",
+      "toKnowledgeId": "k-s-1-3",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773898953846
+    },
+    {
+      "fromKnowledgeId": "k-s-1-3",
+      "toKnowledgeId": "k-deep-5",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773898953846
+    },
+    {
+      "fromKnowledgeId": "k-deep-3",
+      "toKnowledgeId": "k-s-1-1",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773898953846
+    },
+    {
+      "fromKnowledgeId": "k-s-1-1",
+      "toKnowledgeId": "k-deep-3",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773898953846
+    },
+    {
+      "fromKnowledgeId": "k-s-1-1",
+      "toKnowledgeId": "k-s-1-2",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773898953846
+    },
+    {
+      "fromKnowledgeId": "k-s-1-2",
+      "toKnowledgeId": "k-s-1-1",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773898953846
+    },
+    {
+      "fromKnowledgeId": "k-deep-5",
+      "toKnowledgeId": "k-s-8-1",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773898953846
+    },
+    {
+      "fromKnowledgeId": "k-s-8-1",
+      "toKnowledgeId": "k-deep-5",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773898953846
+    },
+    {
+      "fromKnowledgeId": "k-deep-1",
+      "toKnowledgeId": "k-s-8-1",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773898953846
+    },
+    {
+      "fromKnowledgeId": "k-s-8-1",
+      "toKnowledgeId": "k-deep-1",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773898953846
+    },
+    {
+      "fromKnowledgeId": "k-s-1-1",
+      "toKnowledgeId": "k-s-2-3",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773898953846
+    },
+    {
+      "fromKnowledgeId": "k-s-2-3",
+      "toKnowledgeId": "k-s-1-1",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773898953846
+    },
+    {
+      "fromKnowledgeId": "k-s-2-3",
+      "toKnowledgeId": "k-s-4-3",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773898953846
+    },
+    {
+      "fromKnowledgeId": "k-s-4-3",
+      "toKnowledgeId": "k-s-2-3",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773898953846
+    },
+    {
+      "fromKnowledgeId": "k-s-4-3",
+      "toKnowledgeId": "k-s-5-2",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773898953846
+    },
+    {
+      "fromKnowledgeId": "k-s-5-2",
+      "toKnowledgeId": "k-s-4-3",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773898953846
+    },
+    {
+      "fromKnowledgeId": "k-s-4-3",
+      "toKnowledgeId": "k-s-5-3",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773898953846
+    },
+    {
+      "fromKnowledgeId": "k-s-5-3",
+      "toKnowledgeId": "k-s-4-3",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773898953846
+    },
+    {
+      "fromKnowledgeId": "k-s-2-2",
+      "toKnowledgeId": "k-s-4-2",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773898953846
+    },
+    {
+      "fromKnowledgeId": "k-s-4-2",
+      "toKnowledgeId": "k-s-2-2",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773898953846
+    },
+    {
+      "fromKnowledgeId": "k-deep-2",
+      "toKnowledgeId": "k-s-4-2",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773898953846
+    },
+    {
+      "fromKnowledgeId": "k-s-4-2",
+      "toKnowledgeId": "k-deep-2",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773898953846
+    },
+    {
+      "fromKnowledgeId": "k-deep-4",
+      "toKnowledgeId": "k-s-4-4",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773898953846
+    },
+    {
+      "fromKnowledgeId": "k-s-4-4",
+      "toKnowledgeId": "k-deep-4",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773898953846
+    },
+    {
+      "fromKnowledgeId": "k-deep-2",
+      "toKnowledgeId": "k-s-4-4",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773898953846
+    },
+    {
+      "fromKnowledgeId": "k-s-4-4",
+      "toKnowledgeId": "k-deep-2",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773898953846
+    },
+    {
+      "fromKnowledgeId": "k-deep-2",
+      "toKnowledgeId": "k-s-7-4",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773898953846
+    },
+    {
+      "fromKnowledgeId": "k-s-7-4",
+      "toKnowledgeId": "k-deep-2",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773898953846
+    },
+    {
+      "fromKnowledgeId": "k-s-6-1",
+      "toKnowledgeId": "k-s-5-2",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773898953847
+    },
+    {
+      "fromKnowledgeId": "k-s-5-2",
+      "toKnowledgeId": "k-s-6-1",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773898953847
+    },
+    {
+      "fromKnowledgeId": "k-s-4-4",
+      "toKnowledgeId": "k-s-6-2",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773898953847
+    },
+    {
+      "fromKnowledgeId": "k-s-6-2",
+      "toKnowledgeId": "k-s-4-4",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773898953847
+    },
+    {
+      "fromKnowledgeId": "k-s-2-2",
+      "toKnowledgeId": "k-s-5-5",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773898953847
+    },
+    {
+      "fromKnowledgeId": "k-s-5-5",
+      "toKnowledgeId": "k-s-2-2",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773898953847
+    },
+    {
+      "fromKnowledgeId": "k-s-2-3",
+      "toKnowledgeId": "k-s-7-3",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773898953847
+    },
+    {
+      "fromKnowledgeId": "k-s-7-3",
+      "toKnowledgeId": "k-s-2-3",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773898953847
+    },
+    {
+      "fromKnowledgeId": "k-s-1-1",
+      "toKnowledgeId": "k-s-3-2",
+      "similarity": 0.7303649540097105,
+      "relationType": "related",
+      "createdAt": 1773898954729
+    },
+    {
+      "fromKnowledgeId": "k-s-3-2",
+      "toKnowledgeId": "k-s-1-1",
+      "similarity": 0.7303649540097105,
+      "relationType": "related",
+      "createdAt": 1773898954729
+    },
+    {
+      "fromKnowledgeId": "k-s-1-1",
+      "toKnowledgeId": "k-deep-1",
+      "similarity": 0.691030358751726,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-deep-1",
+      "toKnowledgeId": "k-s-1-1",
+      "similarity": 0.691030358751726,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-1-2",
+      "toKnowledgeId": "k-s-3-2",
+      "similarity": 0.7500992337014969,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-3-2",
+      "toKnowledgeId": "k-s-1-2",
+      "similarity": 0.7500992337014969,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-1-2",
+      "toKnowledgeId": "k-deep-1",
+      "similarity": 0.6571499401756851,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-deep-1",
+      "toKnowledgeId": "k-s-1-2",
+      "similarity": 0.6571499401756851,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-1-2",
+      "toKnowledgeId": "k-deep-3",
+      "similarity": 0.7896641968529199,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-deep-3",
+      "toKnowledgeId": "k-s-1-2",
+      "similarity": 0.7896641968529199,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-1-3",
+      "toKnowledgeId": "k-s-2-2",
+      "similarity": 0.7330132738816557,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-2-2",
+      "toKnowledgeId": "k-s-1-3",
+      "similarity": 0.7330132738816557,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-1-3",
+      "toKnowledgeId": "k-s-5-5",
+      "similarity": 0.7279854490069375,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-5-5",
+      "toKnowledgeId": "k-s-1-3",
+      "similarity": 0.7279854490069375,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-2-1",
+      "toKnowledgeId": "k-s-3-1",
+      "similarity": 0.9172752706765418,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-3-1",
+      "toKnowledgeId": "k-s-2-1",
+      "similarity": 0.9172752706765418,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-2-1",
+      "toKnowledgeId": "k-s-3-3",
+      "similarity": 0.8898266516937913,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-3-3",
+      "toKnowledgeId": "k-s-2-1",
+      "similarity": 0.8898266516937913,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-2-1",
+      "toKnowledgeId": "k-s-4-1",
+      "similarity": 0.7688520166758439,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-4-1",
+      "toKnowledgeId": "k-s-2-1",
+      "similarity": 0.7688520166758439,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-2-1",
+      "toKnowledgeId": "k-s-4-4",
+      "similarity": 0.7873719273365684,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-4-4",
+      "toKnowledgeId": "k-s-2-1",
+      "similarity": 0.7873719273365684,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-2-1",
+      "toKnowledgeId": "k-s-5-1",
+      "similarity": 0.9123780191405864,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-5-1",
+      "toKnowledgeId": "k-s-2-1",
+      "similarity": 0.9123780191405864,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-2-1",
+      "toKnowledgeId": "k-s-5-2",
+      "similarity": 0.9091999436284727,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-5-2",
+      "toKnowledgeId": "k-s-2-1",
+      "similarity": 0.9091999436284727,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-2-1",
+      "toKnowledgeId": "k-s-5-3",
+      "similarity": 0.9214493250949797,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-5-3",
+      "toKnowledgeId": "k-s-2-1",
+      "similarity": 0.9214493250949797,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-2-1",
+      "toKnowledgeId": "k-s-5-4",
+      "similarity": 0.9341300969371378,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-5-4",
+      "toKnowledgeId": "k-s-2-1",
+      "similarity": 0.9341300969371378,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-2-1",
+      "toKnowledgeId": "k-s-6-1",
+      "similarity": 0.8990474471792259,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-6-1",
+      "toKnowledgeId": "k-s-2-1",
+      "similarity": 0.8990474471792259,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-2-1",
+      "toKnowledgeId": "k-s-6-2",
+      "similarity": 0.8216194554628579,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-6-2",
+      "toKnowledgeId": "k-s-2-1",
+      "similarity": 0.8216194554628579,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-2-1",
+      "toKnowledgeId": "k-s-6-4",
+      "similarity": 0.8514940959207399,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-6-4",
+      "toKnowledgeId": "k-s-2-1",
+      "similarity": 0.8514940959207399,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-2-1",
+      "toKnowledgeId": "k-s-7-1",
+      "similarity": 0.932860554368506,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-7-1",
+      "toKnowledgeId": "k-s-2-1",
+      "similarity": 0.932860554368506,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-2-1",
+      "toKnowledgeId": "k-s-7-2",
+      "similarity": 0.8830762587668667,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-7-2",
+      "toKnowledgeId": "k-s-2-1",
+      "similarity": 0.8830762587668667,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-2-1",
+      "toKnowledgeId": "k-s-7-4",
+      "similarity": 0.826480602833494,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-7-4",
+      "toKnowledgeId": "k-s-2-1",
+      "similarity": 0.826480602833494,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-2-1",
+      "toKnowledgeId": "k-deep-2",
+      "similarity": 0.7553191512442473,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-deep-2",
+      "toKnowledgeId": "k-s-2-1",
+      "similarity": 0.7553191512442473,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-2-1",
+      "toKnowledgeId": "k-deep-4",
+      "similarity": 0.6766767416562326,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-deep-4",
+      "toKnowledgeId": "k-s-2-1",
+      "similarity": 0.6766767416562326,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-2-2",
+      "toKnowledgeId": "k-s-2-3",
+      "similarity": 0.6513598015537198,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-2-3",
+      "toKnowledgeId": "k-s-2-2",
+      "similarity": 0.6513598015537198,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-2-2",
+      "toKnowledgeId": "k-s-8-1",
+      "similarity": 0.6528460476979823,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-8-1",
+      "toKnowledgeId": "k-s-2-2",
+      "similarity": 0.6528460476979823,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-2-4",
+      "toKnowledgeId": "k-s-5-3",
+      "similarity": 0.6539622007365216,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-5-3",
+      "toKnowledgeId": "k-s-2-4",
+      "similarity": 0.6539622007365216,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-3-1",
+      "toKnowledgeId": "k-s-3-3",
+      "similarity": 0.8579841172937309,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-3-3",
+      "toKnowledgeId": "k-s-3-1",
+      "similarity": 0.8579841172937309,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-3-1",
+      "toKnowledgeId": "k-s-4-1",
+      "similarity": 0.7540794628902112,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-4-1",
+      "toKnowledgeId": "k-s-3-1",
+      "similarity": 0.7540794628902112,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-3-1",
+      "toKnowledgeId": "k-s-4-4",
+      "similarity": 0.7199911820378825,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-4-4",
+      "toKnowledgeId": "k-s-3-1",
+      "similarity": 0.7199911820378825,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-3-1",
+      "toKnowledgeId": "k-s-5-1",
+      "similarity": 0.9034993103698777,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-5-1",
+      "toKnowledgeId": "k-s-3-1",
+      "similarity": 0.9034993103698777,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-3-1",
+      "toKnowledgeId": "k-s-5-2",
+      "similarity": 0.8883079397016808,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-5-2",
+      "toKnowledgeId": "k-s-3-1",
+      "similarity": 0.8883079397016808,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-3-1",
+      "toKnowledgeId": "k-s-5-3",
+      "similarity": 0.8697523917083112,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-5-3",
+      "toKnowledgeId": "k-s-3-1",
+      "similarity": 0.8697523917083112,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-3-1",
+      "toKnowledgeId": "k-s-5-4",
+      "similarity": 0.9136114751073132,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-5-4",
+      "toKnowledgeId": "k-s-3-1",
+      "similarity": 0.9136114751073132,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-3-1",
+      "toKnowledgeId": "k-s-6-1",
+      "similarity": 0.8603548397855275,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-6-1",
+      "toKnowledgeId": "k-s-3-1",
+      "similarity": 0.8603548397855275,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-3-1",
+      "toKnowledgeId": "k-s-6-2",
+      "similarity": 0.7936017545739219,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-6-2",
+      "toKnowledgeId": "k-s-3-1",
+      "similarity": 0.7936017545739219,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-3-1",
+      "toKnowledgeId": "k-s-6-4",
+      "similarity": 0.7729270560064778,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-6-4",
+      "toKnowledgeId": "k-s-3-1",
+      "similarity": 0.7729270560064778,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-3-1",
+      "toKnowledgeId": "k-s-7-1",
+      "similarity": 0.8757308451436928,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-7-1",
+      "toKnowledgeId": "k-s-3-1",
+      "similarity": 0.8757308451436928,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-3-1",
+      "toKnowledgeId": "k-s-7-2",
+      "similarity": 0.8177590620056874,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-7-2",
+      "toKnowledgeId": "k-s-3-1",
+      "similarity": 0.8177590620056874,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-3-1",
+      "toKnowledgeId": "k-s-7-4",
+      "similarity": 0.7751745626002285,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-7-4",
+      "toKnowledgeId": "k-s-3-1",
+      "similarity": 0.7751745626002285,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-3-1",
+      "toKnowledgeId": "k-deep-2",
+      "similarity": 0.6802524729404313,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-deep-2",
+      "toKnowledgeId": "k-s-3-1",
+      "similarity": 0.6802524729404313,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-3-1",
+      "toKnowledgeId": "k-deep-4",
+      "similarity": 0.6635039426782188,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-deep-4",
+      "toKnowledgeId": "k-s-3-1",
+      "similarity": 0.6635039426782188,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-3-2",
+      "toKnowledgeId": "k-deep-1",
+      "similarity": 0.6877977997132874,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-deep-1",
+      "toKnowledgeId": "k-s-3-2",
+      "similarity": 0.6877977997132874,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-3-2",
+      "toKnowledgeId": "k-deep-3",
+      "similarity": 0.710748896127513,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-deep-3",
+      "toKnowledgeId": "k-s-3-2",
+      "similarity": 0.710748896127513,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-3-3",
+      "toKnowledgeId": "k-s-4-4",
+      "similarity": 0.713238382062217,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-4-4",
+      "toKnowledgeId": "k-s-3-3",
+      "similarity": 0.713238382062217,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-3-3",
+      "toKnowledgeId": "k-s-5-1",
+      "similarity": 0.8599619355313483,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-5-1",
+      "toKnowledgeId": "k-s-3-3",
+      "similarity": 0.8599619355313483,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-3-3",
+      "toKnowledgeId": "k-s-5-2",
+      "similarity": 0.8348264592495709,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-5-2",
+      "toKnowledgeId": "k-s-3-3",
+      "similarity": 0.8348264592495709,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-3-3",
+      "toKnowledgeId": "k-s-5-3",
+      "similarity": 0.8735339967862086,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-5-3",
+      "toKnowledgeId": "k-s-3-3",
+      "similarity": 0.8735339967862086,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-3-3",
+      "toKnowledgeId": "k-s-5-4",
+      "similarity": 0.9372948935265694,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-5-4",
+      "toKnowledgeId": "k-s-3-3",
+      "similarity": 0.9372948935265694,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-3-3",
+      "toKnowledgeId": "k-s-6-1",
+      "similarity": 0.9415774115982353,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-6-1",
+      "toKnowledgeId": "k-s-3-3",
+      "similarity": 0.9415774115982353,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-3-3",
+      "toKnowledgeId": "k-s-6-2",
+      "similarity": 0.7093907099789726,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-6-2",
+      "toKnowledgeId": "k-s-3-3",
+      "similarity": 0.7093907099789726,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-3-3",
+      "toKnowledgeId": "k-s-6-4",
+      "similarity": 0.7205480465308867,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-6-4",
+      "toKnowledgeId": "k-s-3-3",
+      "similarity": 0.7205480465308867,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-3-3",
+      "toKnowledgeId": "k-s-7-1",
+      "similarity": 0.869360821812431,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-7-1",
+      "toKnowledgeId": "k-s-3-3",
+      "similarity": 0.869360821812431,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-3-3",
+      "toKnowledgeId": "k-s-7-2",
+      "similarity": 0.8143582931765423,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-7-2",
+      "toKnowledgeId": "k-s-3-3",
+      "similarity": 0.8143582931765423,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-3-3",
+      "toKnowledgeId": "k-s-7-4",
+      "similarity": 0.8322974423033465,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-7-4",
+      "toKnowledgeId": "k-s-3-3",
+      "similarity": 0.8322974423033465,
+      "relationType": "related",
+      "createdAt": 1773898954730
+    },
+    {
+      "fromKnowledgeId": "k-s-4-1",
+      "toKnowledgeId": "k-s-5-1",
+      "similarity": 0.7551632799430504,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-5-1",
+      "toKnowledgeId": "k-s-4-1",
+      "similarity": 0.7551632799430504,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-4-1",
+      "toKnowledgeId": "k-s-5-2",
+      "similarity": 0.7889176286786291,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-5-2",
+      "toKnowledgeId": "k-s-4-1",
+      "similarity": 0.7889176286786291,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-4-1",
+      "toKnowledgeId": "k-s-5-3",
+      "similarity": 0.7133372749181615,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-5-3",
+      "toKnowledgeId": "k-s-4-1",
+      "similarity": 0.7133372749181615,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-4-1",
+      "toKnowledgeId": "k-s-5-4",
+      "similarity": 0.717224732047549,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-5-4",
+      "toKnowledgeId": "k-s-4-1",
+      "similarity": 0.717224732047549,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-4-1",
+      "toKnowledgeId": "k-s-6-1",
+      "similarity": 0.7246845791279317,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-6-1",
+      "toKnowledgeId": "k-s-4-1",
+      "similarity": 0.7246845791279317,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-4-1",
+      "toKnowledgeId": "k-s-6-2",
+      "similarity": 0.751640189580833,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-6-2",
+      "toKnowledgeId": "k-s-4-1",
+      "similarity": 0.751640189580833,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-4-1",
+      "toKnowledgeId": "k-s-6-3",
+      "similarity": 0.7187313795506273,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-6-3",
+      "toKnowledgeId": "k-s-4-1",
+      "similarity": 0.7187313795506273,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-4-1",
+      "toKnowledgeId": "k-s-6-4",
+      "similarity": 0.7734938803421353,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-6-4",
+      "toKnowledgeId": "k-s-4-1",
+      "similarity": 0.7734938803421353,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-4-1",
+      "toKnowledgeId": "k-s-7-1",
+      "similarity": 0.8136288795357619,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-7-1",
+      "toKnowledgeId": "k-s-4-1",
+      "similarity": 0.8136288795357619,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-4-1",
+      "toKnowledgeId": "k-s-7-2",
+      "similarity": 0.7422409453307631,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-7-2",
+      "toKnowledgeId": "k-s-4-1",
+      "similarity": 0.7422409453307631,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-4-1",
+      "toKnowledgeId": "k-s-8-3",
+      "similarity": 0.7142201295664863,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-8-3",
+      "toKnowledgeId": "k-s-4-1",
+      "similarity": 0.7142201295664863,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-4-1",
+      "toKnowledgeId": "k-deep-2",
+      "similarity": 0.6878960941537603,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-deep-2",
+      "toKnowledgeId": "k-s-4-1",
+      "similarity": 0.6878960941537603,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-4-1",
+      "toKnowledgeId": "k-deep-4",
+      "similarity": 0.7119074534604135,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-deep-4",
+      "toKnowledgeId": "k-s-4-1",
+      "similarity": 0.7119074534604135,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-4-4",
+      "toKnowledgeId": "k-s-5-1",
+      "similarity": 0.711031895587266,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-5-1",
+      "toKnowledgeId": "k-s-4-4",
+      "similarity": 0.711031895587266,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-4-4",
+      "toKnowledgeId": "k-s-5-2",
+      "similarity": 0.731806047304669,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-5-2",
+      "toKnowledgeId": "k-s-4-4",
+      "similarity": 0.731806047304669,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-4-4",
+      "toKnowledgeId": "k-s-5-3",
+      "similarity": 0.747972008782126,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-5-3",
+      "toKnowledgeId": "k-s-4-4",
+      "similarity": 0.747972008782126,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-4-4",
+      "toKnowledgeId": "k-s-5-4",
+      "similarity": 0.741504975048269,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-5-4",
+      "toKnowledgeId": "k-s-4-4",
+      "similarity": 0.741504975048269,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-4-4",
+      "toKnowledgeId": "k-s-6-1",
+      "similarity": 0.7307193204754526,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-6-1",
+      "toKnowledgeId": "k-s-4-4",
+      "similarity": 0.7307193204754526,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-4-4",
+      "toKnowledgeId": "k-s-6-4",
+      "similarity": 0.711996678432598,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-6-4",
+      "toKnowledgeId": "k-s-4-4",
+      "similarity": 0.711996678432598,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-4-4",
+      "toKnowledgeId": "k-s-7-1",
+      "similarity": 0.7919914572026842,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-7-1",
+      "toKnowledgeId": "k-s-4-4",
+      "similarity": 0.7919914572026842,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-4-4",
+      "toKnowledgeId": "k-s-7-2",
+      "similarity": 0.7148277380150836,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-7-2",
+      "toKnowledgeId": "k-s-4-4",
+      "similarity": 0.7148277380150836,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-4-4",
+      "toKnowledgeId": "k-s-7-4",
+      "similarity": 0.8782214925279035,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-7-4",
+      "toKnowledgeId": "k-s-4-4",
+      "similarity": 0.8782214925279035,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-5-1",
+      "toKnowledgeId": "k-s-5-2",
+      "similarity": 0.8887495365598108,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-5-2",
+      "toKnowledgeId": "k-s-5-1",
+      "similarity": 0.8887495365598108,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-5-1",
+      "toKnowledgeId": "k-s-5-3",
+      "similarity": 0.8854168012649255,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-5-3",
+      "toKnowledgeId": "k-s-5-1",
+      "similarity": 0.8854168012649255,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-5-1",
+      "toKnowledgeId": "k-s-5-4",
+      "similarity": 0.9128222047293484,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-5-4",
+      "toKnowledgeId": "k-s-5-1",
+      "similarity": 0.9128222047293484,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-5-1",
+      "toKnowledgeId": "k-s-6-1",
+      "similarity": 0.8937153010574409,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-6-1",
+      "toKnowledgeId": "k-s-5-1",
+      "similarity": 0.8937153010574409,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-5-1",
+      "toKnowledgeId": "k-s-6-2",
+      "similarity": 0.794863565508187,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-6-2",
+      "toKnowledgeId": "k-s-5-1",
+      "similarity": 0.794863565508187,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-5-1",
+      "toKnowledgeId": "k-s-6-4",
+      "similarity": 0.820672843584129,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-6-4",
+      "toKnowledgeId": "k-s-5-1",
+      "similarity": 0.820672843584129,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-5-1",
+      "toKnowledgeId": "k-s-7-1",
+      "similarity": 0.8953741652750331,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-7-1",
+      "toKnowledgeId": "k-s-5-1",
+      "similarity": 0.8953741652750331,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-5-1",
+      "toKnowledgeId": "k-s-7-2",
+      "similarity": 0.8440274129283502,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-7-2",
+      "toKnowledgeId": "k-s-5-1",
+      "similarity": 0.8440274129283502,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-5-1",
+      "toKnowledgeId": "k-s-7-4",
+      "similarity": 0.7808648648421028,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-7-4",
+      "toKnowledgeId": "k-s-5-1",
+      "similarity": 0.7808648648421028,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-5-1",
+      "toKnowledgeId": "k-deep-2",
+      "similarity": 0.6984843411410042,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-deep-2",
+      "toKnowledgeId": "k-s-5-1",
+      "similarity": 0.6984843411410042,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-5-1",
+      "toKnowledgeId": "k-deep-4",
+      "similarity": 0.7276613306425209,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-deep-4",
+      "toKnowledgeId": "k-s-5-1",
+      "similarity": 0.7276613306425209,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-5-2",
+      "toKnowledgeId": "k-s-5-3",
+      "similarity": 0.92349092970023,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-5-3",
+      "toKnowledgeId": "k-s-5-2",
+      "similarity": 0.92349092970023,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-5-2",
+      "toKnowledgeId": "k-s-5-4",
+      "similarity": 0.8985473098333723,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-5-4",
+      "toKnowledgeId": "k-s-5-2",
+      "similarity": 0.8985473098333723,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-5-2",
+      "toKnowledgeId": "k-s-6-2",
+      "similarity": 0.8017221633813088,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-6-2",
+      "toKnowledgeId": "k-s-5-2",
+      "similarity": 0.8017221633813088,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-5-2",
+      "toKnowledgeId": "k-s-6-3",
+      "similarity": 0.722376780132226,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-6-3",
+      "toKnowledgeId": "k-s-5-2",
+      "similarity": 0.722376780132226,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-5-2",
+      "toKnowledgeId": "k-s-6-4",
+      "similarity": 0.8402234133393457,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-6-4",
+      "toKnowledgeId": "k-s-5-2",
+      "similarity": 0.8402234133393457,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-5-2",
+      "toKnowledgeId": "k-s-7-1",
+      "similarity": 0.916346922551148,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-7-1",
+      "toKnowledgeId": "k-s-5-2",
+      "similarity": 0.916346922551148,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-5-2",
+      "toKnowledgeId": "k-s-7-2",
+      "similarity": 0.8477476636594177,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-7-2",
+      "toKnowledgeId": "k-s-5-2",
+      "similarity": 0.8477476636594177,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-5-2",
+      "toKnowledgeId": "k-s-7-4",
+      "similarity": 0.7965479276062329,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-7-4",
+      "toKnowledgeId": "k-s-5-2",
+      "similarity": 0.7965479276062329,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-5-2",
+      "toKnowledgeId": "k-deep-2",
+      "similarity": 0.7432784084607585,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-deep-2",
+      "toKnowledgeId": "k-s-5-2",
+      "similarity": 0.7432784084607585,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-5-2",
+      "toKnowledgeId": "k-deep-4",
+      "similarity": 0.6507991176916678,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-deep-4",
+      "toKnowledgeId": "k-s-5-2",
+      "similarity": 0.6507991176916678,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-5-3",
+      "toKnowledgeId": "k-s-5-4",
+      "similarity": 0.9061076237052509,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-5-4",
+      "toKnowledgeId": "k-s-5-3",
+      "similarity": 0.9061076237052509,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-5-3",
+      "toKnowledgeId": "k-s-6-1",
+      "similarity": 0.8974822546650426,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-6-1",
+      "toKnowledgeId": "k-s-5-3",
+      "similarity": 0.8974822546650426,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-5-3",
+      "toKnowledgeId": "k-s-6-2",
+      "similarity": 0.7832255060566093,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-6-2",
+      "toKnowledgeId": "k-s-5-3",
+      "similarity": 0.7832255060566093,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-5-3",
+      "toKnowledgeId": "k-s-6-3",
+      "similarity": 0.6902079797368819,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-6-3",
+      "toKnowledgeId": "k-s-5-3",
+      "similarity": 0.6902079797368819,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-5-3",
+      "toKnowledgeId": "k-s-6-4",
+      "similarity": 0.8466802057233641,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-6-4",
+      "toKnowledgeId": "k-s-5-3",
+      "similarity": 0.8466802057233641,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-5-3",
+      "toKnowledgeId": "k-s-7-1",
+      "similarity": 0.9095866578452019,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-7-1",
+      "toKnowledgeId": "k-s-5-3",
+      "similarity": 0.9095866578452019,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-5-3",
+      "toKnowledgeId": "k-s-7-2",
+      "similarity": 0.8836383577370154,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-7-2",
+      "toKnowledgeId": "k-s-5-3",
+      "similarity": 0.8836383577370154,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-5-3",
+      "toKnowledgeId": "k-s-7-4",
+      "similarity": 0.8254023526648763,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-7-4",
+      "toKnowledgeId": "k-s-5-3",
+      "similarity": 0.8254023526648763,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-5-3",
+      "toKnowledgeId": "k-deep-2",
+      "similarity": 0.7539100311729588,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-deep-2",
+      "toKnowledgeId": "k-s-5-3",
+      "similarity": 0.7539100311729588,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-5-4",
+      "toKnowledgeId": "k-s-6-1",
+      "similarity": 0.9482160666253908,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-6-1",
+      "toKnowledgeId": "k-s-5-4",
+      "similarity": 0.9482160666253908,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-5-4",
+      "toKnowledgeId": "k-s-6-2",
+      "similarity": 0.7697557603654934,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-6-2",
+      "toKnowledgeId": "k-s-5-4",
+      "similarity": 0.7697557603654934,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-5-4",
+      "toKnowledgeId": "k-s-6-4",
+      "similarity": 0.7960159850709784,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-6-4",
+      "toKnowledgeId": "k-s-5-4",
+      "similarity": 0.7960159850709784,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-5-4",
+      "toKnowledgeId": "k-s-7-1",
+      "similarity": 0.8935309533223543,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-7-1",
+      "toKnowledgeId": "k-s-5-4",
+      "similarity": 0.8935309533223543,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-5-4",
+      "toKnowledgeId": "k-s-7-2",
+      "similarity": 0.8573005523431974,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-7-2",
+      "toKnowledgeId": "k-s-5-4",
+      "similarity": 0.8573005523431974,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-5-4",
+      "toKnowledgeId": "k-s-7-4",
+      "similarity": 0.8381186436114582,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-7-4",
+      "toKnowledgeId": "k-s-5-4",
+      "similarity": 0.8381186436114582,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-5-4",
+      "toKnowledgeId": "k-deep-2",
+      "similarity": 0.6894678174482405,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-deep-2",
+      "toKnowledgeId": "k-s-5-4",
+      "similarity": 0.6894678174482405,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-6-1",
+      "toKnowledgeId": "k-s-6-2",
+      "similarity": 0.7486666391821024,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-6-2",
+      "toKnowledgeId": "k-s-6-1",
+      "similarity": 0.7486666391821024,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-6-1",
+      "toKnowledgeId": "k-s-6-4",
+      "similarity": 0.7856076303701384,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-6-4",
+      "toKnowledgeId": "k-s-6-1",
+      "similarity": 0.7856076303701384,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-6-1",
+      "toKnowledgeId": "k-s-7-1",
+      "similarity": 0.9109046528272744,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-7-1",
+      "toKnowledgeId": "k-s-6-1",
+      "similarity": 0.9109046528272744,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-6-1",
+      "toKnowledgeId": "k-s-7-2",
+      "similarity": 0.8414846481858161,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-7-2",
+      "toKnowledgeId": "k-s-6-1",
+      "similarity": 0.8414846481858161,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-6-1",
+      "toKnowledgeId": "k-s-7-4",
+      "similarity": 0.850273114417677,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-7-4",
+      "toKnowledgeId": "k-s-6-1",
+      "similarity": 0.850273114417677,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-6-1",
+      "toKnowledgeId": "k-deep-2",
+      "similarity": 0.6813044623596743,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-deep-2",
+      "toKnowledgeId": "k-s-6-1",
+      "similarity": 0.6813044623596743,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-6-2",
+      "toKnowledgeId": "k-s-6-4",
+      "similarity": 0.7861957992227163,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-6-4",
+      "toKnowledgeId": "k-s-6-2",
+      "similarity": 0.7861957992227163,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-6-2",
+      "toKnowledgeId": "k-s-7-1",
+      "similarity": 0.8096379796561706,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-7-1",
+      "toKnowledgeId": "k-s-6-2",
+      "similarity": 0.8096379796561706,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-6-2",
+      "toKnowledgeId": "k-s-7-2",
+      "similarity": 0.7746481273554363,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-7-2",
+      "toKnowledgeId": "k-s-6-2",
+      "similarity": 0.7746481273554363,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-6-2",
+      "toKnowledgeId": "k-s-7-4",
+      "similarity": 0.6981762448837782,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-7-4",
+      "toKnowledgeId": "k-s-6-2",
+      "similarity": 0.6981762448837782,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-6-2",
+      "toKnowledgeId": "k-deep-2",
+      "similarity": 0.6787082115058563,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-deep-2",
+      "toKnowledgeId": "k-s-6-2",
+      "similarity": 0.6787082115058563,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-6-2",
+      "toKnowledgeId": "k-deep-4",
+      "similarity": 0.7476290756973463,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-deep-4",
+      "toKnowledgeId": "k-s-6-2",
+      "similarity": 0.7476290756973463,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-6-3",
+      "toKnowledgeId": "k-s-6-4",
+      "similarity": 0.6582219082135636,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-6-4",
+      "toKnowledgeId": "k-s-6-3",
+      "similarity": 0.6582219082135636,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-6-3",
+      "toKnowledgeId": "k-s-7-1",
+      "similarity": 0.6900203635820726,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-7-1",
+      "toKnowledgeId": "k-s-6-3",
+      "similarity": 0.6900203635820726,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-6-3",
+      "toKnowledgeId": "k-s-7-3",
+      "similarity": 0.6802266043367305,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-7-3",
+      "toKnowledgeId": "k-s-6-3",
+      "similarity": 0.6802266043367305,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-6-3",
+      "toKnowledgeId": "k-deep-1",
+      "similarity": 0.6553830905020256,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-deep-1",
+      "toKnowledgeId": "k-s-6-3",
+      "similarity": 0.6553830905020256,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-6-3",
+      "toKnowledgeId": "k-deep-2",
+      "similarity": 0.7197237526017239,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-deep-2",
+      "toKnowledgeId": "k-s-6-3",
+      "similarity": 0.7197237526017239,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-6-3",
+      "toKnowledgeId": "k-deep-4",
+      "similarity": 0.6937503674591725,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-deep-4",
+      "toKnowledgeId": "k-s-6-3",
+      "similarity": 0.6937503674591725,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-6-4",
+      "toKnowledgeId": "k-s-7-1",
+      "similarity": 0.8587801500495034,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-7-1",
+      "toKnowledgeId": "k-s-6-4",
+      "similarity": 0.8587801500495034,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-6-4",
+      "toKnowledgeId": "k-s-7-2",
+      "similarity": 0.8604758865099652,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-7-2",
+      "toKnowledgeId": "k-s-6-4",
+      "similarity": 0.8604758865099652,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-6-4",
+      "toKnowledgeId": "k-s-7-4",
+      "similarity": 0.7085866990697774,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-7-4",
+      "toKnowledgeId": "k-s-6-4",
+      "similarity": 0.7085866990697774,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-6-4",
+      "toKnowledgeId": "k-deep-2",
+      "similarity": 0.7603315466593011,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-deep-2",
+      "toKnowledgeId": "k-s-6-4",
+      "similarity": 0.7603315466593011,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-6-4",
+      "toKnowledgeId": "k-deep-4",
+      "similarity": 0.7405817520247209,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-deep-4",
+      "toKnowledgeId": "k-s-6-4",
+      "similarity": 0.7405817520247209,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-7-1",
+      "toKnowledgeId": "k-s-7-2",
+      "similarity": 0.8791017593256688,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-7-2",
+      "toKnowledgeId": "k-s-7-1",
+      "similarity": 0.8791017593256688,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-7-1",
+      "toKnowledgeId": "k-s-7-4",
+      "similarity": 0.8165884342685252,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-7-4",
+      "toKnowledgeId": "k-s-7-1",
+      "similarity": 0.8165884342685252,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-7-1",
+      "toKnowledgeId": "k-deep-2",
+      "similarity": 0.7598890249038521,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-deep-2",
+      "toKnowledgeId": "k-s-7-1",
+      "similarity": 0.7598890249038521,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-7-1",
+      "toKnowledgeId": "k-deep-4",
+      "similarity": 0.6766744701310841,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-deep-4",
+      "toKnowledgeId": "k-s-7-1",
+      "similarity": 0.6766744701310841,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-7-2",
+      "toKnowledgeId": "k-s-7-4",
+      "similarity": 0.7310486398460914,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-7-4",
+      "toKnowledgeId": "k-s-7-2",
+      "similarity": 0.7310486398460914,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-7-2",
+      "toKnowledgeId": "k-deep-2",
+      "similarity": 0.6983653095936021,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-deep-2",
+      "toKnowledgeId": "k-s-7-2",
+      "similarity": 0.6983653095936021,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-7-2",
+      "toKnowledgeId": "k-deep-4",
+      "similarity": 0.6620101378275407,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-deep-4",
+      "toKnowledgeId": "k-s-7-2",
+      "similarity": 0.6620101378275407,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-7-3",
+      "toKnowledgeId": "k-s-8-3",
+      "similarity": 0.8323851568145896,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-8-3",
+      "toKnowledgeId": "k-s-7-3",
+      "similarity": 0.8323851568145896,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-s-8-3",
+      "toKnowledgeId": "k-deep-1",
+      "similarity": 0.6620837612513355,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-deep-1",
+      "toKnowledgeId": "k-s-8-3",
+      "similarity": 0.6620837612513355,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-deep-1",
+      "toKnowledgeId": "k-deep-4",
+      "similarity": 0.6707493930148605,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-deep-4",
+      "toKnowledgeId": "k-deep-1",
+      "similarity": 0.6707493930148605,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-deep-2",
+      "toKnowledgeId": "k-deep-4",
+      "similarity": 0.6873442961246473,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    },
+    {
+      "fromKnowledgeId": "k-deep-4",
+      "toKnowledgeId": "k-deep-2",
+      "similarity": 0.6873442961246473,
+      "relationType": "related",
+      "createdAt": 1773898954731
+    }
+  ],
+  "knowledgeToStepRelations": [
+    {
+      "knowledgeId": "k-s-1-1",
+      "stepId": "s-1",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-1-2",
+      "stepId": "s-1",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-2-1",
+      "stepId": "s-2",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-2-4",
+      "stepId": "s-2",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-3-1",
+      "stepId": "s-3",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-3-2",
+      "stepId": "s-3",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-3-3",
+      "stepId": "s-3",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-4-1",
+      "stepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-1",
+      "stepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-4",
+      "stepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-6-1",
+      "stepId": "s-6",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-6-4",
+      "stepId": "s-6",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-7-1",
+      "stepId": "s-7",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-7-2",
+      "stepId": "s-7",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-8-3",
+      "stepId": "s-8",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-3",
+      "stepId": "s-1",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-3",
+      "stepId": "s-3",
+      "createdAt": 1773898934066
+    }
+  ],
+  "knowledgeToCodeChunkRelations": [
+    {
+      "knowledgeId": "k-s-1-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-80",
+      "viaStepId": "s-1",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-1-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-81",
+      "viaStepId": "s-1",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-1-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-82",
+      "viaStepId": "s-1",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-1-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-83",
+      "viaStepId": "s-1",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-1-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-84",
+      "viaStepId": "s-1",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-1-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-85",
+      "viaStepId": "s-1",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-1-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-86",
+      "viaStepId": "s-1",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-1-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-80",
+      "viaStepId": "s-1",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-1-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-81",
+      "viaStepId": "s-1",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-1-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-82",
+      "viaStepId": "s-1",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-1-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-83",
+      "viaStepId": "s-1",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-1-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-84",
+      "viaStepId": "s-1",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-1-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-85",
+      "viaStepId": "s-1",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-1-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-86",
+      "viaStepId": "s-1",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-2-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-25",
+      "viaStepId": "s-2",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-2-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-26",
+      "viaStepId": "s-2",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-2-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-27",
+      "viaStepId": "s-2",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-2-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-28",
+      "viaStepId": "s-2",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-2-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-29",
+      "viaStepId": "s-2",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-2-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-38",
+      "viaStepId": "s-2",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-2-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-60",
+      "viaStepId": "s-2",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-2-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-76",
+      "viaStepId": "s-2",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-2-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-77",
+      "viaStepId": "s-2",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-2-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-78",
+      "viaStepId": "s-2",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-2-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-79",
+      "viaStepId": "s-2",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-2-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-81",
+      "viaStepId": "s-2",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-2-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-82",
+      "viaStepId": "s-2",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-2-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-83",
+      "viaStepId": "s-2",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-2-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-84",
+      "viaStepId": "s-2",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-2-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-85",
+      "viaStepId": "s-2",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-2-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-25",
+      "viaStepId": "s-2",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-2-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-26",
+      "viaStepId": "s-2",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-2-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-27",
+      "viaStepId": "s-2",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-2-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-28",
+      "viaStepId": "s-2",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-2-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-29",
+      "viaStepId": "s-2",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-2-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-38",
+      "viaStepId": "s-2",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-2-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-60",
+      "viaStepId": "s-2",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-2-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-76",
+      "viaStepId": "s-2",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-2-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-77",
+      "viaStepId": "s-2",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-2-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-78",
+      "viaStepId": "s-2",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-2-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-79",
+      "viaStepId": "s-2",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-2-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-81",
+      "viaStepId": "s-2",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-2-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-82",
+      "viaStepId": "s-2",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-2-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-83",
+      "viaStepId": "s-2",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-2-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-84",
+      "viaStepId": "s-2",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-2-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-85",
+      "viaStepId": "s-2",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-4-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-106",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-4-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-112",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-4-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-113",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-4-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-114",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-4-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-115",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-4-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-116",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-4-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-117",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-4-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-118",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-4-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-119",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-4-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-120",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-4-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-121",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-4-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-122",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-4-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-123",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-4-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-124",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-4-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-125",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-4-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-126",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-4-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-127",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-4-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-128",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-4-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-132",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-4-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-106",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-4-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-112",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-4-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-113",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-4-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-114",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-4-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-115",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-4-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-116",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-4-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-117",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-4-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-118",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-4-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-119",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-4-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-120",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-4-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-121",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-4-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-122",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-4-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-123",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-4-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-124",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-4-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-125",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-4-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-126",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-4-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-127",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-4-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-128",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-4-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-132",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-4-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-106",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-4-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-112",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-4-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-113",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-4-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-114",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-4-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-115",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-4-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-116",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-4-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-117",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-4-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-118",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-4-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-119",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-4-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-120",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-4-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-121",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-4-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-122",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-4-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-123",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-4-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-124",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-4-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-125",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-4-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-126",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-4-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-127",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-4-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-128",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-4-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-132",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-135",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-136",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-137",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-138",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-139",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-140",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-141",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-142",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-143",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-144",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-145",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-146",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-147",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-148",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-149",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-150",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-151",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-152",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-153",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-154",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-155",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-156",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-157",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-158",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-159",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-160",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-161",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-162",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-135",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-136",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-137",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-138",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-139",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-140",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-141",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-142",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-143",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-144",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-145",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-146",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-147",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-148",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-149",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-150",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-151",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-152",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-153",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-154",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-155",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-156",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-157",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-158",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-159",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-160",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-161",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-162",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-5",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-135",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-5",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-136",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-5",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-137",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-5",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-138",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-5",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-139",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-5",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-140",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-5",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-141",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-5",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-142",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-5",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-143",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-5",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-144",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-5",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-145",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-5",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-146",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-5",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-147",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-5",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-148",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-5",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-149",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-5",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-150",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-5",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-151",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-5",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-152",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-5",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-153",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-5",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-154",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-5",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-155",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-5",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-156",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-5",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-157",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-5",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-158",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-5",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-159",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-5",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-160",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-5",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-161",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-5-5",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-162",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-6-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-136",
+      "viaStepId": "s-6",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-6-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-137",
+      "viaStepId": "s-6",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-6-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-138",
+      "viaStepId": "s-6",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-6-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-139",
+      "viaStepId": "s-6",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-6-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-140",
+      "viaStepId": "s-6",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-6-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-141",
+      "viaStepId": "s-6",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-6-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-136",
+      "viaStepId": "s-6",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-6-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-137",
+      "viaStepId": "s-6",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-6-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-138",
+      "viaStepId": "s-6",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-6-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-139",
+      "viaStepId": "s-6",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-6-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-140",
+      "viaStepId": "s-6",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-6-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-141",
+      "viaStepId": "s-6",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-7-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-106",
+      "viaStepId": "s-7",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-7-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-157",
+      "viaStepId": "s-7",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-7-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-158",
+      "viaStepId": "s-7",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-7-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-159",
+      "viaStepId": "s-7",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-7-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-160",
+      "viaStepId": "s-7",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-7-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-161",
+      "viaStepId": "s-7",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-7-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-162",
+      "viaStepId": "s-7",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-7-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-163",
+      "viaStepId": "s-7",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-7-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-106",
+      "viaStepId": "s-7",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-7-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-157",
+      "viaStepId": "s-7",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-7-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-158",
+      "viaStepId": "s-7",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-7-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-159",
+      "viaStepId": "s-7",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-7-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-160",
+      "viaStepId": "s-7",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-7-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-161",
+      "viaStepId": "s-7",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-7-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-162",
+      "viaStepId": "s-7",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-7-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-163",
+      "viaStepId": "s-7",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-8-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-107",
+      "viaStepId": "s-8",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-8-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-108",
+      "viaStepId": "s-8",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-8-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-109",
+      "viaStepId": "s-8",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-8-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-110",
+      "viaStepId": "s-8",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-8-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-107",
+      "viaStepId": "s-8",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-8-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-108",
+      "viaStepId": "s-8",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-8-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-109",
+      "viaStepId": "s-8",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-8-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-110",
+      "viaStepId": "s-8",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-8-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-107",
+      "viaStepId": "s-8",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-8-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-108",
+      "viaStepId": "s-8",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-8-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-109",
+      "viaStepId": "s-8",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-s-8-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-110",
+      "viaStepId": "s-8",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-80",
+      "viaStepId": "s-1",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-81",
+      "viaStepId": "s-2",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-82",
+      "viaStepId": "s-2",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-83",
+      "viaStepId": "s-2",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-84",
+      "viaStepId": "s-2",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-85",
+      "viaStepId": "s-2",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-86",
+      "viaStepId": "s-1",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-25",
+      "viaStepId": "s-2",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-26",
+      "viaStepId": "s-2",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-27",
+      "viaStepId": "s-2",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-28",
+      "viaStepId": "s-2",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-29",
+      "viaStepId": "s-2",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-38",
+      "viaStepId": "s-2",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-60",
+      "viaStepId": "s-2",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-76",
+      "viaStepId": "s-2",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-77",
+      "viaStepId": "s-2",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-78",
+      "viaStepId": "s-2",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-79",
+      "viaStepId": "s-2",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-135",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-136",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-137",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-138",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-139",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-140",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-141",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-142",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-143",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-144",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-145",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-146",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-147",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-148",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-149",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-150",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-151",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-152",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-153",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-154",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-155",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-156",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-157",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-158",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-159",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-160",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-161",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-162",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-106",
+      "viaStepId": "s-7",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-112",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-113",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-114",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-115",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-116",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-117",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-118",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-119",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-120",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-121",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-122",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-123",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-124",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-125",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-126",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-127",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-128",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-132",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-136",
+      "viaStepId": "s-6",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-137",
+      "viaStepId": "s-6",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-138",
+      "viaStepId": "s-6",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-139",
+      "viaStepId": "s-6",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-140",
+      "viaStepId": "s-6",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-141",
+      "viaStepId": "s-6",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-157",
+      "viaStepId": "s-7",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-158",
+      "viaStepId": "s-7",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-159",
+      "viaStepId": "s-7",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-160",
+      "viaStepId": "s-7",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-161",
+      "viaStepId": "s-7",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-162",
+      "viaStepId": "s-7",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-163",
+      "viaStepId": "s-7",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-106",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-112",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-113",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-114",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-115",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-116",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-117",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-118",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-119",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-120",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-121",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-122",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-123",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-124",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-125",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-126",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-127",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-128",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-132",
+      "viaStepId": "s-4",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-135",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-136",
+      "viaStepId": "s-6",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-137",
+      "viaStepId": "s-6",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-138",
+      "viaStepId": "s-6",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-139",
+      "viaStepId": "s-6",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-140",
+      "viaStepId": "s-6",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-141",
+      "viaStepId": "s-6",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-142",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-143",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-144",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-145",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-146",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-147",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-148",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-149",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-150",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-151",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-152",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-153",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-154",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-155",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-156",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-157",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-158",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-159",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-160",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-161",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-162",
+      "viaStepId": "s-5",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-5",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-80",
+      "viaStepId": "s-1",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-5",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-81",
+      "viaStepId": "s-1",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-5",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-82",
+      "viaStepId": "s-1",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-5",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-83",
+      "viaStepId": "s-1",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-5",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-84",
+      "viaStepId": "s-1",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-5",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-85",
+      "viaStepId": "s-1",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-5",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-86",
+      "viaStepId": "s-1",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-5",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-107",
+      "viaStepId": "s-8",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-5",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-108",
+      "viaStepId": "s-8",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-5",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-109",
+      "viaStepId": "s-8",
+      "createdAt": 1773898934066
+    },
+    {
+      "knowledgeId": "k-deep-5",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/raytracer.py-chunk-110",
+      "viaStepId": "s-8",
+      "createdAt": 1773898934066
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+{"timestamp":"2026-03-19T05:02:32.712Z","codeAwareSessionId":"526e9999-437a-4e98-8ea7-b6edddba4e7c","eventType":"session_start","payload":{"username":"zyh","sessionName":"test","codeAwareSessionId":"526e9999-437a-4e98-8ea7-b6edddba4e7c"}}
+{"timestamp":"2026-03-19T05:02:32.719Z","codeAwareSessionId":"526e9999-437a-4e98-8ea7-b6edddba4e7c","eventType":"user_create_new_session","payload":{"username":"zyh","sessionName":"test","timestamp":"2026-03-19T05:02:32.718Z"}}
+{"timestamp":"2026-03-19T05:02:32.736Z","codeAwareSessionId":"526e9999-437a-4e98-8ea7-b6edddba4e7c","eventType":"system_create_session_file","payload":{"filename":"test.py","username":"zyh","sessionName":"test","timestamp":"2026-03-19T05:02:32.736Z"}}
+{"timestamp":"2026-03-19T05:02:41.438Z","codeAwareSessionId":"526e9999-437a-4e98-8ea7-b6edddba4e7c","eventType":"user_load_preset","payload":{"presetName":"raytracer","timestamp":"2026-03-19T05:02:41.435Z"}}
+{"timestamp":"2026-03-19T05:02:41.460Z","codeAwareSessionId":"526e9999-437a-4e98-8ea7-b6edddba4e7c","eventType":"user_load_preset_failed","payload":{"presetName":"raytracer","error":"[object Object]"}}
+{"timestamp":"2026-03-19T05:05:07.066Z","codeAwareSessionId":"526e9999-437a-4e98-8ea7-b6edddba4e7c","eventType":"user_request_new_session","payload":{"timestamp":"2026-03-19T05:05:07.063Z"}}

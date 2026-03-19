@@ -1,0 +1,6 @@
+{"timestamp":"2026-03-19T05:44:22.485Z","codeAwareSessionId":"461ab482-3937-4f4a-ad2e-923c59ff86ad","eventType":"session_start","payload":{"username":"zyh","sessionName":"test","codeAwareSessionId":"461ab482-3937-4f4a-ad2e-923c59ff86ad"}}
+{"timestamp":"2026-03-19T05:44:22.501Z","codeAwareSessionId":"461ab482-3937-4f4a-ad2e-923c59ff86ad","eventType":"user_start_editing_requirement","payload":{"initialContent":"","timestamp":"2026-03-19T05:44:22.500Z"}}
+{"timestamp":"2026-03-19T05:44:22.520Z","codeAwareSessionId":"461ab482-3937-4f4a-ad2e-923c59ff86ad","eventType":"user_create_new_session","payload":{"username":"zyh","sessionName":"test","timestamp":"2026-03-19T05:44:22.510Z"}}
+{"timestamp":"2026-03-19T05:44:22.524Z","codeAwareSessionId":"461ab482-3937-4f4a-ad2e-923c59ff86ad","eventType":"system_create_session_file","payload":{"filename":"test.py","username":"zyh","sessionName":"test","timestamp":"2026-03-19T05:44:22.523Z"}}
+{"timestamp":"2026-03-19T05:44:31.054Z","codeAwareSessionId":"461ab482-3937-4f4a-ad2e-923c59ff86ad","eventType":"user_load_preset","payload":{"presetName":"raytracer","timestamp":"2026-03-19T05:44:31.052Z"}}
+{"timestamp":"2026-03-19T05:44:31.087Z","codeAwareSessionId":"461ab482-3937-4f4a-ad2e-923c59ff86ad","eventType":"user_load_preset_failed","payload":{"presetName":"raytracer","error":"[object Object]"}}

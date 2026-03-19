@@ -1,0 +1,145 @@
+{
+  "schemaVersion": 1,
+  "presetName": "raytracer",
+  "createdAt": "2026-03-19T05:44:12.560Z",
+  "originalRequirement": "@preset:raytracer",
+  "title": "基础光线追踪器项目拆解",
+  "learningGoal": "通过实现简单的光线追踪渲染系统，理解物理渲染流程、场景建模、光线与物体交互，以及像素级图像生成的核心步骤。",
+  "highLevelSteps": [
+    {
+      "id": "r-1",
+      "content": "场景几何建模体系",
+      "isHighlighted": false,
+      "isCompleted": false
+    },
+    {
+      "id": "r-2",
+      "content": "光线追踪渲染流程",
+      "isHighlighted": false,
+      "isCompleted": false
+    },
+    {
+      "id": "r-3",
+      "content": "像素颜色生成与输出",
+      "isHighlighted": false,
+      "isCompleted": false
+    }
+  ],
+  "highLevelStepNarrative": "实现一个简单的光线追踪渲染系统，其实你可以把它想象成让计算机“画”出一个三维世界的样子。想要让机器看懂你搭建的世界，首先得通过{{r-1:场景几何建模体系}}把场景里的形状、物体和它们的位置描述清楚。接着，计算机需要靠{{r-2:光线追踪渲染流程}}模拟光从相机视角出发，碰到物体时会发生什么——比如被反射、折射或者直接被挡住。最终，所有这些交互结果会通过{{r-3:像素颜色生成与输出}}汇总到每个像素上，你就能看到完整的图片效果。",
+  "stepToHighLevelMappings": [
+    {
+      "stepId": "s-1",
+      "highLevelStepId": "r-1",
+      "highLevelStepIndex": 1
+    },
+    {
+      "stepId": "s-2",
+      "highLevelStepId": "r-1",
+      "highLevelStepIndex": 1
+    },
+    {
+      "stepId": "s-3",
+      "highLevelStepId": "r-1",
+      "highLevelStepIndex": 1
+    },
+    {
+      "stepId": "s-4",
+      "highLevelStepId": "r-2",
+      "highLevelStepIndex": 2
+    },
+    {
+      "stepId": "s-5",
+      "highLevelStepId": "r-2",
+      "highLevelStepIndex": 2
+    },
+    {
+      "stepId": "s-6",
+      "highLevelStepId": "r-2",
+      "highLevelStepIndex": 2
+    },
+    {
+      "stepId": "s-7",
+      "highLevelStepId": "r-3",
+      "highLevelStepIndex": 3
+    },
+    {
+      "stepId": "s-8",
+      "highLevelStepId": "r-3",
+      "highLevelStepIndex": 3
+    }
+  ],
+  "steps": [
+    {
+      "id": "s-1",
+      "title": "定义场景中的几何物体",
+      "abstract": "就像布置一个拍照现场，需要先把各种物品放进空间里。在这里，就是要告诉程序有哪些物体，比如球、平面或者其他形状，以及它们的位置和大小。这样做之后，光线就有地方可以“碰撞”，整个场景才有东西可看。",
+      "knowledgeCards": [],
+      "isHighlighted": false,
+      "stepStatus": "generated",
+      "knowledgeCardGenerationStatus": "empty"
+    },
+    {
+      "id": "s-2",
+      "title": "设置物体表面属性",
+      "abstract": "给每个物体的表面规定颜色、反光程度、材质类型等等，就像决定墙是白色还是蓝色、桌子是木头还是玻璃。这样，光线碰到它们时会根据这些属性算出不同的效果，让场景变得有“质感”。",
+      "knowledgeCards": [],
+      "isHighlighted": false,
+      "stepStatus": "generated",
+      "knowledgeCardGenerationStatus": "empty"
+    },
+    {
+      "id": "s-3",
+      "title": "设计光源和摄像机参数",
+      "abstract": "指定场景里的灯光位置和亮度，同时设定相机（视角）的方向和距离。就像拍照片时要摆好灯和摄像机，否则光线照不到东西，也没地方观察整个画面。这个基础决定了整个结果会明亮还是昏暗、视角是俯视还是平视。",
+      "knowledgeCards": [],
+      "isHighlighted": false,
+      "stepStatus": "generated",
+      "knowledgeCardGenerationStatus": "empty"
+    },
+    {
+      "id": "s-4",
+      "title": "发射光线并计算交点",
+      "abstract": "程序会从摄像机的位置“射出”一束束光线，每条都像探路的小侦查兵，去场景里看看会撞到什么物体。每找到一个碰撞点，就知道画面上的哪个地方应该显示这个物体的信息。如果光线啥都没碰到，那这一点就是背景。",
+      "knowledgeCards": [],
+      "isHighlighted": false,
+      "stepStatus": "generated",
+      "knowledgeCardGenerationStatus": "empty"
+    },
+    {
+      "id": "s-5",
+      "title": "模拟光线与表面交互",
+      "abstract": "当光线撞上物体表面时，要决定它是直接反射、被吸收，还是继续穿透或散射出去。这个过程好比现实生活中光照射到玻璃、镜子或者砖墙，会呈现不同效果。做完这步，程序才能真实地显示出阴影、反光和透明度。",
+      "knowledgeCards": [],
+      "isHighlighted": false,
+      "stepStatus": "generated",
+      "knowledgeCardGenerationStatus": "empty"
+    },
+    {
+      "id": "s-6",
+      "title": "支持多次反射和折射",
+      "abstract": "如果物体表面是镜子或玻璃，光线碰到它不是就此结束，还要继续产生新的光线路径，比如反射到别的地方或穿透下去。这样能让画面显示出真实的“倒影”和“透过玻璃”的效果。做完这步，场景会变得更复杂、更真实。",
+      "knowledgeCards": [],
+      "isHighlighted": false,
+      "stepStatus": "generated",
+      "knowledgeCardGenerationStatus": "empty"
+    },
+    {
+      "id": "s-7",
+      "title": "计算每个像素的最终颜色",
+      "abstract": "每条光线算完之后，要决定它对应画面上这一个小格子的颜色。例如光线碰到红球就给这个像素染成红色，没碰到任何东西就涂成背景色。汇总所有光线路径的结果，就是完成了一幅图像的所有像素色彩。",
+      "knowledgeCards": [],
+      "isHighlighted": false,
+      "stepStatus": "generated",
+      "knowledgeCardGenerationStatus": "empty"
+    },
+    {
+      "id": "s-8",
+      "title": "输出图像到文件或屏幕",
+      "abstract": "把所有像素的颜色拼起来，生成一张完整的图片，可以保存成文件或者直接显示在屏幕上。就像拍完照片之后，看到最终的效果或分享给朋友。这个步骤能让你真正‘看见’自己的渲染成果，有了视觉反馈。",
+      "knowledgeCards": [],
+      "isHighlighted": false,
+      "stepStatus": "generated",
+      "knowledgeCardGenerationStatus": "empty"
+    }
+  ]
+}

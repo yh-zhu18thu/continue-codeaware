@@ -1,0 +1,6 @@
+{"timestamp":"2026-03-19T05:14:18.563Z","codeAwareSessionId":"d508f40e-c53b-435a-bf54-9e27b85fedbb","eventType":"session_start","payload":{"username":"zyh","sessionName":"boids","codeAwareSessionId":"d508f40e-c53b-435a-bf54-9e27b85fedbb"}}
+{"timestamp":"2026-03-19T05:14:18.582Z","codeAwareSessionId":"d508f40e-c53b-435a-bf54-9e27b85fedbb","eventType":"user_create_new_session","payload":{"username":"zyh","sessionName":"boids","timestamp":"2026-03-19T05:14:18.581Z"}}
+{"timestamp":"2026-03-19T05:14:18.584Z","codeAwareSessionId":"d508f40e-c53b-435a-bf54-9e27b85fedbb","eventType":"system_create_session_file","payload":{"filename":"boids.py","username":"zyh","sessionName":"boids","timestamp":"2026-03-19T05:14:18.583Z"}}
+{"timestamp":"2026-03-19T05:14:41.414Z","codeAwareSessionId":"d508f40e-c53b-435a-bf54-9e27b85fedbb","eventType":"user_load_preset","payload":{"presetName":"boids","timestamp":"2026-03-19T05:14:41.412Z"}}
+{"timestamp":"2026-03-19T05:14:41.431Z","codeAwareSessionId":"d508f40e-c53b-435a-bf54-9e27b85fedbb","eventType":"user_load_preset_failed","payload":{"presetName":"boids","error":"[object Object]"}}
+{"timestamp":"2026-03-19T05:25:36.245Z","codeAwareSessionId":"d508f40e-c53b-435a-bf54-9e27b85fedbb","eventType":"user_request_new_session","payload":{"timestamp":"2026-03-19T05:25:36.243Z"}}

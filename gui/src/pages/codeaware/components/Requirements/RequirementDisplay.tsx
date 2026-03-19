@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import styled, { css, keyframes } from "styled-components";
 import { defaultBorderRadius, vscForeground } from "../../../../components";
 import { useAppDispatch, useAppSelector } from "../../../../redux/hooks";
+import { selectAllHighLevelStepMasteries } from "../../../../redux/selectors/masterySelectors";
 import {
   clearElementHighlight,
   selectHighLevelStepNarrative,
@@ -14,6 +15,10 @@ import {
   setHighlightedElement,
 } from "../../../../redux/slices/codeAwareSlice";
 import { useCodeAwareLogger } from "../../../../util/codeAwareWebViewLogger";
+import {
+  masteryScoreToColor,
+  masteryScoreToColorWithAlpha,
+} from "../../../../utils/masteryColor";
 // import RequirementDisplayToolBar from "./RequirementDisplayToolbar"; // 移除工具栏导入
 
 // Flickering animation for highlight state changes
@@ -305,6 +310,7 @@ const StepRefSpan = styled.span<{
   isHighlighted: boolean;
   isFlickering: boolean;
   isCompleted: boolean;
+  masteryGradient?: string;
 }>`
   cursor: pointer;
   transition: all 0.3s ease;
@@ -320,14 +326,20 @@ const StepRefSpan = styled.span<{
 
   color: ${(props) => (props.isHighlighted ? "#00BFFF" : "#82cfff")} !important;
   font-weight: ${(props) => (props.isHighlighted ? "bold" : "500")} !important;
-  background-color: ${(props) =>
-    props.isHighlighted ? "rgba(0, 191, 255, 0.15)" : "transparent"};
+  background: ${(props) => {
+    if (props.isHighlighted) return "rgba(0, 191, 255, 0.15)";
+    if (props.masteryGradient) return props.masteryGradient;
+    return "transparent";
+  }};
   text-decoration: ${(props) => (props.isHighlighted ? "none" : "underline")};
   text-decoration-color: rgba(130, 207, 255, 0.4);
   text-underline-offset: 3px;
 
   &:hover {
-    background-color: rgba(0, 191, 255, 0.12);
+    background: ${(props) =>
+      props.masteryGradient && !props.isHighlighted
+        ? props.masteryGradient
+        : "rgba(0, 191, 255, 0.12)"};
     color: #00bfff !important;
   }
 `;
@@ -338,6 +350,25 @@ const NarrativeText = styled.div`
   line-height: 1.8;
   color: #d4d4d4;
   word-break: break-word;
+`;
+
+const MasteryBackgroundFill = styled.div<{
+  percent: number;
+  masteryColor: string;
+}>`
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: ${({ percent }) => percent}%;
+  background-color: ${({ masteryColor }) => masteryColor};
+  opacity: 0.18;
+  border-radius: ${defaultBorderRadius};
+  pointer-events: none;
+  z-index: 0;
+  transition:
+    width 0.5s ease-in-out,
+    background-color 0.4s ease-in-out;
 `;
 
 interface RequirementDisplayProps {
@@ -367,6 +398,10 @@ export default function RequirementDisplay({
   const requirementText = useAppSelector(selectRequirementText);
   const highLevelSteps = useAppSelector(selectHighLevelSteps);
   const highLevelStepNarrative = useAppSelector(selectHighLevelStepNarrative);
+  const showMasteryIndicators = useAppSelector(
+    (state) => state.codeAwareSession.showMasteryIndicators,
+  );
+  const hlMasteries = useAppSelector(selectAllHighLevelStepMasteries);
 
   // CodeAware logger
   const logger = useCodeAwareLogger();
@@ -605,12 +640,27 @@ export default function RequirementDisplay({
                 const isCompleted = hlStep?.isCompleted ?? false;
                 const isFlickering = flickeringSteps.has(segment.stepId);
 
+                // Mastery gradient for narrative mode
+                let masteryGradient: string | undefined;
+                if (showMasteryIndicators && !isHighlighted) {
+                  const mastery = hlMasteries.get(segment.stepId);
+                  if (mastery) {
+                    const percent = Math.round(mastery.score * 100);
+                    const color = masteryScoreToColorWithAlpha(
+                      mastery.score,
+                      0.18,
+                    );
+                    masteryGradient = `linear-gradient(to right, ${color} ${percent}%, transparent ${percent}%)`;
+                  }
+                }
+
                 return (
                   <StepRefSpan
                     key={idx}
                     isHighlighted={isHighlighted}
                     isFlickering={isFlickering}
                     isCompleted={isCompleted}
+                    masteryGradient={masteryGradient}
                     onClick={() => handleStepClick(segment.stepId)}
                     onKeyDown={(e) => handleChunkKeyDown(e, segment.stepId)}
                     tabIndex={0}
@@ -646,6 +696,15 @@ export default function RequirementDisplay({
                   {steps.map((step, index) => {
                     const isFlickering = flickeringSteps.has(step.id);
                     const isHighlighted = step.isHighlighted;
+                    const mastery = showMasteryIndicators
+                      ? hlMasteries.get(step.id)
+                      : undefined;
+                    const masteryPercent = mastery
+                      ? Math.round(mastery.score * 100)
+                      : null;
+                    const mColor = mastery
+                      ? masteryScoreToColor(mastery.score)
+                      : undefined;
 
                     return (
                       <Step key={step.id} active={true} completed={false}>
@@ -669,6 +728,8 @@ export default function RequirementDisplay({
                           onFocus={handleChunkFocus}
                           sx={{
                             cursor: "pointer",
+                            position: "relative",
+                            overflow: "hidden",
                             "&:hover": {
                               // Remove background color on hover
                             },
@@ -681,6 +742,12 @@ export default function RequirementDisplay({
                             <span style={{ flex: 1 }}>{step.label}</span>
                             {step.isCompleted && <CompletionIcon />}
                           </AnimatedStepText>
+                          {mColor && masteryPercent !== null && (
+                            <MasteryBackgroundFill
+                              percent={masteryPercent}
+                              masteryColor={mColor}
+                            />
+                          )}
                         </StepLabel>
                       </Step>
                     );

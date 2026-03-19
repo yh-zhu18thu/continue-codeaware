@@ -642,15 +642,16 @@ export function constructGenerateKnowledgeCardDetailPrompt(
         "related_code": "${codeContext}",
         "project_context": "${taskDescription || ""}",${masteredSection}
         "requirements": [
-            "Treat the user as a beginning learner: use plain language as the baseline, but do not shy away from terms the user has already encountered (see mastered_related_context).",
+            "CRITICAL: The user is a NON-PROGRAMMER. Write as if explaining to someone who has never written code. Use everyday language throughout.",
             "Use adaptive scaffolding style: internally choose one of hinting/explaining/instructing/modeling, but DO NOT output the chosen type.",
             "Focus on one specific confusion point only. Do not expand to downstream topics or unrelated concepts.",
+            "STRICT: Only reference knowledge the user has already mastered (from mastered_related_context). Do NOT introduce new concepts, code snippets, syntax, or technical terms that the user has not encountered yet. If no mastered_related_context is provided, explain purely in plain language without any code.",
             "Title must be a SHORT QUESTION (ending with '?' in Chinese or English) that helps a non-programmer quickly judge whether they need this card. Avoid obscure jargon. Example: '为什么用循环能省掉重复劳动？' instead of '循环结构'.",
-            "Content must be 4-5 sentences, informative yet accessible.",
-            "Sentence 1: TLDR in plain language. Sentences 2-4: explanation that connects to the user's existing knowledge (from mastered_related_context if available) and ties to project_context and related_code. Sentence 5: a practical takeaway or next-step hint.",
+            "Content must be 3-4 sentences, informative yet accessible.",
+            "Sentence 1: TLDR in plain language. Sentences 2-3: explanation that connects to the user's existing knowledge (from mastered_related_context if available) and ties to project_context. Last sentence: a practical takeaway or next-step hint.",
             ${masteredRequirements.join(",\n            ")}
             "Use simple words and life-like analogies when helpful.",
-            "Do not dump full code explanations. Only mention the most relevant code behavior if needed.",
+            "Do NOT include code snippets, code examples, or programming syntax in the content unless the user has already demonstrated familiarity with code (evident from mastered_related_context). Focus on conceptual understanding instead.",
             "Respond in the same language as the project_context. You may use Markdown in the content to make it more readable.",
             "You must follow this JSON format in your response: {\\"title\\": \\"(title of the knowledge card)\\", \\"content\\": \\"(content of the knowledge card. Markdown can be used here)\\"}",
             "IMPORTANT: Properly escape all special characters in JSON strings. Ensure the JSON is valid and parseable.",
@@ -1409,7 +1410,7 @@ export function constructGenerateHighLevelStepNarrativePrompt(
     .map((step, index) => `  ${index + 1}. ID: r-${index + 1}, 名称: "${step}"`)
     .join("\n");
 
-  return `你是一个面向初学者的编程教学专家。请将以下高级功能域列表融入一段**自然、易读的说明文段**，帮助学习者理解要实现的效果以及达成它的思路。
+  return `你是一个面向初学者的编程教学专家。请将以下高级功能域列表融入一段**清晰、易懂的说明文段**，帮助学习者理解这个项目背后的原理和解题思路，并建立起对接下来各阶段学习内容的预期。
 
 ## 用户的项目需求
 
@@ -1428,34 +1429,33 @@ ${stepsWithIds}
 请生成一段**连续的说明文段**（不是列表），满足以下要求：
 
 ### 文段风格
-1. **先讲整体思路**：用 1-2 句话向初学者小白解释这个项目的整体设计思路——我们打算怎么解决这个问题、背后的核心想法是什么。用日常语言，就像给一个完全没接触过编程的朋友解释一样。
-2. **再串联各功能域**：在整体思路的基础上，自然地引出每个功能域，说明它在整体方案中扮演什么角色。不要用"首先…接着…然后…最后…"这类机械连接词，而是用因果或目的关系自然过渡。
-3. **简洁口语化**：总长度控制在 100-200 字左右，像在和朋友聊天一样，避免书面腔和套话。
+1. **先用大白话讲核心思路**：用 1-2 句话说清楚这个项目要解决什么问题、用的是什么思路。你的读者是完全没有编程基础的人，所以如果涉及专业概念（如"动态规划""梯度"等），必须紧跟一句通俗的解释让他们能理解（比如"动态规划——一种把大问题拆成小问题、逐步找最优解的方法"）。可以用一个贴切的日常类比辅助理解，但类比只是辅助，核心是把原理本身讲明白。
+2. **再串联各功能域并建立学习预期**：在核心思路的基础上，依次引出每个功能域。对每个功能域，用一两句话说清楚：(a) 它具体在做什么事（用直白的语言让 non-programmer 能理解），(b) 你在这个阶段会学到什么（比如"在这里你会学到怎么让程序自动比较大量方案并挑出最好的那个"）。用因果或递进关系自然过渡，不要用"首先…接着…然后…最后…"这类机械连接词。
+3. **清晰且友好**：总长度控制在 120-250 字左右。语气像一位耐心的老师在给零基础学生讲解——温和、清楚、不居高临下。不要通篇都在打比方，但在专业概念首次出现时可以用一个短小的类比帮助理解。
 4. **第二人称**：使用"你"来称呼学习者。
 
-### ❌ 不好的写法（缺少整体思路，生硬罗列）
-"你的项目将从 A 开始。接着进入 B 阶段。然后完成 C。最后通过 D 实现目标。"
+### ❌ 不好的写法
 
-### ✅ 好的写法（先讲思路，再自然串联）
-"这个项目的核心想法是：与其直接裁掉图片边缘，不如找到画面中'不重要'的像素一列列去掉，这样缩小图片时重要内容就不会丢失。具体来说，你需要先通过 A 给每个像素打分，弄清楚哪些不重要。有了打分结果，B 就能用动态规划找到一条影响最小的像素路径。最后在 C 中沿这条路径移除像素，重复几轮就达到目标尺寸了。"
+**问题1：缺少原理，生硬罗列**
+"你的项目将从 A 开始。接着进入 B 阶段。然后完成 C。最后通过 D 实现目标。"
+→ 完全没有解释"为什么"，学习者不知道这些步骤在干什么。
+
+**问题2：比喻过多，原理反而模糊**
+"想象你是一个裁缝，要把一块布剪小但花纹不能断掉。A 就像给布上的每个点标记'重要不重要'，B 就像沿着最不起眼的线剪一刀，C 就像反复剪直到布变成你要的大小。"
+→ 通篇比喻让读者记住了比喻却没理解原理，也不知道接下来具体要学什么。
+
+**问题3：术语堆砌，non-programmer 看不懂**
+"你需要先计算梯度能量矩阵，然后用动态规划求解累积能量最小路径，最后执行接缝移除操作。"
+→ 术语没有解释，没有编程背景的人根本看不懂。
+
+### ✅ 好的写法（通俗讲清原理 + 建立学习预期）
+"这个项目要实现一种智能的图片缩小方式：普通缩小会把整张图等比压扁，但这里的做法是让程序找出画面里'不太重要'的像素（比如大片纯色背景），一列列地去掉它们，这样图片变小了但重要的人物、物体还能完整保留。为此，你需要先在{{r-1:图像能量分析}}中让程序计算每个像素跟旁边像素的颜色差异——差异越大说明越处于边缘或细节区域、越重要。有了每个像素的'重要性评分'，{{r-2:最优接缝求解}}会用一种叫动态规划的方法（简单说就是把'找最不重要的一整列像素'这个大问题拆成一行行的小问题来解决），从上到下找出一条总评分最低的路径。最后在{{r-3:图像尺寸调整}}中沿这条路径把像素移除，重复多轮就能达到目标尺寸——在这里你会理解循环和迭代的概念。"
 
 ### 引用规则（最重要，严格遵守）
 1. **每个功能域必须被引用恰好一次**：文段中必须出现所有 ${highLevelSteps.length} 个功能域的引用
 2. **引用格式**：每次提到功能域名称时，必须使用 \`{{r-N:功能域名称}}\` 的格式包裹，其中 N 是该功能域的序号（1-based）
 3. **引用内容必须与原名称完全一致**：\`{{r-1:${highLevelSteps[0] || "示例名称"}}}\` 中冒号后的文字必须与上方列表中的名称完全相同
 4. **引用按原始顺序出现**：文段中各功能域的引用顺序应与上方列表顺序一致
-
-### 示例
-
-如果功能域列表是：
-1. r-1: "图像能量分析"
-2. r-2: "最优接缝求解"
-3. r-3: "图像尺寸调整"
-
-则输出应该类似：
-\`\`\`json
-{"narrative": "这个项目的核心想法是：与其直接裁掉图片边缘，不如找到画面中'不重要'的像素一列列去掉，这样图片变小了但重要内容还在。具体来说，你需要先通过{{r-1:图像能量分析}}给每个像素打分，弄清楚谁不重要。有了打分结果，{{r-2:最优接缝求解}}就能用动态规划找出一条影响最小的像素路径。最后在{{r-3:图像尺寸调整}}中沿这条路径移除像素，重复几轮就能达到目标尺寸。"}
-\`\`\`
 
 ### 输出格式
 
@@ -1468,6 +1468,8 @@ ${stepsWithIds}
 - 文段中 \`{{r-N:...}}\` 标记的数量是否恰好等于 ${highLevelSteps.length}？
 - 每个标记的 N 是否正确对应上方列表中的序号？
 - 标记中的名称是否与列表中的名称完全一致？
+- 文段是否讲清了核心原理，而不仅仅是用比喻代替解释？
+- 各功能域的介绍中是否包含了学习者在该阶段会接触到的知识或技能？
 - 文段是否连贯自然，而非简单罗列？
 
 请使用与项目需求相同的语言来撰写文段。现在请开始生成。`;

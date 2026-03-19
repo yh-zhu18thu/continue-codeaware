@@ -1,0 +1,1668 @@
+{
+  "codeFile": {
+    "relativePath": "ray_tracing_sphere.py",
+    "content": "import numpy as np\nfrom PIL import Image\n\ndef normalize(v):\n    return v / np.linalg.norm(v)\n\ndef ray_sphere_intersect(origin, direction, sphere_center, radius):\n    # Returns the distance from ray origin to intersection, or np.inf if no hit\n    oc = origin - sphere_center\n    a = np.dot(direction, direction)\n    b = 2.0 * np.dot(oc, direction)\n    c = np.dot(oc, oc) - radius * radius\n    discriminant = b * b - 4 * a * c\n    if discriminant < 0:\n        return np.inf\n    sqrt_disc = np.sqrt(discriminant)\n    t1 = (-b - sqrt_disc) / (2 * a)\n    t2 = (-b + sqrt_disc) / (2 * a)\n    if t1 > 0:\n        return t1\n    if t2 > 0:\n        return t2\n    return np.inf\n\ndef main():\n    # 1. 摄像机参数\n    width, height = 400, 300\n    aspect_ratio = width / height\n    fov = np.pi / 3  # 60 degrees\n    cam_pos = np.array([0.0, 0.0, 1.0])\n    cam_look_at = np.array([0.0, 0.0, 0.0])\n    cam_up = np.array([0.0, 1.0, 0.0])\n    forward = normalize(cam_look_at - cam_pos)\n    right = normalize(np.cross(forward, cam_up))\n    up = np.cross(right, forward)\n    \n    # 2. 球体参数\n    sphere_center = np.array([0.0, 0.0, -2.0])\n    sphere_radius = 0.7\n    \n    # 光源方向（简单平行光）\n    light_dir = normalize(np.array([1.0, -1.0, -1.0]))\n    ambient = 0.15  # 环境光\n    \n    # 图像缓冲区\n    img = np.zeros((height, width, 3), dtype=np.uint8)\n    \n    # 3. 生成每个像素的视线\n    for j in range(height):\n        for i in range(width):\n            # NDC（规范化设备坐标）\n            x = (2 * (i + 0.5) / width - 1) * np.tan(fov / 2) * aspect_ratio\n            y = (1 - 2 * (j + 0.5) / height) * np.tan(fov / 2)\n            dir = normalize(x * right + y * up + forward)\n            # 4. 与球体的交点\n            t = ray_sphere_intersect(cam_pos, dir, sphere_center, sphere_radius)\n            if t == np.inf:\n                img[j, i] = [20, 20, 40] # 背景深蓝\n                continue\n            hit_pos = cam_pos + t * dir\n            normal = normalize(hit_pos - sphere_center)\n            # 5. 亮度：简易Lambertian shading\n            diff = max(np.dot(normal, -light_dir), 0.0)\n            brightness = ambient + (1 - ambient) * diff\n            brightness = np.clip(brightness, 0, 1)\n            # 6. 像素蓝色色值\n            color = np.array([40, 80, 250]) * brightness\n            img[j, i] = np.clip(color, 0, 255)\n    # 7. 保存图像\n    image = Image.fromarray(img)\n    image.save('blue_sphere.png')\n\nif __name__ == '__main__':\n    main()\n"
+  },
+  "codeChunks": [
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-0",
+      "content": "import numpy as np",
+      "range": [1, 1],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-1",
+      "content": "from PIL import Image",
+      "range": [2, 2],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-2",
+      "content": "def normalize(v):",
+      "range": [4, 4],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-3",
+      "content": "    return v / np.linalg.norm(v)",
+      "range": [5, 5],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-4",
+      "content": "def ray_sphere_intersect(origin, direction, sphere_center, radius):",
+      "range": [7, 7],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-5",
+      "content": "    # Returns the distance from ray origin to intersection, or np.inf if no hit",
+      "range": [8, 8],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-6",
+      "content": "    oc = origin - sphere_center",
+      "range": [9, 9],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-7",
+      "content": "    a = np.dot(direction, direction)",
+      "range": [10, 10],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-8",
+      "content": "    b = 2.0 * np.dot(oc, direction)",
+      "range": [11, 11],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-9",
+      "content": "    c = np.dot(oc, oc) - radius * radius",
+      "range": [12, 12],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-10",
+      "content": "    discriminant = b * b - 4 * a * c",
+      "range": [13, 13],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-11",
+      "content": "    if discriminant < 0:",
+      "range": [14, 14],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-12",
+      "content": "        return np.inf",
+      "range": [15, 15],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-13",
+      "content": "    sqrt_disc = np.sqrt(discriminant)",
+      "range": [16, 16],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-14",
+      "content": "    t1 = (-b - sqrt_disc) / (2 * a)",
+      "range": [17, 17],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-15",
+      "content": "    t2 = (-b + sqrt_disc) / (2 * a)",
+      "range": [18, 18],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-16",
+      "content": "    if t1 > 0:",
+      "range": [19, 19],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-17",
+      "content": "        return t1",
+      "range": [20, 20],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-18",
+      "content": "    if t2 > 0:",
+      "range": [21, 21],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-19",
+      "content": "        return t2",
+      "range": [22, 22],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-20",
+      "content": "    return np.inf",
+      "range": [23, 23],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-21",
+      "content": "def main():",
+      "range": [25, 25],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-22",
+      "content": "    # 1. 摄像机参数",
+      "range": [26, 26],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-23",
+      "content": "    width, height = 400, 300",
+      "range": [27, 27],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-24",
+      "content": "    aspect_ratio = width / height",
+      "range": [28, 28],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-25",
+      "content": "    fov = np.pi / 3  # 60 degrees",
+      "range": [29, 29],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-26",
+      "content": "    cam_pos = np.array([0.0, 0.0, 1.0])",
+      "range": [30, 30],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-27",
+      "content": "    cam_look_at = np.array([0.0, 0.0, 0.0])",
+      "range": [31, 31],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-28",
+      "content": "    cam_up = np.array([0.0, 1.0, 0.0])",
+      "range": [32, 32],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-29",
+      "content": "    forward = normalize(cam_look_at - cam_pos)",
+      "range": [33, 33],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-30",
+      "content": "    right = normalize(np.cross(forward, cam_up))",
+      "range": [34, 34],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-31",
+      "content": "    up = np.cross(right, forward)",
+      "range": [35, 35],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-32",
+      "content": "    # 2. 球体参数",
+      "range": [37, 37],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-33",
+      "content": "    sphere_center = np.array([0.0, 0.0, -2.0])",
+      "range": [38, 38],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-34",
+      "content": "    sphere_radius = 0.7",
+      "range": [39, 39],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-35",
+      "content": "    # 光源方向（简单平行光）",
+      "range": [41, 41],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-36",
+      "content": "    light_dir = normalize(np.array([1.0, -1.0, -1.0]))",
+      "range": [42, 42],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-37",
+      "content": "    ambient = 0.15  # 环境光",
+      "range": [43, 43],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-38",
+      "content": "    # 图像缓冲区",
+      "range": [45, 45],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-39",
+      "content": "    img = np.zeros((height, width, 3), dtype=np.uint8)",
+      "range": [46, 46],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-40",
+      "content": "    # 3. 生成每个像素的视线",
+      "range": [48, 48],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-41",
+      "content": "    for j in range(height):",
+      "range": [49, 49],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-42",
+      "content": "        for i in range(width):",
+      "range": [50, 50],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-43",
+      "content": "            # NDC（规范化设备坐标）",
+      "range": [51, 51],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-44",
+      "content": "            x = (2 * (i + 0.5) / width - 1) * np.tan(fov / 2) * aspect_ratio",
+      "range": [52, 52],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-45",
+      "content": "            y = (1 - 2 * (j + 0.5) / height) * np.tan(fov / 2)",
+      "range": [53, 53],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-46",
+      "content": "            dir = normalize(x * right + y * up + forward)",
+      "range": [54, 54],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-47",
+      "content": "            # 4. 与球体的交点",
+      "range": [55, 55],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-48",
+      "content": "            t = ray_sphere_intersect(cam_pos, dir, sphere_center, sphere_radius)",
+      "range": [56, 56],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-49",
+      "content": "            if t == np.inf:",
+      "range": [57, 57],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-50",
+      "content": "                img[j, i] = [20, 20, 40] # 背景深蓝",
+      "range": [58, 58],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-51",
+      "content": "                continue",
+      "range": [59, 59],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-52",
+      "content": "            hit_pos = cam_pos + t * dir",
+      "range": [60, 60],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-53",
+      "content": "            normal = normalize(hit_pos - sphere_center)",
+      "range": [61, 61],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-54",
+      "content": "            # 5. 亮度：简易Lambertian shading",
+      "range": [62, 62],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-55",
+      "content": "            diff = max(np.dot(normal, -light_dir), 0.0)",
+      "range": [63, 63],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-56",
+      "content": "            brightness = ambient + (1 - ambient) * diff",
+      "range": [64, 64],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-57",
+      "content": "            brightness = np.clip(brightness, 0, 1)",
+      "range": [65, 65],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-58",
+      "content": "            # 6. 像素蓝色色值",
+      "range": [66, 66],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-59",
+      "content": "            color = np.array([40, 80, 250]) * brightness",
+      "range": [67, 67],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-60",
+      "content": "            img[j, i] = np.clip(color, 0, 255)",
+      "range": [68, 68],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-61",
+      "content": "    # 7. 保存图像",
+      "range": [69, 69],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-62",
+      "content": "    image = Image.fromarray(img)",
+      "range": [70, 70],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-63",
+      "content": "    image.save('blue_sphere.png')",
+      "range": [71, 71],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-64",
+      "content": "if __name__ == '__main__':",
+      "range": [73, 73],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-65",
+      "content": "    main()",
+      "range": [74, 74],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py"
+    }
+  ],
+  "codeChunkRelations": [
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-2",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-21",
+      "similarity": 0.6666666666666666,
+      "createdAt": 1773914812616
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-21",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-2",
+      "similarity": 0.6666666666666666,
+      "createdAt": 1773914812616
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-7",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-8",
+      "similarity": 0.8,
+      "createdAt": 1773914812617
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-8",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-7",
+      "similarity": 0.8,
+      "createdAt": 1773914812617
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-7",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-9",
+      "similarity": 0.5833333333333334,
+      "createdAt": 1773914812617
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-9",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-7",
+      "similarity": 0.5833333333333334,
+      "createdAt": 1773914812617
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-7",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-13",
+      "similarity": 0.45454545454545453,
+      "createdAt": 1773914812617
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-13",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-7",
+      "similarity": 0.45454545454545453,
+      "createdAt": 1773914812617
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-7",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-26",
+      "similarity": 0.5,
+      "createdAt": 1773914812617
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-26",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-7",
+      "similarity": 0.5,
+      "createdAt": 1773914812617
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-7",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-27",
+      "similarity": 0.5,
+      "createdAt": 1773914812617
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-27",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-7",
+      "similarity": 0.5,
+      "createdAt": 1773914812617
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-7",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-28",
+      "similarity": 0.5,
+      "createdAt": 1773914812617
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-28",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-7",
+      "similarity": 0.5,
+      "createdAt": 1773914812617
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-7",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-30",
+      "similarity": 0.46153846153846156,
+      "createdAt": 1773914812617
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-30",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-7",
+      "similarity": 0.46153846153846156,
+      "createdAt": 1773914812617
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-7",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-31",
+      "similarity": 0.5,
+      "createdAt": 1773914812617
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-31",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-7",
+      "similarity": 0.5,
+      "createdAt": 1773914812617
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-7",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-33",
+      "similarity": 0.46153846153846156,
+      "createdAt": 1773914812617
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-33",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-7",
+      "similarity": 0.46153846153846156,
+      "createdAt": 1773914812617
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-7",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-55",
+      "similarity": 0.5384615384615384,
+      "createdAt": 1773914812617
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-55",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-7",
+      "similarity": 0.5384615384615384,
+      "createdAt": 1773914812617
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-7",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-57",
+      "similarity": 0.6,
+      "createdAt": 1773914812617
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-57",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-7",
+      "similarity": 0.6,
+      "createdAt": 1773914812617
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-7",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-60",
+      "similarity": 0.46153846153846156,
+      "createdAt": 1773914812617
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-60",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-7",
+      "similarity": 0.46153846153846156,
+      "createdAt": 1773914812617
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-8",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-9",
+      "similarity": 0.75,
+      "createdAt": 1773914812617
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-9",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-8",
+      "similarity": 0.75,
+      "createdAt": 1773914812617
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-8",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-55",
+      "similarity": 0.4666666666666667,
+      "createdAt": 1773914812617
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-55",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-8",
+      "similarity": 0.4666666666666667,
+      "createdAt": 1773914812617
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-8",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-57",
+      "similarity": 0.5,
+      "createdAt": 1773914812617
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-57",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-8",
+      "similarity": 0.5,
+      "createdAt": 1773914812617
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-8",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-59",
+      "similarity": 0.4666666666666667,
+      "createdAt": 1773914812617
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-59",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-8",
+      "similarity": 0.4666666666666667,
+      "createdAt": 1773914812617
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-9",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-33",
+      "similarity": 0.4666666666666667,
+      "createdAt": 1773914812623
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-33",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-9",
+      "similarity": 0.4666666666666667,
+      "createdAt": 1773914812623
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-9",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-55",
+      "similarity": 0.5333333333333333,
+      "createdAt": 1773914812623
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-55",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-9",
+      "similarity": 0.5333333333333333,
+      "createdAt": 1773914812623
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-9",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-57",
+      "similarity": 0.46153846153846156,
+      "createdAt": 1773914812623
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-57",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-9",
+      "similarity": 0.46153846153846156,
+      "createdAt": 1773914812623
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-12",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-20",
+      "similarity": 1,
+      "createdAt": 1773914812623
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-20",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-12",
+      "similarity": 1,
+      "createdAt": 1773914812623
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-13",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-57",
+      "similarity": 0.45454545454545453,
+      "createdAt": 1773914812623
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-57",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-13",
+      "similarity": 0.45454545454545453,
+      "createdAt": 1773914812623
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-14",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-15",
+      "similarity": 0.7,
+      "createdAt": 1773914812623
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-15",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-14",
+      "similarity": 0.7,
+      "createdAt": 1773914812623
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-15",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-44",
+      "similarity": 0.4666666666666667,
+      "createdAt": 1773914812624
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-44",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-15",
+      "similarity": 0.4666666666666667,
+      "createdAt": 1773914812624
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-15",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-45",
+      "similarity": 0.5,
+      "createdAt": 1773914812624
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-45",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-15",
+      "similarity": 0.5,
+      "createdAt": 1773914812624
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-15",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-56",
+      "similarity": 0.5,
+      "createdAt": 1773914812624
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-56",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-15",
+      "similarity": 0.5,
+      "createdAt": 1773914812624
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-16",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-18",
+      "similarity": 0.6,
+      "createdAt": 1773914812624
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-18",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-16",
+      "similarity": 0.6,
+      "createdAt": 1773914812624
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-21",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-65",
+      "similarity": 0.6,
+      "createdAt": 1773914812624
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-65",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-21",
+      "similarity": 0.6,
+      "createdAt": 1773914812624
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-23",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-24",
+      "similarity": 0.5,
+      "createdAt": 1773914812624
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-24",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-23",
+      "similarity": 0.5,
+      "createdAt": 1773914812624
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-26",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-27",
+      "similarity": 0.8181818181818182,
+      "createdAt": 1773914812625
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-27",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-26",
+      "similarity": 0.8181818181818182,
+      "createdAt": 1773914812625
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-26",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-28",
+      "similarity": 0.8181818181818182,
+      "createdAt": 1773914812625
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-28",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-26",
+      "similarity": 0.8181818181818182,
+      "createdAt": 1773914812625
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-26",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-33",
+      "similarity": 0.75,
+      "createdAt": 1773914812625
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-33",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-26",
+      "similarity": 0.75,
+      "createdAt": 1773914812625
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-26",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-36",
+      "similarity": 0.6923076923076923,
+      "createdAt": 1773914812625
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-36",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-26",
+      "similarity": 0.6923076923076923,
+      "createdAt": 1773914812625
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-26",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-57",
+      "similarity": 0.5,
+      "createdAt": 1773914812625
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-57",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-26",
+      "similarity": 0.5,
+      "createdAt": 1773914812625
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-26",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-59",
+      "similarity": 0.6923076923076923,
+      "createdAt": 1773914812625
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-59",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-26",
+      "similarity": 0.6923076923076923,
+      "createdAt": 1773914812625
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-26",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-60",
+      "similarity": 0.6153846153846154,
+      "createdAt": 1773914812625
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-60",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-26",
+      "similarity": 0.6153846153846154,
+      "createdAt": 1773914812625
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-27",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-28",
+      "similarity": 0.8181818181818182,
+      "createdAt": 1773914812625
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-28",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-27",
+      "similarity": 0.8181818181818182,
+      "createdAt": 1773914812625
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-27",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-33",
+      "similarity": 0.75,
+      "createdAt": 1773914812625
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-33",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-27",
+      "similarity": 0.75,
+      "createdAt": 1773914812625
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-27",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-36",
+      "similarity": 0.6923076923076923,
+      "createdAt": 1773914812625
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-36",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-27",
+      "similarity": 0.6923076923076923,
+      "createdAt": 1773914812625
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-27",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-57",
+      "similarity": 0.5,
+      "createdAt": 1773914812626
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-57",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-27",
+      "similarity": 0.5,
+      "createdAt": 1773914812626
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-27",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-59",
+      "similarity": 0.6923076923076923,
+      "createdAt": 1773914812626
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-59",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-27",
+      "similarity": 0.6923076923076923,
+      "createdAt": 1773914812626
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-27",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-60",
+      "similarity": 0.6153846153846154,
+      "createdAt": 1773914812626
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-60",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-27",
+      "similarity": 0.6153846153846154,
+      "createdAt": 1773914812626
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-28",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-30",
+      "similarity": 0.5,
+      "createdAt": 1773914812626
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-30",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-28",
+      "similarity": 0.5,
+      "createdAt": 1773914812626
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-28",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-33",
+      "similarity": 0.75,
+      "createdAt": 1773914812626
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-33",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-28",
+      "similarity": 0.75,
+      "createdAt": 1773914812626
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-28",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-36",
+      "similarity": 0.6923076923076923,
+      "createdAt": 1773914812627
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-36",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-28",
+      "similarity": 0.6923076923076923,
+      "createdAt": 1773914812627
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-28",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-57",
+      "similarity": 0.5,
+      "createdAt": 1773914812627
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-57",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-28",
+      "similarity": 0.5,
+      "createdAt": 1773914812627
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-28",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-59",
+      "similarity": 0.6923076923076923,
+      "createdAt": 1773914812627
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-59",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-28",
+      "similarity": 0.6923076923076923,
+      "createdAt": 1773914812627
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-28",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-60",
+      "similarity": 0.6153846153846154,
+      "createdAt": 1773914812627
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-60",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-28",
+      "similarity": 0.6153846153846154,
+      "createdAt": 1773914812627
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-29",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-53",
+      "similarity": 0.45454545454545453,
+      "createdAt": 1773914812627
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-53",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-29",
+      "similarity": 0.45454545454545453,
+      "createdAt": 1773914812627
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-30",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-31",
+      "similarity": 0.75,
+      "createdAt": 1773914812627
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-31",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-30",
+      "similarity": 0.75,
+      "createdAt": 1773914812627
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-30",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-57",
+      "similarity": 0.46153846153846156,
+      "createdAt": 1773914812627
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-57",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-30",
+      "similarity": 0.46153846153846156,
+      "createdAt": 1773914812627
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-31",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-57",
+      "similarity": 0.5,
+      "createdAt": 1773914812627
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-57",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-31",
+      "similarity": 0.5,
+      "createdAt": 1773914812627
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-33",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-36",
+      "similarity": 0.7692307692307693,
+      "createdAt": 1773914812627
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-36",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-33",
+      "similarity": 0.7692307692307693,
+      "createdAt": 1773914812627
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-33",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-57",
+      "similarity": 0.46153846153846156,
+      "createdAt": 1773914812627
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-57",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-33",
+      "similarity": 0.46153846153846156,
+      "createdAt": 1773914812627
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-33",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-59",
+      "similarity": 0.6428571428571429,
+      "createdAt": 1773914812627
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-59",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-33",
+      "similarity": 0.6428571428571429,
+      "createdAt": 1773914812627
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-33",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-60",
+      "similarity": 0.5714285714285714,
+      "createdAt": 1773914812627
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-60",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-33",
+      "similarity": 0.5714285714285714,
+      "createdAt": 1773914812627
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-36",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-55",
+      "similarity": 0.5,
+      "createdAt": 1773914812627
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-55",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-36",
+      "similarity": 0.5,
+      "createdAt": 1773914812627
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-36",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-59",
+      "similarity": 0.6,
+      "createdAt": 1773914812627
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-59",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-36",
+      "similarity": 0.6,
+      "createdAt": 1773914812627
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-36",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-60",
+      "similarity": 0.5333333333333333,
+      "createdAt": 1773914812627
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-60",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-36",
+      "similarity": 0.5333333333333333,
+      "createdAt": 1773914812627
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-41",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-42",
+      "similarity": 0.75,
+      "createdAt": 1773914812627
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-42",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-41",
+      "similarity": 0.75,
+      "createdAt": 1773914812627
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-44",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-45",
+      "similarity": 0.7857142857142857,
+      "createdAt": 1773914812627
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-45",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-44",
+      "similarity": 0.7857142857142857,
+      "createdAt": 1773914812627
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-57",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-59",
+      "similarity": 0.5384615384615384,
+      "createdAt": 1773914812627
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-59",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-57",
+      "similarity": 0.5384615384615384,
+      "createdAt": 1773914812627
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-57",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-60",
+      "similarity": 0.5833333333333334,
+      "createdAt": 1773914812627
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-60",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-57",
+      "similarity": 0.5833333333333334,
+      "createdAt": 1773914812627
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-59",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-60",
+      "similarity": 0.6428571428571429,
+      "createdAt": 1773914812627
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-60",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-59",
+      "similarity": 0.6428571428571429,
+      "createdAt": 1773914812627
+    }
+  ],
+  "codeAwareMappings": [
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-23",
+      "semanticElementId": "s-1",
+      "semanticElementType": "step",
+      "createdAt": 1773914790705,
+      "source": "initial",
+      "confidence": 0.8
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-24",
+      "semanticElementId": "s-1",
+      "semanticElementType": "step",
+      "createdAt": 1773914790705,
+      "source": "initial",
+      "confidence": 0.8
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-25",
+      "semanticElementId": "s-1",
+      "semanticElementType": "step",
+      "createdAt": 1773914790705,
+      "source": "initial",
+      "confidence": 0.8
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-26",
+      "semanticElementId": "s-1",
+      "semanticElementType": "step",
+      "createdAt": 1773914790705,
+      "source": "initial",
+      "confidence": 0.8
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-27",
+      "semanticElementId": "s-1",
+      "semanticElementType": "step",
+      "createdAt": 1773914790705,
+      "source": "initial",
+      "confidence": 0.8
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-28",
+      "semanticElementId": "s-1",
+      "semanticElementType": "step",
+      "createdAt": 1773914790705,
+      "source": "initial",
+      "confidence": 0.8
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-29",
+      "semanticElementId": "s-1",
+      "semanticElementType": "step",
+      "createdAt": 1773914790705,
+      "source": "initial",
+      "confidence": 0.8
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-30",
+      "semanticElementId": "s-1",
+      "semanticElementType": "step",
+      "createdAt": 1773914790705,
+      "source": "initial",
+      "confidence": 0.8
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-31",
+      "semanticElementId": "s-1",
+      "semanticElementType": "step",
+      "createdAt": 1773914790705,
+      "source": "initial",
+      "confidence": 0.8
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-33",
+      "semanticElementId": "s-2",
+      "semanticElementType": "step",
+      "createdAt": 1773914793106,
+      "source": "initial",
+      "confidence": 1
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-34",
+      "semanticElementId": "s-2",
+      "semanticElementType": "step",
+      "createdAt": 1773914793106,
+      "source": "initial",
+      "confidence": 1
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-41",
+      "semanticElementId": "s-3",
+      "semanticElementType": "step",
+      "createdAt": 1773914797002,
+      "source": "initial",
+      "confidence": 1
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-42",
+      "semanticElementId": "s-3",
+      "semanticElementType": "step",
+      "createdAt": 1773914797002,
+      "source": "initial",
+      "confidence": 1
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-43",
+      "semanticElementId": "s-3",
+      "semanticElementType": "step",
+      "createdAt": 1773914797002,
+      "source": "initial",
+      "confidence": 1
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-44",
+      "semanticElementId": "s-3",
+      "semanticElementType": "step",
+      "createdAt": 1773914797002,
+      "source": "initial",
+      "confidence": 1
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-45",
+      "semanticElementId": "s-3",
+      "semanticElementType": "step",
+      "createdAt": 1773914797002,
+      "source": "initial",
+      "confidence": 1
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-46",
+      "semanticElementId": "s-3",
+      "semanticElementType": "step",
+      "createdAt": 1773914797002,
+      "source": "initial",
+      "confidence": 1
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-4",
+      "semanticElementId": "s-4",
+      "semanticElementType": "step",
+      "createdAt": 1773914800162,
+      "source": "initial",
+      "confidence": 1
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-5",
+      "semanticElementId": "s-4",
+      "semanticElementType": "step",
+      "createdAt": 1773914800162,
+      "source": "initial",
+      "confidence": 1
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-6",
+      "semanticElementId": "s-4",
+      "semanticElementType": "step",
+      "createdAt": 1773914800162,
+      "source": "initial",
+      "confidence": 1
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-7",
+      "semanticElementId": "s-4",
+      "semanticElementType": "step",
+      "createdAt": 1773914800162,
+      "source": "initial",
+      "confidence": 1
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-8",
+      "semanticElementId": "s-4",
+      "semanticElementType": "step",
+      "createdAt": 1773914800162,
+      "source": "initial",
+      "confidence": 1
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-9",
+      "semanticElementId": "s-4",
+      "semanticElementType": "step",
+      "createdAt": 1773914800162,
+      "source": "initial",
+      "confidence": 1
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-10",
+      "semanticElementId": "s-4",
+      "semanticElementType": "step",
+      "createdAt": 1773914800162,
+      "source": "initial",
+      "confidence": 1
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-11",
+      "semanticElementId": "s-4",
+      "semanticElementType": "step",
+      "createdAt": 1773914800162,
+      "source": "initial",
+      "confidence": 1
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-12",
+      "semanticElementId": "s-4",
+      "semanticElementType": "step",
+      "createdAt": 1773914800162,
+      "source": "initial",
+      "confidence": 1
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-13",
+      "semanticElementId": "s-4",
+      "semanticElementType": "step",
+      "createdAt": 1773914800162,
+      "source": "initial",
+      "confidence": 1
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-14",
+      "semanticElementId": "s-4",
+      "semanticElementType": "step",
+      "createdAt": 1773914800162,
+      "source": "initial",
+      "confidence": 1
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-15",
+      "semanticElementId": "s-4",
+      "semanticElementType": "step",
+      "createdAt": 1773914800162,
+      "source": "initial",
+      "confidence": 1
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-16",
+      "semanticElementId": "s-4",
+      "semanticElementType": "step",
+      "createdAt": 1773914800162,
+      "source": "initial",
+      "confidence": 1
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-17",
+      "semanticElementId": "s-4",
+      "semanticElementType": "step",
+      "createdAt": 1773914800162,
+      "source": "initial",
+      "confidence": 1
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-18",
+      "semanticElementId": "s-4",
+      "semanticElementType": "step",
+      "createdAt": 1773914800162,
+      "source": "initial",
+      "confidence": 1
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-19",
+      "semanticElementId": "s-4",
+      "semanticElementType": "step",
+      "createdAt": 1773914800162,
+      "source": "initial",
+      "confidence": 1
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-20",
+      "semanticElementId": "s-4",
+      "semanticElementType": "step",
+      "createdAt": 1773914800162,
+      "source": "initial",
+      "confidence": 1
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-48",
+      "semanticElementId": "s-4",
+      "semanticElementType": "step",
+      "createdAt": 1773914800162,
+      "source": "initial",
+      "confidence": 1
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-49",
+      "semanticElementId": "s-4",
+      "semanticElementType": "step",
+      "createdAt": 1773914800162,
+      "source": "initial",
+      "confidence": 1
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-51",
+      "semanticElementId": "s-4",
+      "semanticElementType": "step",
+      "createdAt": 1773914800162,
+      "source": "initial",
+      "confidence": 1
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-55",
+      "semanticElementId": "s-5",
+      "semanticElementType": "step",
+      "createdAt": 1773914807065,
+      "source": "initial",
+      "confidence": 1
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-56",
+      "semanticElementId": "s-5",
+      "semanticElementType": "step",
+      "createdAt": 1773914807065,
+      "source": "initial",
+      "confidence": 1
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-57",
+      "semanticElementId": "s-5",
+      "semanticElementType": "step",
+      "createdAt": 1773914807065,
+      "source": "initial",
+      "confidence": 1
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-50",
+      "semanticElementId": "s-6",
+      "semanticElementType": "step",
+      "createdAt": 1773914809288,
+      "source": "initial",
+      "confidence": 1
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-59",
+      "semanticElementId": "s-6",
+      "semanticElementType": "step",
+      "createdAt": 1773914809288,
+      "source": "initial",
+      "confidence": 1
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-60",
+      "semanticElementId": "s-6",
+      "semanticElementType": "step",
+      "createdAt": 1773914809288,
+      "source": "initial",
+      "confidence": 1
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-62",
+      "semanticElementId": "s-7",
+      "semanticElementType": "step",
+      "createdAt": 1773914812596,
+      "source": "initial",
+      "confidence": 1
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-63",
+      "semanticElementId": "s-7",
+      "semanticElementType": "step",
+      "createdAt": 1773914812596,
+      "source": "initial",
+      "confidence": 1
+    }
+  ]
+}

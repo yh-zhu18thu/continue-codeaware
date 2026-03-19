@@ -1,0 +1,2191 @@
+{
+  "knowledgePoints": [
+    {
+      "id": "k-s-1-1",
+      "title": "向量运算与表示",
+      "content": "向量在二维或三维空间中表示位置和运动方向。在模拟鸟群行为时，使用向量对象（如 pygame.Vector2）计算距离、方向和速度变化。理解向量加减、归一化、以及点到点距离的计算是实现群体运动和规则的基础。",
+      "relatedStepIds": ["s-1"],
+      "category": "algorithm",
+      "difficulty": "medium",
+      "scope": "code"
+    },
+    {
+      "id": "k-s-1-2",
+      "title": "Boids 算法三大规则",
+      "content": "Boids 算法通过分离（避免靠得太近）、对齐（跟随邻居方向）、凝聚（靠近群体中心）三大局部规则模拟真实鸟群。这些规则让群体自发形成有序运动，无需全局控制。理解每条规则对于设计和实现仿真十分关键。",
+      "relatedStepIds": ["s-1"],
+      "category": "concept",
+      "difficulty": "medium",
+      "scope": "step"
+    },
+    {
+      "id": "k-s-1-3",
+      "title": "邻域感知与局部交互",
+      "content": "群体行为模型依赖于个体对邻居的识别——只对一定范围内的邻居产生影响（如 VIEW_RADIUS、PROTECTED_RANGE）。这种局部交互是复杂群体行为的基础，需理解个体如何判断邻域，确保仿真自然。",
+      "relatedStepIds": ["s-1"],
+      "category": "concept",
+      "difficulty": "medium",
+      "scope": "step"
+    },
+    {
+      "id": "k-s-1-4",
+      "title": "PyGame 向量API使用",
+      "content": "代码使用了 PyGame 的 Vector2 类型及其方法，如 distance_to。熟悉 PyGame 向量API（属性、方法、加减操作）能帮助正确读懂和实现位置、速度更新等功能。",
+      "relatedStepIds": ["s-1"],
+      "category": "framework",
+      "difficulty": "easy",
+      "scope": "code"
+    },
+    {
+      "id": "k-s-2-1",
+      "title": "群体行为建模参数",
+      "content": "鸟群模拟涉及多个参数（如速度、可视范围、最小保护距离等），这些参数影响整体行为的流畅性、逼真度和安全性。理解这些参数如何协作，是进行有效调优、避免群体过于分散或拥挤、实现自然流动的重要前提。",
+      "relatedStepIds": ["s-2"],
+      "category": "concept",
+      "difficulty": "medium",
+      "scope": "step"
+    },
+    {
+      "id": "k-s-2-2",
+      "title": "系统参数调优思想",
+      "content": "调整模型参数以获得目标效果是仿真和动画开发的核心思路。开发者需要懂得如何通过试验、分析反馈来精准调控，实现逼真的场景表现。这涉及对参数敏感性的理解及整体协调能力。",
+      "relatedStepIds": ["s-2"],
+      "category": "concept",
+      "difficulty": "medium",
+      "scope": "step"
+    },
+    {
+      "id": "k-s-2-3",
+      "title": "变量声明与初始化",
+      "content": "在Python等语言中，变量声明和初始化用于存储和设置系统参数，便于后续代码引用与修改。理解如何为不同类型的参数赋初值、为何采用常量设定，是实现稳定、可维护代码的基础。",
+      "relatedStepIds": ["s-2"],
+      "category": "syntax",
+      "difficulty": "easy",
+      "scope": "code"
+    },
+    {
+      "id": "k-s-2-4",
+      "title": "二维空间坐标系概念",
+      "content": "鸟群模拟通常在二维空间内运行，因此需要理解 WIDTH 和 HEIGHT 分别表示空间宽度和高度。这个知识点有助于理解空间边界、可视范围以及群体行为的空间交互。",
+      "relatedStepIds": ["s-2"],
+      "category": "concept",
+      "difficulty": "easy",
+      "scope": "step"
+    },
+    {
+      "id": "k-s-3-1",
+      "title": "二维向量运算",
+      "content": "在群体动画模拟中，每只鸟的速度和位置都用二维向量表示。理解向量的加减、缩放、归一化及距离计算是实现动态更新的基础。代码中大量使用了 Vector2 操作，如速度调整与位置更新，掌握这些运算有助于准确理解鸟群行为。",
+      "relatedStepIds": ["s-3"],
+      "category": "algorithm",
+      "difficulty": "medium",
+      "scope": "code"
+    },
+    {
+      "id": "k-s-3-2",
+      "title": "相邻对象交互算法",
+      "content": "鸟群模拟依赖每只鸟根据邻居位置和速度调整自身状态。这包括检测邻居（距离判定）、统计邻居数量，并按分离、对齐、聚集规则动态更新。理解如何遍历并根据距离进行交互，是实现群体行为的关键。",
+      "relatedStepIds": ["s-3"],
+      "category": "algorithm",
+      "difficulty": "medium",
+      "scope": "code"
+    },
+    {
+      "id": "k-s-3-3",
+      "title": "Boids行为规则建模",
+      "content": "分离、对齐、聚集是 Boids 群体智能模型的三大核心行为规则。每只鸟通过这三规则调整运动，实现自然的群体动态。理解每个规则的设计思想（分离防碰撞、对齐趋同方向、聚集保持队形），是理解该步骤意义的基础。",
+      "relatedStepIds": ["s-3"],
+      "category": "concept",
+      "difficulty": "medium",
+      "scope": "step"
+    },
+    {
+      "id": "k-s-3-4",
+      "title": "实时动画循环原理",
+      "content": "动态更新鸟群位置和速度需要每帧反复计算并渲染，实现流动动画效果。理解什么是动画循环（game loop），为何每步都要更新状态，避免画面静止，有助于把握群体模拟的整体流程和目的。",
+      "relatedStepIds": ["s-3"],
+      "category": "concept",
+      "difficulty": "easy",
+      "scope": "step"
+    },
+    {
+      "id": "k-s-4-1",
+      "title": "向量运算基础",
+      "content": "在群体模拟中，鸟的位置和速度常用向量表示。理解如何进行向量加减法（如 self.pos - other.pos）是实现避让和分离行为的基础，对模拟运动方向与距离计算至关重要。",
+      "relatedStepIds": ["s-4"],
+      "category": "algorithm",
+      "difficulty": "medium",
+      "scope": "code"
+    },
+    {
+      "id": "k-s-4-2",
+      "title": "坐标取模实现环绕",
+      "content": "通过对坐标使用模运算（如 self.pos.x %= WIDTH），可以实现边界穿越的环绕效果，使对象从一侧消失后在另一侧出现。理解这种做法对于场景循环与流畅动画至关重要。",
+      "relatedStepIds": ["s-4"],
+      "category": "syntax",
+      "difficulty": "medium",
+      "scope": "code"
+    },
+    {
+      "id": "k-s-4-3",
+      "title": "Boids 群体行为模型",
+      "content": "Boids 算法描述了鸟群等群体智能的模拟原理，包括分离、对齐、聚合等行为。理解其算法思想有助于把握 '避让' 以及为何检测距离实现碰撞避免，对于本步骤的设计思路非常关键。",
+      "relatedStepIds": ["s-4"],
+      "category": "concept",
+      "difficulty": "hard",
+      "scope": "step"
+    },
+    {
+      "id": "k-s-4-4",
+      "title": "二维平面边界条件处理",
+      "content": "在二维仿真场景下，如何处理对象靠近或者超出场景边界，是动画和物理引擎常见问题。理解不同类型的边界（如反射、穿越/环绕）及其对整体行为的影响，可以帮助设计更自然的动态系统。",
+      "relatedStepIds": ["s-4"],
+      "category": "concept",
+      "difficulty": "medium",
+      "scope": "step"
+    },
+    {
+      "id": "k-s-5-1",
+      "title": "Pygame 基本绘图API",
+      "content": "Pygame 是一个用 Python 编写的游戏开发库，提供了丰富的图形显示接口。了解如何使用 Pygame 的 draw 模块，如 draw.circle 方法，能将图形对象呈现在屏幕上，是实现动画效果的基础。",
+      "relatedStepIds": ["s-5"],
+      "category": "framework",
+      "difficulty": "easy",
+      "scope": "code"
+    },
+    {
+      "id": "k-s-5-2",
+      "title": "二维坐标与像素映射",
+      "content": "在屏幕上绘制对象时，理解二维空间中位置与像素坐标的对应关系非常重要。你需要掌握如何将虚拟物体的几何位置（如向量 pos.x, pos.y）转换为屏幕的像素点，用于准确地渲染动画。",
+      "relatedStepIds": ["s-5"],
+      "category": "concept",
+      "difficulty": "medium",
+      "scope": "step"
+    },
+    {
+      "id": "k-s-5-3",
+      "title": "动画帧与重绘机制",
+      "content": "要实现动态动画需理解帧的概念：每一帧都需要清空并重新绘制所有对象。掌握何时刷新屏幕和如何使每个对象以时间为序连续移动，保证视觉上的连贯流畅，是动画效果的关键。",
+      "relatedStepIds": ["s-5"],
+      "category": "concept",
+      "difficulty": "medium",
+      "scope": "step"
+    },
+    {
+      "id": "k-s-5-4",
+      "title": "群体行为可视化思想",
+      "content": "群体行为模拟的最大价值在于直观展示，必须理解如何将若干个体的信息通过动画和可视化展现出来，让复杂抽象规则变得易于理解和有趣。可视化不仅是画图，更是对行为模型的表达。",
+      "relatedStepIds": ["s-5"],
+      "category": "concept",
+      "difficulty": "medium",
+      "scope": "step"
+    },
+    {
+      "id": "k-s-6-1",
+      "title": "Pygame 事件循环机制",
+      "content": "Pygame 的事件循环用于持续监听和处理用户交互事件（如键盘、鼠标、窗口关闭等）。理解该机制对于实现动态动画和交互响应至关重要，能够让程序不断刷新并接收外部输入，而不是只运行一次。",
+      "relatedStepIds": ["s-6"],
+      "category": "framework",
+      "difficulty": "medium",
+      "scope": "step"
+    },
+    {
+      "id": "k-s-6-2",
+      "title": "动画循环与帧控制",
+      "content": "动画循环是通过反复更新画面、处理状态变化以及绘制新内容来实现持续动态效果。帧控制（如 clock.tick(60)）用于设定刷新率，保证动画流畅且不会过快或过慢。掌握这一概念是制作“活”的模拟和流畅体验的关键。",
+      "relatedStepIds": ["s-6"],
+      "category": "concept",
+      "difficulty": "medium",
+      "scope": "step"
+    },
+    {
+      "id": "k-s-6-3",
+      "title": "Pygame 屏幕刷新与绘制流程",
+      "content": "Pygame 采用先清空画面（fill）、再逐个绘制对象（draw），最后整体刷新显示（display.flip）的方法。理解屏幕刷新与绘制流程能帮助实现正确的视觉效果，防止残影、闪烁等问题。",
+      "relatedStepIds": ["s-6"],
+      "category": "framework",
+      "difficulty": "easy",
+      "scope": "code"
+    },
+    {
+      "id": "k-s-6-4",
+      "title": "对象状态更新方法设计",
+      "content": "将对象的行为与状态变化逻辑封装为 update 方法，使每个对象在动画循环中自主更新。这种设计方式有助于模块化编程、提升可维护性，并支持群体行为模拟。需要理解对象方法调用及其与整体系统的交互。",
+      "relatedStepIds": ["s-6"],
+      "category": "concept",
+      "difficulty": "medium",
+      "scope": "step"
+    },
+    {
+      "id": "k-deep-1",
+      "title": "变量与数据类型",
+      "content": "变量用于存储数据，数据类型决定变量内容的性质，如数值、字符串、布尔值等。理解变量本质、如何赋值，以及数字、浮点数、布尔类型的区分，是编程和参数控制、赋初值等最基本的前提。",
+      "relatedStepIds": ["s-2"],
+      "category": "syntax",
+      "difficulty": "easy",
+      "scope": "code"
+    },
+    {
+      "id": "k-deep-2",
+      "title": "函数定义与调用",
+      "content": "函数是组织、封装和重复利用代码的基本单位，掌握如何定义（def）、传参、返回值、调用函数是编写和理解可模块化程序的基础。理解对象方法设计与动画循环中的函数调用依赖于此。",
+      "relatedStepIds": ["s-6"],
+      "category": "syntax",
+      "difficulty": "easy",
+      "scope": "code"
+    },
+    {
+      "id": "k-deep-3",
+      "title": "条件判断与流程控制",
+      "content": "条件判断（如 if、elif、else）和流程控制（如 for、while 循环）是让代码根据情形分支、重复执行的基础工具。邻域检测、遍历对象、动画循环等关键算法都依赖这一知识点。",
+      "relatedStepIds": ["s-3", "s-6", "s-4"],
+      "category": "syntax",
+      "difficulty": "easy",
+      "scope": "code"
+    },
+    {
+      "id": "k-deep-4",
+      "title": "笛卡尔坐标系原理",
+      "content": "笛卡尔坐标系在二维空间中用 (x, y) 对表示位置，是向量、位置和距离计算的理论基础。只有理解坐标如何表达空间位置，才能实现位置的计算、对象的绘制及空间边界的判断。",
+      "relatedStepIds": ["s-1", "s-2", "s-5"],
+      "category": "concept",
+      "difficulty": "easy",
+      "scope": "step"
+    },
+    {
+      "id": "k-deep-5",
+      "title": "平方根与欧氏距离",
+      "content": "计算两个点的距离通常使用欧氏距离公式（平方根和平方运算），是判断邻域范围、实现避让与规则的重要基础。必须理解基本的平方和平方根运算，才能确定对象间距离并据此实现交互。",
+      "relatedStepIds": ["s-1", "s-3"],
+      "category": "algorithm",
+      "difficulty": "easy",
+      "scope": "step"
+    }
+  ],
+  "knowledgeRelations": [
+    {
+      "fromKnowledgeId": "k-deep-1",
+      "toKnowledgeId": "k-s-2-3",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773915877805
+    },
+    {
+      "fromKnowledgeId": "k-s-2-3",
+      "toKnowledgeId": "k-deep-1",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773915877805
+    },
+    {
+      "fromKnowledgeId": "k-deep-4",
+      "toKnowledgeId": "k-s-4-4",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773915877805
+    },
+    {
+      "fromKnowledgeId": "k-s-4-4",
+      "toKnowledgeId": "k-deep-4",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773915877805
+    },
+    {
+      "fromKnowledgeId": "k-deep-5",
+      "toKnowledgeId": "k-s-1-1",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773915877805
+    },
+    {
+      "fromKnowledgeId": "k-s-1-1",
+      "toKnowledgeId": "k-deep-5",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773915877805
+    },
+    {
+      "fromKnowledgeId": "k-deep-5",
+      "toKnowledgeId": "k-s-3-1",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773915877805
+    },
+    {
+      "fromKnowledgeId": "k-s-3-1",
+      "toKnowledgeId": "k-deep-5",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773915877805
+    },
+    {
+      "fromKnowledgeId": "k-s-1-1",
+      "toKnowledgeId": "k-s-3-1",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773915877805
+    },
+    {
+      "fromKnowledgeId": "k-s-3-1",
+      "toKnowledgeId": "k-s-1-1",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773915877805
+    },
+    {
+      "fromKnowledgeId": "k-s-1-1",
+      "toKnowledgeId": "k-s-2-1",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773915877805
+    },
+    {
+      "fromKnowledgeId": "k-s-2-1",
+      "toKnowledgeId": "k-s-1-1",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773915877805
+    },
+    {
+      "fromKnowledgeId": "k-s-3-1",
+      "toKnowledgeId": "k-s-3-2",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773915877805
+    },
+    {
+      "fromKnowledgeId": "k-s-3-2",
+      "toKnowledgeId": "k-s-3-1",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773915877805
+    },
+    {
+      "fromKnowledgeId": "k-s-1-2",
+      "toKnowledgeId": "k-s-3-3",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773915877805
+    },
+    {
+      "fromKnowledgeId": "k-s-3-3",
+      "toKnowledgeId": "k-s-1-2",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773915877805
+    },
+    {
+      "fromKnowledgeId": "k-s-1-1",
+      "toKnowledgeId": "k-s-1-4",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773915877805
+    },
+    {
+      "fromKnowledgeId": "k-s-1-4",
+      "toKnowledgeId": "k-s-1-1",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773915877805
+    },
+    {
+      "fromKnowledgeId": "k-deep-4",
+      "toKnowledgeId": "k-s-2-4",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773915877805
+    },
+    {
+      "fromKnowledgeId": "k-s-2-4",
+      "toKnowledgeId": "k-deep-4",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773915877805
+    },
+    {
+      "fromKnowledgeId": "k-s-4-1",
+      "toKnowledgeId": "k-s-4-2",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773915877805
+    },
+    {
+      "fromKnowledgeId": "k-s-4-2",
+      "toKnowledgeId": "k-s-4-1",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773915877805
+    },
+    {
+      "fromKnowledgeId": "k-s-1-1",
+      "toKnowledgeId": "k-s-4-1",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773915877805
+    },
+    {
+      "fromKnowledgeId": "k-s-4-1",
+      "toKnowledgeId": "k-s-1-1",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773915877805
+    },
+    {
+      "fromKnowledgeId": "k-s-4-1",
+      "toKnowledgeId": "k-s-4-3",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773915877805
+    },
+    {
+      "fromKnowledgeId": "k-s-4-3",
+      "toKnowledgeId": "k-s-4-1",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773915877805
+    },
+    {
+      "fromKnowledgeId": "k-s-5-1",
+      "toKnowledgeId": "k-s-5-2",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773915877805
+    },
+    {
+      "fromKnowledgeId": "k-s-5-2",
+      "toKnowledgeId": "k-s-5-1",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773915877805
+    },
+    {
+      "fromKnowledgeId": "k-s-5-1",
+      "toKnowledgeId": "k-s-5-3",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773915877805
+    },
+    {
+      "fromKnowledgeId": "k-s-5-3",
+      "toKnowledgeId": "k-s-5-1",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773915877805
+    },
+    {
+      "fromKnowledgeId": "k-s-5-1",
+      "toKnowledgeId": "k-s-5-4",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773915877805
+    },
+    {
+      "fromKnowledgeId": "k-s-5-4",
+      "toKnowledgeId": "k-s-5-1",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773915877805
+    },
+    {
+      "fromKnowledgeId": "k-s-5-1",
+      "toKnowledgeId": "k-s-6-3",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773915877805
+    },
+    {
+      "fromKnowledgeId": "k-s-6-3",
+      "toKnowledgeId": "k-s-5-1",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773915877805
+    },
+    {
+      "fromKnowledgeId": "k-deep-2",
+      "toKnowledgeId": "k-s-6-4",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773915877805
+    },
+    {
+      "fromKnowledgeId": "k-s-6-4",
+      "toKnowledgeId": "k-deep-2",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773915877805
+    },
+    {
+      "fromKnowledgeId": "k-s-6-1",
+      "toKnowledgeId": "k-s-6-2",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773915877805
+    },
+    {
+      "fromKnowledgeId": "k-s-6-2",
+      "toKnowledgeId": "k-s-6-1",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773915877805
+    },
+    {
+      "fromKnowledgeId": "k-s-1-1",
+      "toKnowledgeId": "k-s-5-1",
+      "similarity": 0.7093365140198944,
+      "relationType": "related",
+      "createdAt": 1773915878474
+    },
+    {
+      "fromKnowledgeId": "k-s-5-1",
+      "toKnowledgeId": "k-s-1-1",
+      "similarity": 0.7093365140198944,
+      "relationType": "related",
+      "createdAt": 1773915878474
+    },
+    {
+      "fromKnowledgeId": "k-s-1-1",
+      "toKnowledgeId": "k-s-6-3",
+      "similarity": 0.7191277697161668,
+      "relationType": "related",
+      "createdAt": 1773915878474
+    },
+    {
+      "fromKnowledgeId": "k-s-6-3",
+      "toKnowledgeId": "k-s-1-1",
+      "similarity": 0.7191277697161668,
+      "relationType": "related",
+      "createdAt": 1773915878474
+    },
+    {
+      "fromKnowledgeId": "k-s-1-2",
+      "toKnowledgeId": "k-s-2-2",
+      "similarity": 0.7163201669640169,
+      "relationType": "related",
+      "createdAt": 1773915878474
+    },
+    {
+      "fromKnowledgeId": "k-s-2-2",
+      "toKnowledgeId": "k-s-1-2",
+      "similarity": 0.7163201669640169,
+      "relationType": "related",
+      "createdAt": 1773915878474
+    },
+    {
+      "fromKnowledgeId": "k-s-1-2",
+      "toKnowledgeId": "k-s-4-3",
+      "similarity": 0.7056747634598882,
+      "relationType": "related",
+      "createdAt": 1773915878474
+    },
+    {
+      "fromKnowledgeId": "k-s-4-3",
+      "toKnowledgeId": "k-s-1-2",
+      "similarity": 0.7056747634598882,
+      "relationType": "related",
+      "createdAt": 1773915878474
+    },
+    {
+      "fromKnowledgeId": "k-s-1-4",
+      "toKnowledgeId": "k-s-5-1",
+      "similarity": 0.7333819057966111,
+      "relationType": "related",
+      "createdAt": 1773915878474
+    },
+    {
+      "fromKnowledgeId": "k-s-5-1",
+      "toKnowledgeId": "k-s-1-4",
+      "similarity": 0.7333819057966111,
+      "relationType": "related",
+      "createdAt": 1773915878474
+    },
+    {
+      "fromKnowledgeId": "k-s-2-1",
+      "toKnowledgeId": "k-s-3-2",
+      "similarity": 0.7797032980625532,
+      "relationType": "related",
+      "createdAt": 1773915878474
+    },
+    {
+      "fromKnowledgeId": "k-s-3-2",
+      "toKnowledgeId": "k-s-2-1",
+      "similarity": 0.7797032980625532,
+      "relationType": "related",
+      "createdAt": 1773915878474
+    },
+    {
+      "fromKnowledgeId": "k-s-2-1",
+      "toKnowledgeId": "k-s-3-3",
+      "similarity": 0.7163264941897383,
+      "relationType": "related",
+      "createdAt": 1773915878474
+    },
+    {
+      "fromKnowledgeId": "k-s-3-3",
+      "toKnowledgeId": "k-s-2-1",
+      "similarity": 0.7163264941897383,
+      "relationType": "related",
+      "createdAt": 1773915878474
+    },
+    {
+      "fromKnowledgeId": "k-s-2-1",
+      "toKnowledgeId": "k-s-4-4",
+      "similarity": 0.7022768594140179,
+      "relationType": "related",
+      "createdAt": 1773915878474
+    },
+    {
+      "fromKnowledgeId": "k-s-4-4",
+      "toKnowledgeId": "k-s-2-1",
+      "similarity": 0.7022768594140179,
+      "relationType": "related",
+      "createdAt": 1773915878474
+    },
+    {
+      "fromKnowledgeId": "k-s-2-1",
+      "toKnowledgeId": "k-s-5-3",
+      "similarity": 0.7477674493100761,
+      "relationType": "related",
+      "createdAt": 1773915878474
+    },
+    {
+      "fromKnowledgeId": "k-s-5-3",
+      "toKnowledgeId": "k-s-2-1",
+      "similarity": 0.7477674493100761,
+      "relationType": "related",
+      "createdAt": 1773915878474
+    },
+    {
+      "fromKnowledgeId": "k-s-2-1",
+      "toKnowledgeId": "k-s-5-4",
+      "similarity": 0.7891489840592855,
+      "relationType": "related",
+      "createdAt": 1773915878474
+    },
+    {
+      "fromKnowledgeId": "k-s-5-4",
+      "toKnowledgeId": "k-s-2-1",
+      "similarity": 0.7891489840592855,
+      "relationType": "related",
+      "createdAt": 1773915878474
+    },
+    {
+      "fromKnowledgeId": "k-s-2-1",
+      "toKnowledgeId": "k-s-6-4",
+      "similarity": 0.667885701048295,
+      "relationType": "related",
+      "createdAt": 1773915878474
+    },
+    {
+      "fromKnowledgeId": "k-s-6-4",
+      "toKnowledgeId": "k-s-2-1",
+      "similarity": 0.667885701048295,
+      "relationType": "related",
+      "createdAt": 1773915878474
+    },
+    {
+      "fromKnowledgeId": "k-s-2-1",
+      "toKnowledgeId": "k-deep-1",
+      "similarity": 0.6770685967876336,
+      "relationType": "related",
+      "createdAt": 1773915878474
+    },
+    {
+      "fromKnowledgeId": "k-deep-1",
+      "toKnowledgeId": "k-s-2-1",
+      "similarity": 0.6770685967876336,
+      "relationType": "related",
+      "createdAt": 1773915878474
+    },
+    {
+      "fromKnowledgeId": "k-s-2-1",
+      "toKnowledgeId": "k-deep-3",
+      "similarity": 0.6784265463283524,
+      "relationType": "related",
+      "createdAt": 1773915878474
+    },
+    {
+      "fromKnowledgeId": "k-deep-3",
+      "toKnowledgeId": "k-s-2-1",
+      "similarity": 0.6784265463283524,
+      "relationType": "related",
+      "createdAt": 1773915878474
+    },
+    {
+      "fromKnowledgeId": "k-s-2-4",
+      "toKnowledgeId": "k-s-4-4",
+      "similarity": 0.6561056949868516,
+      "relationType": "related",
+      "createdAt": 1773915878475
+    },
+    {
+      "fromKnowledgeId": "k-s-4-4",
+      "toKnowledgeId": "k-s-2-4",
+      "similarity": 0.6561056949868516,
+      "relationType": "related",
+      "createdAt": 1773915878475
+    },
+    {
+      "fromKnowledgeId": "k-s-2-4",
+      "toKnowledgeId": "k-s-5-2",
+      "similarity": 0.7582074665418326,
+      "relationType": "related",
+      "createdAt": 1773915878475
+    },
+    {
+      "fromKnowledgeId": "k-s-5-2",
+      "toKnowledgeId": "k-s-2-4",
+      "similarity": 0.7582074665418326,
+      "relationType": "related",
+      "createdAt": 1773915878475
+    },
+    {
+      "fromKnowledgeId": "k-s-3-2",
+      "toKnowledgeId": "k-s-5-3",
+      "similarity": 0.6552398920186496,
+      "relationType": "related",
+      "createdAt": 1773915878475
+    },
+    {
+      "fromKnowledgeId": "k-s-5-3",
+      "toKnowledgeId": "k-s-3-2",
+      "similarity": 0.6552398920186496,
+      "relationType": "related",
+      "createdAt": 1773915878475
+    },
+    {
+      "fromKnowledgeId": "k-s-3-2",
+      "toKnowledgeId": "k-s-5-4",
+      "similarity": 0.6945323168696153,
+      "relationType": "related",
+      "createdAt": 1773915878475
+    },
+    {
+      "fromKnowledgeId": "k-s-5-4",
+      "toKnowledgeId": "k-s-3-2",
+      "similarity": 0.6945323168696153,
+      "relationType": "related",
+      "createdAt": 1773915878475
+    },
+    {
+      "fromKnowledgeId": "k-s-3-2",
+      "toKnowledgeId": "k-s-6-4",
+      "similarity": 0.7647434465982869,
+      "relationType": "related",
+      "createdAt": 1773915878475
+    },
+    {
+      "fromKnowledgeId": "k-s-6-4",
+      "toKnowledgeId": "k-s-3-2",
+      "similarity": 0.7647434465982869,
+      "relationType": "related",
+      "createdAt": 1773915878475
+    },
+    {
+      "fromKnowledgeId": "k-s-3-2",
+      "toKnowledgeId": "k-deep-2",
+      "similarity": 0.7255128990257881,
+      "relationType": "related",
+      "createdAt": 1773915878475
+    },
+    {
+      "fromKnowledgeId": "k-deep-2",
+      "toKnowledgeId": "k-s-3-2",
+      "similarity": 0.7255128990257881,
+      "relationType": "related",
+      "createdAt": 1773915878475
+    },
+    {
+      "fromKnowledgeId": "k-s-3-3",
+      "toKnowledgeId": "k-s-4-3",
+      "similarity": 0.8253893295205946,
+      "relationType": "related",
+      "createdAt": 1773915878475
+    },
+    {
+      "fromKnowledgeId": "k-s-4-3",
+      "toKnowledgeId": "k-s-3-3",
+      "similarity": 0.8253893295205946,
+      "relationType": "related",
+      "createdAt": 1773915878475
+    },
+    {
+      "fromKnowledgeId": "k-s-3-4",
+      "toKnowledgeId": "k-s-6-3",
+      "similarity": 0.6617852176111252,
+      "relationType": "related",
+      "createdAt": 1773915878475
+    },
+    {
+      "fromKnowledgeId": "k-s-6-3",
+      "toKnowledgeId": "k-s-3-4",
+      "similarity": 0.6617852176111252,
+      "relationType": "related",
+      "createdAt": 1773915878475
+    },
+    {
+      "fromKnowledgeId": "k-s-4-1",
+      "toKnowledgeId": "k-s-6-4",
+      "similarity": 0.6621786881229493,
+      "relationType": "related",
+      "createdAt": 1773915878475
+    },
+    {
+      "fromKnowledgeId": "k-s-6-4",
+      "toKnowledgeId": "k-s-4-1",
+      "similarity": 0.6621786881229493,
+      "relationType": "related",
+      "createdAt": 1773915878475
+    },
+    {
+      "fromKnowledgeId": "k-s-4-3",
+      "toKnowledgeId": "k-s-6-4",
+      "similarity": 0.6655527676902444,
+      "relationType": "related",
+      "createdAt": 1773915878475
+    },
+    {
+      "fromKnowledgeId": "k-s-6-4",
+      "toKnowledgeId": "k-s-4-3",
+      "similarity": 0.6655527676902444,
+      "relationType": "related",
+      "createdAt": 1773915878475
+    },
+    {
+      "fromKnowledgeId": "k-s-4-4",
+      "toKnowledgeId": "k-s-5-2",
+      "similarity": 0.6969687457764566,
+      "relationType": "related",
+      "createdAt": 1773915878475
+    },
+    {
+      "fromKnowledgeId": "k-s-5-2",
+      "toKnowledgeId": "k-s-4-4",
+      "similarity": 0.6969687457764566,
+      "relationType": "related",
+      "createdAt": 1773915878475
+    },
+    {
+      "fromKnowledgeId": "k-s-4-4",
+      "toKnowledgeId": "k-deep-5",
+      "similarity": 0.6638451278024763,
+      "relationType": "related",
+      "createdAt": 1773915878476
+    },
+    {
+      "fromKnowledgeId": "k-deep-5",
+      "toKnowledgeId": "k-s-4-4",
+      "similarity": 0.6638451278024763,
+      "relationType": "related",
+      "createdAt": 1773915878476
+    },
+    {
+      "fromKnowledgeId": "k-s-5-1",
+      "toKnowledgeId": "k-s-6-1",
+      "similarity": 0.6788116206760798,
+      "relationType": "related",
+      "createdAt": 1773915878476
+    },
+    {
+      "fromKnowledgeId": "k-s-6-1",
+      "toKnowledgeId": "k-s-5-1",
+      "similarity": 0.6788116206760798,
+      "relationType": "related",
+      "createdAt": 1773915878476
+    },
+    {
+      "fromKnowledgeId": "k-s-5-2",
+      "toKnowledgeId": "k-deep-4",
+      "similarity": 0.7456380357574866,
+      "relationType": "related",
+      "createdAt": 1773915878476
+    },
+    {
+      "fromKnowledgeId": "k-deep-4",
+      "toKnowledgeId": "k-s-5-2",
+      "similarity": 0.7456380357574866,
+      "relationType": "related",
+      "createdAt": 1773915878476
+    },
+    {
+      "fromKnowledgeId": "k-s-5-3",
+      "toKnowledgeId": "k-s-5-4",
+      "similarity": 0.661793181232221,
+      "relationType": "related",
+      "createdAt": 1773915878476
+    },
+    {
+      "fromKnowledgeId": "k-s-5-4",
+      "toKnowledgeId": "k-s-5-3",
+      "similarity": 0.661793181232221,
+      "relationType": "related",
+      "createdAt": 1773915878476
+    },
+    {
+      "fromKnowledgeId": "k-s-5-3",
+      "toKnowledgeId": "k-s-6-2",
+      "similarity": 0.6567466902150682,
+      "relationType": "related",
+      "createdAt": 1773915878476
+    },
+    {
+      "fromKnowledgeId": "k-s-6-2",
+      "toKnowledgeId": "k-s-5-3",
+      "similarity": 0.6567466902150682,
+      "relationType": "related",
+      "createdAt": 1773915878476
+    },
+    {
+      "fromKnowledgeId": "k-s-5-3",
+      "toKnowledgeId": "k-deep-4",
+      "similarity": 0.6945960721676911,
+      "relationType": "related",
+      "createdAt": 1773915878476
+    },
+    {
+      "fromKnowledgeId": "k-deep-4",
+      "toKnowledgeId": "k-s-5-3",
+      "similarity": 0.6945960721676911,
+      "relationType": "related",
+      "createdAt": 1773915878476
+    },
+    {
+      "fromKnowledgeId": "k-s-5-4",
+      "toKnowledgeId": "k-s-6-4",
+      "similarity": 0.669585929811579,
+      "relationType": "related",
+      "createdAt": 1773915878476
+    },
+    {
+      "fromKnowledgeId": "k-s-6-4",
+      "toKnowledgeId": "k-s-5-4",
+      "similarity": 0.669585929811579,
+      "relationType": "related",
+      "createdAt": 1773915878476
+    },
+    {
+      "fromKnowledgeId": "k-s-6-1",
+      "toKnowledgeId": "k-s-6-3",
+      "similarity": 0.7282232934191808,
+      "relationType": "related",
+      "createdAt": 1773915878476
+    },
+    {
+      "fromKnowledgeId": "k-s-6-3",
+      "toKnowledgeId": "k-s-6-1",
+      "similarity": 0.7282232934191808,
+      "relationType": "related",
+      "createdAt": 1773915878476
+    },
+    {
+      "fromKnowledgeId": "k-deep-1",
+      "toKnowledgeId": "k-deep-2",
+      "similarity": 0.7635430476965674,
+      "relationType": "related",
+      "createdAt": 1773915878476
+    },
+    {
+      "fromKnowledgeId": "k-deep-2",
+      "toKnowledgeId": "k-deep-1",
+      "similarity": 0.7635430476965674,
+      "relationType": "related",
+      "createdAt": 1773915878476
+    }
+  ],
+  "knowledgeToStepRelations": [
+    {
+      "knowledgeId": "k-s-1-2",
+      "stepId": "s-1",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-1-3",
+      "stepId": "s-1",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-2-1",
+      "stepId": "s-2",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-2-2",
+      "stepId": "s-2",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-2-4",
+      "stepId": "s-2",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-3-3",
+      "stepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-3-4",
+      "stepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-4-3",
+      "stepId": "s-4",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-4-4",
+      "stepId": "s-4",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-5-2",
+      "stepId": "s-5",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-5-3",
+      "stepId": "s-5",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-5-4",
+      "stepId": "s-5",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-6-1",
+      "stepId": "s-6",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-6-2",
+      "stepId": "s-6",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-6-4",
+      "stepId": "s-6",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-deep-4",
+      "stepId": "s-1",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-deep-4",
+      "stepId": "s-2",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-deep-4",
+      "stepId": "s-5",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-deep-5",
+      "stepId": "s-1",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-deep-5",
+      "stepId": "s-3",
+      "createdAt": 1773915869660
+    }
+  ],
+  "knowledgeToCodeChunkRelations": [
+    {
+      "knowledgeId": "k-s-1-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-19",
+      "viaStepId": "s-1",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-1-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-20",
+      "viaStepId": "s-1",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-1-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-21",
+      "viaStepId": "s-1",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-1-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-22",
+      "viaStepId": "s-1",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-1-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-23",
+      "viaStepId": "s-1",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-1-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-24",
+      "viaStepId": "s-1",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-1-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-25",
+      "viaStepId": "s-1",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-1-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-26",
+      "viaStepId": "s-1",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-1-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-27",
+      "viaStepId": "s-1",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-1-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-28",
+      "viaStepId": "s-1",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-1-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-29",
+      "viaStepId": "s-1",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-1-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-30",
+      "viaStepId": "s-1",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-1-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-31",
+      "viaStepId": "s-1",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-1-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-32",
+      "viaStepId": "s-1",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-1-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-33",
+      "viaStepId": "s-1",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-1-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-34",
+      "viaStepId": "s-1",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-1-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-35",
+      "viaStepId": "s-1",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-1-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-36",
+      "viaStepId": "s-1",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-1-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-37",
+      "viaStepId": "s-1",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-1-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-38",
+      "viaStepId": "s-1",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-1-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-19",
+      "viaStepId": "s-1",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-1-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-20",
+      "viaStepId": "s-1",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-1-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-21",
+      "viaStepId": "s-1",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-1-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-22",
+      "viaStepId": "s-1",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-1-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-23",
+      "viaStepId": "s-1",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-1-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-24",
+      "viaStepId": "s-1",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-1-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-25",
+      "viaStepId": "s-1",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-1-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-26",
+      "viaStepId": "s-1",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-1-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-27",
+      "viaStepId": "s-1",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-1-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-28",
+      "viaStepId": "s-1",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-1-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-29",
+      "viaStepId": "s-1",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-1-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-30",
+      "viaStepId": "s-1",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-1-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-31",
+      "viaStepId": "s-1",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-1-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-32",
+      "viaStepId": "s-1",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-1-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-33",
+      "viaStepId": "s-1",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-1-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-34",
+      "viaStepId": "s-1",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-1-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-35",
+      "viaStepId": "s-1",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-1-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-36",
+      "viaStepId": "s-1",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-1-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-37",
+      "viaStepId": "s-1",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-1-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-38",
+      "viaStepId": "s-1",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-2-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-3",
+      "viaStepId": "s-2",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-2-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-4",
+      "viaStepId": "s-2",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-2-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-5",
+      "viaStepId": "s-2",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-2-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-6",
+      "viaStepId": "s-2",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-2-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-7",
+      "viaStepId": "s-2",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-2-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-8",
+      "viaStepId": "s-2",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-2-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-9",
+      "viaStepId": "s-2",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-2-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-10",
+      "viaStepId": "s-2",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-2-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-11",
+      "viaStepId": "s-2",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-3-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-18",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-3-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-19",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-3-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-20",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-3-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-21",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-3-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-22",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-3-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-23",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-3-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-24",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-3-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-25",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-3-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-26",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-3-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-27",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-3-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-28",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-3-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-29",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-3-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-30",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-3-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-31",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-3-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-32",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-3-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-33",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-3-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-34",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-3-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-35",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-3-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-36",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-3-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-37",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-3-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-38",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-3-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-39",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-3-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-40",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-3-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-41",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-3-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-42",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-3-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-43",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-3-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-44",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-3-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-18",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-3-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-19",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-3-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-20",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-3-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-21",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-3-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-22",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-3-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-23",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-3-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-24",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-3-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-25",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-3-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-26",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-3-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-27",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-3-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-28",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-3-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-29",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-3-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-30",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-3-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-31",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-3-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-32",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-3-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-33",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-3-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-34",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-3-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-35",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-3-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-36",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-3-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-37",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-3-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-38",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-3-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-39",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-3-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-40",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-3-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-41",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-3-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-42",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-3-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-43",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-3-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-44",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-4-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-28",
+      "viaStepId": "s-4",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-4-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-29",
+      "viaStepId": "s-4",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-4-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-46",
+      "viaStepId": "s-4",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-4-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-47",
+      "viaStepId": "s-4",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-4-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-28",
+      "viaStepId": "s-4",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-4-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-29",
+      "viaStepId": "s-4",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-4-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-46",
+      "viaStepId": "s-4",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-4-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-47",
+      "viaStepId": "s-4",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-5-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-49",
+      "viaStepId": "s-5",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-5-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-50",
+      "viaStepId": "s-5",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-5-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-66",
+      "viaStepId": "s-5",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-6-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-59",
+      "viaStepId": "s-6",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-6-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-60",
+      "viaStepId": "s-6",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-6-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-61",
+      "viaStepId": "s-6",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-6-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-62",
+      "viaStepId": "s-6",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-6-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-63",
+      "viaStepId": "s-6",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-6-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-64",
+      "viaStepId": "s-6",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-6-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-65",
+      "viaStepId": "s-6",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-6-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-66",
+      "viaStepId": "s-6",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-6-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-67",
+      "viaStepId": "s-6",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-s-6-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-68",
+      "viaStepId": "s-6",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-3",
+      "viaStepId": "s-2",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-4",
+      "viaStepId": "s-2",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-5",
+      "viaStepId": "s-2",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-6",
+      "viaStepId": "s-2",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-7",
+      "viaStepId": "s-2",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-8",
+      "viaStepId": "s-2",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-9",
+      "viaStepId": "s-2",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-10",
+      "viaStepId": "s-2",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-11",
+      "viaStepId": "s-2",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-deep-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-59",
+      "viaStepId": "s-6",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-deep-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-60",
+      "viaStepId": "s-6",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-deep-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-61",
+      "viaStepId": "s-6",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-deep-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-62",
+      "viaStepId": "s-6",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-deep-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-63",
+      "viaStepId": "s-6",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-deep-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-64",
+      "viaStepId": "s-6",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-deep-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-65",
+      "viaStepId": "s-6",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-deep-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-66",
+      "viaStepId": "s-6",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-deep-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-67",
+      "viaStepId": "s-6",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-deep-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-68",
+      "viaStepId": "s-6",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-deep-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-18",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-deep-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-19",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-deep-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-20",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-deep-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-21",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-deep-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-22",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-deep-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-23",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-deep-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-24",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-deep-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-25",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-deep-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-26",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-deep-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-27",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-deep-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-28",
+      "viaStepId": "s-4",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-deep-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-29",
+      "viaStepId": "s-4",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-deep-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-30",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-deep-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-31",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-deep-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-32",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-deep-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-33",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-deep-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-34",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-deep-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-35",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-deep-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-36",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-deep-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-37",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-deep-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-38",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-deep-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-39",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-deep-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-40",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-deep-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-41",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-deep-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-42",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-deep-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-43",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-deep-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-44",
+      "viaStepId": "s-3",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-deep-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-59",
+      "viaStepId": "s-6",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-deep-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-60",
+      "viaStepId": "s-6",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-deep-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-61",
+      "viaStepId": "s-6",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-deep-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-62",
+      "viaStepId": "s-6",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-deep-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-63",
+      "viaStepId": "s-6",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-deep-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-64",
+      "viaStepId": "s-6",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-deep-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-65",
+      "viaStepId": "s-6",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-deep-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-66",
+      "viaStepId": "s-6",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-deep-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-67",
+      "viaStepId": "s-6",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-deep-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-68",
+      "viaStepId": "s-6",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-deep-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-46",
+      "viaStepId": "s-4",
+      "createdAt": 1773915869660
+    },
+    {
+      "knowledgeId": "k-deep-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-47",
+      "viaStepId": "s-4",
+      "createdAt": 1773915869660
+    }
+  ]
+}

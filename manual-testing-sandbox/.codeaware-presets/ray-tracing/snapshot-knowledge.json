@@ -1,0 +1,2512 @@
+{
+  "knowledgePoints": [
+    {
+      "id": "k-s-1-1",
+      "title": "三维向量及运算",
+      "content": "三维向量是描述空间中方向和位置的基础数学对象。理解向量的加减、叉乘、归一化等操作对于表示摄像机方向、计算空间关系至关重要，本步骤中使用向量运算确定摄像机的视角及画面方向。",
+      "relatedStepIds": ["s-1"],
+      "category": "concept",
+      "difficulty": "medium",
+      "scope": "step"
+    },
+    {
+      "id": "k-s-1-2",
+      "title": "摄像机参数模型",
+      "content": "摄像机参数模型定义了虚拟照相机的位置、朝向、画面大小、视场角等关键属性。这些参数决定后续成像、光线追踪等图形处理过程的基础，是计算画布上每个像素对应视线的前提。",
+      "relatedStepIds": ["s-1"],
+      "category": "concept",
+      "difficulty": "medium",
+      "scope": "step"
+    },
+    {
+      "id": "k-s-1-3",
+      "title": "NumPy 数组操作",
+      "content": "NumPy 是 Python 中处理科学计算的关键库，支持高效的多维数组操作。理解 NumPy 的数组创建、基本算术运算以及与数学函数的配合使用，是读懂摄像机参数在代码中具体实现的基础。",
+      "relatedStepIds": ["s-1"],
+      "category": "framework",
+      "difficulty": "easy",
+      "scope": "code"
+    },
+    {
+      "id": "k-s-1-4",
+      "title": "归一化与向量正交",
+      "content": "归一化处理是将向量长度调整为1，方便表示方向，正交计算如叉积可求得空间中垂直的方向，这在定义摄像机局部空间如 'right' 和 'up' 时非常关键。理解这些算法有助于明白坐标系的构建方式。",
+      "relatedStepIds": ["s-1"],
+      "category": "algorithm",
+      "difficulty": "medium",
+      "scope": "code"
+    },
+    {
+      "id": "k-s-2-1",
+      "title": "NumPy 数组概念",
+      "content": "NumPy 数组是一种高效存储和处理数据的结构，常用于科学计算。这里通过 np.array 创建三维向量表示球心位置，理解其语法和数据结构是后续数学与物理运算的基础。",
+      "relatedStepIds": ["s-2"],
+      "category": "framework",
+      "difficulty": "easy",
+      "scope": "code"
+    },
+    {
+      "id": "k-s-2-2",
+      "title": "三维空间几何点表示",
+      "content": "在计算机图形学中，三维空间的点常用三个坐标（x, y, z）唯一确定。本步骤用三元数组表示球心，理解三维点的表达和物理含义，有助于后续进行射线、物体之间的几何关系计算。",
+      "relatedStepIds": ["s-2"],
+      "category": "concept",
+      "difficulty": "easy",
+      "scope": "step"
+    },
+    {
+      "id": "k-s-2-3",
+      "title": "球体参数建模",
+      "content": "球体在虚拟场景中通过其中心点位置和半径来定义。这一建模方式是3D渲染、物理模拟等领域的基础，能理解球体的空间属性如何被数据结构表示，有助于下一步进行光线检测与碰撞计算。",
+      "relatedStepIds": ["s-2"],
+      "category": "concept",
+      "difficulty": "medium",
+      "scope": "step"
+    },
+    {
+      "id": "k-s-3-1",
+      "title": "视线投射原理",
+      "content": "视线投射（Ray Casting）是一种通过从观察者向场景发射射线，判断每个像素应显示内容的计算机图形学基础方法。本步骤将每个像素与一条唯一的射线对应，为后续的碰撞检测或着色做准备。理解这一原理有助于把像素与三维空间联系起来。",
+      "relatedStepIds": ["s-3"],
+      "category": "concept",
+      "difficulty": "medium",
+      "scope": "step"
+    },
+    {
+      "id": "k-s-3-2",
+      "title": "NDC 与视角变换",
+      "content": "NDC（规范化设备坐标）是一种将像素索引映射到标准化坐标空间（-1~1），便于在不同分辨率和视角下进行统一的几何运算。本步骤通过NDC将每个像素点转换为视线方向的参数，对理解如何实现分辨率无关的渲染至关重要。",
+      "relatedStepIds": ["s-3"],
+      "category": "concept",
+      "difficulty": "medium",
+      "scope": "step"
+    },
+    {
+      "id": "k-s-3-3",
+      "title": "向量归一化与方向计算",
+      "content": "向量归一化是数学中将任意向量变为单位向量（长度为1）的操作，常用于方向计算。在三维空间里，射线方向需要用单位向量描述，以便进行后续的各种几何计算。理解归一化和方向向量对于编码和解释相关表达式至关重要。",
+      "relatedStepIds": ["s-3"],
+      "category": "algorithm",
+      "difficulty": "medium",
+      "scope": "code"
+    },
+    {
+      "id": "k-s-3-4",
+      "title": "NumPy 基本运算",
+      "content": "NumPy 是 Python 中用于高效数值计算的库。本代码中用它进行数学运算，如乘法、加法、三角函数处理等。理解 NumPy 的基本数组操作和函数调用方式有助于读懂相关代码行及其实现原理。",
+      "relatedStepIds": ["s-3"],
+      "category": "framework",
+      "difficulty": "easy",
+      "scope": "code"
+    },
+    {
+      "id": "k-s-4-1",
+      "title": "向量点积与代数运算",
+      "content": "点积（内积）是线性代数中两个向量之间的基础运算，用于度量两向量的投影关系。在代码中，计算向量之间的点积来推导光线与球的交点。理解点积对于推导球面方程以及之后光线轨迹的计算至关重要。",
+      "relatedStepIds": ["s-4"],
+      "category": "concept",
+      "difficulty": "medium",
+      "scope": "code"
+    },
+    {
+      "id": "k-s-4-2",
+      "title": "一元二次方程求解",
+      "content": "判断光线与球的交点涉及将三维空间几何关系转化为一元二次方程，并根据判别式（Δ）判断是否有实根，从而确定交点存在性。掌握该知识能理解如何解析地判断‘碰撞’和求出具体交点参数。",
+      "relatedStepIds": ["s-4"],
+      "category": "algorithm",
+      "difficulty": "medium",
+      "scope": "step"
+    },
+    {
+      "id": "k-s-4-3",
+      "title": "数值无穷大表示与判断",
+      "content": "代码使用 np.inf 作为特殊值表示‘没有交点’（即距离为无穷远）。了解无穷大在数值计算、比较和逻辑判断中如何表示及其语义，有助于正确理解交点不存在时的处理方式。",
+      "relatedStepIds": ["s-4"],
+      "category": "syntax",
+      "difficulty": "easy",
+      "scope": "code"
+    },
+    {
+      "id": "k-s-4-4",
+      "title": "光线与球体相交原理",
+      "content": "这是光线追踪与计算机图形学中的核心几何问题，指如何判断一条有向直线是否撞击球体。该原理是实现渲染、碰撞检测等功能的基础。对于理解本步骤‘光线打中球’的语义和意义至关重要。",
+      "relatedStepIds": ["s-4"],
+      "category": "concept",
+      "difficulty": "medium",
+      "scope": "step"
+    },
+    {
+      "id": "k-s-5-1",
+      "title": "法线与光照基本原理",
+      "content": "在光照计算中，法线向量表示表面朝向，而光照的强度决定于法线与光源方向的夹角。理解这个基本原理有助于判断表面因为角度不同而产生的亮度差异，这是 3D 渲染和真实感图形的核心。",
+      "relatedStepIds": ["s-5"],
+      "category": "concept",
+      "difficulty": "medium",
+      "scope": "step"
+    },
+    {
+      "id": "k-s-5-2",
+      "title": "点乘（点积）运算",
+      "content": "点乘是两个向量相乘得到一个标量的运算，常用于计算向量间的夹角。在光照模型中，点乘可以用来判断法线与光线方向的关系，从而决定表面亮度。理解点乘的计算和意义是正确读取相关代码的基础。",
+      "relatedStepIds": ["s-5"],
+      "category": "algorithm",
+      "difficulty": "medium",
+      "scope": "code"
+    },
+    {
+      "id": "k-s-5-3",
+      "title": "Numpy 数组点乘函数",
+      "content": "Numpy 库中的 np.dot 函数用于快速计算两个向量或矩阵的点积。熟悉其参数、返回值类型和行为有助于正确实现和调试点积相关的计算。",
+      "relatedStepIds": ["s-5"],
+      "category": "framework",
+      "difficulty": "easy",
+      "scope": "code"
+    },
+    {
+      "id": "k-s-5-4",
+      "title": "环境光与漫反射模型",
+      "content": "环境光（ambient）用于模拟场景中的全局最小亮度，漫反射（diffuse）由表面朝向光源的角度决定。这些是基本的物理光照模型，有助于增加物体立体感并使阴影与亮部自然过渡。",
+      "relatedStepIds": ["s-5"],
+      "category": "concept",
+      "difficulty": "medium",
+      "scope": "step"
+    },
+    {
+      "id": "k-s-5-5",
+      "title": "Numpy 数组值裁剪",
+      "content": "np.clip 是 Numpy 中用于限定数组元素范围的函数。通过设置上下界，可以防止亮度等数值超出合理范围。这是数值稳定性和结果正确性的常见保障措施。",
+      "relatedStepIds": ["s-5"],
+      "category": "framework",
+      "difficulty": "easy",
+      "scope": "code"
+    },
+    {
+      "id": "k-s-6-1",
+      "title": "NumPy 数组基本操作",
+      "content": "NumPy 是 Python 的一个科学计算库，其数组（ndarray）用于高效存储和操作多维数据。本步骤代码中 img[j, i] 语法表达的是对二维数组（图片像素网格）中单个像素操作，需要理解数组索引和赋值，以及数组可以承载颜色数据。",
+      "relatedStepIds": ["s-6"],
+      "category": "framework",
+      "difficulty": "easy",
+      "scope": "code"
+    },
+    {
+      "id": "k-s-6-2",
+      "title": "颜色空间与RGB编码",
+      "content": "RGB 颜色模型用三个通道（红绿蓝）的数值组合表示颜色。像素的颜色通常用 [R, G, B] 数组存储。理解RGB如何表达颜色、各分量取值范围（0-255），有助于理解如何通过改变这些值表现不同图像效果，如深蓝色背景或物体本身颜色变化。",
+      "relatedStepIds": ["s-6"],
+      "category": "concept",
+      "difficulty": "easy",
+      "scope": "step"
+    },
+    {
+      "id": "k-s-6-3",
+      "title": "像素亮度与明暗处理",
+      "content": "像素亮度是用以表现物体在不同光照条件下的明暗。将亮度（brightness，通常为一个0到1之间的小数）与颜色向量相乘，可以实现不同强度的颜色表现，从而在球体渲染中模拟光照和阴影效果。",
+      "relatedStepIds": ["s-6"],
+      "category": "concept",
+      "difficulty": "medium",
+      "scope": "step"
+    },
+    {
+      "id": "k-s-6-4",
+      "title": "np.clip 函数使用",
+      "content": "np.clip 是 NumPy 提供的用于数组截断的方法。它将数组中的元素限制在给定的最小值和最大值之间，常用于图像处理中防止像素值溢出（如RGB值应保持在0-255之间）。理解其用法有助于正确处理像素赋值。",
+      "relatedStepIds": ["s-6"],
+      "category": "framework",
+      "difficulty": "easy",
+      "scope": "code"
+    },
+    {
+      "id": "k-s-7-1",
+      "title": "Pillow 图像库基础",
+      "content": "Pillow（PIL 的升级版本）是 Python 处理图像的主流第三方库，提供了生成、编辑、保存多种格式图片的 API。理解如何导入、创建 Image 对象以及使用 save 方法保存为文件，是进行程序化图像处理的前提。",
+      "relatedStepIds": ["s-7"],
+      "category": "framework",
+      "difficulty": "easy",
+      "scope": "code"
+    },
+    {
+      "id": "k-s-7-2",
+      "title": "NumPy 数组与图像互转",
+      "content": "NumPy 的多维数组可以高效表示图像的像素数据，Pillow 支持通过 fromarray 方法直接把 NumPy 数组对象转换为图像。理解二者的互操作性是用代码生成与操作图片的基础。",
+      "relatedStepIds": ["s-7"],
+      "category": "framework",
+      "difficulty": "medium",
+      "scope": "code"
+    },
+    {
+      "id": "k-s-7-3",
+      "title": "数字图像的像素拼接原理",
+      "content": "数字图像是由像素矩阵构成的。将算法生成的每个像素值正确拼成二维（或三维）图片，是图像生成程序的核心之一。理解像素排列、三通道颜色模型（RGB）等知识，有助于明白合成完整图片的本质。",
+      "relatedStepIds": ["s-7"],
+      "category": "concept",
+      "difficulty": "medium",
+      "scope": "step"
+    },
+    {
+      "id": "k-deep-1",
+      "title": "变量与数据类型",
+      "content": "变量用于存储信息，数据类型（如整数、浮点数、数组）决定变量能表达的数据和操作范围。理解变量和常见类型是读懂 Python、NumPy、图像及数学计算代码的基础，也是正确使用数组、函数和数学运算的前提。",
+      "relatedStepIds": ["s-2", "s-6", "s-7"],
+      "category": "syntax",
+      "difficulty": "easy",
+      "scope": "code"
+    },
+    {
+      "id": "k-deep-2",
+      "title": "坐标系基础概念",
+      "content": "坐标系是用于描述空间中点和方向的数学工具。包括二维、三维坐标系，以及轴的定义（如x/y/z）。理解何为坐标和坐标系，能帮助读者明白三维向量、空间点、像素位置等如何被描述和操作，是三维图形和射线相关知识的基础。",
+      "relatedStepIds": ["s-1", "s-2", "s-3"],
+      "category": "concept",
+      "difficulty": "easy",
+      "scope": "step"
+    },
+    {
+      "id": "k-deep-3",
+      "title": "数组索引与切片",
+      "content": "数组索引用于访问数组中的单个或多个元素，切片可以指定区间批量操作。理解这点是正确操作 NumPy 数组和图像像素矩阵的基础。初学者往往不熟悉 np.array[j, i] 语法与切片机制，补充此知识便于操作和调试代码。",
+      "relatedStepIds": ["s-3", "s-6", "s-7"],
+      "category": "syntax",
+      "difficulty": "easy",
+      "scope": "code"
+    },
+    {
+      "id": "k-deep-4",
+      "title": "函数与调用机制",
+      "content": "函数是实现特定操作的封装，调用函数可以复用代码。理解函数的定义、参数及返回值，是使用 NumPy、Pillow 及各项数学和数组运算的基础。此知识对于理解 np.dot、np.clip、Image.save 等标准调用不可或缺。",
+      "relatedStepIds": ["s-3", "s-5", "s-6", "s-7"],
+      "category": "syntax",
+      "difficulty": "easy",
+      "scope": "code"
+    },
+    {
+      "id": "k-deep-5",
+      "title": "循环结构基础",
+      "content": "循环用于重复执行代码块，遍历像素网格或数组需要循环结构。理解 for 循环等迭代机制，是生成整张图片或逐像素处理的基础。没有此知识点，用户难以理解如何参与每个像素的渲染和数组遍历。",
+      "relatedStepIds": ["s-3", "s-6", "s-7"],
+      "category": "syntax",
+      "difficulty": "easy",
+      "scope": "code"
+    }
+  ],
+  "knowledgeRelations": [
+    {
+      "fromKnowledgeId": "k-deep-1",
+      "toKnowledgeId": "k-s-1-3",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773914895093
+    },
+    {
+      "fromKnowledgeId": "k-s-1-3",
+      "toKnowledgeId": "k-deep-1",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773914895093
+    },
+    {
+      "fromKnowledgeId": "k-deep-1",
+      "toKnowledgeId": "k-s-2-1",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773914895093
+    },
+    {
+      "fromKnowledgeId": "k-s-2-1",
+      "toKnowledgeId": "k-deep-1",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773914895093
+    },
+    {
+      "fromKnowledgeId": "k-deep-2",
+      "toKnowledgeId": "k-s-1-1",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773914895093
+    },
+    {
+      "fromKnowledgeId": "k-s-1-1",
+      "toKnowledgeId": "k-deep-2",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773914895093
+    },
+    {
+      "fromKnowledgeId": "k-deep-2",
+      "toKnowledgeId": "k-s-2-2",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773914895093
+    },
+    {
+      "fromKnowledgeId": "k-s-2-2",
+      "toKnowledgeId": "k-deep-2",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773914895093
+    },
+    {
+      "fromKnowledgeId": "k-deep-3",
+      "toKnowledgeId": "k-s-6-1",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773914895093
+    },
+    {
+      "fromKnowledgeId": "k-s-6-1",
+      "toKnowledgeId": "k-deep-3",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773914895093
+    },
+    {
+      "fromKnowledgeId": "k-s-1-1",
+      "toKnowledgeId": "k-s-1-4",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773914895093
+    },
+    {
+      "fromKnowledgeId": "k-s-1-4",
+      "toKnowledgeId": "k-s-1-1",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773914895093
+    },
+    {
+      "fromKnowledgeId": "k-s-1-1",
+      "toKnowledgeId": "k-s-3-3",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773914895093
+    },
+    {
+      "fromKnowledgeId": "k-s-3-3",
+      "toKnowledgeId": "k-s-1-1",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773914895093
+    },
+    {
+      "fromKnowledgeId": "k-s-1-3",
+      "toKnowledgeId": "k-s-1-4",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773914895093
+    },
+    {
+      "fromKnowledgeId": "k-s-1-4",
+      "toKnowledgeId": "k-s-1-3",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773914895093
+    },
+    {
+      "fromKnowledgeId": "k-s-1-3",
+      "toKnowledgeId": "k-s-3-4",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773914895093
+    },
+    {
+      "fromKnowledgeId": "k-s-3-4",
+      "toKnowledgeId": "k-s-1-3",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773914895093
+    },
+    {
+      "fromKnowledgeId": "k-s-2-1",
+      "toKnowledgeId": "k-s-2-2",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773914895093
+    },
+    {
+      "fromKnowledgeId": "k-s-2-2",
+      "toKnowledgeId": "k-s-2-1",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773914895093
+    },
+    {
+      "fromKnowledgeId": "k-s-2-2",
+      "toKnowledgeId": "k-s-2-3",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773914895093
+    },
+    {
+      "fromKnowledgeId": "k-s-2-3",
+      "toKnowledgeId": "k-s-2-2",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773914895093
+    },
+    {
+      "fromKnowledgeId": "k-s-3-3",
+      "toKnowledgeId": "k-s-4-1",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773914895093
+    },
+    {
+      "fromKnowledgeId": "k-s-4-1",
+      "toKnowledgeId": "k-s-3-3",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773914895093
+    },
+    {
+      "fromKnowledgeId": "k-s-4-1",
+      "toKnowledgeId": "k-s-4-2",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773914895093
+    },
+    {
+      "fromKnowledgeId": "k-s-4-2",
+      "toKnowledgeId": "k-s-4-1",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773914895093
+    },
+    {
+      "fromKnowledgeId": "k-s-4-1",
+      "toKnowledgeId": "k-s-5-2",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773914895093
+    },
+    {
+      "fromKnowledgeId": "k-s-5-2",
+      "toKnowledgeId": "k-s-4-1",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773914895093
+    },
+    {
+      "fromKnowledgeId": "k-s-5-2",
+      "toKnowledgeId": "k-s-5-3",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773914895093
+    },
+    {
+      "fromKnowledgeId": "k-s-5-3",
+      "toKnowledgeId": "k-s-5-2",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773914895093
+    },
+    {
+      "fromKnowledgeId": "k-s-5-5",
+      "toKnowledgeId": "k-s-6-4",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773914895093
+    },
+    {
+      "fromKnowledgeId": "k-s-6-4",
+      "toKnowledgeId": "k-s-5-5",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773914895093
+    },
+    {
+      "fromKnowledgeId": "k-deep-4",
+      "toKnowledgeId": "k-s-5-3",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773914895093
+    },
+    {
+      "fromKnowledgeId": "k-s-5-3",
+      "toKnowledgeId": "k-deep-4",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773914895093
+    },
+    {
+      "fromKnowledgeId": "k-deep-4",
+      "toKnowledgeId": "k-s-6-4",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773914895093
+    },
+    {
+      "fromKnowledgeId": "k-s-6-4",
+      "toKnowledgeId": "k-deep-4",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773914895093
+    },
+    {
+      "fromKnowledgeId": "k-deep-4",
+      "toKnowledgeId": "k-s-7-1",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773914895093
+    },
+    {
+      "fromKnowledgeId": "k-s-7-1",
+      "toKnowledgeId": "k-deep-4",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773914895093
+    },
+    {
+      "fromKnowledgeId": "k-s-6-1",
+      "toKnowledgeId": "k-s-7-2",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773914895093
+    },
+    {
+      "fromKnowledgeId": "k-s-7-2",
+      "toKnowledgeId": "k-s-6-1",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1773914895093
+    },
+    {
+      "fromKnowledgeId": "k-s-1-1",
+      "toKnowledgeId": "k-s-2-2",
+      "similarity": 0.8587781254520342,
+      "relationType": "related",
+      "createdAt": 1773914895831
+    },
+    {
+      "fromKnowledgeId": "k-s-2-2",
+      "toKnowledgeId": "k-s-1-1",
+      "similarity": 0.8587781254520342,
+      "relationType": "related",
+      "createdAt": 1773914895831
+    },
+    {
+      "fromKnowledgeId": "k-s-1-1",
+      "toKnowledgeId": "k-s-2-3",
+      "similarity": 0.6826728612217293,
+      "relationType": "related",
+      "createdAt": 1773914895831
+    },
+    {
+      "fromKnowledgeId": "k-s-2-3",
+      "toKnowledgeId": "k-s-1-1",
+      "similarity": 0.6826728612217293,
+      "relationType": "related",
+      "createdAt": 1773914895831
+    },
+    {
+      "fromKnowledgeId": "k-s-1-1",
+      "toKnowledgeId": "k-s-4-2",
+      "similarity": 0.671729247543011,
+      "relationType": "related",
+      "createdAt": 1773914895832
+    },
+    {
+      "fromKnowledgeId": "k-s-4-2",
+      "toKnowledgeId": "k-s-1-1",
+      "similarity": 0.671729247543011,
+      "relationType": "related",
+      "createdAt": 1773914895832
+    },
+    {
+      "fromKnowledgeId": "k-s-1-2",
+      "toKnowledgeId": "k-s-2-3",
+      "similarity": 0.7240310675202201,
+      "relationType": "related",
+      "createdAt": 1773914895832
+    },
+    {
+      "fromKnowledgeId": "k-s-2-3",
+      "toKnowledgeId": "k-s-1-2",
+      "similarity": 0.7240310675202201,
+      "relationType": "related",
+      "createdAt": 1773914895832
+    },
+    {
+      "fromKnowledgeId": "k-s-1-2",
+      "toKnowledgeId": "k-s-4-1",
+      "similarity": 0.7259324263413394,
+      "relationType": "related",
+      "createdAt": 1773914895832
+    },
+    {
+      "fromKnowledgeId": "k-s-4-1",
+      "toKnowledgeId": "k-s-1-2",
+      "similarity": 0.7259324263413394,
+      "relationType": "related",
+      "createdAt": 1773914895832
+    },
+    {
+      "fromKnowledgeId": "k-s-1-2",
+      "toKnowledgeId": "k-s-4-2",
+      "similarity": 0.7226716725713186,
+      "relationType": "related",
+      "createdAt": 1773914895832
+    },
+    {
+      "fromKnowledgeId": "k-s-4-2",
+      "toKnowledgeId": "k-s-1-2",
+      "similarity": 0.7226716725713186,
+      "relationType": "related",
+      "createdAt": 1773914895832
+    },
+    {
+      "fromKnowledgeId": "k-s-1-2",
+      "toKnowledgeId": "k-s-4-4",
+      "similarity": 0.7412998197727921,
+      "relationType": "related",
+      "createdAt": 1773914895832
+    },
+    {
+      "fromKnowledgeId": "k-s-4-4",
+      "toKnowledgeId": "k-s-1-2",
+      "similarity": 0.7412998197727921,
+      "relationType": "related",
+      "createdAt": 1773914895832
+    },
+    {
+      "fromKnowledgeId": "k-s-1-2",
+      "toKnowledgeId": "k-s-5-1",
+      "similarity": 0.7681295730377019,
+      "relationType": "related",
+      "createdAt": 1773914895832
+    },
+    {
+      "fromKnowledgeId": "k-s-5-1",
+      "toKnowledgeId": "k-s-1-2",
+      "similarity": 0.7681295730377019,
+      "relationType": "related",
+      "createdAt": 1773914895832
+    },
+    {
+      "fromKnowledgeId": "k-s-1-2",
+      "toKnowledgeId": "k-s-5-2",
+      "similarity": 0.8445006709191744,
+      "relationType": "related",
+      "createdAt": 1773914895832
+    },
+    {
+      "fromKnowledgeId": "k-s-5-2",
+      "toKnowledgeId": "k-s-1-2",
+      "similarity": 0.8445006709191744,
+      "relationType": "related",
+      "createdAt": 1773914895832
+    },
+    {
+      "fromKnowledgeId": "k-s-1-2",
+      "toKnowledgeId": "k-s-5-4",
+      "similarity": 0.7208812551058708,
+      "relationType": "related",
+      "createdAt": 1773914895832
+    },
+    {
+      "fromKnowledgeId": "k-s-5-4",
+      "toKnowledgeId": "k-s-1-2",
+      "similarity": 0.7208812551058708,
+      "relationType": "related",
+      "createdAt": 1773914895832
+    },
+    {
+      "fromKnowledgeId": "k-s-1-2",
+      "toKnowledgeId": "k-s-6-3",
+      "similarity": 0.7358395742362408,
+      "relationType": "related",
+      "createdAt": 1773914895832
+    },
+    {
+      "fromKnowledgeId": "k-s-6-3",
+      "toKnowledgeId": "k-s-1-2",
+      "similarity": 0.7358395742362408,
+      "relationType": "related",
+      "createdAt": 1773914895832
+    },
+    {
+      "fromKnowledgeId": "k-s-1-3",
+      "toKnowledgeId": "k-s-2-1",
+      "similarity": 0.7716568521354601,
+      "relationType": "related",
+      "createdAt": 1773914895832
+    },
+    {
+      "fromKnowledgeId": "k-s-2-1",
+      "toKnowledgeId": "k-s-1-3",
+      "similarity": 0.7716568521354601,
+      "relationType": "related",
+      "createdAt": 1773914895832
+    },
+    {
+      "fromKnowledgeId": "k-s-1-3",
+      "toKnowledgeId": "k-s-5-3",
+      "similarity": 0.8149568236933953,
+      "relationType": "related",
+      "createdAt": 1773914895833
+    },
+    {
+      "fromKnowledgeId": "k-s-5-3",
+      "toKnowledgeId": "k-s-1-3",
+      "similarity": 0.8149568236933953,
+      "relationType": "related",
+      "createdAt": 1773914895833
+    },
+    {
+      "fromKnowledgeId": "k-s-1-3",
+      "toKnowledgeId": "k-s-5-5",
+      "similarity": 0.7389853306672364,
+      "relationType": "related",
+      "createdAt": 1773914895833
+    },
+    {
+      "fromKnowledgeId": "k-s-5-5",
+      "toKnowledgeId": "k-s-1-3",
+      "similarity": 0.7389853306672364,
+      "relationType": "related",
+      "createdAt": 1773914895833
+    },
+    {
+      "fromKnowledgeId": "k-s-1-3",
+      "toKnowledgeId": "k-s-6-1",
+      "similarity": 0.8452330497667215,
+      "relationType": "related",
+      "createdAt": 1773914895833
+    },
+    {
+      "fromKnowledgeId": "k-s-6-1",
+      "toKnowledgeId": "k-s-1-3",
+      "similarity": 0.8452330497667215,
+      "relationType": "related",
+      "createdAt": 1773914895833
+    },
+    {
+      "fromKnowledgeId": "k-s-1-3",
+      "toKnowledgeId": "k-s-7-2",
+      "similarity": 0.7613731696005064,
+      "relationType": "related",
+      "createdAt": 1773914895833
+    },
+    {
+      "fromKnowledgeId": "k-s-7-2",
+      "toKnowledgeId": "k-s-1-3",
+      "similarity": 0.7613731696005064,
+      "relationType": "related",
+      "createdAt": 1773914895833
+    },
+    {
+      "fromKnowledgeId": "k-s-2-1",
+      "toKnowledgeId": "k-s-3-4",
+      "similarity": 0.7107384653859139,
+      "relationType": "related",
+      "createdAt": 1773914895834
+    },
+    {
+      "fromKnowledgeId": "k-s-3-4",
+      "toKnowledgeId": "k-s-2-1",
+      "similarity": 0.7107384653859139,
+      "relationType": "related",
+      "createdAt": 1773914895834
+    },
+    {
+      "fromKnowledgeId": "k-s-2-1",
+      "toKnowledgeId": "k-s-5-3",
+      "similarity": 0.7892623184179358,
+      "relationType": "related",
+      "createdAt": 1773914895834
+    },
+    {
+      "fromKnowledgeId": "k-s-5-3",
+      "toKnowledgeId": "k-s-2-1",
+      "similarity": 0.7892623184179358,
+      "relationType": "related",
+      "createdAt": 1773914895834
+    },
+    {
+      "fromKnowledgeId": "k-s-2-1",
+      "toKnowledgeId": "k-s-5-5",
+      "similarity": 0.7115480381084691,
+      "relationType": "related",
+      "createdAt": 1773914895834
+    },
+    {
+      "fromKnowledgeId": "k-s-5-5",
+      "toKnowledgeId": "k-s-2-1",
+      "similarity": 0.7115480381084691,
+      "relationType": "related",
+      "createdAt": 1773914895834
+    },
+    {
+      "fromKnowledgeId": "k-s-2-1",
+      "toKnowledgeId": "k-s-6-1",
+      "similarity": 0.7471361105560013,
+      "relationType": "related",
+      "createdAt": 1773914895834
+    },
+    {
+      "fromKnowledgeId": "k-s-6-1",
+      "toKnowledgeId": "k-s-2-1",
+      "similarity": 0.7471361105560013,
+      "relationType": "related",
+      "createdAt": 1773914895834
+    },
+    {
+      "fromKnowledgeId": "k-s-2-1",
+      "toKnowledgeId": "k-s-7-2",
+      "similarity": 0.7871215012122044,
+      "relationType": "related",
+      "createdAt": 1773914895834
+    },
+    {
+      "fromKnowledgeId": "k-s-7-2",
+      "toKnowledgeId": "k-s-2-1",
+      "similarity": 0.7871215012122044,
+      "relationType": "related",
+      "createdAt": 1773914895834
+    },
+    {
+      "fromKnowledgeId": "k-s-2-1",
+      "toKnowledgeId": "k-deep-3",
+      "similarity": 0.8410636100194685,
+      "relationType": "related",
+      "createdAt": 1773914895834
+    },
+    {
+      "fromKnowledgeId": "k-deep-3",
+      "toKnowledgeId": "k-s-2-1",
+      "similarity": 0.8410636100194685,
+      "relationType": "related",
+      "createdAt": 1773914895834
+    },
+    {
+      "fromKnowledgeId": "k-s-2-2",
+      "toKnowledgeId": "k-s-3-3",
+      "similarity": 0.7676673208049578,
+      "relationType": "related",
+      "createdAt": 1773914895834
+    },
+    {
+      "fromKnowledgeId": "k-s-3-3",
+      "toKnowledgeId": "k-s-2-2",
+      "similarity": 0.7676673208049578,
+      "relationType": "related",
+      "createdAt": 1773914895834
+    },
+    {
+      "fromKnowledgeId": "k-s-2-2",
+      "toKnowledgeId": "k-s-4-2",
+      "similarity": 0.6653401348984999,
+      "relationType": "related",
+      "createdAt": 1773914895834
+    },
+    {
+      "fromKnowledgeId": "k-s-4-2",
+      "toKnowledgeId": "k-s-2-2",
+      "similarity": 0.6653401348984999,
+      "relationType": "related",
+      "createdAt": 1773914895834
+    },
+    {
+      "fromKnowledgeId": "k-s-2-2",
+      "toKnowledgeId": "k-s-7-3",
+      "similarity": 0.6982219736596279,
+      "relationType": "related",
+      "createdAt": 1773914895835
+    },
+    {
+      "fromKnowledgeId": "k-s-7-3",
+      "toKnowledgeId": "k-s-2-2",
+      "similarity": 0.6982219736596279,
+      "relationType": "related",
+      "createdAt": 1773914895835
+    },
+    {
+      "fromKnowledgeId": "k-s-2-3",
+      "toKnowledgeId": "k-s-3-3",
+      "similarity": 0.6778729613163944,
+      "relationType": "related",
+      "createdAt": 1773914895835
+    },
+    {
+      "fromKnowledgeId": "k-s-3-3",
+      "toKnowledgeId": "k-s-2-3",
+      "similarity": 0.6778729613163944,
+      "relationType": "related",
+      "createdAt": 1773914895835
+    },
+    {
+      "fromKnowledgeId": "k-s-2-3",
+      "toKnowledgeId": "k-s-4-1",
+      "similarity": 0.6510332182202703,
+      "relationType": "related",
+      "createdAt": 1773914895835
+    },
+    {
+      "fromKnowledgeId": "k-s-4-1",
+      "toKnowledgeId": "k-s-2-3",
+      "similarity": 0.6510332182202703,
+      "relationType": "related",
+      "createdAt": 1773914895835
+    },
+    {
+      "fromKnowledgeId": "k-s-2-3",
+      "toKnowledgeId": "k-s-4-2",
+      "similarity": 0.6550784542751897,
+      "relationType": "related",
+      "createdAt": 1773914895835
+    },
+    {
+      "fromKnowledgeId": "k-s-4-2",
+      "toKnowledgeId": "k-s-2-3",
+      "similarity": 0.6550784542751897,
+      "relationType": "related",
+      "createdAt": 1773914895835
+    },
+    {
+      "fromKnowledgeId": "k-s-2-3",
+      "toKnowledgeId": "k-s-4-4",
+      "similarity": 0.7023102784170416,
+      "relationType": "related",
+      "createdAt": 1773914895835
+    },
+    {
+      "fromKnowledgeId": "k-s-4-4",
+      "toKnowledgeId": "k-s-2-3",
+      "similarity": 0.7023102784170416,
+      "relationType": "related",
+      "createdAt": 1773914895835
+    },
+    {
+      "fromKnowledgeId": "k-s-2-3",
+      "toKnowledgeId": "k-s-5-1",
+      "similarity": 0.7744940105433842,
+      "relationType": "related",
+      "createdAt": 1773914895835
+    },
+    {
+      "fromKnowledgeId": "k-s-5-1",
+      "toKnowledgeId": "k-s-2-3",
+      "similarity": 0.7744940105433842,
+      "relationType": "related",
+      "createdAt": 1773914895835
+    },
+    {
+      "fromKnowledgeId": "k-s-2-3",
+      "toKnowledgeId": "k-s-5-2",
+      "similarity": 0.7562522818434881,
+      "relationType": "related",
+      "createdAt": 1773914895835
+    },
+    {
+      "fromKnowledgeId": "k-s-5-2",
+      "toKnowledgeId": "k-s-2-3",
+      "similarity": 0.7562522818434881,
+      "relationType": "related",
+      "createdAt": 1773914895835
+    },
+    {
+      "fromKnowledgeId": "k-s-3-3",
+      "toKnowledgeId": "k-s-4-2",
+      "similarity": 0.7061047948761935,
+      "relationType": "related",
+      "createdAt": 1773914895836
+    },
+    {
+      "fromKnowledgeId": "k-s-4-2",
+      "toKnowledgeId": "k-s-3-3",
+      "similarity": 0.7061047948761935,
+      "relationType": "related",
+      "createdAt": 1773914895836
+    },
+    {
+      "fromKnowledgeId": "k-s-3-3",
+      "toKnowledgeId": "k-s-7-3",
+      "similarity": 0.6739649395361875,
+      "relationType": "related",
+      "createdAt": 1773914895836
+    },
+    {
+      "fromKnowledgeId": "k-s-7-3",
+      "toKnowledgeId": "k-s-3-3",
+      "similarity": 0.6739649395361875,
+      "relationType": "related",
+      "createdAt": 1773914895836
+    },
+    {
+      "fromKnowledgeId": "k-s-3-3",
+      "toKnowledgeId": "k-deep-2",
+      "similarity": 0.7473964716417603,
+      "relationType": "related",
+      "createdAt": 1773914895836
+    },
+    {
+      "fromKnowledgeId": "k-deep-2",
+      "toKnowledgeId": "k-s-3-3",
+      "similarity": 0.7473964716417603,
+      "relationType": "related",
+      "createdAt": 1773914895836
+    },
+    {
+      "fromKnowledgeId": "k-s-3-4",
+      "toKnowledgeId": "k-s-5-3",
+      "similarity": 0.7655302449868941,
+      "relationType": "related",
+      "createdAt": 1773914895836
+    },
+    {
+      "fromKnowledgeId": "k-s-5-3",
+      "toKnowledgeId": "k-s-3-4",
+      "similarity": 0.7655302449868941,
+      "relationType": "related",
+      "createdAt": 1773914895836
+    },
+    {
+      "fromKnowledgeId": "k-s-3-4",
+      "toKnowledgeId": "k-s-5-5",
+      "similarity": 0.7260137501324374,
+      "relationType": "related",
+      "createdAt": 1773914895836
+    },
+    {
+      "fromKnowledgeId": "k-s-5-5",
+      "toKnowledgeId": "k-s-3-4",
+      "similarity": 0.7260137501324374,
+      "relationType": "related",
+      "createdAt": 1773914895836
+    },
+    {
+      "fromKnowledgeId": "k-s-3-4",
+      "toKnowledgeId": "k-s-6-1",
+      "similarity": 0.805413736528641,
+      "relationType": "related",
+      "createdAt": 1773914895836
+    },
+    {
+      "fromKnowledgeId": "k-s-6-1",
+      "toKnowledgeId": "k-s-3-4",
+      "similarity": 0.805413736528641,
+      "relationType": "related",
+      "createdAt": 1773914895836
+    },
+    {
+      "fromKnowledgeId": "k-s-3-4",
+      "toKnowledgeId": "k-s-7-2",
+      "similarity": 0.7080737708078517,
+      "relationType": "related",
+      "createdAt": 1773914895836
+    },
+    {
+      "fromKnowledgeId": "k-s-7-2",
+      "toKnowledgeId": "k-s-3-4",
+      "similarity": 0.7080737708078517,
+      "relationType": "related",
+      "createdAt": 1773914895836
+    },
+    {
+      "fromKnowledgeId": "k-s-3-4",
+      "toKnowledgeId": "k-deep-1",
+      "similarity": 0.7394114228373685,
+      "relationType": "related",
+      "createdAt": 1773914895836
+    },
+    {
+      "fromKnowledgeId": "k-deep-1",
+      "toKnowledgeId": "k-s-3-4",
+      "similarity": 0.7394114228373685,
+      "relationType": "related",
+      "createdAt": 1773914895836
+    },
+    {
+      "fromKnowledgeId": "k-s-4-1",
+      "toKnowledgeId": "k-s-4-4",
+      "similarity": 0.862676531839184,
+      "relationType": "related",
+      "createdAt": 1773914895836
+    },
+    {
+      "fromKnowledgeId": "k-s-4-4",
+      "toKnowledgeId": "k-s-4-1",
+      "similarity": 0.862676531839184,
+      "relationType": "related",
+      "createdAt": 1773914895836
+    },
+    {
+      "fromKnowledgeId": "k-s-4-1",
+      "toKnowledgeId": "k-s-5-1",
+      "similarity": 0.8284784768641767,
+      "relationType": "related",
+      "createdAt": 1773914895836
+    },
+    {
+      "fromKnowledgeId": "k-s-5-1",
+      "toKnowledgeId": "k-s-4-1",
+      "similarity": 0.8284784768641767,
+      "relationType": "related",
+      "createdAt": 1773914895836
+    },
+    {
+      "fromKnowledgeId": "k-s-4-1",
+      "toKnowledgeId": "k-s-5-4",
+      "similarity": 0.8259329385281158,
+      "relationType": "related",
+      "createdAt": 1773914895837
+    },
+    {
+      "fromKnowledgeId": "k-s-5-4",
+      "toKnowledgeId": "k-s-4-1",
+      "similarity": 0.8259329385281158,
+      "relationType": "related",
+      "createdAt": 1773914895837
+    },
+    {
+      "fromKnowledgeId": "k-s-4-1",
+      "toKnowledgeId": "k-s-6-3",
+      "similarity": 0.860491033217179,
+      "relationType": "related",
+      "createdAt": 1773914895837
+    },
+    {
+      "fromKnowledgeId": "k-s-6-3",
+      "toKnowledgeId": "k-s-4-1",
+      "similarity": 0.860491033217179,
+      "relationType": "related",
+      "createdAt": 1773914895837
+    },
+    {
+      "fromKnowledgeId": "k-s-4-2",
+      "toKnowledgeId": "k-s-5-2",
+      "similarity": 0.6796039916948841,
+      "relationType": "related",
+      "createdAt": 1773914895837
+    },
+    {
+      "fromKnowledgeId": "k-s-5-2",
+      "toKnowledgeId": "k-s-4-2",
+      "similarity": 0.6796039916948841,
+      "relationType": "related",
+      "createdAt": 1773914895837
+    },
+    {
+      "fromKnowledgeId": "k-s-4-2",
+      "toKnowledgeId": "k-s-7-3",
+      "similarity": 0.6867321357969045,
+      "relationType": "related",
+      "createdAt": 1773914895837
+    },
+    {
+      "fromKnowledgeId": "k-s-7-3",
+      "toKnowledgeId": "k-s-4-2",
+      "similarity": 0.6867321357969045,
+      "relationType": "related",
+      "createdAt": 1773914895837
+    },
+    {
+      "fromKnowledgeId": "k-s-4-2",
+      "toKnowledgeId": "k-deep-2",
+      "similarity": 0.7137565391723225,
+      "relationType": "related",
+      "createdAt": 1773914895837
+    },
+    {
+      "fromKnowledgeId": "k-deep-2",
+      "toKnowledgeId": "k-s-4-2",
+      "similarity": 0.7137565391723225,
+      "relationType": "related",
+      "createdAt": 1773914895837
+    },
+    {
+      "fromKnowledgeId": "k-s-4-3",
+      "toKnowledgeId": "k-deep-5",
+      "similarity": 0.6634349316217509,
+      "relationType": "related",
+      "createdAt": 1773914895838
+    },
+    {
+      "fromKnowledgeId": "k-deep-5",
+      "toKnowledgeId": "k-s-4-3",
+      "similarity": 0.6634349316217509,
+      "relationType": "related",
+      "createdAt": 1773914895838
+    },
+    {
+      "fromKnowledgeId": "k-s-4-4",
+      "toKnowledgeId": "k-s-5-1",
+      "similarity": 0.8939437384612857,
+      "relationType": "related",
+      "createdAt": 1773914895838
+    },
+    {
+      "fromKnowledgeId": "k-s-5-1",
+      "toKnowledgeId": "k-s-4-4",
+      "similarity": 0.8939437384612857,
+      "relationType": "related",
+      "createdAt": 1773914895838
+    },
+    {
+      "fromKnowledgeId": "k-s-4-4",
+      "toKnowledgeId": "k-s-5-2",
+      "similarity": 0.834301884698804,
+      "relationType": "related",
+      "createdAt": 1773914895838
+    },
+    {
+      "fromKnowledgeId": "k-s-5-2",
+      "toKnowledgeId": "k-s-4-4",
+      "similarity": 0.834301884698804,
+      "relationType": "related",
+      "createdAt": 1773914895838
+    },
+    {
+      "fromKnowledgeId": "k-s-4-4",
+      "toKnowledgeId": "k-s-5-4",
+      "similarity": 0.8923168587959346,
+      "relationType": "related",
+      "createdAt": 1773914895838
+    },
+    {
+      "fromKnowledgeId": "k-s-5-4",
+      "toKnowledgeId": "k-s-4-4",
+      "similarity": 0.8923168587959346,
+      "relationType": "related",
+      "createdAt": 1773914895838
+    },
+    {
+      "fromKnowledgeId": "k-s-4-4",
+      "toKnowledgeId": "k-s-6-3",
+      "similarity": 0.8399192658999066,
+      "relationType": "related",
+      "createdAt": 1773914895838
+    },
+    {
+      "fromKnowledgeId": "k-s-6-3",
+      "toKnowledgeId": "k-s-4-4",
+      "similarity": 0.8399192658999066,
+      "relationType": "related",
+      "createdAt": 1773914895838
+    },
+    {
+      "fromKnowledgeId": "k-s-5-1",
+      "toKnowledgeId": "k-s-5-2",
+      "similarity": 0.8542081219418171,
+      "relationType": "related",
+      "createdAt": 1773914895838
+    },
+    {
+      "fromKnowledgeId": "k-s-5-2",
+      "toKnowledgeId": "k-s-5-1",
+      "similarity": 0.8542081219418171,
+      "relationType": "related",
+      "createdAt": 1773914895838
+    },
+    {
+      "fromKnowledgeId": "k-s-5-1",
+      "toKnowledgeId": "k-s-5-4",
+      "similarity": 0.817924275201491,
+      "relationType": "related",
+      "createdAt": 1773914895838
+    },
+    {
+      "fromKnowledgeId": "k-s-5-4",
+      "toKnowledgeId": "k-s-5-1",
+      "similarity": 0.817924275201491,
+      "relationType": "related",
+      "createdAt": 1773914895838
+    },
+    {
+      "fromKnowledgeId": "k-s-5-1",
+      "toKnowledgeId": "k-s-6-3",
+      "similarity": 0.8046524014389552,
+      "relationType": "related",
+      "createdAt": 1773914895838
+    },
+    {
+      "fromKnowledgeId": "k-s-6-3",
+      "toKnowledgeId": "k-s-5-1",
+      "similarity": 0.8046524014389552,
+      "relationType": "related",
+      "createdAt": 1773914895838
+    },
+    {
+      "fromKnowledgeId": "k-s-5-2",
+      "toKnowledgeId": "k-s-5-4",
+      "similarity": 0.7896375689906436,
+      "relationType": "related",
+      "createdAt": 1773914895838
+    },
+    {
+      "fromKnowledgeId": "k-s-5-4",
+      "toKnowledgeId": "k-s-5-2",
+      "similarity": 0.7896375689906436,
+      "relationType": "related",
+      "createdAt": 1773914895838
+    },
+    {
+      "fromKnowledgeId": "k-s-5-2",
+      "toKnowledgeId": "k-s-6-3",
+      "similarity": 0.8179812326648157,
+      "relationType": "related",
+      "createdAt": 1773914895838
+    },
+    {
+      "fromKnowledgeId": "k-s-6-3",
+      "toKnowledgeId": "k-s-5-2",
+      "similarity": 0.8179812326648157,
+      "relationType": "related",
+      "createdAt": 1773914895838
+    },
+    {
+      "fromKnowledgeId": "k-s-5-3",
+      "toKnowledgeId": "k-s-5-5",
+      "similarity": 0.7986132789962072,
+      "relationType": "related",
+      "createdAt": 1773914895838
+    },
+    {
+      "fromKnowledgeId": "k-s-5-5",
+      "toKnowledgeId": "k-s-5-3",
+      "similarity": 0.7986132789962072,
+      "relationType": "related",
+      "createdAt": 1773914895838
+    },
+    {
+      "fromKnowledgeId": "k-s-5-3",
+      "toKnowledgeId": "k-s-6-1",
+      "similarity": 0.7433961137532207,
+      "relationType": "related",
+      "createdAt": 1773914895838
+    },
+    {
+      "fromKnowledgeId": "k-s-6-1",
+      "toKnowledgeId": "k-s-5-3",
+      "similarity": 0.7433961137532207,
+      "relationType": "related",
+      "createdAt": 1773914895838
+    },
+    {
+      "fromKnowledgeId": "k-s-5-3",
+      "toKnowledgeId": "k-s-6-4",
+      "similarity": 0.6803983025387227,
+      "relationType": "related",
+      "createdAt": 1773914895838
+    },
+    {
+      "fromKnowledgeId": "k-s-6-4",
+      "toKnowledgeId": "k-s-5-3",
+      "similarity": 0.6803983025387227,
+      "relationType": "related",
+      "createdAt": 1773914895838
+    },
+    {
+      "fromKnowledgeId": "k-s-5-3",
+      "toKnowledgeId": "k-s-7-2",
+      "similarity": 0.7550206527101516,
+      "relationType": "related",
+      "createdAt": 1773914895838
+    },
+    {
+      "fromKnowledgeId": "k-s-7-2",
+      "toKnowledgeId": "k-s-5-3",
+      "similarity": 0.7550206527101516,
+      "relationType": "related",
+      "createdAt": 1773914895838
+    },
+    {
+      "fromKnowledgeId": "k-s-5-3",
+      "toKnowledgeId": "k-deep-1",
+      "similarity": 0.733082670408571,
+      "relationType": "related",
+      "createdAt": 1773914895838
+    },
+    {
+      "fromKnowledgeId": "k-deep-1",
+      "toKnowledgeId": "k-s-5-3",
+      "similarity": 0.733082670408571,
+      "relationType": "related",
+      "createdAt": 1773914895838
+    },
+    {
+      "fromKnowledgeId": "k-s-5-3",
+      "toKnowledgeId": "k-deep-3",
+      "similarity": 0.7258906941252241,
+      "relationType": "related",
+      "createdAt": 1773914895838
+    },
+    {
+      "fromKnowledgeId": "k-deep-3",
+      "toKnowledgeId": "k-s-5-3",
+      "similarity": 0.7258906941252241,
+      "relationType": "related",
+      "createdAt": 1773914895838
+    },
+    {
+      "fromKnowledgeId": "k-s-5-4",
+      "toKnowledgeId": "k-s-6-3",
+      "similarity": 0.8298959178715497,
+      "relationType": "related",
+      "createdAt": 1773914895839
+    },
+    {
+      "fromKnowledgeId": "k-s-6-3",
+      "toKnowledgeId": "k-s-5-4",
+      "similarity": 0.8298959178715497,
+      "relationType": "related",
+      "createdAt": 1773914895839
+    },
+    {
+      "fromKnowledgeId": "k-s-5-5",
+      "toKnowledgeId": "k-s-6-1",
+      "similarity": 0.6677173511921443,
+      "relationType": "related",
+      "createdAt": 1773914895839
+    },
+    {
+      "fromKnowledgeId": "k-s-6-1",
+      "toKnowledgeId": "k-s-5-5",
+      "similarity": 0.6677173511921443,
+      "relationType": "related",
+      "createdAt": 1773914895839
+    },
+    {
+      "fromKnowledgeId": "k-s-5-5",
+      "toKnowledgeId": "k-s-7-2",
+      "similarity": 0.6931539623003984,
+      "relationType": "related",
+      "createdAt": 1773914895839
+    },
+    {
+      "fromKnowledgeId": "k-s-7-2",
+      "toKnowledgeId": "k-s-5-5",
+      "similarity": 0.6931539623003984,
+      "relationType": "related",
+      "createdAt": 1773914895839
+    },
+    {
+      "fromKnowledgeId": "k-s-5-5",
+      "toKnowledgeId": "k-deep-1",
+      "similarity": 0.6709270966415014,
+      "relationType": "related",
+      "createdAt": 1773914895839
+    },
+    {
+      "fromKnowledgeId": "k-deep-1",
+      "toKnowledgeId": "k-s-5-5",
+      "similarity": 0.6709270966415014,
+      "relationType": "related",
+      "createdAt": 1773914895839
+    },
+    {
+      "fromKnowledgeId": "k-s-6-1",
+      "toKnowledgeId": "k-s-6-4",
+      "similarity": 0.6610948360285228,
+      "relationType": "related",
+      "createdAt": 1773914895839
+    },
+    {
+      "fromKnowledgeId": "k-s-6-4",
+      "toKnowledgeId": "k-s-6-1",
+      "similarity": 0.6610948360285228,
+      "relationType": "related",
+      "createdAt": 1773914895839
+    },
+    {
+      "fromKnowledgeId": "k-s-6-1",
+      "toKnowledgeId": "k-deep-1",
+      "similarity": 0.7437577826508115,
+      "relationType": "related",
+      "createdAt": 1773914895839
+    },
+    {
+      "fromKnowledgeId": "k-deep-1",
+      "toKnowledgeId": "k-s-6-1",
+      "similarity": 0.7437577826508115,
+      "relationType": "related",
+      "createdAt": 1773914895839
+    },
+    {
+      "fromKnowledgeId": "k-s-6-1",
+      "toKnowledgeId": "k-deep-4",
+      "similarity": 0.6547519012016788,
+      "relationType": "related",
+      "createdAt": 1773914895839
+    },
+    {
+      "fromKnowledgeId": "k-deep-4",
+      "toKnowledgeId": "k-s-6-1",
+      "similarity": 0.6547519012016788,
+      "relationType": "related",
+      "createdAt": 1773914895839
+    },
+    {
+      "fromKnowledgeId": "k-s-6-2",
+      "toKnowledgeId": "k-s-7-3",
+      "similarity": 0.67922586511198,
+      "relationType": "related",
+      "createdAt": 1773914895839
+    },
+    {
+      "fromKnowledgeId": "k-s-7-3",
+      "toKnowledgeId": "k-s-6-2",
+      "similarity": 0.67922586511198,
+      "relationType": "related",
+      "createdAt": 1773914895839
+    },
+    {
+      "fromKnowledgeId": "k-s-7-1",
+      "toKnowledgeId": "k-s-7-2",
+      "similarity": 0.7197913766914493,
+      "relationType": "related",
+      "createdAt": 1773914895839
+    },
+    {
+      "fromKnowledgeId": "k-s-7-2",
+      "toKnowledgeId": "k-s-7-1",
+      "similarity": 0.7197913766914493,
+      "relationType": "related",
+      "createdAt": 1773914895839
+    },
+    {
+      "fromKnowledgeId": "k-s-7-2",
+      "toKnowledgeId": "k-deep-1",
+      "similarity": 0.7182310912011469,
+      "relationType": "related",
+      "createdAt": 1773914895839
+    },
+    {
+      "fromKnowledgeId": "k-deep-1",
+      "toKnowledgeId": "k-s-7-2",
+      "similarity": 0.7182310912011469,
+      "relationType": "related",
+      "createdAt": 1773914895839
+    },
+    {
+      "fromKnowledgeId": "k-s-7-2",
+      "toKnowledgeId": "k-deep-3",
+      "similarity": 0.6771804919815533,
+      "relationType": "related",
+      "createdAt": 1773914895839
+    },
+    {
+      "fromKnowledgeId": "k-deep-3",
+      "toKnowledgeId": "k-s-7-2",
+      "similarity": 0.6771804919815533,
+      "relationType": "related",
+      "createdAt": 1773914895839
+    },
+    {
+      "fromKnowledgeId": "k-s-7-2",
+      "toKnowledgeId": "k-deep-4",
+      "similarity": 0.7741179883274418,
+      "relationType": "related",
+      "createdAt": 1773914895839
+    },
+    {
+      "fromKnowledgeId": "k-deep-4",
+      "toKnowledgeId": "k-s-7-2",
+      "similarity": 0.7741179883274418,
+      "relationType": "related",
+      "createdAt": 1773914895839
+    },
+    {
+      "fromKnowledgeId": "k-deep-1",
+      "toKnowledgeId": "k-deep-4",
+      "similarity": 0.7153885756400911,
+      "relationType": "related",
+      "createdAt": 1773914895839
+    },
+    {
+      "fromKnowledgeId": "k-deep-4",
+      "toKnowledgeId": "k-deep-1",
+      "similarity": 0.7153885756400911,
+      "relationType": "related",
+      "createdAt": 1773914895839
+    }
+  ],
+  "knowledgeToStepRelations": [
+    {
+      "knowledgeId": "k-s-1-1",
+      "stepId": "s-1",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-1-2",
+      "stepId": "s-1",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-2-2",
+      "stepId": "s-2",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-2-3",
+      "stepId": "s-2",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-3-1",
+      "stepId": "s-3",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-3-2",
+      "stepId": "s-3",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-4-2",
+      "stepId": "s-4",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-4-4",
+      "stepId": "s-4",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-5-1",
+      "stepId": "s-5",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-5-4",
+      "stepId": "s-5",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-6-2",
+      "stepId": "s-6",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-6-3",
+      "stepId": "s-6",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-7-3",
+      "stepId": "s-7",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-deep-2",
+      "stepId": "s-1",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-deep-2",
+      "stepId": "s-2",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-deep-2",
+      "stepId": "s-3",
+      "createdAt": 1773914884526
+    }
+  ],
+  "knowledgeToCodeChunkRelations": [
+    {
+      "knowledgeId": "k-s-1-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-23",
+      "viaStepId": "s-1",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-1-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-24",
+      "viaStepId": "s-1",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-1-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-25",
+      "viaStepId": "s-1",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-1-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-26",
+      "viaStepId": "s-1",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-1-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-27",
+      "viaStepId": "s-1",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-1-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-28",
+      "viaStepId": "s-1",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-1-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-29",
+      "viaStepId": "s-1",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-1-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-30",
+      "viaStepId": "s-1",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-1-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-31",
+      "viaStepId": "s-1",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-1-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-23",
+      "viaStepId": "s-1",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-1-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-24",
+      "viaStepId": "s-1",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-1-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-25",
+      "viaStepId": "s-1",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-1-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-26",
+      "viaStepId": "s-1",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-1-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-27",
+      "viaStepId": "s-1",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-1-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-28",
+      "viaStepId": "s-1",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-1-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-29",
+      "viaStepId": "s-1",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-1-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-30",
+      "viaStepId": "s-1",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-1-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-31",
+      "viaStepId": "s-1",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-2-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-33",
+      "viaStepId": "s-2",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-2-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-34",
+      "viaStepId": "s-2",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-3-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-41",
+      "viaStepId": "s-3",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-3-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-42",
+      "viaStepId": "s-3",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-3-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-43",
+      "viaStepId": "s-3",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-3-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-44",
+      "viaStepId": "s-3",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-3-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-45",
+      "viaStepId": "s-3",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-3-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-46",
+      "viaStepId": "s-3",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-3-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-41",
+      "viaStepId": "s-3",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-3-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-42",
+      "viaStepId": "s-3",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-3-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-43",
+      "viaStepId": "s-3",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-3-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-44",
+      "viaStepId": "s-3",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-3-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-45",
+      "viaStepId": "s-3",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-3-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-46",
+      "viaStepId": "s-3",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-4-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-4",
+      "viaStepId": "s-4",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-4-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-5",
+      "viaStepId": "s-4",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-4-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-6",
+      "viaStepId": "s-4",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-4-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-7",
+      "viaStepId": "s-4",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-4-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-8",
+      "viaStepId": "s-4",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-4-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-9",
+      "viaStepId": "s-4",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-4-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-10",
+      "viaStepId": "s-4",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-4-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-11",
+      "viaStepId": "s-4",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-4-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-12",
+      "viaStepId": "s-4",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-4-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-13",
+      "viaStepId": "s-4",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-4-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-14",
+      "viaStepId": "s-4",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-4-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-15",
+      "viaStepId": "s-4",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-4-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-16",
+      "viaStepId": "s-4",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-4-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-17",
+      "viaStepId": "s-4",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-4-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-18",
+      "viaStepId": "s-4",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-4-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-19",
+      "viaStepId": "s-4",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-4-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-20",
+      "viaStepId": "s-4",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-4-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-48",
+      "viaStepId": "s-4",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-4-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-49",
+      "viaStepId": "s-4",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-4-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-51",
+      "viaStepId": "s-4",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-4-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-4",
+      "viaStepId": "s-4",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-4-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-5",
+      "viaStepId": "s-4",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-4-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-6",
+      "viaStepId": "s-4",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-4-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-7",
+      "viaStepId": "s-4",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-4-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-8",
+      "viaStepId": "s-4",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-4-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-9",
+      "viaStepId": "s-4",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-4-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-10",
+      "viaStepId": "s-4",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-4-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-11",
+      "viaStepId": "s-4",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-4-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-12",
+      "viaStepId": "s-4",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-4-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-13",
+      "viaStepId": "s-4",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-4-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-14",
+      "viaStepId": "s-4",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-4-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-15",
+      "viaStepId": "s-4",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-4-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-16",
+      "viaStepId": "s-4",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-4-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-17",
+      "viaStepId": "s-4",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-4-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-18",
+      "viaStepId": "s-4",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-4-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-19",
+      "viaStepId": "s-4",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-4-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-20",
+      "viaStepId": "s-4",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-4-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-48",
+      "viaStepId": "s-4",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-4-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-49",
+      "viaStepId": "s-4",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-4-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-51",
+      "viaStepId": "s-4",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-5-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-55",
+      "viaStepId": "s-5",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-5-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-56",
+      "viaStepId": "s-5",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-5-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-57",
+      "viaStepId": "s-5",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-5-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-55",
+      "viaStepId": "s-5",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-5-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-56",
+      "viaStepId": "s-5",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-5-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-57",
+      "viaStepId": "s-5",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-5-5",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-55",
+      "viaStepId": "s-5",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-5-5",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-56",
+      "viaStepId": "s-5",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-5-5",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-57",
+      "viaStepId": "s-5",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-6-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-50",
+      "viaStepId": "s-6",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-6-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-59",
+      "viaStepId": "s-6",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-6-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-60",
+      "viaStepId": "s-6",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-6-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-50",
+      "viaStepId": "s-6",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-6-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-59",
+      "viaStepId": "s-6",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-6-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-60",
+      "viaStepId": "s-6",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-7-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-62",
+      "viaStepId": "s-7",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-7-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-63",
+      "viaStepId": "s-7",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-7-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-62",
+      "viaStepId": "s-7",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-s-7-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-63",
+      "viaStepId": "s-7",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-33",
+      "viaStepId": "s-2",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-34",
+      "viaStepId": "s-2",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-50",
+      "viaStepId": "s-6",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-59",
+      "viaStepId": "s-6",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-60",
+      "viaStepId": "s-6",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-62",
+      "viaStepId": "s-7",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-63",
+      "viaStepId": "s-7",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-deep-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-41",
+      "viaStepId": "s-3",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-deep-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-42",
+      "viaStepId": "s-3",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-deep-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-43",
+      "viaStepId": "s-3",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-deep-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-44",
+      "viaStepId": "s-3",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-deep-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-45",
+      "viaStepId": "s-3",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-deep-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-46",
+      "viaStepId": "s-3",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-deep-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-50",
+      "viaStepId": "s-6",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-deep-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-59",
+      "viaStepId": "s-6",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-deep-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-60",
+      "viaStepId": "s-6",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-deep-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-62",
+      "viaStepId": "s-7",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-deep-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-63",
+      "viaStepId": "s-7",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-deep-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-41",
+      "viaStepId": "s-3",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-deep-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-42",
+      "viaStepId": "s-3",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-deep-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-43",
+      "viaStepId": "s-3",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-deep-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-44",
+      "viaStepId": "s-3",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-deep-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-45",
+      "viaStepId": "s-3",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-deep-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-46",
+      "viaStepId": "s-3",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-deep-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-55",
+      "viaStepId": "s-5",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-deep-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-56",
+      "viaStepId": "s-5",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-deep-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-57",
+      "viaStepId": "s-5",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-deep-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-50",
+      "viaStepId": "s-6",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-deep-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-59",
+      "viaStepId": "s-6",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-deep-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-60",
+      "viaStepId": "s-6",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-deep-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-62",
+      "viaStepId": "s-7",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-deep-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-63",
+      "viaStepId": "s-7",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-deep-5",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-41",
+      "viaStepId": "s-3",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-deep-5",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-42",
+      "viaStepId": "s-3",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-deep-5",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-43",
+      "viaStepId": "s-3",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-deep-5",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-44",
+      "viaStepId": "s-3",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-deep-5",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-45",
+      "viaStepId": "s-3",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-deep-5",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-46",
+      "viaStepId": "s-3",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-deep-5",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-50",
+      "viaStepId": "s-6",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-deep-5",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-59",
+      "viaStepId": "s-6",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-deep-5",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-60",
+      "viaStepId": "s-6",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-deep-5",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-62",
+      "viaStepId": "s-7",
+      "createdAt": 1773914884526
+    },
+    {
+      "knowledgeId": "k-deep-5",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/ray_tracing_sphere.py-chunk-63",
+      "viaStepId": "s-7",
+      "createdAt": 1773914884526
+    }
+  ]
+}

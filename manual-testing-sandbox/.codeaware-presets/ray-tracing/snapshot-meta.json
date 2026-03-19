@@ -1,0 +1,131 @@
+{
+  "schemaVersion": 1,
+  "presetName": "ray-tracing",
+  "createdAt": "2026-03-19T10:10:03.198Z",
+  "originalRequirement": "使用python+numpy实现ray tracing算法渲染出一个蓝色的立体球体，保持代码简洁",
+  "title": "简易球体光线追踪绘制",
+  "learningGoal": "通过本项目可以理解如何把三维场景理解为数据模型，并拆分出渲染管线的关键阶段，提高用代码思考图像生成与视觉算法基本结构的能力。",
+  "highLevelSteps": [
+    {
+      "id": "r-1",
+      "content": "三维场景与视野建模",
+      "isHighlighted": false,
+      "isCompleted": false
+    },
+    {
+      "id": "r-2",
+      "content": "光线与物体交互计算",
+      "isHighlighted": false,
+      "isCompleted": false
+    },
+    {
+      "id": "r-3",
+      "content": "像素颜色合成与输出",
+      "isHighlighted": false,
+      "isCompleted": false
+    }
+  ],
+  "highLevelStepNarrative": "这个项目的目标是用代码画出一个三维蓝色球体，你可以把它理解成用“光线”去探测球体表面，然后根据结果决定每个像素的颜色。首先，你需要把三维场景和相机的位置用数据描述出来，这就是{{r-1:三维场景与视野建模}}，就像先画一个地图，告诉电脑球在哪里、你从哪个角度看。接着，算法会模拟很多光线穿过每个像素，判断哪些光线碰到了球体，这部分叫{{r-2:光线与物体交互计算}}，其实就是用数学算一算“这条光线有没有撞上球”。最后，当你知道每个光线是否碰到球，就能决定它在画面上该显示什么颜色，这个过程是{{r-3:像素颜色合成与输出}}，也就是把球体渲染成蓝色，并生成最终的图片。通过这一整套流程，你会学到用代码一步步把想象的画面变成真实的图像。",
+  "stepToHighLevelMappings": [
+    {
+      "stepId": "s-1",
+      "highLevelStepId": "r-1",
+      "highLevelStepIndex": 1
+    },
+    {
+      "stepId": "s-2",
+      "highLevelStepId": "r-1",
+      "highLevelStepIndex": 1
+    },
+    {
+      "stepId": "s-3",
+      "highLevelStepId": "r-1",
+      "highLevelStepIndex": 1
+    },
+    {
+      "stepId": "s-4",
+      "highLevelStepId": "r-2",
+      "highLevelStepIndex": 2
+    },
+    {
+      "stepId": "s-5",
+      "highLevelStepId": "r-2",
+      "highLevelStepIndex": 2
+    },
+    {
+      "stepId": "s-6",
+      "highLevelStepId": "r-3",
+      "highLevelStepIndex": 3
+    },
+    {
+      "stepId": "s-7",
+      "highLevelStepId": "r-3",
+      "highLevelStepIndex": 3
+    }
+  ],
+  "steps": [
+    {
+      "id": "s-1",
+      "title": "定义摄像机参数",
+      "abstract": "就是先想象一个照相机，规定它的位置、能看到的方向和画面有多大。这样，后面我们才能搞清楚每一条光线是从哪里射出去、要照到画布上的哪个点。没有这个，后面都无从谈起，等于你闭着眼在画画，会一团乱。",
+      "knowledgeCards": [],
+      "isHighlighted": false,
+      "stepStatus": "generated",
+      "knowledgeCardGenerationStatus": "empty"
+    },
+    {
+      "id": "s-2",
+      "title": "设置球体位置与半径",
+      "abstract": "这一步就像在虚拟世界里放一个球，说清楚它在场景中的具体位置和有多大。有了这个，后面才知道哪些光线能撞到球，有哪些只是从旁边掠过。实际效果就决定了画面上球到底会多显眼、被光线怎么‘看到’。",
+      "knowledgeCards": [],
+      "isHighlighted": false,
+      "stepStatus": "generated",
+      "knowledgeCardGenerationStatus": "empty"
+    },
+    {
+      "id": "s-3",
+      "title": "生成像素对应的视线",
+      "abstract": "想象你面前有一张画布，每个像素都是一个小窗口。我们需要算出，每个小窗口都该有一条穿出去的直线——这些就是‘光线’。这一波操作后，每个像素都知道了它要代表的是哪条射向场景的线，为后面判断撞到没做好准备。",
+      "knowledgeCards": [],
+      "isHighlighted": false,
+      "stepStatus": "generated",
+      "knowledgeCardGenerationStatus": "empty"
+    },
+    {
+      "id": "s-4",
+      "title": "计算光线和球体的交点",
+      "abstract": "这步就是问：画出的每一条光线究竟有没有‘射中’球？具体就像做一道数学题，判断球和每条直线会不会碰撞。如果有，那我们就记下来交点位置；如果没碰到，这个像素就是背景色。搞清谁打到了球，才能继续想颜色怎么定。",
+      "knowledgeCards": [],
+      "isHighlighted": false,
+      "stepStatus": "generated",
+      "knowledgeCardGenerationStatus": "empty"
+    },
+    {
+      "id": "s-5",
+      "title": "确定球面被照亮程度",
+      "abstract": "判断交点后，我们需要看看，每个交点到底亮不亮——就像球体有阴影和亮面。这就要‘模拟阳光’，看看每处是不是直接被光打到。如果是，那里就亮些；如果是背阴，就暗些。这样球体才不会像一块平板，更有立体感。",
+      "knowledgeCards": [],
+      "isHighlighted": false,
+      "stepStatus": "generated",
+      "knowledgeCardGenerationStatus": "empty"
+    },
+    {
+      "id": "s-6",
+      "title": "分配像素颜色值",
+      "abstract": "有了哪些像素‘看到’球、球面上每点亮度的消息，我们给每个像素安排最终的颜色。这一步决定了球体到底是不是深蓝色、有没有渐变暗影，以及身后的背景是不是对的。像是给每个小格子涂上合乎实际的色彩，整体才像那么回事。",
+      "knowledgeCards": [],
+      "isHighlighted": false,
+      "stepStatus": "generated",
+      "knowledgeCardGenerationStatus": "empty"
+    },
+    {
+      "id": "s-7",
+      "title": "生成和保存图像结果",
+      "abstract": "最后，把所有像素按照‘涂色’的结果拼成一张完整图片，再保存下来。这样你就能打开、看到自己用计算机‘画’出来的三维感十足、蓝色的球体，所有前面的努力才有了最终的成果。",
+      "knowledgeCards": [],
+      "isHighlighted": false,
+      "stepStatus": "generated",
+      "knowledgeCardGenerationStatus": "empty"
+    }
+  ]
+}

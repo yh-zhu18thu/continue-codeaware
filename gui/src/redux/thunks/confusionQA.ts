@@ -1,10 +1,12 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import { constructGlobalQAResponsePrompt } from "../../../../core/llm/codeAwarePrompts";
+import { buildCodeAwareCognitiveEdges } from "../../utils/codeAwareRelationGraph";
 import {
   selectJsonGenerationModel,
   selectSelectedChatModel,
 } from "../slices/configSlice";
 import { ThunkApiType } from "../store";
+import { buildMasteredRelatedContext } from "./masteryNodeUtils";
 
 /**
  * Generic confusion Q&A response thunk.
@@ -72,12 +74,44 @@ export const respondToConfusionQA = createAsyncThunk<
       abstract: step.abstract,
     }));
 
+    // Build mastered-related context for KC and step levels
+    let masteredRelatedContext = "";
+    if (
+      context.level === "knowledge-card" &&
+      context.stepId &&
+      context.cardId
+    ) {
+      const step = steps.find((s) => s.id === context.stepId);
+      const card = step?.knowledgeCards.find((k) => k.id === context.cardId);
+      masteredRelatedContext = buildMasteredRelatedContext({
+        linkedMasteryNodes: card?.linkedMasteryNodes,
+        linkedKnowledgeNodeIds: card?.linkedKnowledgeNodeIds,
+        edges: buildCodeAwareCognitiveEdges(state.codeAwareSession),
+        nodeMasteryScores: state.codeAwareSession.nodeMasteryScores,
+        knowledgePoints: state.codeAwareSession.knowledgePoints,
+        codeChunks: state.codeAwareSession.codeChunks,
+        steps: state.codeAwareSession.steps,
+      });
+    } else if (context.level === "step" && context.stepId) {
+      // For step-level, use the step itself as center node
+      masteredRelatedContext = buildMasteredRelatedContext({
+        linkedMasteryNodes: [{ nodeId: context.stepId, nodeType: "step" }],
+        edges: buildCodeAwareCognitiveEdges(state.codeAwareSession),
+        nodeMasteryScores: state.codeAwareSession.nodeMasteryScores,
+        knowledgePoints: state.codeAwareSession.knowledgePoints,
+        codeChunks: state.codeAwareSession.codeChunks,
+        steps: state.codeAwareSession.steps,
+      });
+    }
+    // Global level: no mastered context
+
     const prompt = constructGlobalQAResponsePrompt(
       fullHistory,
       allStepsInfo,
       context.currentCode || "",
       context.taskDescription,
       context.learningGoal,
+      masteredRelatedContext || undefined,
     );
 
     const maxRetries = 3;

@@ -22,6 +22,7 @@ import {
   constructProcessCodeChangesPrompt,
   constructQAToKnowledgeCardPrompt,
 } from "../../../../core/llm/codeAwarePrompts";
+import { buildCodeAwareCognitiveEdges } from "../../utils/codeAwareRelationGraph";
 import {
   addGlobalQAMessage,
   clearAllCodeAwareMappings,
@@ -61,6 +62,7 @@ import {
 } from "../slices/configSlice";
 import { ThunkApiType } from "../store";
 import { generateCognitiveKnowledgeCards } from "./generateCognitiveKnowledgeCards";
+import { buildMasteredRelatedContext } from "./masteryNodeUtils";
 
 // 辅助函数：检查并更新高级步骤的完成状态
 // TODO: 重新实现此函数以适配新的映射机制
@@ -1244,6 +1246,19 @@ export const generateKnowledgeCardDetail = createAsyncThunk<
       const taskDescription =
         state.codeAwareSession.userRequirement?.requirementDescription || "";
 
+      // 构建已掌握的相关知识上下文
+      const step = state.codeAwareSession.steps.find((s) => s.id === stepId);
+      const card = step?.knowledgeCards.find((k) => k.id === knowledgeCardId);
+      const masteredRelatedContext = buildMasteredRelatedContext({
+        linkedMasteryNodes: card?.linkedMasteryNodes,
+        linkedKnowledgeNodeIds: card?.linkedKnowledgeNodeIds,
+        edges: buildCodeAwareCognitiveEdges(state.codeAwareSession),
+        nodeMasteryScores: state.codeAwareSession.nodeMasteryScores,
+        knowledgePoints: state.codeAwareSession.knowledgePoints,
+        codeChunks: state.codeAwareSession.codeChunks,
+        steps: state.codeAwareSession.steps,
+      });
+
       // 设置加载状态
       dispatch(
         setKnowledgeCardLoading({
@@ -1259,6 +1274,7 @@ export const generateKnowledgeCardDetail = createAsyncThunk<
         learningGoal,
         codeContext,
         taskDescription,
+        masteredRelatedContext || undefined,
       );
 
       console.log("[CA:CodeGen] generateKnowledgeCardDetail called with:", {
@@ -1268,6 +1284,9 @@ export const generateKnowledgeCardDetail = createAsyncThunk<
         learningGoal,
         taskDescription,
         codeContext: codeContext.substring(0, 100) + "...", // 只打印前100个字符
+        masteredRelatedContext: masteredRelatedContext
+          ? masteredRelatedContext.substring(0, 200) + "..."
+          : "(empty)",
       });
 
       // 重试机制

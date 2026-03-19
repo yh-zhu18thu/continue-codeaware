@@ -621,21 +621,35 @@ export function constructGenerateKnowledgeCardDetailPrompt(
   learningGoal: string,
   codeContext: string,
   taskDescription?: string,
+  masteredRelatedContext?: string,
 ): string {
+  const masteredSection = masteredRelatedContext
+    ? `
+        "mastered_related_context": ${JSON.stringify(masteredRelatedContext)},`
+    : "";
+
+  const masteredRequirements = masteredRelatedContext
+    ? [
+        `"When mastered_related_context is provided, actively reference and build upon the user's existing knowledge listed there. Connect new concepts to what they already understand, e.g. 'You already know X — this works similarly but …'."`,
+        `"Minimize jargon by default, but if a term appears in the mastered_related_context (meaning the user has encountered it before), you may use that term directly without extra explanation."`,
+      ]
+    : [];
+
   return `{
-        "task": "A non-programmer user is working on a coding project and needs fast, adaptive scaffolding for one specific confusion point. Based on the knowledge theme, project context, related code, and learning objectives, generate a short and clear knowledge card.",
+        "task": "A non-programmer user is working on a coding project and needs fast, adaptive scaffolding for one specific confusion point. Based on the knowledge theme, project context, related code, learning objectives, and the user's already-mastered related knowledge, generate a clear and helpful knowledge card.",
         "knowledge_theme": "${knowledgeCardTheme}",
         "learning_objectives": "${learningGoal}",
         "related_code": "${codeContext}",
-        "project_context": "${taskDescription || ""}",
+        "project_context": "${taskDescription || ""}",${masteredSection}
         "requirements": [
-            "Treat the user as a non-programmer: assume minimal coding background and minimal terminology knowledge.",
+            "Treat the user as a beginning learner: use plain language as the baseline, but do not shy away from terms the user has already encountered (see mastered_related_context).",
             "Use adaptive scaffolding style: internally choose one of hinting/explaining/instructing/modeling, but DO NOT output the chosen type.",
             "Focus on one specific confusion point only. Do not expand to downstream topics or unrelated concepts.",
             "Title must be a SHORT QUESTION (ending with '?' in Chinese or English) that helps a non-programmer quickly judge whether they need this card. Avoid obscure jargon. Example: '为什么用循环能省掉重复劳动？' instead of '循环结构'.",
-            "Content must be 2-3 short sentences only, concise and practical.",
-            "Sentence 1: TLDR in plain language. Sentence 2-3: minimal explanation or next action tied to project_context and related_code.",
-            "Use simple words, life-like analogies when helpful, and avoid long definitions.",
+            "Content must be 4-5 sentences, informative yet accessible.",
+            "Sentence 1: TLDR in plain language. Sentences 2-4: explanation that connects to the user's existing knowledge (from mastered_related_context if available) and ties to project_context and related_code. Sentence 5: a practical takeaway or next-step hint.",
+            ${masteredRequirements.join(",\n            ")}
+            "Use simple words and life-like analogies when helpful.",
             "Do not dump full code explanations. Only mention the most relevant code behavior if needed.",
             "Respond in the same language as the project_context. You may use Markdown in the content to make it more readable.",
             "You must follow this JSON format in your response: {\\"title\\": \\"(title of the knowledge card)\\", \\"content\\": \\"(content of the knowledge card. Markdown can be used here)\\"}",
@@ -1135,6 +1149,7 @@ export function constructGlobalQAResponsePrompt(
   codeContext: string,
   taskDescription: string,
   learningGoal: string,
+  masteredRelatedContext?: string,
 ): string {
   const historyText = conversationHistory
     .map(
@@ -1146,21 +1161,33 @@ export function constructGlobalQAResponsePrompt(
     .map((s) => `- ${s.title}: ${s.abstract}`)
     .join("\n");
 
+  const masteredField = masteredRelatedContext
+    ? `\n    "mastered_related_context": ${JSON.stringify(masteredRelatedContext)},`
+    : "";
+
+  const masteredReqs = masteredRelatedContext
+    ? [
+        `"When mastered_related_context is provided, actively leverage the user's existing understanding listed there. Reference what they already know to give more targeted, connected explanations, e.g. 'You already learned about X — here Y works the same way but …'."`,
+        `"Minimize jargon by default, but if a term appears in the mastered_related_context, you may use it directly since the user has encountered it before."`,
+      ]
+    : [];
+
   return `{
-    "task": "A non-programmer user is confused about a coding project. They are having a conversation with you. Based on the conversation history, project context, related code, learning objectives, and project steps, provide a short, clear, and helpful response using adaptive scaffolding.",
+    "task": "A non-programmer user is confused about a coding project. They are having a conversation with you. Based on the conversation history, project context, related code, learning objectives, project steps, and the user's already-mastered related knowledge, provide a clear and helpful response using adaptive scaffolding.",
     "conversation_history": ${JSON.stringify(historyText)},
     "project_steps": ${JSON.stringify(stepsText)},
     "related_code": ${JSON.stringify(codeContext)},
     "project_context": ${JSON.stringify(taskDescription)},
-    "learning_objectives": ${JSON.stringify(learningGoal)},
+    "learning_objectives": ${JSON.stringify(learningGoal)},${masteredField}
     "requirements": [
-        "Treat the user as a non-programmer: assume minimal coding background and minimal terminology knowledge.",
+        "Treat the user as a beginning learner: use plain language as the baseline, but do not shy away from terms the user has already encountered (see mastered_related_context if provided).",
         "Use adaptive scaffolding style: internally choose one of hinting/explaining/instructing/modeling, but DO NOT output the chosen type.",
         "Directly answer the user's latest question in the conversation. Do not repeat previous answers.",
         "If the user says they still don't understand, try a different approach: use an analogy, give a concrete example, or simplify further.",
-        "Response must be 2-4 short sentences, concise and practical.",
-        "Sentence 1: TLDR in plain language. Remaining sentences: minimal explanation or next action tied to project context and code.",
-        "Use simple words, life-like analogies when helpful, and avoid long definitions.",
+        "Response must be 4-6 sentences, informative yet accessible.",
+        "Sentence 1: TLDR in plain language. Sentences 2-4: explanation that connects to the user's existing knowledge (from mastered_related_context if available) and ties to project context and code. Remaining sentences: a practical takeaway, next-step hint, or clarifying example.",
+        ${masteredReqs.join(",\n        ")}
+        "Use simple words and life-like analogies when helpful.",
         "Do not dump full code explanations. Only mention the most relevant code behavior if needed.",
         "Respond in the same language as the user's question. You may use Markdown for readability.",
         "You must follow this JSON format in your response: {\\"response\\": \\"(your response in Markdown)\\"}",

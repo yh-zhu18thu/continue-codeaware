@@ -134,7 +134,8 @@ export function updateDirectNodeMastery(args: {
 
   const seen = new Set<string>();
 
-  normalizedRefs.forEach(({ nodeId, nodeType }) => {
+  normalizedRefs.forEach((ref) => {
+    const { nodeId, nodeType } = ref;
     if (!nodeId) {
       return;
     }
@@ -148,7 +149,11 @@ export function updateDirectNodeMastery(args: {
     const key = toScoreKey(nodeId, nodeType);
     const existing = scoreMap.get(key);
     const before = existing?.score ?? 0.5;
-    const after = clamp01((1 - alpha) * before + alpha * args.evidence);
+    const nodeWeight = clamp01(ref.weight ?? 1);
+    const effectiveAlpha = alpha * nodeWeight;
+    const after = clamp01(
+      (1 - effectiveAlpha) * before + effectiveAlpha * args.evidence,
+    );
 
     const updated: NodeMasteryScore = {
       nodeId,

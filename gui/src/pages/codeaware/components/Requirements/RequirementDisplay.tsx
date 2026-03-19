@@ -362,7 +362,7 @@ const MasteryBackgroundFill = styled.div<{
   bottom: 0;
   width: ${({ percent }) => percent}%;
   background-color: ${({ masteryColor }) => masteryColor};
-  opacity: 0.18;
+  opacity: 0.32;
   border-radius: ${defaultBorderRadius};
   pointer-events: none;
   z-index: 0;
@@ -648,7 +648,7 @@ export default function RequirementDisplay({
                     const percent = Math.round(mastery.score * 100);
                     const color = masteryScoreToColorWithAlpha(
                       mastery.score,
-                      0.18,
+                      0.3,
                     );
                     masteryGradient = `linear-gradient(to right, ${color} ${percent}%, transparent ${percent}%)`;
                   }

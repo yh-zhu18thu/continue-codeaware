@@ -1152,14 +1152,30 @@ export const CodeAware = () => {
           codeAwareSessionState.codeAwareMappings,
           codeAwareSessionState.codeChunks,
         );
+        const selStart = currentCodeSelection.selectedLines[0];
+        const selEnd = currentCodeSelection.selectedLines[1];
         const sitRefs: MasteryNodeRef[] = [];
         stepMappings.forEach((m) => {
           groups
-            .filter((g) => g.stepIds.includes(m.semanticElementId))
+            .filter((g) => {
+              // Only keep groups whose line range overlaps with the selection
+              if (!g.stepIds.includes(m.semanticElementId)) {
+                return false;
+              }
+              const [gStart, gEnd] = g.lineRange;
+              return selStart <= gEnd && selEnd >= gStart;
+            })
             .forEach((g) => {
+              // Compute coverage ratio: how much of this group's lines are selected
+              const [gStart, gEnd] = g.lineRange;
+              const overlapStart = Math.max(selStart, gStart);
+              const overlapEnd = Math.min(selEnd, gEnd);
+              const overlapLines = Math.max(0, overlapEnd - overlapStart + 1);
+              const coverageRatio = overlapLines / g.lineCount;
               sitRefs.push({
                 nodeId: toSituationNodeId(m.semanticElementId, g.groupId),
                 nodeType: "situation",
+                weight: coverageRatio,
               });
             });
         });

@@ -729,6 +729,10 @@ export interface NodeMasteryScore {
 export interface MasteryNodeRef {
   nodeId: string;
   nodeType: "step" | "code-chunk" | "background-knowledge" | "situation";
+  /** Optional weight (0–1) to scale the mastery update amount.
+   *  e.g. coverage ratio of selected code within a situation group.
+   *  Defaults to 1 (full update). */
+  weight?: number;
 }
 
 // CODEAWARE: 初始生成流程的状态

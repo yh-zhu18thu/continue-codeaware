@@ -114,6 +114,11 @@ export type ToIdeFromWebviewProtocol = ToIdeFromWebviewOrCoreProtocol & {
   ];
   addCodeAwareLogEntry: [{ eventType: string; payload: any }, void];
   endCodeAwareLogSession: [undefined, void];
+  //CodeAware: 通过 VS Code showInputBox 让用户输入文本
+  showInputBox: [
+    { prompt: string; placeholder?: string; value?: string },
+    string | undefined,
+  ];
   // CodeAware: 跳转并展开代码注释
   revealCodeAnnotation: [
     {

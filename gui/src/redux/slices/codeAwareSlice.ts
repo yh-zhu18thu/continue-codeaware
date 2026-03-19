@@ -1,7 +1,9 @@
 //CATODO: 参考着sessionSlice中chatHistory的实现方式加入codeaware的所有数据结构，包括UserIntent,UserMastery,Flow,KnowledgeCard,Quizzes
 import { createSelector, createSlice, PayloadAction } from "@reduxjs/toolkit";
 import {
+  CodeAwareCognitiveEdge,
   CodeAwareMapping,
+  CodeAwarePresetSnapshot,
   CodeChunk,
   CodeChunkRelation,
   CollaborationStatus,
@@ -123,6 +125,8 @@ export type CodeAwareSessionState = {
   };
   codeGenerationDebugLogs: string[];
   cognitiveTrace: CognitiveTraceState;
+  // 认知关联边（初始生成后计算并存储，预设加载时直接恢复）
+  cognitiveEdges: CodeAwareCognitiveEdge[];
 };
 
 const initialCodeAwareState: CodeAwareSessionState = {
@@ -171,6 +175,7 @@ const initialCodeAwareState: CodeAwareSessionState = {
   },
   codeGenerationDebugLogs: [],
   cognitiveTrace: createEmptyCognitiveTrace(),
+  cognitiveEdges: [],
 };
 
 export const codeAwareSessionSlice = createSlice({
@@ -1358,6 +1363,84 @@ export const codeAwareSessionSlice = createSlice({
       };
       state.shouldClearIdeHighlights = false;
       state.codeChunksToHighlightInIde = [];
+      state.cognitiveEdges = [];
+    },
+    // 从预设快照一次性恢复全部状态（用于用户测试场景）
+    restoreFromSnapshot: (
+      state,
+      action: PayloadAction<{
+        snapshot: CodeAwarePresetSnapshot;
+        resolvedCodeFilePath: string;
+      }>,
+    ) => {
+      const { snapshot, resolvedCodeFilePath } = action.payload;
+      const now = Date.now();
+
+      // 基础信息
+      state.title = snapshot.title;
+      state.learningGoal = snapshot.learningGoal;
+
+      // 需求
+      if (state.userRequirement) {
+        state.userRequirement.requirementDescription =
+          snapshot.originalRequirement;
+        state.userRequirement.requirementStatus = "finalized";
+      }
+
+      // 步骤结构
+      state.highLevelSteps = snapshot.highLevelSteps;
+      state.highLevelStepNarrative = snapshot.highLevelStepNarrative;
+      state.stepToHighLevelMappings = snapshot.stepToHighLevelMappings;
+      state.steps = snapshot.steps;
+
+      // 代码块（替换 filePath 为当前 workspace 的绝对路径）
+      state.codeChunks = snapshot.codeChunks.map((chunk) => ({
+        ...chunk,
+        filePath: resolvedCodeFilePath,
+      }));
+      state.codeChunkRelations = snapshot.codeChunkRelations;
+
+      // 映射
+      state.codeAwareMappings = snapshot.codeAwareMappings;
+
+      // 知识图谱
+      state.knowledgePoints = snapshot.knowledgePoints;
+      state.knowledgeRelations = snapshot.knowledgeRelations;
+      state.knowledgeToStepRelations = snapshot.knowledgeToStepRelations;
+      state.knowledgeToCodeChunkRelations =
+        snapshot.knowledgeToCodeChunkRelations;
+
+      // 掌握度：重置为 0（每个学生从零开始）
+      state.nodeMasteryScores = snapshot.nodeMasteryScores.map((score) => ({
+        ...score,
+        score: 0,
+        updatedAt: now,
+      }));
+
+      // 认知边：直接从快照恢复，不重算
+      state.cognitiveEdges = snapshot.cognitiveEdges;
+
+      // 初始生成状态：标记为已完成
+      state.initialGeneration = {
+        status: "completed",
+        currentPhase: "预设加载完成",
+        progress: 100,
+        errors: [],
+      };
+
+      // 清理运行时状态
+      state.pinnedItems = [];
+      state.globalQASession = null;
+      state.cognitiveTrace = createEmptyCognitiveTrace();
+      state.shouldClearIdeHighlights = false;
+      state.codeChunksToHighlightInIde = [];
+    },
+    // 设置认知边（导出时由 buildCodeAwareCognitiveEdges 计算后存入）
+    setCognitiveEdges: (
+      state,
+      action: PayloadAction<CodeAwareCognitiveEdge[]>,
+    ) => {
+      state.cognitiveEdges = action.payload;
     },
     // Mark steps as code_dirty based on code changes
     markStepsCodeDirty: (
@@ -1744,6 +1827,8 @@ export const {
   clearCodeGenerationDebugLogs,
   recordCognitiveEvent,
   clearCognitiveTrace,
+  restoreFromSnapshot,
+  setCognitiveEdges,
 } = codeAwareSessionSlice.actions;
 
 export const {

@@ -91,6 +91,11 @@ import {
   establishCodeToSemanticMapping,
   establishSemanticToCodeMapping,
 } from "../../redux/thunks/mappingLookup";
+import {
+  detectPresetTrigger,
+  exportPresetSnapshot,
+  loadPresetSnapshot,
+} from "../../redux/thunks/presetSnapshot";
 import { useCodeAwareLogger } from "../../util/codeAwareWebViewLogger";
 import { buildCodeAwareCognitiveEdges } from "../../utils/codeAwareRelationGraph";
 import {
@@ -317,6 +322,7 @@ export const CodeAware = () => {
   const [isSessionDialogOpen, setIsSessionDialogOpen] = useState(false);
   const [isExportingKnowledgeState, setIsExportingKnowledgeState] =
     useState(false);
+  const [isExportingPreset, setIsExportingPreset] = useState(false);
 
   // Navigation buttons state
   const [isMappingLookupInProgress, setIsMappingLookupInProgress] =
@@ -984,6 +990,35 @@ export const CodeAware = () => {
     }
   }, [dispatch, ideMessenger, logger]);
 
+  const handleExportPreset = useCallback(async () => {
+    try {
+      setIsExportingPreset(true);
+      const result = await dispatch(exportPresetSnapshot()).unwrap();
+
+      ideMessenger?.post("showToast", [
+        "info",
+        `预设 "${result.presetName}" 已导出到 .codeaware-presets/ 目录`,
+      ]);
+
+      await logger.addLogEntry("user_export_preset", {
+        presetName: result.presetName,
+        snapshotPath: result.snapshotPath,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      // 用户取消导出不算错误
+      if (msg.includes("导出取消")) {
+        console.log("[CA:UI] 预设导出已取消");
+      } else {
+        console.error("[CA:UI] 导出预设失败:", error);
+        ideMessenger?.post("showToast", ["warning", `导出预设失败: ${msg}`]);
+      }
+    } finally {
+      setIsExportingPreset(false);
+    }
+  }, [dispatch, ideMessenger, logger]);
+
   // log all the data for debugging
   useEffect(() => {
     console.log("[CA:UI] All mappings length: ", allMappings.length);
@@ -1589,6 +1624,36 @@ export const CodeAware = () => {
       // Expect requirement from editor
 
       if (!userRequirement) {
+        return;
+      }
+
+      // 检测是否为预设密语 (@preset:name)
+      const presetName = detectPresetTrigger(requirement);
+      if (presetName) {
+        console.log(`[CA:UI] 检测到预设密语: ${presetName}`);
+        await logger.addLogEntry("user_load_preset", {
+          presetName,
+          timestamp: new Date().toISOString(),
+        });
+        dispatch(resetSessionExceptRequirement());
+        dispatch(submitRequirementContent(requirement));
+        dispatch(setUserRequirementStatus("confirmed"));
+        void dispatch(loadPresetSnapshot({ presetName }))
+          .unwrap()
+          .then(async () => {
+            console.log(`[CA:UI] 预设 "${presetName}" 加载完成`);
+            await logger.addLogEntry("user_load_preset_completed", {
+              presetName,
+              timestamp: new Date().toISOString(),
+            });
+          })
+          .catch(async (error) => {
+            console.error(`[CA:UI] 预设 "${presetName}" 加载失败`, error);
+            await logger.addLogEntry("user_load_preset_failed", {
+              presetName,
+              error: error instanceof Error ? error.message : String(error),
+            });
+          });
         return;
       }
 
@@ -3525,6 +3590,13 @@ export const CodeAware = () => {
               title="导出/更新认知状态文件到 .knowledge_state/"
             >
               {isExportingKnowledgeState ? "导出中..." : "导出知识状态"}
+            </HeaderActionButton>
+            <HeaderActionButton
+              onClick={handleExportPreset}
+              disabled={isExportingPreset}
+              title="导出当前状态为预设快照（用于用户测试）"
+            >
+              {isExportingPreset ? "导出中..." : "导出预设"}
             </HeaderActionButton>
           </div>
         }

@@ -687,6 +687,15 @@ export class VsCodeMessenger {
       codeAwareLogger.endLogSession();
     });
 
+    this.onWebview("showInputBox", async (msg) => {
+      const result = await vscode.window.showInputBox({
+        prompt: msg.data.prompt,
+        placeHolder: msg.data.placeholder,
+        value: msg.data.value,
+      });
+      return result;
+    });
+
     /** PASS THROUGH FROM WEBVIEW TO CORE AND BACK **/
     WEBVIEW_TO_CORE_PASS_THROUGH.forEach((messageType) => {
       this.onWebview(messageType, async (msg) => {

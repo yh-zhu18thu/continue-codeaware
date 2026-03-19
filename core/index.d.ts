@@ -801,6 +801,33 @@ export interface KnowledgeToCodeChunkRelation {
   createdAt: number;
 }
 
+// CODEAWARE: 预设快照（用于用户测试，导出/加载完整 CodeAware 状态）
+export interface CodeAwarePresetSnapshot {
+  schemaVersion: number;
+  presetName: string;
+  createdAt: string;
+  originalRequirement: string;
+  codeFile: {
+    relativePath: string;
+    content: string;
+  };
+  title: string;
+  learningGoal: string;
+  highLevelSteps: HighLevelStepItem[];
+  highLevelStepNarrative: string;
+  stepToHighLevelMappings: StepToHighLevelMapping[];
+  steps: StepItem[];
+  codeChunks: CodeChunk[];
+  codeChunkRelations: CodeChunkRelation[];
+  codeAwareMappings: CodeAwareMapping[];
+  knowledgePoints: KnowledgePoint[];
+  knowledgeRelations: KnowledgeRelation[];
+  knowledgeToStepRelations: KnowledgeToStepRelation[];
+  knowledgeToCodeChunkRelations: KnowledgeToCodeChunkRelation[];
+  nodeMasteryScores: NodeMasteryScore[];
+  cognitiveEdges: CodeAwareCognitiveEdge[];
+}
+
 export interface HighlightEvent {
   sourceType: "code" | "highLevelStep" | "step" | "knowledgeCard";
   identifier: string;

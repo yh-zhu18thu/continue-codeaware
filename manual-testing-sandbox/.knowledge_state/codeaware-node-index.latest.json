@@ -1,818 +1,596 @@
 {
   "schemaVersion": 1,
-  "sessionId": "5020d4cf-643e-44ad-ac80-c0ec3b6dff32",
-  "generatedAt": "2026-03-18T14:35:04.144Z",
-  "nodeCount": 135,
+  "sessionId": "5fde270c-a261-4f8e-9848-6240a61970b3",
+  "generatedAt": "2026-03-20T05:27:09.233Z",
+  "nodeCount": 98,
   "nodes": [
     {
       "id": "r-1",
       "nodeType": "step",
-      "title": "[Framework] 三维场景与摄像机建模",
+      "title": "[Framework] 输入输出管理体系",
       "abstract": ""
     },
     {
       "id": "r-2",
       "nodeType": "step",
-      "title": "[Framework] 光线-物体求交与颜色着色",
+      "title": "[Framework] 局部亮度色块分析",
       "abstract": ""
     },
     {
       "id": "r-3",
       "nodeType": "step",
-      "title": "[Framework] 像素级图像输出生成",
+      "title": "[Framework] 结果生成与存储",
       "abstract": ""
     },
     {
       "id": "s-1",
       "nodeType": "step",
-      "title": "定义球体与摄像机参数",
-      "abstract": "本步骤需建立三维场景的基本数据结构，包括定义球体（如位置、半径）以及摄像机（如位置、观察方向、投影视野）的参数。具体产出为数值或对象，可供光线发射与相交检测使用。本步骤是“三维场景与摄像机建模”功能域的起点，为整个渲染流程提供了描述场景与观察者视角的基准。缺失此步骤将导致后续计算无法进行，渲染目标的属性与观察关系都无从谈起。"
+      "title": "加载输入图像文件",
+      "abstract": "首先要把用户提供的原始图片从硬盘上读进来，就像先把画板摆在桌上才能作画一样。如果图片文件打不开或路径不对，需要提前报错、避免后面白忙一场。这一步确保后续处理能在真实的图像数据上进行，而不会空手套白狼。"
     },
     {
       "id": "s-2",
       "nodeType": "step",
-      "title": "设定图像分辨率与投影视平面",
-      "abstract": "在本步骤中，确定输出图像的宽度与高度像素数目，并在摄像机前方设定一虚拟投影视平面。每个像素将对应该平面上的一个采样点，用于发射光线。此举为“三维场景与摄像机建模”中的空间映射提供粒度控制，使后续光线追踪操作有明确的分辨基础。若忽略此步骤，生成图像将无法准确对应三维内容，像素排布与场景元素间的映射关系混乱，影响最终可视化成果。"
+      "title": "准备输出画布与参数设置",
+      "abstract": "在正式处理前，先搭好要绘画的新画布（其实就是一张和原图一样大的黑底图片），再把油画风格相关的参数（如笔触粗细、色块数量）准备好。就像画画前先决定用大刷子还是小刷子，效果自然差别很大，没有这些准备后面就会手忙脚乱。"
     },
     {
       "id": "s-3",
       "nodeType": "step",
-      "title": "生成每个像素对应的视线",
-      "abstract": "此步骤为输出图像的每个像素点，计算出一条从摄像机出发、穿过投影视平面上对应像素中心的光线（射线）。这些光线代表了从观察者视角出发，探索三维场景的途径。作为“光线-物体求交与颜色着色”功能域的前置环节，它为后续光线与物体的相交检测提供必需的数据。省略本步骤将无法建立像素与场景间的映射，致使渲染面出现空白或混乱的数据输出。"
+      "title": "构建局部窗口统计模型",
+      "abstract": "每处理一个像素，就像拿放大镜观察它周围的一小块区域，记录下这块里颜色和亮度的信息。这一步的核心是把每一小片的颜色分门别类，统计不同亮度成分的分布，为后面决定主导色彩提供依据。没有这样的细致'巡视'，整体效果只会一团糊。"
     },
     {
       "id": "s-4",
       "nodeType": "step",
-      "title": "检测光线与球体的相交点",
-      "abstract": "针对每条像素视线，计算其与场景中球体的相交情况（若有则求出交点）。这一过程涉及解一元二次方程，判定光线是否击中球体及其距离信息。在“光线-物体求交与颜色着色”功能域中，本环节是区分前景（球体）与背景、为像素分配内容的关键。去除此步骤，像素无法判断是否显示球体内容，渲染结果失真失意，无法表达任何立体结构。"
+      "title": "实现邻域主色提取与应用",
+      "abstract": "分析完每个小区域后，相当于‘投票’决定哪种亮度最有代表性，然后用这个类别下的平均颜色来重新上色。这就像涂墙时先挑主色，再满满刷一遍，确保画面被区域化、色块感更强。如果直接用原图颜色，油画味就出不来。"
     },
     {
       "id": "s-5",
       "nodeType": "step",
-      "title": "为像素赋予基础着色效果",
-      "abstract": "对与球体相交的每个像素，依据表面法线与设定光源，使用简单着色（如法线映射色或者 Lambert 漫反射）获得颜色；未命中球体则赋予背景色。它在“光线-物体求交与颜色着色”功能域中负责将三维信息转化为二维可视信号。缺乏此步骤则像素仅有命中与否、缺少空间与立体感的表达，渲染效果将平淡或不可用。"
+      "title": "合成最终油画风格图像",
+      "abstract": "所有像素都处理完毕，输出画布也随之被填充成全新的油画风格图片。这一步就像画家最后起身，欣赏完整作品那样——原图的细碎细节被‘油画化’成色块分明、独特色调的成品，给人截然不同的美感。"
     },
     {
       "id": "s-6",
       "nodeType": "step",
-      "title": "将像素颜色写入到图像缓冲区",
-      "abstract": "本步骤负责将所有像素的最终颜色依照图像分辨率顺序填充到图像数组或缓冲区结构中，为后续保存操作做准备。此行为“像素级图像输出生成”功能域实现像素内容完整性的核心。这一过程若被省略，虽已完成了颜色计算但最终不能得到实际的图片结果，导致算法成果无法以图片形式直观呈现给用户。"
+      "title": "保存处理后图像文件",
+      "abstract": "最后一步，把这张新诞生的油画风格作品存成文件，方便上传、分享或者继续编辑。存储时要选合适的图片格式和画质，确保视觉效果不被破坏。如果只在内存里显示，不存下来，前面的努力就浪费了，分享展示都无从谈起。"
     },
     {
-      "id": "s-7",
-      "nodeType": "step",
-      "title": "保存或显示最终渲染图片",
-      "abstract": "最后一步是将图像缓冲区中的像素数据输出为标准图像文件（如 PNG、BMP 等），或直接在窗口中显示，为用户呈现渲染成果。它在“像素级图像输出生成”功能域中实现了数据到可见内容的最后转化。若跳过该步骤，所有计算只存在于内存，不可供观察与评估，项目最终目标无法实现。"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-0",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-0",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:1-1",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py:1-1",
+      "abstract": "import cv2"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-1",
+      "nodeType": "code-chunk",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py:2-2",
       "abstract": "import numpy as np"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-1",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-2",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:2-2",
-      "abstract": "from PIL import Image"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py:3-3",
+      "abstract": "import time"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-2",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-3",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:4-4",
-      "abstract": "def normalize(v):"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py:5-5",
+      "abstract": "class MinimalOilPainter:"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-3",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-4",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:5-5",
-      "abstract": "norm = np.linalg.norm(v)"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py:6-6",
+      "abstract": "\"\"\""
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-4",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-5",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:6-6",
-      "abstract": "if norm == 0:"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py:7-7",
+      "abstract": "极简版手动油画滤镜：仅通过局部亮度统计实现色块化"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-5",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-6",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:7-7",
-      "abstract": "return v"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py:8-8",
+      "abstract": "\"\"\""
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-6",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-7",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:8-8",
-      "abstract": "return v / norm"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py:9-9",
+      "abstract": "def __init__(self, radius=5, levels=8):"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-7",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-8",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:10-10",
-      "abstract": "# 1. 定义球体与摄像机参数"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py:10-10",
+      "abstract": "# 步骤2: 准备输出画布与参数设置"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-8",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-9",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:11-11",
-      "abstract": "class Sphere:"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-9",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:12-12",
-      "abstract": "def __init__(self, center, radius, color):"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-10",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:13-13",
-      "abstract": "self.center = np.array(center, dtype=float)"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-11",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:14-14",
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py:11-11",
       "abstract": "self.radius = radius"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-12",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-10",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:15-15",
-      "abstract": "self.color = np.array(color, dtype=float)"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py:12-12",
+      "abstract": "self.levels = levels"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-13",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-11",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:17-17",
-      "abstract": "def intersect(self, origin, direction):"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py:14-14",
+      "abstract": "def paint(self, input_path, output_path):"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-14",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-12",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:18-18",
-      "abstract": "# 返回最近相交的t和法线（如无相交返回None）"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py:15-15",
+      "abstract": "# 步骤1: 加载输入图像文件"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-15",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-13",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:19-19",
-      "abstract": "L = self.center - origin"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py:16-16",
+      "abstract": "img = cv2.imread(input_path)"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-16",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-14",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:20-20",
-      "abstract": "t_ca = np.dot(L, direction)"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py:17-17",
+      "abstract": "if img is None:"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-17",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-15",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:21-21",
-      "abstract": "d2 = np.dot(L, L) - t_ca * t_ca"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py:18-18",
+      "abstract": "print(f\"错误：无法读取文件 {input_path}\")"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-18",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-16",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:22-22",
-      "abstract": "r2 = self.radius * self.radius"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py:19-19",
+      "abstract": "return"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-19",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-17",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:23-23",
-      "abstract": "if d2 > r2:"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py:20-20",
+      "abstract": "h, w = img.shape[:2]"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-20",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-18",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:24-24",
-      "abstract": "return None"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py:21-21",
+      "abstract": "# 步骤2 (延续): 创建全黑画布"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-21",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-19",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:25-25",
-      "abstract": "thc = np.sqrt(r2 - d2)"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py:22-22",
+      "abstract": "output = np.zeros_like(img)"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-22",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-20",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:26-26",
-      "abstract": "t0 = t_ca - thc"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py:23-23",
+      "abstract": "# 灰度图以便进行亮度统计"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-23",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-21",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:27-27",
-      "abstract": "t1 = t_ca + thc"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py:24-24",
+      "abstract": "gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-24",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-22",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:28-28",
-      "abstract": "if t1 < 0:"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py:25-25",
+      "abstract": "print(f\"开始极简油画转换 {input_path} (等级: {self.levels}, 半径: {self.radius})...\")"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-25",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-23",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:29-29",
-      "abstract": "return None"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py:26-26",
+      "abstract": "start_time = time.time()"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-26",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-24",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:30-30",
-      "abstract": "t = t0 if t0 > 0 else t1"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py:28-28",
+      "abstract": "# 步骤3 & 4: 构建局部窗口统计模型，并实现邻域主色提取与应用"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-27",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-25",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:31-31",
-      "abstract": "hit_point = origin + t * direction"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py:29-29",
+      "abstract": "for y in range(self.radius, h - self.radius):"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-28",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-26",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:32-32",
-      "abstract": "normal = normalize(hit_point - self.center)"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py:30-30",
+      "abstract": "for x in range(self.radius, w - self.radius):"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-29",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-27",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:33-33",
-      "abstract": "return t, hit_point, normal"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py:31-31",
+      "abstract": "# 局部窗口"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-30",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-28",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:35-35",
-      "abstract": "class Camera:"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py:32-32",
+      "abstract": "roi_gray = gray[y - self.radius:y + self.radius + 1,"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-31",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-29",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:36-36",
-      "abstract": "def __init__(self, eye, target, up, fov, aspect):"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py:33-33",
+      "abstract": "x - self.radius:x + self.radius + 1]"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-32",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-30",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:37-37",
-      "abstract": "self.eye = np.array(eye, dtype=float)"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py:34-34",
+      "abstract": "roi_color = img[y - self.radius:y + self.radius + 1,"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-33",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-31",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:38-38",
-      "abstract": "self.target = np.array(target, dtype=float)"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py:35-35",
+      "abstract": "x - self.radius:x + self.radius + 1]"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-34",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-32",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:39-39",
-      "abstract": "self.up = np.array(up, dtype=float)"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py:36-36",
+      "abstract": "# 亮度量化分类"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-35",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-33",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:40-40",
-      "abstract": "self.fov = fov"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py:37-37",
+      "abstract": "intensity_map = (roi_gray.astype(np.uint32) * self.levels // 256)"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-36",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-34",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:41-41",
-      "abstract": "self.aspect = aspect"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py:38-38",
+      "abstract": "# 分类统计"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-37",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-35",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:42-42",
-      "abstract": "self._setup()"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py:39-39",
+      "abstract": "counts = np.zeros(self.levels + 1, dtype=np.uint32)"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-38",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-36",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:44-44",
-      "abstract": "def _setup(self):"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py:40-40",
+      "abstract": "sum_rgb = np.zeros((self.levels + 1, 3), dtype=np.uint32)"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-39",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-37",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:45-45",
-      "abstract": "self.forward = normalize(self.target - self.eye)"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py:41-41",
+      "abstract": "flat_intensity = intensity_map.flatten()"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-40",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-38",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:46-46",
-      "abstract": "self.right = normalize(np.cross(self.forward, self.up))"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py:42-42",
+      "abstract": "flat_color = roi_color.reshape(-1, 3)"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-41",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-39",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:47-47",
-      "abstract": "self.up = normalize(np.cross(self.right, self.forward))"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py:43-43",
+      "abstract": "for i in range(len(flat_intensity)):"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-42",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-40",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:48-48",
-      "abstract": "self.h = np.tan(self.fov / 2)"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py:44-44",
+      "abstract": "lvl = flat_intensity[i]"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-43",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-41",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:49-49",
-      "abstract": "self.w = self.h * self.aspect"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py:45-45",
+      "abstract": "counts[lvl] += 1"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-44",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-42",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:51-51",
-      "abstract": "# 2. 设定图像分辨率与投影视平面"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py:46-46",
+      "abstract": "sum_rgb[lvl] += flat_color[i]"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-45",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-43",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:52-52",
-      "abstract": "WIDTH = 400"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py:47-47",
+      "abstract": "# 多数决策"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-46",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-44",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:53-53",
-      "abstract": "HEIGHT = 400"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py:48-48",
+      "abstract": "max_lvl = np.argmax(counts)"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-47",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-45",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:54-54",
-      "abstract": "FOV = np.radians(60)"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py:49-49",
+      "abstract": "# 平均主色上色"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-48",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-46",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:56-56",
-      "abstract": "sphere = Sphere(center=[0, 0, -3], radius=1.0, color=[1, 0, 0])"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py:50-50",
+      "abstract": "output[y, x] = sum_rgb[max_lvl] // counts[max_lvl]"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-49",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-47",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:57-57",
-      "abstract": "camera = Camera(eye=[0, 0, 0], target=[0, 0, -1], up=[0, 1, 0], fov=FOV, aspect=WIDTH/HEIGHT)"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py:52-52",
+      "abstract": "# 步骤5: 合成最终油画风格图像（已在output中完成）"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-50",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-48",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:59-59",
-      "abstract": "background_color = np.array([0.2, 0.7, 1.0])  # 天空蓝"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py:53-53",
+      "abstract": "# 步骤6: 保存处理后图像文件"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-51",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-49",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:60-60",
-      "abstract": "light_dir = normalize(np.array([1, -1, -1]))  # 5. 法线映射简单光源"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py:54-54",
+      "abstract": "cv2.imwrite(output_path, output, [int(cv2.IMWRITE_JPEG_QUALITY), 95])"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-52",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-50",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:62-62",
-      "abstract": "image = np.zeros((HEIGHT, WIDTH, 3), dtype=np.float32)"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py:55-55",
+      "abstract": "print(f\"转换完成！耗时: {time.time() - start_time:.2f}秒，已保存至: {output_path}\")"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-53",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-51",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:64-64",
-      "abstract": "# 3. 生成每个像素对应的视线"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py:56-56",
+      "abstract": "return output"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-54",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-52",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:65-65",
-      "abstract": "for j in range(HEIGHT):"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py:58-58",
+      "abstract": "if __name__ == \"__main__\":"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-55",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-53",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:66-66",
-      "abstract": "for i in range(WIDTH):"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py:59-59",
+      "abstract": "# 用法示例"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-56",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-54",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:67-67",
-      "abstract": "# 归一化像素坐标到[-1, 1]"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py:60-60",
+      "abstract": "painter = MinimalOilPainter(radius=5, levels=8) # 可修改参数体验不同效果"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-57",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-55",
       "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:68-68",
-      "abstract": "x = (2 * (i + 0.5) / WIDTH - 1) * camera.w"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-58",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:69-69",
-      "abstract": "y = (1 - 2 * (j + 0.5) / HEIGHT) * camera.h"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-59",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:70-70",
-      "abstract": "direction = normalize(x * camera.right + y * camera.up + camera.forward)"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-60",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:71-71",
-      "abstract": "# 4. 检测光线与球体的相交点"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-61",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:72-72",
-      "abstract": "hit = sphere.intersect(camera.eye, direction)"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-62",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:73-73",
-      "abstract": "if hit is not None:"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-63",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:74-74",
-      "abstract": "t, point, normal = hit"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-64",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:75-75",
-      "abstract": "# 5. 为像素赋予基础着色效果"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-65",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:76-76",
-      "abstract": "diffuse = max(np.dot(normal, -light_dir), 0)"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-66",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:77-77",
-      "abstract": "color = sphere.color * diffuse"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-67",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:78-78",
-      "abstract": "image[j, i] = np.clip(color, 0, 1)"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-68",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:79-79",
-      "abstract": "else:"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-69",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:80-80",
-      "abstract": "image[j, i] = background_color"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-70",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:82-82",
-      "abstract": "# 6. 将像素颜色写入到图像缓冲区 (已在上面填充image数组)"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-71",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:83-83",
-      "abstract": "# 7. 保存或显示最终渲染图片"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-72",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:84-84",
-      "abstract": "image_out = (image * 255).astype(np.uint8)"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-73",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:85-85",
-      "abstract": "img = Image.fromarray(image_out, 'RGB')"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-74",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:86-86",
-      "abstract": "img.save('raytraced_sphere.png')"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-75",
-      "nodeType": "code-chunk",
-      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py:87-87",
-      "abstract": "print('渲染完成，图片已保存为 raytraced_sphere.png')"
+      "title": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py:61-61",
+      "abstract": "painter.paint(\"input.jpg\", \"output_minimal.jpg\")"
     },
     {
       "id": "k-s-1-1",
       "nodeType": "background-knowledge",
-      "title": "三维空间坐标表示",
-      "abstract": "在三维计算机图形中，使用三维坐标系（x, y, z）来描述对象的空间位置。理解如何通过向量表示位置与方向是实现三维场景建模和后续渲染计算的基础。"
+      "title": "cv2.imread 函数用法",
+      "abstract": "cv2.imread 是 OpenCV 库中用于从硬盘读取图像文件到内存的函数。需要理解其参数、返回值类型，以及何时会返回 None（如路径错误或文件不可读取）。掌握这一点能确保能正确加载和处理图像数据。"
     },
     {
       "id": "k-s-1-2",
       "nodeType": "background-knowledge",
-      "title": "摄像机参数与视图建模",
-      "abstract": "摄像机在三维渲染中定义观察者的视点、目标方向、上方向、视野（FOV）和宽高比等参数。这些参数决定了最终图像的构图和投影，理解这些参数对于正确设置场景观察关系至关重要。"
+      "title": "文件路径和错误处理",
+      "abstract": "在加载本地文件时，理解文件路径（绝对/相对）如何指定，以及若路径不存在或权限不符可能导致文件加载失败。还需掌握错误检测（如判空）流程，及时发现并反馈问题，避免无效操作。"
     },
     {
       "id": "k-s-1-3",
       "nodeType": "background-knowledge",
-      "title": "Python 类定义与构造方法",
-      "abstract": "Python 使用 class 关键字定义类，并通过 __init__ 方法设置对象的初始属性。理解如何声明类、初始化成员变量，以及如何实例化对象，是面向对象建模的基础。"
-    },
-    {
-      "id": "k-s-1-4",
-      "nodeType": "background-knowledge",
-      "title": "NumPy 数组基本用法",
-      "abstract": "NumPy 是 Python 常用的科学计算库。代码中 np.array 用于创建高效的数值向量，支持算术运算和广播操作。在三维计算中，NumPy 数组常用来表示向量和颜色等属性。"
+      "title": "条件语句 if 的用法",
+      "abstract": "理解 Python 中的 if 条件语句及其结构，用于根据表达式的真假分支执行不同的逻辑。在此代码中，通过判定变量是否为 None 来处理文件加载异常情况。"
     },
     {
       "id": "k-s-2-1",
       "nodeType": "background-knowledge",
-      "title": "投影视平面概念",
-      "abstract": "投影视平面是三维计算机图形学中一个虚拟平面，通常放在摄像机前方，用于将三维场景内容投影成二维图像。理解该概念有助于明白像素如何与场景中的点对应，是光线追踪和渲染算法的基础。"
+      "title": "NumPy 数组创建与操作",
+      "abstract": "NumPy 是 Python 中用于高效数值计算的库。`np.zeros_like(img)` 能创建与原图像数组相同形状和类型的全零（黑色）数组。在图像处理中，这常用于初始化输出画布。理解 NumPy 创建和操作数组是读懂相关代码的基础。"
     },
     {
       "id": "k-s-2-2",
       "nodeType": "background-knowledge",
-      "title": "图像分辨率定义",
-      "abstract": "图像分辨率描述了输出图像的宽度和高度的像素数量，直接影响渲染精度和粒度。掌握分辨率的定义有助于合理设置图像清晰度，权衡渲染速度与效果。"
+      "title": "图像在计算机中的矩阵表示",
+      "abstract": "在编程中，图像通常被表示为矩阵（数组），其中每个元素表示一个像素的颜色或亮度。理解这一表示方式对于理解如何用全黑数组初始化输出画布，并处理图像内容至关重要。"
     },
     {
       "id": "k-s-2-3",
       "nodeType": "background-knowledge",
-      "title": "视场角（FOV）原理",
-      "abstract": "视场角（FOV）决定了摄像机看到的场景范围，影响投影变形和透视效果。在三维图像渲染中，正确设置 FOV 可使输出画面契合视觉预期。理解其与摄像机参数的关联至关重要。"
-    },
-    {
-      "id": "k-s-2-4",
-      "nodeType": "background-knowledge",
-      "title": "Python 列表与数组表达",
-      "abstract": "在 Python 中，方括号如 [0, 0, 0] 表示列表结构，常用来表达三维坐标、向量等数据。在构建摄像机参数如 eye、target、up 时，需能正确读写和传递此类数据。"
+      "title": "参数化设计思想",
+      "abstract": "参数化设计即在处理问题时，将关键影响效果的变量（如笔触粗细、色块数量）抽象为参数，在程序执行前进行设置。这种方式有助于灵活调整效果，增强程序的可控性和可复用性。"
     },
     {
       "id": "k-s-3-1",
       "nodeType": "background-knowledge",
-      "title": "光线生成与几何原理",
-      "abstract": "在光线追踪渲染中，每个像素对应一条光线，这需要理解摄像机、投影视平面以及三维空间中光线的数学表达方式。此原理实现像素到场景的空间映射，是后续光线与场景交互的基础。理解这一概念有助于理解为什么要计算特定方向的射线。"
+      "title": "局部窗口处理思想",
+      "abstract": "局部窗口处理是一种图像分析方法：对每个像素，都选取其周围一个小区域（如3x3或5x5），在该子区域内进行统计运算。这能帮助分析本地特征，比如降低噪声、提取局部信息等。这种思想是本步骤区分主导色彩和亮度的基础。"
     },
     {
       "id": "k-s-3-2",
       "nodeType": "background-knowledge",
-      "title": "向量运算与归一化",
-      "abstract": "代码中涉及向量加减和归一化（normalize）操作。掌握向量在空间中的表述和归一化（长度变为1）对于理解光线方向如何从摄像机出发并穿越像素中心至关重要。缺乏此知识无法正确实现和理解射线的生成过程。"
+      "title": "像素级颜色与亮度表示",
+      "abstract": "理解彩色图像与灰度图像的像素表示至关重要。彩色像素通常用 RGB 三元组存储，灰度图像每个像素只有一个亮度值。只有理解这些，才能知道统计的是哪些内容，为什么灰度和颜色要分开处理。"
     },
     {
       "id": "k-s-3-3",
       "nodeType": "background-knowledge",
-      "title": "像素坐标归一化技术",
-      "abstract": "像素坐标需从二维图像空间转换为[-1,1]的标准空间，再映射到三维空间。这种归一化处理保证每个像素能正确对应投影视平面上的位置，是光线方向计算的基础，需要理解坐标系统及归一化的算法方法。"
+      "title": "NumPy 数组切片与形状变换",
+      "abstract": "NumPy 支持高效的多维数组操作，是 Python 图像处理常用基础。切片（如 a[x1:x2, y1:y2]）可用于选择局部区域，reshape 和 flatten 操作能实现不同的数组结构转换。熟练掌握这些操作能快速定位、转换数据用于统计。"
     },
     {
       "id": "k-s-3-4",
       "nodeType": "background-knowledge",
-      "title": "右手坐标系与摄像机姿态",
-      "abstract": "光线追踪通常采用右手坐标系，并通过摄像机的 right、up、forward 向量来定义视角和方向。理解坐标系和摄像机姿态的表示方法对于解析方向向量和空间映射非常重要，是实现多视角渲染的基础。"
+      "title": "亮度量化与分桶统计",
+      "abstract": "量化是信息处理中的常用步骤，将连续的亮度值划分为有限个等级（桶），方便统计和分析。分桶统计（histogram/binning）用于统计每个区间的像素数量，常见于图像分析与数据处理。这是实现按亮度分组和计算主导色彩的核心方法。"
     },
     {
       "id": "k-s-4-1",
       "nodeType": "background-knowledge",
-      "title": "一元二次方程求解",
-      "abstract": "在检测光线与球体的相交点时，需要通过求解一元二次方程来判断交点的位置。这涉及判别式的使用和根的筛选，对于判断光线是否与球体相交至关重要。"
+      "title": "亮度量化原理",
+      "abstract": "亮度量化是将像素的灰度值分为有限的等级，实现分类处理。在图像区域化中，量化后可“投票”决定主导亮度，便于分割色块，为油画风格效果提供基础。理解这一原理有助于明白为何不是直接使用原始颜色。"
     },
     {
       "id": "k-s-4-2",
       "nodeType": "background-knowledge",
-      "title": "三维向量运算基础",
-      "abstract": "代码中多次涉及三维向量的加减、点积和归一化操作（如 np.dot、normalize）。熟练掌握这些运算对于理解空间坐标、方向向量和法向量的计算是必须的。"
+      "title": " 多数投票决策算法",
+      "abstract": "多数投票算法是统计各类别出现频率，选择数据中占比最高的类别作为代表。在本步骤中，用于挑选区域内最常见的亮度等级，以确定主色。掌握此算法有助于理解如何自动确定区域主色。"
     },
     {
       "id": "k-s-4-3",
       "nodeType": "background-knowledge",
-      "title": "光线-球体相交原理",
-      "abstract": "在光线追踪算法中，判定光线是否与球体相交及求解交点，是实现基础渲染的关键。理解相交检测的几何原理有助于掌握渲染流程的核心环节。"
+      "title": "Numpy 多维数组操作",
+      "abstract": "代码中涉及对多维数组（如 roi_color, roi_gray）执行 reshape、flatten、加法等操作。理解 Numpy 的数组结构和基本操作是读懂此代码和理解数据处理逻辑的基础。"
     },
     {
       "id": "k-s-4-4",
       "nodeType": "background-knowledge",
-      "title": "NumPy 数组运算",
-      "abstract": "代码中调用如 np.dot、矢量加减法等 NumPy 函数，这要求理解 Python 中如何利用 NumPy 进行高效的数组和向量操作，是正确读懂代码实现的前提。"
+      "title": "区域主色提取与重构",
+      "abstract": "区域主色提取是图像处理中的一种简化表达方式，用平均值或投票结果重新上色，强调局部特征。此方法广泛用于图像分割与风格化，理解其概念有助于把握本步骤为何采用主色重构，而非原色。"
     },
     {
       "id": "k-s-5-1",
       "nodeType": "background-knowledge",
-      "title": "Lambert 漫反射原理",
-      "abstract": "Lambert 漫反射模型是计算物体表面在光照下产生的颜色的基础方法，其反射强度与表面法线和光线方向夹角的余弦成正比。理解该原理有助于解释为什么用法线和光源方向的点积求得漫反射效果，以及如何让三维物体具备立体感。"
+      "title": "油画风格图像原理",
+      "abstract": "油画风格图像原理指的是通过像素分块、颜色重构等方式将原始图片转换为色块分明、具有艺术风格的图像。理解这一步有助于明白为何经过处理后图像有截然不同的视觉效果，以及整体步骤的设计目标。"
     },
     {
       "id": "k-s-5-2",
       "nodeType": "background-knowledge",
-      "title": "法线映射颜色",
-      "abstract": "法线映射通过将表面法线方向映射为颜色值，可以用来直观展示物体表面空间结构。它是一种基础着色方法，通常用于调试或表现空间感，理解这一点有助于掌握像素着色的视觉效果来源。"
-    },
-    {
-      "id": "k-s-5-3",
-      "nodeType": "background-knowledge",
-      "title": "NumPy 数组操作",
-      "abstract": "NumPy 是 Python 的科学计算库，广泛用于高效处理多维数组。像素赋色通常涉及二维数组操作，如 image[j, i]=...，需要理解如何用 NumPy 操作和赋值，实现图像存储和访问。"
-    },
-    {
-      "id": "k-s-5-4",
-      "nodeType": "background-knowledge",
-      "title": "点积（内积）计算",
-      "abstract": "向量点积（内积）是计算两个向量夹角关系的常用方法，在图形学中用于光照算法（如漫反射）判断表面朝向与光线方向的关系。理解 np.dot 用法及其在物理建模中的意义是实现着色的关键。"
+      "title": "数字图像输出与画布管理",
+      "abstract": "在生成新的图像时，需要将所有像素输出到一个画布对象中。这要求了解数字图像如何被存储、修改和输出，以及画布的填充流程。这一知识点帮助理解最终油画风格合成的机制。"
     },
     {
       "id": "k-s-6-1",
       "nodeType": "background-knowledge",
-      "title": "NumPy 数组操作基本方法",
-      "abstract": "NumPy 是 Python 中处理多维数组和数值计算的常用库。理解如何使用下标 image[j, i] 访问和修改数组元素，是正确填充图像缓冲区所必须的基础操作。这涉及数组的索引方式、切片等。"
+      "title": "图像文件格式选择",
+      "abstract": "图像文件格式如 JPEG、PNG、BMP 决定了存储方式、是否压缩、兼容性及画质等。理解不同格式的优缺点，有助于根据用途选择最适合的格式，确保图像视觉效果不被破坏。"
     },
     {
       "id": "k-s-6-2",
       "nodeType": "background-knowledge",
-      "title": "像素与图像缓冲区结构",
-      "abstract": "图像缓冲区是用于按二维像素坐标存储颜色数据的数组结构。了解缓冲区如何与实际图像分辨率对应，以及填充像素数据的必要性，是理解像素级图像生成流程的核心。"
+      "title": "OpenCV 文件保存 API",
+      "abstract": "OpenCV 提供 imwrite 函数用于将图像数据保存为文件。该函数支持不同格式与参数（如 JPEG 质量），理解其用法和参数设置对于实现高质量图像输出非常重要。"
     },
     {
       "id": "k-s-6-3",
       "nodeType": "background-knowledge",
-      "title": "颜色值归一化与截断",
-      "abstract": "颜色值通常被限制在一定范围（如 0-1）。np.clip 能将数组中的元素限制在指定最小、最大值之间，这对于确保生成的像素不会超出合法颜色空间范围很重要。"
+      "title": "Python 列表构造与参数传递",
+      "abstract": "在 Python 中，函数参数可以通过包含键值的列表传递，如 imwrite 的第三个参数就是一个参数列表。这种语法常用于配置函数行为，掌握其用法有助于灵活调整调用。"
     },
     {
       "id": "k-s-6-4",
       "nodeType": "background-knowledge",
-      "title": "逐像素渲染思想",
-      "abstract": "逐像素渲染是指对每个像素单独计算颜色并写入图像缓冲区。这是光栅化渲染、图像生成等领域的基本处理方法，有助于理解本步骤为何需要依照分辨率顺序输出所有像素点数据。"
-    },
-    {
-      "id": "k-s-7-1",
-      "nodeType": "background-knowledge",
-      "title": "NumPy 数组类型转换",
-      "abstract": "NumPy 提供 astype 方法用于将数组元素的数据类型进行转换。在图像处理等场景中，常需要将浮点型像素值（0~1）缩放并转为 8 位无符号整型以适应常规图像格式的存储要求。理解其原理和用法有助于正确处理数值类型和防止数据丢失。"
-    },
-    {
-      "id": "k-s-7-2",
-      "nodeType": "background-knowledge",
-      "title": "Pillow 图像创建与保存",
-      "abstract": "Pillow 库是 Python 处理图像的主流库。fromarray 方法可将 NumPy 数组转换为 Image 对象，save 方法用于将 Image 对象输出为 PNG、BMP 等标准图像文件。理解这些 API 的使用方式对于实现自定义像素数据的可视化和持久化是必要的。"
-    },
-    {
-      "id": "k-s-7-3",
-      "nodeType": "background-knowledge",
-      "title": "像素与图像文件格式",
-      "abstract": "像素是构成图像的最小单位，标准图像文件（如 PNG、BMP）存储的本质是像素数据及其编码方式。理解像素值范围（如 RGB 0-255）、文件格式与内存图像缓冲区的转换，有助于正确输出计算所得图像内容，避免色彩失真或文件损坏。"
-    },
-    {
-      "id": "k-s-7-4",
-      "nodeType": "background-knowledge",
-      "title": "数据可视化与验证在渲染流程中的作用",
-      "abstract": "渲染步骤中的像素数据只有通过保存或显示为图像文件，才能转化为可观察成果，便于调试和质量评估。理解这一环节的重要性，有助于认识到输出环节不仅是用户查看的出口，也是渲染算法正确性的验证手段。"
+      "title": "图像压缩与质量参数",
+      "abstract": "数字图像压缩算法（如 JPEG）通过调整压缩质量参数影响文件大小和画质。理解图像压缩原理及参数作用，能更好地权衡存储和视觉效果，避免过度压缩导致画质下降。"
     },
     {
       "id": "k-deep-1",
       "nodeType": "background-knowledge",
       "title": "变量与赋值概念",
-      "abstract": "变量是存储数据的命名空间，用于在程序中保存和引用信息。理解变量的定义和赋值过程是解释如数组、对象、数值等元素如何在代码中传递和修改的前提。没有变量概念，无法理解如何操作数组、图像数据或函数返回值、参数。"
+      "abstract": "变量是用来临时存储数据的命名空间。理解变量及赋值操作（如 x = 3）是编程最基本的组成部分，有助于理解如何存取、修改、传递数据。在项目中，无论加载图像还是处理数组，都需要用变量来保存中间结果和状态。"
     },
     {
       "id": "k-deep-2",
       "nodeType": "background-knowledge",
-      "title": "函数定义与调用",
-      "abstract": "函数是具有特定功能可复用的代码块，通过参数实现输入输出。理解函数的声明、参数传递和调用结果，有助于正确阅读如 normalize, np.dot 及自定义方法等逻辑，否则难以理解数据如何在模块间流转。"
+      "title": "函数与参数基本理解",
+      "abstract": "函数是实现特定功能的代码模块，通过输入参数获得特定输出。理解什么是函数、如何调用它、如何理解返回值，是正确使用如 cv2.imread、np.zeros_like、cv2.imwrite 等API的前提。这有助于分析和组合多步数据处理流程。"
     },
     {
       "id": "k-deep-3",
       "nodeType": "background-knowledge",
-      "title": "数组与数列基础概念",
-      "abstract": "数组（或数列）是由一组有序的数据构成的数据结构。理解数组的本质，有助于掌握 Python 列表、NumPy 数组等操作，这对于像素、坐标、图像缓冲区等涉及多元素集合的处理至关重要。"
+      "title": "像素和坐标系概念",
+      "abstract": "数字图像由成千上万个像素按特定顺序排列而成，每个像素可通过二维坐标(x, y)访问。理解像素和图像坐标系对于理解数组切片、窗口处理、区域统计这些知识点必不可少，是数字图像分析和操作的核心基础。"
     },
     {
       "id": "k-deep-4",
       "nodeType": "background-knowledge",
-      "title": "坐标系与平面几何基础",
-      "abstract": "坐标系用于描述空间中点的位置，是解析三维空间坐标、像素与投影视平面关系、三维向量和摄像机姿态的基础。没有此基础，将难以理解空间映射、光线追踪等核心原理。"
+      "title": "数组与列表基本概念",
+      "abstract": "数组和列表是用于存储多个数据元素（如多个数字、像素）的结构。理解其顺序、索引、与单一数值的不同，是理解 NumPy 数组操作、图片矩阵存储等各知识点的前置基础。"
     },
     {
-      "id": "k-deep-5",
-      "nodeType": "background-knowledge",
-      "title": "循环与顺序执行",
-      "abstract": "循环是程序中实现批量、重复操作的基本结构，用于遍历像素点、赋值数组。只有理解循环和顺序结构，才能明白逐像素渲染、逐步计算图像数据的实现方式。"
-    },
-    {
-      "id": "sit-s-1-grp-L10",
+      "id": "sit-s-2-grp-L10",
       "nodeType": "situation",
-      "title": "Situation s-1 -> lines 10-15",
-      "abstract": "Bridge connecting step to 6 code chunks."
-    },
-    {
-      "id": "sit-s-4-grp-L17",
-      "nodeType": "situation",
-      "title": "Situation s-4 -> lines 17-33",
-      "abstract": "Bridge connecting step to 17 code chunks."
-    },
-    {
-      "id": "sit-s-1-grp-L35",
-      "nodeType": "situation",
-      "title": "Situation s-1 -> lines 35-42",
-      "abstract": "Bridge connecting step to 8 code chunks."
-    },
-    {
-      "id": "sit-s-2-grp-L52",
-      "nodeType": "situation",
-      "title": "Situation s-2 -> lines 52-54",
+      "title": "Situation s-2 -> lines 10-12",
       "abstract": "Bridge connecting step to 3 code chunks."
     },
     {
-      "id": "sit-s-1-grp-L56",
+      "id": "sit-s-1-grp-L16",
       "nodeType": "situation",
-      "title": "Situation s-1 -> lines 56-56",
-      "abstract": "Bridge connecting step to 1 code chunks."
+      "title": "Situation s-1 -> lines 16-19",
+      "abstract": "Bridge connecting step to 4 code chunks."
     },
     {
-      "id": "sit-s-1-grp-L57",
+      "id": "sit-s-2-grp-L21",
       "nodeType": "situation",
-      "title": "Situation s-1 -> lines 57-57",
-      "abstract": "Bridge connecting step to 1 code chunks."
-    },
-    {
-      "id": "sit-s-2-grp-L57",
-      "nodeType": "situation",
-      "title": "Situation s-2 -> lines 57-57",
-      "abstract": "Bridge connecting step to 1 code chunks."
-    },
-    {
-      "id": "sit-s-3-grp-L65",
-      "nodeType": "situation",
-      "title": "Situation s-3 -> lines 65-70",
-      "abstract": "Bridge connecting step to 6 code chunks."
-    },
-    {
-      "id": "sit-s-4-grp-L72",
-      "nodeType": "situation",
-      "title": "Situation s-4 -> lines 72-72",
-      "abstract": "Bridge connecting step to 1 code chunks."
-    },
-    {
-      "id": "sit-s-5-grp-L76",
-      "nodeType": "situation",
-      "title": "Situation s-5 -> lines 76-77",
+      "title": "Situation s-2 -> lines 21-22",
       "abstract": "Bridge connecting step to 2 code chunks."
     },
     {
-      "id": "sit-s-5-grp-L78",
+      "id": "sit-s-3-grp-L31",
       "nodeType": "situation",
-      "title": "Situation s-5 -> lines 78-78",
-      "abstract": "Bridge connecting step to 1 code chunks."
+      "title": "Situation s-3 -> lines 31-35",
+      "abstract": "Bridge connecting step to 5 code chunks."
     },
     {
-      "id": "sit-s-6-grp-L78",
+      "id": "sit-s-3-grp-L36",
       "nodeType": "situation",
-      "title": "Situation s-6 -> lines 78-78",
-      "abstract": "Bridge connecting step to 1 code chunks."
+      "title": "Situation s-3 -> lines 36-46",
+      "abstract": "Bridge connecting step to 11 code chunks."
     },
     {
-      "id": "sit-s-6-grp-L79",
+      "id": "sit-s-4-grp-L36",
       "nodeType": "situation",
-      "title": "Situation s-6 -> lines 79-79",
-      "abstract": "Bridge connecting step to 1 code chunks."
+      "title": "Situation s-4 -> lines 36-46",
+      "abstract": "Bridge connecting step to 11 code chunks."
     },
     {
-      "id": "sit-s-5-grp-L80",
+      "id": "sit-s-4-grp-L47",
       "nodeType": "situation",
-      "title": "Situation s-5 -> lines 80-80",
-      "abstract": "Bridge connecting step to 1 code chunks."
-    },
-    {
-      "id": "sit-s-6-grp-L80",
-      "nodeType": "situation",
-      "title": "Situation s-6 -> lines 80-80",
-      "abstract": "Bridge connecting step to 1 code chunks."
-    },
-    {
-      "id": "sit-s-7-grp-L84",
-      "nodeType": "situation",
-      "title": "Situation s-7 -> lines 84-87",
+      "title": "Situation s-4 -> lines 47-50",
       "abstract": "Bridge connecting step to 4 code chunks."
+    },
+    {
+      "id": "sit-s-5-grp-L52",
+      "nodeType": "situation",
+      "title": "Situation s-5 -> lines 52-52",
+      "abstract": "Bridge connecting step to 1 code chunks."
+    },
+    {
+      "id": "sit-s-6-grp-L54",
+      "nodeType": "situation",
+      "title": "Situation s-6 -> lines 54-54",
+      "abstract": "Bridge connecting step to 1 code chunks."
     }
   ]
 }

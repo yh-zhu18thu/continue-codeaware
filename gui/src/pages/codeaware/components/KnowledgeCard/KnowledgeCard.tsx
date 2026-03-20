@@ -235,7 +235,6 @@ export interface KnowledgeCardProps {
   // Toggle functionality props
   defaultTestMode?: boolean;
   defaultExpanded?: boolean;
-  shouldCollapse?: boolean; // External signal to collapse the card
 
   // Deprecated highlight props kept only for compatibility. They are ignored.
   isHighlighted?: boolean;
@@ -303,7 +302,6 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
   onGenerateTests, // 新增：生成测试题的回调
   defaultTestMode = false,
   defaultExpanded = true,
-  shouldCollapse = false, // External collapse signal
   cardId,
   onExpansionChange,
   onViewModeChange,
@@ -531,13 +529,6 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
   const handleMouseLeave = () => {
     setIsHovered(false);
   };
-
-  // Handle external collapse signal
-  useEffect(() => {
-    if (shouldCollapse && isExpanded) {
-      setIsExpanded(false);
-    }
-  }, [shouldCollapse, isExpanded]);
 
   const handleToggle = async () => {
     const wasExpanded = isExpanded;

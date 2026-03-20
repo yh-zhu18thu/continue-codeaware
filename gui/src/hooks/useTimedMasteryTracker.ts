@@ -7,84 +7,165 @@ export interface PendingTimedView {
   masteryNodeRefs: MasteryNodeRef[];
   startTime: number;
   minReadingTimeMs: number;
+  maxReadingTimeMs: number;
   metadata?: Record<string, unknown>;
+  /** Whether the normal (min-threshold) signal has been emitted. */
+  firstThresholdEmitted: boolean;
+  /** Whether the overtime (max-threshold) signal has been emitted. */
+  secondThresholdEmitted: boolean;
 }
+
+export type TimedViewSignal = "normal" | "overtime";
 
 export interface TimedViewResult {
   type: TimedViewTarget;
   masteryNodeRefs: MasteryNodeRef[];
   durationMs: number;
+  signal: TimedViewSignal;
   metadata?: Record<string, unknown>;
 }
 
 /**
- * Two-slot timed mastery tracker.
+ * Two-slot timed mastery tracker with dual thresholds.
  *
  * - **step slot**: tracks the currently expanded step. Persists across
  *   knowledge-card interactions within the same step.
  * - **detail slot**: tracks knowledge-card / code-explanation / situation views.
  *   Replaced independently of the step slot.
+ *
+ * Each slot has two thresholds:
+ * 1. `minReadingTimeMs` — emits a "normal" signal (weak positive mastery)
+ * 2. `maxReadingTimeMs` — emits an "overtime" signal (moderate negative mastery)
  */
 export function useTimedMasteryTracker() {
   const stepRef = useRef<PendingTimedView | null>(null);
   const detailRef = useRef<PendingTimedView | null>(null);
 
-  const flushRef = useCallback(
+  /**
+   * Check a single slot and emit any pending signals that have reached their threshold.
+   * Returns 0-2 results. Does NOT clear the slot unless both thresholds are done.
+   */
+  const checkRef = useCallback(
     (
       ref: React.MutableRefObject<PendingTimedView | null>,
-    ): TimedViewResult | null => {
+    ): TimedViewResult[] => {
       const pending = ref.current;
-      if (!pending) {
-        return null;
+      if (!pending || pending.masteryNodeRefs.length === 0) {
+        return [];
       }
 
       const duration = Date.now() - pending.startTime;
+      const results: TimedViewResult[] = [];
 
-      if (duration < pending.minReadingTimeMs) {
-        return null;
+      // Check first threshold (normal reading time met)
+      if (
+        duration >= pending.minReadingTimeMs &&
+        !pending.firstThresholdEmitted
+      ) {
+        pending.firstThresholdEmitted = true;
+        results.push({
+          type: pending.type,
+          masteryNodeRefs: pending.masteryNodeRefs,
+          durationMs: duration,
+          signal: "normal",
+          metadata: pending.metadata,
+        });
       }
 
-      ref.current = null;
-
-      if (pending.masteryNodeRefs.length === 0) {
-        return null;
+      // Check second threshold (overtime — user may be struggling)
+      if (
+        duration >= pending.maxReadingTimeMs &&
+        !pending.secondThresholdEmitted
+      ) {
+        pending.secondThresholdEmitted = true;
+        results.push({
+          type: pending.type,
+          masteryNodeRefs: pending.masteryNodeRefs,
+          durationMs: duration,
+          signal: "overtime",
+          metadata: pending.metadata,
+        });
       }
 
-      return {
-        type: pending.type,
-        masteryNodeRefs: pending.masteryNodeRefs,
-        durationMs: duration,
-        metadata: pending.metadata,
-      };
+      // Clear slot once both thresholds are emitted
+      if (pending.firstThresholdEmitted && pending.secondThresholdEmitted) {
+        ref.current = null;
+      }
+
+      return results;
     },
     [],
   );
 
-  /** Flush only the step-level pending view. */
+  /**
+   * Force-flush a slot: emit any signals for thresholds that have been reached
+   * but not yet emitted, then clear the slot.
+   */
+  const forceFlushRef = useCallback(
+    (
+      ref: React.MutableRefObject<PendingTimedView | null>,
+    ): TimedViewResult[] => {
+      const pending = ref.current;
+      if (!pending || pending.masteryNodeRefs.length === 0) {
+        ref.current = null;
+        return [];
+      }
+
+      const duration = Date.now() - pending.startTime;
+      const results: TimedViewResult[] = [];
+
+      if (
+        duration >= pending.minReadingTimeMs &&
+        !pending.firstThresholdEmitted
+      ) {
+        results.push({
+          type: pending.type,
+          masteryNodeRefs: pending.masteryNodeRefs,
+          durationMs: duration,
+          signal: "normal",
+          metadata: pending.metadata,
+        });
+      }
+
+      if (
+        duration >= pending.maxReadingTimeMs &&
+        !pending.secondThresholdEmitted
+      ) {
+        results.push({
+          type: pending.type,
+          masteryNodeRefs: pending.masteryNodeRefs,
+          durationMs: duration,
+          signal: "overtime",
+          metadata: pending.metadata,
+        });
+      }
+
+      ref.current = null;
+      return results;
+    },
+    [],
+  );
+
+  /** Force-flush only the step-level pending view. */
   const flushStepView = useCallback(
-    (): TimedViewResult | null => flushRef(stepRef),
-    [flushRef],
+    (): TimedViewResult[] => forceFlushRef(stepRef),
+    [forceFlushRef],
   );
 
-  /** Flush only the detail-level pending view. */
+  /** Force-flush only the detail-level pending view. */
   const flushDetailView = useCallback(
-    (): TimedViewResult | null => flushRef(detailRef),
-    [flushRef],
+    (): TimedViewResult[] => forceFlushRef(detailRef),
+    [forceFlushRef],
   );
 
-  /** Flush both slots. Returns 0–2 results. */
+  /** Force-flush both slots. Returns 0–4 results. */
   const flushAllViews = useCallback((): TimedViewResult[] => {
-    const results: TimedViewResult[] = [];
-    const s = flushStepView();
-    if (s) results.push(s);
-    const d = flushDetailView();
-    if (d) results.push(d);
-    return results;
+    return [...flushStepView(), ...flushDetailView()];
   }, [flushStepView, flushDetailView]);
 
-  /** Start tracking a step view. Only replaces the step slot. */
+  /** Start tracking a step view. Force-flushes existing step slot. */
   const startStepTracking = useCallback(
-    (config: PendingTimedView): TimedViewResult | null => {
+    (config: PendingTimedView): TimedViewResult[] => {
       const flushed = flushStepView();
       stepRef.current = config;
       return flushed;
@@ -95,7 +176,7 @@ export function useTimedMasteryTracker() {
   /** Start tracking a detail view (knowledge-card, code, situation).
    *  Only replaces the detail slot — step tracking is unaffected. */
   const startDetailTracking = useCallback(
-    (config: PendingTimedView): TimedViewResult | null => {
+    (config: PendingTimedView): TimedViewResult[] => {
       const flushed = flushDetailView();
       detailRef.current = config;
       return flushed;
@@ -103,16 +184,11 @@ export function useTimedMasteryTracker() {
     [flushDetailView],
   );
 
-  /** Non-destructive peek: flush only slots whose reading time is met.
-   *  Called by the periodic timer — does NOT clear slots that are still pending. */
+  /** Non-destructive peek: emit signals for slots whose thresholds are met.
+   *  Called by the periodic timer. Slots stay alive until both thresholds fire. */
   const peekAndFlushIfReady = useCallback((): TimedViewResult[] => {
-    const results: TimedViewResult[] = [];
-    const s = flushRef(stepRef);
-    if (s) results.push(s);
-    const d = flushRef(detailRef);
-    if (d) results.push(d);
-    return results;
-  }, [flushRef]);
+    return [...checkRef(stepRef), ...checkRef(detailRef)];
+  }, [checkRef]);
 
   const clearAll = useCallback(() => {
     stepRef.current = null;
@@ -130,7 +206,11 @@ export function useTimedMasteryTracker() {
             type: step.type,
             elapsed: now - step.startTime,
             threshold: step.minReadingTimeMs,
+            maxThreshold: step.maxReadingTimeMs,
             ready: now - step.startTime >= step.minReadingTimeMs,
+            overtime: now - step.startTime >= step.maxReadingTimeMs,
+            firstEmitted: step.firstThresholdEmitted,
+            secondEmitted: step.secondThresholdEmitted,
           }
         : null,
       detail: detail
@@ -138,7 +218,11 @@ export function useTimedMasteryTracker() {
             type: detail.type,
             elapsed: now - detail.startTime,
             threshold: detail.minReadingTimeMs,
+            maxThreshold: detail.maxReadingTimeMs,
             ready: now - detail.startTime >= detail.minReadingTimeMs,
+            overtime: now - detail.startTime >= detail.maxReadingTimeMs,
+            firstEmitted: detail.firstThresholdEmitted,
+            secondEmitted: detail.secondThresholdEmitted,
           }
         : null,
     };

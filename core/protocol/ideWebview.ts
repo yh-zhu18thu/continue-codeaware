@@ -237,6 +237,24 @@ export type ToWebviewFromIdeProtocol = ToWebviewFromIdeOrCoreProtocol & {
     },
     void,
   ];
+  // CodeAware: 代码注释折叠事件
+  codeExplanationCollapsed: [
+    {
+      annotationId: string;
+      filePath: string;
+      selectedLines: [number, number];
+    },
+    void,
+  ];
+  // CodeAware: 代码注释展开事件
+  codeExplanationExpanded: [
+    {
+      annotationId: string;
+      filePath: string;
+      selectedLines: [number, number];
+    },
+    void,
+  ];
   // CodeAware: 代码编辑模式状态变化事件
   didChangeCodeEditMode: [
     {

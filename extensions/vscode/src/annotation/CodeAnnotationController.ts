@@ -118,6 +118,13 @@ class AnnotationComment implements vscode.Comment {
   }
 }
 
+export interface AnnotationCollapseEvent {
+  annotationId: string;
+  filePath: string;
+  selectedLines: [number, number];
+  action: "collapsed" | "expanded";
+}
+
 /**
  * 代码注释控制器。
  * 使用 VS Code Comment Controller API 在编辑器中展示非侵入式注释。
@@ -128,6 +135,13 @@ export class CodeAnnotationController implements vscode.Disposable {
   private storage: AnnotationStorageService;
   private threads: Map<string, vscode.CommentThread> = new Map();
   private disposables: vscode.Disposable[] = [];
+  /** Track last known collapsible state per annotation for change detection */
+  private lastKnownStates: Map<string, vscode.CommentThreadCollapsibleState> =
+    new Map();
+  private collapsePollingInterval: ReturnType<typeof setInterval> | null = null;
+  private onCollapseChangeCallback:
+    | ((event: AnnotationCollapseEvent) => void)
+    | null = null;
 
   constructor(
     private context: vscode.ExtensionContext,
@@ -174,6 +188,54 @@ export class CodeAnnotationController implements vscode.Disposable {
         this.restoreAnnotationsForFile(editor.document);
       }
     }
+
+    // Poll for collapsible state changes (VS Code doesn't provide an event)
+    this.collapsePollingInterval = setInterval(() => {
+      this.pollCollapsibleStateChanges();
+    }, 1500);
+  }
+
+  /**
+   * Register a callback to be invoked when a CommentThread's collapse state changes.
+   */
+  onDidChangeCollapseState(
+    callback: (event: AnnotationCollapseEvent) => void,
+  ): void {
+    this.onCollapseChangeCallback = callback;
+  }
+
+  /** Check all threads for collapsible state changes. */
+  private pollCollapsibleStateChanges(): void {
+    for (const [id, thread] of this.threads) {
+      const current = thread.collapsibleState;
+      const last = this.lastKnownStates.get(id);
+
+      // Skip first observation (initial state) to avoid spurious events
+      if (last === undefined) {
+        this.lastKnownStates.set(id, current);
+        continue;
+      }
+
+      if (current !== last) {
+        this.lastKnownStates.set(id, current);
+
+        if (this.onCollapseChangeCallback) {
+          const action =
+            current === vscode.CommentThreadCollapsibleState.Collapsed
+              ? "collapsed"
+              : "expanded";
+          this.onCollapseChangeCallback({
+            annotationId: id,
+            filePath: thread.uri.fsPath,
+            selectedLines: [
+              thread.range.start.line + 1,
+              thread.range.end.line + 1,
+            ],
+            action,
+          });
+        }
+      }
+    }
   }
 
   /**
@@ -202,6 +264,7 @@ export class CodeAnnotationController implements vscode.Disposable {
     thread.collapsibleState = vscode.CommentThreadCollapsibleState.Expanded;
 
     this.threads.set(id, thread);
+    this.lastKnownStates.set(id, thread.collapsibleState);
 
     if (persist) {
       const annotation: StoredAnnotation = {
@@ -226,6 +289,7 @@ export class CodeAnnotationController implements vscode.Disposable {
     if (comment?.annotationId) {
       await this.storage.delete(comment.annotationId);
       this.threads.delete(comment.annotationId);
+      this.lastKnownStates.delete(comment.annotationId);
     }
     thread.dispose();
   }
@@ -253,11 +317,13 @@ export class CodeAnnotationController implements vscode.Disposable {
     };
   }
 
-  /** 展开指定注释的 CommentThread（用于 pin 导航） */
+  /** 展开指定注释的 CommentThread（用于 pin 导航，系统触发不产生 mastery 信号） */
   revealAnnotation(annotationId: string): void {
     const thread = this.threads.get(annotationId);
     if (thread) {
       thread.collapsibleState = vscode.CommentThreadCollapsibleState.Expanded;
+      // Update tracked state so the poll doesn't see this as a user-initiated change
+      this.lastKnownStates.set(annotationId, thread.collapsibleState);
     }
   }
 
@@ -377,6 +443,7 @@ export class CodeAnnotationController implements vscode.Disposable {
           vscode.CommentThreadCollapsibleState.Collapsed;
 
         this.threads.set(annotation.id, thread);
+        this.lastKnownStates.set(annotation.id, thread.collapsibleState);
 
         // 如果行号变了，更新存储
         if (
@@ -419,10 +486,15 @@ export class CodeAnnotationController implements vscode.Disposable {
   }
 
   dispose(): void {
+    if (this.collapsePollingInterval) {
+      clearInterval(this.collapsePollingInterval);
+      this.collapsePollingInterval = null;
+    }
     for (const thread of this.threads.values()) {
       thread.dispose();
     }
     this.threads.clear();
+    this.lastKnownStates.clear();
     for (const d of this.disposables) {
       d.dispose();
     }

@@ -99,6 +99,7 @@ import {
 import { useCodeAwareLogger } from "../../util/codeAwareWebViewLogger";
 import { buildCodeAwareCognitiveEdges } from "../../utils/codeAwareRelationGraph";
 import {
+  calculateMaxReadingTimeMs,
   calculateMinReadingTimeMs,
   estimateCodeWordCount,
 } from "../../utils/readingTimeUtils";
@@ -379,6 +380,14 @@ export const CodeAware = () => {
         }
       });
 
+      // Also include situation node refs so code-level signals propagate to step mastery
+      const chunkIds = matchedRefs.map((r) => r.nodeId);
+      const sitRefs = computeSituationRefsForCodeChunks(
+        chunkIds,
+        data.selectedLines,
+      );
+      matchedRefs.push(...sitRefs);
+
       if (matchedRefs.length > 0) {
         const lineCount = selEnd - selStart + 1;
         const estimatedWords = estimateCodeWordCount(lineCount);
@@ -392,6 +401,9 @@ export const CodeAware = () => {
           masteryNodeRefs: matchedRefs,
           startTime: Date.now(),
           minReadingTimeMs: minMs,
+          maxReadingTimeMs: minMs * 2,
+          firstThresholdEmitted: false,
+          secondThresholdEmitted: false,
           metadata: {
             filePath: data.filePath,
             selectedLines: data.selectedLines,
@@ -447,6 +459,10 @@ export const CodeAware = () => {
           });
         }
       });
+      // Also include situation node refs
+      const chunkIds = linkedMasteryNodes.map((r) => r.nodeId);
+      const sitRefs = computeSituationRefsForCodeChunks(chunkIds, lineRange);
+      linkedMasteryNodes.push(...sitRefs);
     }
 
     if (linkedMasteryNodes.length > 0) {
@@ -481,6 +497,117 @@ export const CodeAware = () => {
     });
   });
 
+  // CodeAware: 监听代码注释折叠事件 — 发出 collapse mastery 信号
+  useWebviewListener("codeExplanationCollapsed", async (data) => {
+    console.log("[CA:UI] 代码注释折叠:", data);
+    const { annotationId, filePath, selectedLines } = data;
+
+    manuallyCollapsedAnnotationsRef.current.add(annotationId);
+
+    // Flush any pending timed view
+    handleFlushTimedViewMastery();
+
+    // Find code chunks that overlap
+    const codeChunks = codeAwareSessionState.codeChunks;
+    const linkedMasteryNodes: MasteryNodeRef[] = [];
+    const [selStart, selEnd] = selectedLines;
+    codeChunks.forEach((chunk) => {
+      const [chunkStart, chunkEnd] = chunk.range;
+      if (chunkStart <= selEnd && chunkEnd >= selStart) {
+        linkedMasteryNodes.push({ nodeId: chunk.id, nodeType: "code-chunk" });
+      }
+    });
+    // Also include situation node refs
+    const collapseChunkIds = linkedMasteryNodes.map((r) => r.nodeId);
+    const collapseSitRefs = computeSituationRefsForCodeChunks(
+      collapseChunkIds,
+      selectedLines,
+    );
+    linkedMasteryNodes.push(...collapseSitRefs);
+
+    if (linkedMasteryNodes.length > 0) {
+      const interaction: KnowledgeCardInteraction = { type: "collapse" };
+      const currentState = latestCognitiveStateRef.current;
+      const result = applyKnowledgeCardInteraction({
+        linkedMasteryNodes,
+        interaction,
+        nodeMasteryScores: currentState.nodeMasteryScores,
+        cognitiveEdges: buildCodeAwareCognitiveEdges(currentState),
+      });
+      if (result.changedNodeIds.length > 0) {
+        dispatch(setNodeMasteryScores(result.updatedScores));
+        emitMasteryUpdateLogs({
+          interaction,
+          linkedMasteryNodes,
+          changedNodeIds: result.changedNodeIds,
+          debug: result.debug,
+          knowledgeNodeTitleById: latestKnowledgeNodeTitleByIdRef.current,
+        });
+      }
+    }
+
+    void logger.addLogEntry("user_collapse_code_explanation", {
+      annotationId,
+      filePath,
+      selectedLines,
+      matchedChunks: linkedMasteryNodes.length,
+    });
+  });
+
+  // CodeAware: 监听代码注释展开事件 — 如果之前手动折叠过则发出 re-expand 信号
+  useWebviewListener("codeExplanationExpanded", async (data) => {
+    console.log("[CA:UI] 代码注释展开:", data);
+    const { annotationId, filePath, selectedLines } = data;
+
+    if (manuallyCollapsedAnnotationsRef.current.has(annotationId)) {
+      const codeChunks = codeAwareSessionState.codeChunks;
+      const linkedMasteryNodes: MasteryNodeRef[] = [];
+      const [selStart, selEnd] = selectedLines;
+      codeChunks.forEach((chunk) => {
+        const [chunkStart, chunkEnd] = chunk.range;
+        if (chunkStart <= selEnd && chunkEnd >= selStart) {
+          linkedMasteryNodes.push({ nodeId: chunk.id, nodeType: "code-chunk" });
+        }
+      });
+      // Also include situation node refs
+      const expandChunkIds = linkedMasteryNodes.map((r) => r.nodeId);
+      const expandSitRefs = computeSituationRefsForCodeChunks(
+        expandChunkIds,
+        selectedLines,
+      );
+      linkedMasteryNodes.push(...expandSitRefs);
+
+      if (linkedMasteryNodes.length > 0) {
+        const interaction: KnowledgeCardInteraction = { type: "re-expand" };
+        const currentState = latestCognitiveStateRef.current;
+        const result = applyKnowledgeCardInteraction({
+          linkedMasteryNodes,
+          interaction,
+          nodeMasteryScores: currentState.nodeMasteryScores,
+          cognitiveEdges: buildCodeAwareCognitiveEdges(currentState),
+        });
+        if (result.changedNodeIds.length > 0) {
+          dispatch(setNodeMasteryScores(result.updatedScores));
+          emitMasteryUpdateLogs({
+            interaction,
+            linkedMasteryNodes,
+            changedNodeIds: result.changedNodeIds,
+            debug: result.debug,
+            knowledgeNodeTitleById: latestKnowledgeNodeTitleByIdRef.current,
+          });
+        }
+      }
+    }
+
+    void logger.addLogEntry("user_expand_code_explanation", {
+      annotationId,
+      filePath,
+      selectedLines,
+      wasManuallyCollapsed:
+        manuallyCollapsedAnnotationsRef.current.has(annotationId),
+    });
+  });
+
   //CodeAware: 增加一个指令，使得可以发送当前所选择的知识卡片id
   //CATODO: 参照着codeContextProvider的实现，利用上getAllSnippets的获取最近代码的功能，然后再通过coreToWebview的路径发送更新过来。
 
@@ -504,6 +631,53 @@ export const CodeAware = () => {
 
   const steps = useAppSelector((state) => state.codeAwareSession.steps); // Get steps data
   const codeAwareSessionState = useAppSelector(selectCodeAwareSessionState);
+
+  /**
+   * Given matched code chunk IDs and a selected line range, compute the
+   * corresponding situation node refs so that code-level mastery signals
+   * also update the situation layer (which feeds step mastery).
+   */
+  const computeSituationRefsForCodeChunks = useCallback(
+    (
+      matchedChunkIds: string[],
+      selectedLines: [number, number],
+    ): MasteryNodeRef[] => {
+      const groups = computeSituationGroups(
+        codeAwareSessionState.codeAwareMappings,
+        codeAwareSessionState.codeChunks,
+      );
+      const [selStart, selEnd] = selectedLines;
+      const sitRefs: MasteryNodeRef[] = [];
+      const matchedSet = new Set(matchedChunkIds);
+
+      groups.forEach((g) => {
+        // Only consider groups that contain at least one of the matched code chunks
+        const hasOverlap = g.codeChunkIds.some((id) => matchedSet.has(id));
+        if (!hasOverlap) return;
+
+        // Also verify line range overlap
+        const [gStart, gEnd] = g.lineRange;
+        if (selStart > gEnd || selEnd < gStart) return;
+
+        // Compute coverage ratio
+        const overlapStart = Math.max(selStart, gStart);
+        const overlapEnd = Math.min(selEnd, gEnd);
+        const overlapLines = Math.max(0, overlapEnd - overlapStart + 1);
+        const coverageRatio = overlapLines / g.lineCount;
+
+        g.stepIds.forEach((stepId) => {
+          sitRefs.push({
+            nodeId: toSituationNodeId(stepId, g.groupId),
+            nodeType: "situation",
+            weight: coverageRatio,
+          });
+        });
+      });
+
+      return sitRefs;
+    },
+    [codeAwareSessionState.codeAwareMappings, codeAwareSessionState.codeChunks],
+  );
 
   // CodeAware: 响应 IDE 查询代码相关背景知识和掌握度
   useWebviewListener(
@@ -611,10 +785,10 @@ export const CodeAware = () => {
   const applyTimedViewResult = useCallback(
     (flushed: TimedViewResult): void => {
       const currentState = latestCognitiveStateRef.current;
-      const interaction: KnowledgeCardInteraction = {
-        type: "timed-view",
-        value: flushed.type,
-      };
+      const interaction: KnowledgeCardInteraction =
+        flushed.signal === "overtime"
+          ? { type: "timed-view-overtime", value: flushed.type }
+          : { type: "timed-view", value: flushed.type };
 
       const result = applyKnowledgeCardInteraction({
         linkedMasteryNodes: flushed.masteryNodeRefs,
@@ -648,9 +822,7 @@ export const CodeAware = () => {
    *  Use when switching between knowledge cards within the same step. */
   const handleFlushDetailTimedView = useCallback((): void => {
     const flushed = flushDetailView();
-    if (flushed) {
-      applyTimedViewResult(flushed);
-    }
+    flushed.forEach(applyTimedViewResult);
   }, [flushDetailView, applyTimedViewResult]);
 
   /** Called by Step / KnowledgeCard when user starts viewing content. */
@@ -665,11 +837,15 @@ export const CodeAware = () => {
       }
 
       const minReadingTimeMs = calculateMinReadingTimeMs(args.text);
+      const maxReadingTimeMs = calculateMaxReadingTimeMs(args.text);
       const config = {
         type: args.type,
         masteryNodeRefs: args.masteryNodeRefs,
         startTime: Date.now(),
         minReadingTimeMs,
+        maxReadingTimeMs,
+        firstThresholdEmitted: false,
+        secondThresholdEmitted: false,
         metadata: {
           nodeIds: args.masteryNodeRefs.map((r) => r.nodeId),
         },
@@ -688,11 +864,13 @@ export const CodeAware = () => {
       if (args.type === "step") {
         // Flush both slots when switching steps
         handleFlushTimedViewMastery();
-        startStepTracking(config);
+        const flushed = startStepTracking(config);
+        flushed.forEach(applyTimedViewResult);
       } else {
         // Detail-level: only flush detail slot, step stays alive
         handleFlushDetailTimedView();
-        startDetailTracking(config);
+        const flushed = startDetailTracking(config);
+        flushed.forEach(applyTimedViewResult);
       }
     },
     [
@@ -1182,6 +1360,9 @@ export const CodeAware = () => {
             masteryNodeRefs: sitRefs,
             startTime: Date.now(),
             minReadingTimeMs: 4000, // fixed 4s threshold for navigation
+            maxReadingTimeMs: 8000,
+            firstThresholdEmitted: false,
+            secondThresholdEmitted: false,
             metadata: { source: "code-to-step" },
           });
           console.info("[CA:Mastery:PhaseG][TrackingStart:Detail]", {
@@ -1345,6 +1526,9 @@ export const CodeAware = () => {
             masteryNodeRefs: sitRefs,
             startTime: Date.now(),
             minReadingTimeMs: 4000, // fixed 4s threshold for navigation
+            maxReadingTimeMs: 8000,
+            firstThresholdEmitted: false,
+            secondThresholdEmitted: false,
             metadata: { source: "step-to-code" },
           });
           console.info("[CA:Mastery:PhaseG][TrackingStart:Detail]", {
@@ -1387,10 +1571,10 @@ export const CodeAware = () => {
   const [globalQuestionExpandedSteps, setGlobalQuestionExpandedSteps] =
     useState<Set<string>>(new Set());
 
-  // Track currently expanded step for auto-collapse functionality
-  const [currentlyExpandedStepId, setCurrentlyExpandedStepId] = useState<
-    string | null
-  >(null);
+  // Track manually collapsed steps/cards for re-expand mastery signal
+  const manuallyCollapsedStepsRef = useRef<Set<string>>(new Set());
+  const manuallyCollapsedCardsRef = useRef<Set<string>>(new Set());
+  const manuallyCollapsedAnnotationsRef = useRef<Set<string>>(new Set());
 
   // Track whether RequirementDisplay is visible in viewport
   const [isRequirementDisplayVisible, setIsRequirementDisplayVisible] =
@@ -2453,12 +2637,31 @@ export const CodeAware = () => {
     async (stepId: string, isExpanded: boolean) => {
       console.log(`[CA:UI] Step ${stepId} expansion changed to: ${isExpanded}`);
 
-      // Flush any pending timed view (attention is switching)
-      handleFlushTimedViewMastery();
+      const currentState = latestCognitiveStateRef.current;
 
       if (isExpanded) {
-        // When a step is expanded, immediately set it as the currently expanded step
-        setCurrentlyExpandedStepId(stepId);
+        // Re-expand mastery signal: only if user previously manually collapsed this step
+        if (manuallyCollapsedStepsRef.current.has(stepId)) {
+          const reExpandInteraction: KnowledgeCardInteraction = {
+            type: "re-expand",
+          };
+          const reExpandResult = applyKnowledgeCardInteraction({
+            linkedMasteryNodes: [{ nodeId: stepId, nodeType: "step" }],
+            interaction: reExpandInteraction,
+            nodeMasteryScores: currentState.nodeMasteryScores,
+            cognitiveEdges: buildCodeAwareCognitiveEdges(currentState),
+          });
+          if (reExpandResult.changedNodeIds.length > 0) {
+            dispatch(setNodeMasteryScores(reExpandResult.updatedScores));
+            emitMasteryUpdateLogs({
+              interaction: reExpandInteraction,
+              linkedMasteryNodes: [{ nodeId: stepId, nodeType: "step" }],
+              changedNodeIds: reExpandResult.changedNodeIds,
+              debug: reExpandResult.debug,
+              knowledgeNodeTitleById: latestKnowledgeNodeTitleByIdRef.current,
+            });
+          }
+        }
 
         // 首次展开时，生成前置背景知识卡片
         const expandedStep = steps.find((step) => step.id === stepId);
@@ -2506,8 +2709,33 @@ export const CodeAware = () => {
           );
         }
       } else {
-        // When a step is collapsed, clear the currently expanded step if it's this one
-        setCurrentlyExpandedStepId((prev) => (prev === stepId ? null : prev));
+        // Collapse mastery signal: strong positive (user finished viewing)
+        manuallyCollapsedStepsRef.current.add(stepId);
+
+        // Flush pending timed views first (attention is leaving)
+        handleFlushTimedViewMastery();
+
+        const collapseInteraction: KnowledgeCardInteraction = {
+          type: "collapse",
+        };
+        const collapseResult = applyKnowledgeCardInteraction({
+          linkedMasteryNodes: [{ nodeId: stepId, nodeType: "step" }],
+          interaction: collapseInteraction,
+          nodeMasteryScores: latestCognitiveStateRef.current.nodeMasteryScores,
+          cognitiveEdges: buildCodeAwareCognitiveEdges(
+            latestCognitiveStateRef.current,
+          ),
+        });
+        if (collapseResult.changedNodeIds.length > 0) {
+          dispatch(setNodeMasteryScores(collapseResult.updatedScores));
+          emitMasteryUpdateLogs({
+            interaction: collapseInteraction,
+            linkedMasteryNodes: [{ nodeId: stepId, nodeType: "step" }],
+            changedNodeIds: collapseResult.changedNodeIds,
+            debug: collapseResult.debug,
+            knowledgeNodeTitleById: latestKnowledgeNodeTitleByIdRef.current,
+          });
+        }
 
         // Also remove from both force expanded sets when manually collapsed
         setForceExpandedSteps((prev) => {
@@ -2544,7 +2772,6 @@ export const CodeAware = () => {
     [
       dispatch,
       steps,
-      setCurrentlyExpandedStepId,
       setForceExpandedSteps,
       setGlobalQuestionExpandedSteps,
       handleFlushTimedViewMastery,
@@ -2553,32 +2780,111 @@ export const CodeAware = () => {
 
   const handleKnowledgeCardExpansionChange = useCallback(
     (_stepId: string, cardId: string, isExpanded: boolean) => {
-      // Flush only detail-level view (step tracking stays alive)
-      handleFlushDetailTimedView();
+      const currentState = latestCognitiveStateRef.current;
 
-      // Phase D: remind to unpin when a pinned knowledge card is collapsed
-      if (!isExpanded && !unpinPromptedKCsRef.current.has(cardId)) {
-        const pinnedKC = latestPinnedItemsRef.current.find(
-          (p) => p.level === "knowledge-card" && p.targetId === cardId,
-        );
-        if (pinnedKC) {
-          unpinPromptedKCsRef.current.add(cardId);
-          setActiveToast({
-            key: Date.now(),
-            message: "这块弄清楚了吗？可以取消码住哦",
-            actions: [
-              {
-                label: "取消码住",
-                variant: "primary",
-                onClick: () => handlePinRemoveRef.current(pinnedKC.id),
-              },
-              { label: "还没弄懂", onClick: () => {} },
-            ],
+      if (isExpanded) {
+        // Re-expand mastery signal: only if user previously manually collapsed this card
+        if (manuallyCollapsedCardsRef.current.has(cardId)) {
+          // Find the card's linked mastery nodes
+          const step = steps.find((s) => s.id === _stepId);
+          const card = step?.knowledgeCards.find((k) => k.id === cardId);
+          const linkedMasteryNodes = card?.linkedMasteryNodes || [];
+          const linkedKnowledgeNodeIds = card?.linkedKnowledgeNodeIds || [];
+
+          if (
+            linkedMasteryNodes.length > 0 ||
+            linkedKnowledgeNodeIds.length > 0
+          ) {
+            const reExpandInteraction: KnowledgeCardInteraction = {
+              type: "re-expand",
+            };
+            const reExpandResult = applyKnowledgeCardInteraction({
+              linkedMasteryNodes,
+              linkedKnowledgeNodeIds,
+              interaction: reExpandInteraction,
+              nodeMasteryScores: currentState.nodeMasteryScores,
+              cognitiveEdges: buildCodeAwareCognitiveEdges(currentState),
+            });
+            if (reExpandResult.changedNodeIds.length > 0) {
+              dispatch(setNodeMasteryScores(reExpandResult.updatedScores));
+              emitMasteryUpdateLogs({
+                interaction: reExpandInteraction,
+                linkedMasteryNodes,
+                linkedKnowledgeNodeIds,
+                changedNodeIds: reExpandResult.changedNodeIds,
+                debug: reExpandResult.debug,
+                knowledgeNodeTitleById: latestKnowledgeNodeTitleByIdRef.current,
+              });
+            }
+          }
+        }
+      } else {
+        // Collapse mastery signal: strong positive (user finished viewing this card)
+        manuallyCollapsedCardsRef.current.add(cardId);
+
+        // Flush only detail-level view (step tracking stays alive)
+        handleFlushDetailTimedView();
+
+        // Find the card's linked mastery nodes
+        const step = steps.find((s) => s.id === _stepId);
+        const card = step?.knowledgeCards.find((k) => k.id === cardId);
+        const linkedMasteryNodes = card?.linkedMasteryNodes || [];
+        const linkedKnowledgeNodeIds = card?.linkedKnowledgeNodeIds || [];
+
+        if (
+          linkedMasteryNodes.length > 0 ||
+          linkedKnowledgeNodeIds.length > 0
+        ) {
+          const collapseInteraction: KnowledgeCardInteraction = {
+            type: "collapse",
+          };
+          const collapseResult = applyKnowledgeCardInteraction({
+            linkedMasteryNodes,
+            linkedKnowledgeNodeIds,
+            interaction: collapseInteraction,
+            nodeMasteryScores:
+              latestCognitiveStateRef.current.nodeMasteryScores,
+            cognitiveEdges: buildCodeAwareCognitiveEdges(
+              latestCognitiveStateRef.current,
+            ),
           });
+          if (collapseResult.changedNodeIds.length > 0) {
+            dispatch(setNodeMasteryScores(collapseResult.updatedScores));
+            emitMasteryUpdateLogs({
+              interaction: collapseInteraction,
+              linkedMasteryNodes,
+              linkedKnowledgeNodeIds,
+              changedNodeIds: collapseResult.changedNodeIds,
+              debug: collapseResult.debug,
+              knowledgeNodeTitleById: latestKnowledgeNodeTitleByIdRef.current,
+            });
+          }
+        }
+
+        // Phase D: remind to unpin when a pinned knowledge card is collapsed
+        if (!unpinPromptedKCsRef.current.has(cardId)) {
+          const pinnedKC = latestPinnedItemsRef.current.find(
+            (p) => p.level === "knowledge-card" && p.targetId === cardId,
+          );
+          if (pinnedKC) {
+            unpinPromptedKCsRef.current.add(cardId);
+            setActiveToast({
+              key: Date.now(),
+              message: "这块弄清楚了吗？可以取消码住哦",
+              actions: [
+                {
+                  label: "取消码住",
+                  variant: "primary",
+                  onClick: () => handlePinRemoveRef.current(pinnedKC.id),
+                },
+                { label: "还没弄懂", onClick: () => {} },
+              ],
+            });
+          }
         }
       }
     },
-    [handleFlushDetailTimedView],
+    [dispatch, steps, handleFlushDetailTimedView],
   );
 
   const handleKnowledgeCardViewModeChange = useCallback(
@@ -2880,14 +3186,12 @@ export const CodeAware = () => {
           updateHighlight({ sourceType: "step", identifier: item.targetId }),
         );
         setForceExpandedSteps((prev) => new Set([...prev, item.targetId]));
-        setCurrentlyExpandedStepId(item.targetId);
       } else if (item.level === "knowledge-card" && item.stepId) {
         // Expand parent step and highlight knowledge card
         dispatch(
           updateHighlight({ sourceType: "step", identifier: item.stepId }),
         );
         setForceExpandedSteps((prev) => new Set([...prev, item.stepId!]));
-        setCurrentlyExpandedStepId(item.stepId);
       } else if (item.level === "code" && item.filePath && item.lineRange) {
         // 跳转到 IDE 中对应文件/行并展开注释 CommentThread
         ideMessenger?.post("revealCodeAnnotation", {
@@ -2904,13 +3208,7 @@ export const CodeAware = () => {
         itemTitle: item.title || item.targetId,
       });
     },
-    [
-      dispatch,
-      logger,
-      ideMessenger,
-      setForceExpandedSteps,
-      setCurrentlyExpandedStepId,
-    ],
+    [dispatch, logger, ideMessenger, setForceExpandedSteps],
   );
 
   // Pin removal (from global overlay) — also applies mastery update (unpin = confident)
@@ -3713,12 +4011,6 @@ export const CodeAware = () => {
                     step.knowledgeCardGenerationStatus
                   } // Pass knowledge card generation status
                   forceExpanded={forceExpandedSteps.has(step.id)} // Force expand when marked for expansion
-                  shouldCollapse={
-                    currentlyExpandedStepId !== null &&
-                    currentlyExpandedStepId !== step.id &&
-                    !forceExpandedSteps.has(step.id) &&
-                    !globalQuestionExpandedSteps.has(step.id)
-                  } // Don't collapse force expanded or global question expanded steps
                   onHighlightEvent={handleHighlightEvent}
                   onClearHighlight={removeHighlightEvent}
                   onStepConfusion={handleStepConfusion}

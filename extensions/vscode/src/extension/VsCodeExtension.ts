@@ -563,6 +563,22 @@ export class VsCodeExtension {
     );
     context.subscriptions.push(annotationController);
 
+    // CodeAware: 监听代码注释折叠/展开状态变化，发送 mastery 信号到 webview
+    annotationController.onDidChangeCollapseState((event) => {
+      const messageType =
+        event.action === "collapsed"
+          ? "codeExplanationCollapsed"
+          : "codeExplanationExpanded";
+      void this.sidebar.webviewProtocol.request(messageType, {
+        annotationId: event.annotationId,
+        filePath: event.filePath,
+        selectedLines: event.selectedLines,
+      });
+      console.log(
+        `[CodeAware] Annotation ${event.action}: ${event.annotationId}`,
+      );
+    });
+
     // CodeAware: 注册 revealCodeAnnotation webview 消息处理（从 pin 导航触发）
     this.sidebar.webviewProtocol.on("revealCodeAnnotation", async (msg) => {
       const { annotationId, filePath, lineRange } = msg.data;

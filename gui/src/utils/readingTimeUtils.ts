@@ -46,6 +46,17 @@ export function calculateMinReadingTimeMs(
 }
 
 /**
+ * Calculate the maximum reading time in milliseconds (2× the minimum).
+ * Exceeding this threshold indicates the user may be struggling.
+ */
+export function calculateMaxReadingTimeMs(
+  text: string,
+  wpm: number = DEFAULT_WPM,
+): number {
+  return 2 * calculateMinReadingTimeMs(text, wpm);
+}
+
+/**
  * Estimate word count from code lines (for cases where only line count is known).
  * Assumes ~10 words per code line on average.
  */

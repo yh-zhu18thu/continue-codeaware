@@ -5,9 +5,12 @@ import type {
 } from "core";
 
 const EVIDENCE_VALUES = {
-  timed_view: 0.85,
+  timed_view: 0.55,
+  timed_view_overtime: 0.25,
+  collapse: 0.9,
+  re_expand: 0.35,
   confusion_ask: 0.15,
-  pin_mark: 0.15,
+  pin_mark: 0.1,
   unpin_mark: 0.85,
   understanding_complete: 0.9,
 } as const;
@@ -44,6 +47,9 @@ export type TimedViewTarget = "step" | "situation" | "code" | "knowledge-card";
 
 export type KnowledgeCardInteraction =
   | { type: "timed-view"; value: TimedViewTarget }
+  | { type: "timed-view-overtime"; value: TimedViewTarget }
+  | { type: "collapse" }
+  | { type: "re-expand" }
   | { type: "confusion"; value: "ask" }
   | { type: "pin"; value: "pin" | "unpin" }
   | { type: "understanding-complete" };
@@ -90,6 +96,18 @@ export function deriveEvidenceFromInteraction(
 ): number | undefined {
   if (interaction.type === "timed-view") {
     return EVIDENCE_VALUES.timed_view;
+  }
+
+  if (interaction.type === "timed-view-overtime") {
+    return EVIDENCE_VALUES.timed_view_overtime;
+  }
+
+  if (interaction.type === "collapse") {
+    return EVIDENCE_VALUES.collapse;
+  }
+
+  if (interaction.type === "re-expand") {
+    return EVIDENCE_VALUES.re_expand;
   }
 
   if (interaction.type === "confusion") {

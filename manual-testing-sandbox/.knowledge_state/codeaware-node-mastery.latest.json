@@ -1,818 +1,680 @@
 {
   "schemaVersion": 1,
-  "sessionId": "5020d4cf-643e-44ad-ac80-c0ec3b6dff32",
-  "generatedAt": "2026-03-18T14:35:04.149Z",
-  "scoreCount": 135,
+  "sessionId": "5fde270c-a261-4f8e-9848-6240a61970b3",
+  "generatedAt": "2026-03-20T05:27:09.250Z",
+  "scoreCount": 112,
   "nodeMasteryScores": [
     {
       "nodeId": "r-1",
       "nodeType": "step",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.5270330947361934,
+      "updatedAt": 1773984093451
     },
     {
       "nodeId": "r-2",
       "nodeType": "step",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.5314918827807749,
+      "updatedAt": 1773984093451
     },
     {
       "nodeId": "r-3",
       "nodeType": "step",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.47702137537525724,
+      "updatedAt": 1773984187107
     },
     {
       "nodeId": "s-1",
       "nodeType": "step",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.49036901213070666,
+      "updatedAt": 1773984187107
     },
     {
       "nodeId": "s-2",
       "nodeType": "step",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.5277277160163709,
+      "updatedAt": 1773984138573
     },
     {
       "nodeId": "s-3",
       "nodeType": "step",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.5812383101393248,
+      "updatedAt": 1773984187107
     },
     {
       "nodeId": "s-4",
       "nodeType": "step",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.6040701855708053,
+      "updatedAt": 1773984138573
     },
     {
       "nodeId": "s-5",
       "nodeType": "step",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.5276448655681731,
+      "updatedAt": 1773984187107
     },
     {
       "nodeId": "s-6",
       "nodeType": "step",
-      "score": 0,
-      "updatedAt": 1773844451238
-    },
-    {
-      "nodeId": "s-7",
-      "nodeType": "step",
-      "score": 0,
-      "updatedAt": 1773844451238
-    },
-    {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-0",
-      "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773844451238
-    },
-    {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-1",
-      "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773844451238
-    },
-    {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-2",
-      "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773844451238
-    },
-    {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-3",
-      "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773844451238
-    },
-    {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-4",
-      "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773844451238
-    },
-    {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-5",
-      "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773844451238
-    },
-    {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-6",
-      "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773844451238
-    },
-    {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-7",
-      "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773844451238
-    },
-    {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-8",
-      "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773844451238
-    },
-    {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-9",
-      "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773844451238
-    },
-    {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-10",
-      "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773844451238
-    },
-    {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-11",
-      "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773844451238
-    },
-    {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-12",
-      "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773844451238
-    },
-    {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-13",
-      "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.6412229830279279,
+      "updatedAt": 1773984187107
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-14",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-0",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773844451238
+      "updatedAt": 1773982821448
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-15",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-1",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773844451238
+      "updatedAt": 1773982821448
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-16",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-2",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773844451238
+      "updatedAt": 1773982821448
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-17",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-3",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773844451238
+      "updatedAt": 1773982821448
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-18",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-4",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773844451238
+      "updatedAt": 1773982821448
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-19",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-5",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773844451238
+      "updatedAt": 1773982821448
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-20",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-6",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773844451238
+      "updatedAt": 1773982821448
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-21",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-7",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773844451238
+      "updatedAt": 1773982821448
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-22",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-8",
       "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773844451238
-    },
-    {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-23",
-      "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773844451238
-    },
-    {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-24",
-      "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773844451238
-    },
-    {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-25",
-      "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773844451238
-    },
-    {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-26",
-      "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773844451238
-    },
-    {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-27",
-      "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773844451238
-    },
-    {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-28",
-      "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.4746607934092637,
+      "updatedAt": 1773984178471
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-29",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-9",
       "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.4746607934092637,
+      "updatedAt": 1773984178471
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-30",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-10",
       "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.4746607934092637,
+      "updatedAt": 1773984178471
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-31",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-11",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773844451238
+      "updatedAt": 1773982821448
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-32",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-12",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773844451238
+      "updatedAt": 1773982821448
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-33",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-13",
       "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.4887040063439725,
+      "updatedAt": 1773984178471
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-34",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-14",
       "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.4850956355401096,
+      "updatedAt": 1773984178471
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-35",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-15",
       "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.4850956355401096,
+      "updatedAt": 1773984178471
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-36",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-16",
       "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.4850956355401096,
+      "updatedAt": 1773984178471
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-37",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-17",
       "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.36387561118968736,
+      "updatedAt": 1773984093451
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-38",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-18",
       "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.47387321495178514,
+      "updatedAt": 1773984178471
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-39",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-19",
       "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.4821544195723636,
+      "updatedAt": 1773984178471
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-40",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-20",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773844451238
+      "updatedAt": 1773982821448
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-41",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-21",
       "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.2609749490716846,
+      "updatedAt": 1773983918254
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-42",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-22",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773844451238
+      "updatedAt": 1773982821448
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-43",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-23",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773844451238
+      "updatedAt": 1773982821448
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-44",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-24",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773844451238
+      "updatedAt": 1773982821448
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-45",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-25",
       "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.4557659425322788,
+      "updatedAt": 1773984093451
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-46",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-26",
       "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.4557659425322788,
+      "updatedAt": 1773984093451
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-47",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-27",
       "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.49503214509282134,
+      "updatedAt": 1773984178471
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-48",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-28",
       "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.4918082591576869,
+      "updatedAt": 1773984178471
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-49",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-29",
       "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.4918082591576869,
+      "updatedAt": 1773984178471
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-50",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-30",
       "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.4918082591576869,
+      "updatedAt": 1773984178471
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-51",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-31",
       "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.4918082591576869,
+      "updatedAt": 1773984178471
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-52",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-32",
       "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.4891288343538104,
+      "updatedAt": 1773984178471
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-53",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-33",
       "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.4891288343538104,
+      "updatedAt": 1773984178471
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-54",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-34",
       "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.4891288343538104,
+      "updatedAt": 1773984178471
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-55",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-35",
       "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.4891288343538104,
+      "updatedAt": 1773984178471
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-56",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-36",
       "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.4891288343538104,
+      "updatedAt": 1773984178471
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-57",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-37",
       "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.4891288343538104,
+      "updatedAt": 1773984178471
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-58",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-38",
       "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.4891288343538104,
+      "updatedAt": 1773984178471
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-59",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-39",
       "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.4891288343538104,
+      "updatedAt": 1773984178471
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-60",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-40",
       "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.4891288343538104,
+      "updatedAt": 1773984178471
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-61",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-41",
       "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.4891288343538104,
+      "updatedAt": 1773984178471
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-62",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-42",
       "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.4891288343538104,
+      "updatedAt": 1773984178471
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-63",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-43",
       "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.48975096999199463,
+      "updatedAt": 1773984178471
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-64",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-44",
       "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.5314645532094,
+      "updatedAt": 1773984178471
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-65",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-45",
       "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.5307158797990456,
+      "updatedAt": 1773984178471
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-66",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-46",
       "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.5307158797990456,
+      "updatedAt": 1773984178471
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-67",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-47",
       "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.19084083305741542,
+      "updatedAt": 1773984138573
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-68",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-48",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773844451238
+      "updatedAt": 1773982821448
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-69",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-49",
       "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.42265258576285003,
+      "updatedAt": 1773984187107
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-70",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-50",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773844451238
+      "updatedAt": 1773982821448
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-71",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-51",
       "nodeType": "code-chunk",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.19982326371797648,
+      "updatedAt": 1773983918254
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-72",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-52",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773844451238
+      "updatedAt": 1773982821448
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-73",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-53",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773844451238
+      "updatedAt": 1773982821448
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-74",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-54",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773844451238
+      "updatedAt": 1773982821448
     },
     {
-      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/simple_raytracer.py-chunk-75",
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_paint.py-chunk-55",
       "nodeType": "code-chunk",
       "score": 0,
-      "updatedAt": 1773844451238
+      "updatedAt": 1773982821448
     },
     {
       "nodeId": "k-s-1-1",
       "nodeType": "background-knowledge",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.4897165011979493,
+      "updatedAt": 1773984187107
     },
     {
       "nodeId": "k-s-1-2",
       "nodeType": "background-knowledge",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.5058708801905706,
+      "updatedAt": 1773984187107
     },
     {
       "nodeId": "k-s-1-3",
       "nodeType": "background-knowledge",
-      "score": 0,
-      "updatedAt": 1773844451238
-    },
-    {
-      "nodeId": "k-s-1-4",
-      "nodeType": "background-knowledge",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.4681325486148725,
+      "updatedAt": 1773984187107
     },
     {
       "nodeId": "k-s-2-1",
       "nodeType": "background-knowledge",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.505910616377373,
+      "updatedAt": 1773984178471
     },
     {
       "nodeId": "k-s-2-2",
       "nodeType": "background-knowledge",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.511613959249224,
+      "updatedAt": 1773984187107
     },
     {
       "nodeId": "k-s-2-3",
       "nodeType": "background-knowledge",
-      "score": 0,
-      "updatedAt": 1773844451238
-    },
-    {
-      "nodeId": "k-s-2-4",
-      "nodeType": "background-knowledge",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.5041834921121828,
+      "updatedAt": 1773984178471
     },
     {
       "nodeId": "k-s-3-1",
       "nodeType": "background-knowledge",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.5143120495287129,
+      "updatedAt": 1773984138573
     },
     {
       "nodeId": "k-s-3-2",
       "nodeType": "background-knowledge",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.5063087423960209,
+      "updatedAt": 1773984187107
     },
     {
       "nodeId": "k-s-3-3",
       "nodeType": "background-knowledge",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.505419102638919,
+      "updatedAt": 1773984178471
     },
     {
       "nodeId": "k-s-3-4",
       "nodeType": "background-knowledge",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.5148023656079138,
+      "updatedAt": 1773984093451
     },
     {
       "nodeId": "k-s-4-1",
       "nodeType": "background-knowledge",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.5177223245608196,
+      "updatedAt": 1773984138573
     },
     {
       "nodeId": "k-s-4-2",
       "nodeType": "background-knowledge",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.5122501980341819,
+      "updatedAt": 1773984187107
     },
     {
       "nodeId": "k-s-4-3",
       "nodeType": "background-knowledge",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.49345419842265786,
+      "updatedAt": 1773984178471
     },
     {
       "nodeId": "k-s-4-4",
       "nodeType": "background-knowledge",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.5463582099459697,
+      "updatedAt": 1773984138573
     },
     {
       "nodeId": "k-s-5-1",
       "nodeType": "background-knowledge",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.5026256587222809,
+      "updatedAt": 1773984187107
     },
     {
       "nodeId": "k-s-5-2",
       "nodeType": "background-knowledge",
-      "score": 0,
-      "updatedAt": 1773844451238
-    },
-    {
-      "nodeId": "k-s-5-3",
-      "nodeType": "background-knowledge",
-      "score": 0,
-      "updatedAt": 1773844451238
-    },
-    {
-      "nodeId": "k-s-5-4",
-      "nodeType": "background-knowledge",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.5099453054433196,
+      "updatedAt": 1773984187107
     },
     {
       "nodeId": "k-s-6-1",
       "nodeType": "background-knowledge",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.5059803058629431,
+      "updatedAt": 1773984187107
     },
     {
       "nodeId": "k-s-6-2",
       "nodeType": "background-knowledge",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.4790001305947543,
+      "updatedAt": 1773984187107
     },
     {
       "nodeId": "k-s-6-3",
       "nodeType": "background-knowledge",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.4761552788531683,
+      "updatedAt": 1773984187107
     },
     {
       "nodeId": "k-s-6-4",
       "nodeType": "background-knowledge",
-      "score": 0,
-      "updatedAt": 1773844451238
-    },
-    {
-      "nodeId": "k-s-7-1",
-      "nodeType": "background-knowledge",
-      "score": 0,
-      "updatedAt": 1773844451238
-    },
-    {
-      "nodeId": "k-s-7-2",
-      "nodeType": "background-knowledge",
-      "score": 0,
-      "updatedAt": 1773844451238
-    },
-    {
-      "nodeId": "k-s-7-3",
-      "nodeType": "background-knowledge",
-      "score": 0,
-      "updatedAt": 1773844451238
-    },
-    {
-      "nodeId": "k-s-7-4",
-      "nodeType": "background-knowledge",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.46824027440790633,
+      "updatedAt": 1773984187107
     },
     {
       "nodeId": "k-deep-1",
       "nodeType": "background-knowledge",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.5067915124515356,
+      "updatedAt": 1773984187107
     },
     {
       "nodeId": "k-deep-2",
       "nodeType": "background-knowledge",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.4884775288548134,
+      "updatedAt": 1773984187107
     },
     {
       "nodeId": "k-deep-3",
       "nodeType": "background-knowledge",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.5134940910495713,
+      "updatedAt": 1773984093451
     },
     {
       "nodeId": "k-deep-4",
       "nodeType": "background-knowledge",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.49421948762642925,
+      "updatedAt": 1773984187107
     },
     {
-      "nodeId": "k-deep-5",
-      "nodeType": "background-knowledge",
-      "score": 0,
-      "updatedAt": 1773844451238
-    },
-    {
-      "nodeId": "sit-s-1-grp-L10",
+      "nodeId": "sit-s-2-grp-L10",
       "nodeType": "situation",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.4807611559979178,
+      "updatedAt": 1773984093451
     },
     {
-      "nodeId": "sit-s-4-grp-L17",
+      "nodeId": "sit-s-1-grp-L16",
       "nodeType": "situation",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.3552360104158646,
+      "updatedAt": 1773983918254
     },
     {
-      "nodeId": "sit-s-1-grp-L35",
+      "nodeId": "sit-s-2-grp-L21",
       "nodeType": "situation",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.4653305849100097,
+      "updatedAt": 1773984093451
     },
     {
-      "nodeId": "sit-s-2-grp-L52",
+      "nodeId": "sit-s-3-grp-L31",
       "nodeType": "situation",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.480059582518031,
+      "updatedAt": 1773984093451
     },
     {
-      "nodeId": "sit-s-1-grp-L56",
+      "nodeId": "sit-s-3-grp-L36",
       "nodeType": "situation",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.48639545386902955,
+      "updatedAt": 1773984093451
     },
     {
-      "nodeId": "sit-s-1-grp-L57",
+      "nodeId": "sit-s-4-grp-L36",
       "nodeType": "situation",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.4884413543235552,
+      "updatedAt": 1773984093451
     },
     {
-      "nodeId": "sit-s-2-grp-L57",
+      "nodeId": "sit-s-4-grp-L47",
       "nodeType": "situation",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.4675443716039416,
+      "updatedAt": 1773984093451
     },
     {
-      "nodeId": "sit-s-3-grp-L65",
+      "nodeId": "sit-s-5-grp-L52",
       "nodeType": "situation",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.4123651618590395,
+      "updatedAt": 1773984187107
     },
     {
-      "nodeId": "sit-s-4-grp-L72",
+      "nodeId": "sit-s-6-grp-L54",
       "nodeType": "situation",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "score": 0.4589915770038351,
+      "updatedAt": 1773984187107
     },
     {
-      "nodeId": "sit-s-5-grp-L76",
-      "nodeType": "situation",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/iter2-user_study/playgrounds/zyh/test/image_to_ascii.py-chunk-18",
+      "nodeType": "code-chunk",
+      "score": 0.6625000000000001,
+      "updatedAt": 1773982916258
     },
     {
-      "nodeId": "sit-s-5-grp-L78",
-      "nodeType": "situation",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/iter2-user_study/playgrounds/zyh/test/image_to_ascii.py-chunk-8",
+      "nodeType": "code-chunk",
+      "score": 0.6625000000000001,
+      "updatedAt": 1773982976410
     },
     {
-      "nodeId": "sit-s-6-grp-L78",
-      "nodeType": "situation",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/iter2-user_study/playgrounds/zyh/test/image_to_ascii.py-chunk-9",
+      "nodeType": "code-chunk",
+      "score": 0.6625000000000001,
+      "updatedAt": 1773982976410
     },
     {
-      "nodeId": "sit-s-6-grp-L79",
-      "nodeType": "situation",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/iter2-user_study/playgrounds/zyh/test/image_to_ascii.py-chunk-10",
+      "nodeType": "code-chunk",
+      "score": 0.6625000000000001,
+      "updatedAt": 1773982976410
     },
     {
-      "nodeId": "sit-s-5-grp-L80",
-      "nodeType": "situation",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/iter2-user_study/playgrounds/zyh/test/image_to_ascii.py-chunk-25",
+      "nodeType": "code-chunk",
+      "score": 0.59375,
+      "updatedAt": 1773983107277
     },
     {
-      "nodeId": "sit-s-6-grp-L80",
-      "nodeType": "situation",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/iter2-user_study/playgrounds/zyh/test/image_to_ascii.py-chunk-27",
+      "nodeType": "code-chunk",
+      "score": 0.696875,
+      "updatedAt": 1773984229071
     },
     {
-      "nodeId": "sit-s-7-grp-L84",
-      "nodeType": "situation",
-      "score": 0,
-      "updatedAt": 1773844451238
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/iter2-user_study/playgrounds/zyh/test/image_to_ascii.py-chunk-28",
+      "nodeType": "code-chunk",
+      "score": 0.696875,
+      "updatedAt": 1773984229071
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/iter2-user_study/playgrounds/zyh/test/image_to_ascii.py-chunk-29",
+      "nodeType": "code-chunk",
+      "score": 0.696875,
+      "updatedAt": 1773984229071
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/iter2-user_study/playgrounds/zyh/test/image_to_ascii.py-chunk-30",
+      "nodeType": "code-chunk",
+      "score": 0.696875,
+      "updatedAt": 1773984229071
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/iter2-user_study/playgrounds/zyh/test/image_to_ascii.py-chunk-31",
+      "nodeType": "code-chunk",
+      "score": 0.59375,
+      "updatedAt": 1773983214004
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/iter2-user_study/playgrounds/zyh/test/image_to_ascii.py-chunk-32",
+      "nodeType": "code-chunk",
+      "score": 0.60546875,
+      "updatedAt": 1773983302715
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/iter2-user_study/playgrounds/zyh/test/image_to_ascii.py-chunk-42",
+      "nodeType": "code-chunk",
+      "score": 0.6359375,
+      "updatedAt": 1773983920809
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/iter2-user_study/playgrounds/zyh/test/image_to_ascii.py-chunk-43",
+      "nodeType": "code-chunk",
+      "score": 0.6359375,
+      "updatedAt": 1773983920809
+    },
+    {
+      "nodeId": "file:///Users/thuzyh/Documents/hci/CodeAware/iter2-user_study/playgrounds/zyh/test/image_to_ascii.py-chunk-44",
+      "nodeType": "code-chunk",
+      "score": 0.6359375,
+      "updatedAt": 1773983920809
     }
   ]
 }

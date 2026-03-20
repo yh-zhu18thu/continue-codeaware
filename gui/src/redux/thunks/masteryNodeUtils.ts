@@ -2,8 +2,8 @@
  * Shared mastery-node utilities for confusion-candidate generation.
  */
 import type {
-  CodeAwareMapping,
   CodeAwareCognitiveEdge,
+  CodeAwareMapping,
   CodeChunk,
   KnowledgePoint,
   KnowledgeToStepRelation,

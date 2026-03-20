@@ -158,7 +158,6 @@ interface StepProps {
   isActive?: boolean;
   defaultExpanded?: boolean;
   forceExpanded?: boolean; // Force expand the step (overrides defaultExpanded)
-  shouldCollapse?: boolean; // External signal to collapse the step
   isHighlighted?: boolean;
   stepId?: string;
   stepStatus?: StepStatus; // Use StepStatus type from core
@@ -213,7 +212,6 @@ const Step: React.FC<StepProps> = ({
   isActive = false,
   defaultExpanded = false, // Changed to false for collapsed by default
   forceExpanded = false, // Force expand parameter
-  shouldCollapse = false, // External collapse signal
   isHighlighted = false,
   stepId,
   stepStatus = "confirmed", // Default to confirmed for backward compatibility
@@ -268,10 +266,6 @@ const Step: React.FC<StepProps> = ({
   const [isStepConfusionOpen, setIsStepConfusionOpen] = useState(false);
   const [shouldKeepHighlighted, setShouldKeepHighlighted] = useState(false);
   const [isUserExpanding, setIsUserExpanding] = useState(false); // Track if user is actively expanding this step
-  const [shouldCollapseCards, setShouldCollapseCards] = useState(false); // Signal to collapse all knowledge cards
-  const [currentlyExpandedCardId, setCurrentlyExpandedCardId] = useState<
-    string | null
-  >(null); // Track currently expanded knowledge card
   const flickerTimeoutRef = useRef<(NodeJS.Timeout | null)[]>([]);
 
   // Handle mouse enter/leave for hover effects only
@@ -291,34 +285,6 @@ const Step: React.FC<StepProps> = ({
     // Note: We don't force collapse when forceExpanded becomes false
     // This allows users to manually control the step after force expansion ends
   }, [forceExpanded, isExpanded]);
-
-  // Handle external collapse signal
-  useEffect(() => {
-    // Don't collapse if user is actively expanding this step
-    if (shouldCollapse && isExpanded && !isUserExpanding) {
-      setIsExpanded(false);
-
-      // Trigger knowledge cards collapse when step is externally collapsed
-      setShouldCollapseCards(true);
-      setTimeout(() => setShouldCollapseCards(false), 100); // Reset after brief delay
-
-      // Don't notify parent component about external collapse to avoid infinite loops
-      // The parent already knows about this state change since it initiated it
-
-      // Clear local highlights when externally collapsed
-      // Don't call onClearHighlight() as it clears ALL highlights globally
-      setIsFlickering(false);
-      setShouldKeepHighlighted(false);
-      // Clear all existing timeouts
-      flickerTimeoutRef.current.forEach((timeout) => {
-        if (timeout) clearTimeout(timeout);
-      });
-      flickerTimeoutRef.current = [];
-
-      // Note: We don't call onClearHighlight() here because it would clear
-      // highlights for the newly expanded step as well
-    }
-  }, [shouldCollapse, isExpanded, isUserExpanding]);
 
   // Handle flickering effect when isHighlighted becomes true
   useEffect(() => {
@@ -461,10 +427,6 @@ const Step: React.FC<StepProps> = ({
 
     // If step is being collapsed, clear all highlights and immediately stop flickering
     if (wasExpanded) {
-      // Trigger knowledge cards collapse when step is manually collapsed
-      setShouldCollapseCards(true);
-      setTimeout(() => setShouldCollapseCards(false), 100); // Reset after brief delay
-
       // Immediately stop any flickering animation
       setIsFlickering(false);
       setShouldKeepHighlighted(false); // Clear persistent highlight when collapsing
@@ -540,14 +502,6 @@ const Step: React.FC<StepProps> = ({
     console.log(
       `[CA:UI] Knowledge Card ${cardId} expansion changed to: ${isExpanded}`,
     );
-
-    if (isExpanded) {
-      // When a knowledge card is expanded, set it as the currently expanded card
-      setCurrentlyExpandedCardId(cardId);
-    } else {
-      // When a knowledge card is collapsed, clear the currently expanded card if it's this one
-      setCurrentlyExpandedCardId((prev) => (prev === cardId ? null : prev));
-    }
 
     if (stepId && onKnowledgeCardExpansionChange) {
       onKnowledgeCardExpansionChange(stepId, cardId, isExpanded);
@@ -640,17 +594,11 @@ const Step: React.FC<StepProps> = ({
                 }
 
                 const cardId = cardProps.cardId || `card-${idx}`;
-                const shouldCollapseThisCard =
-                  shouldCollapseCards ||
-                  (currentlyExpandedCardId !== null &&
-                    currentlyExpandedCardId !== cardId);
-
                 elements.push(
                   <KnowledgeCard
                     key={cardId}
                     {...cardProps}
                     cardId={cardId}
-                    shouldCollapse={shouldCollapseThisCard}
                     onDisable={onDisableKnowledgeCard}
                     onExpansionChange={handleKnowledgeCardExpansionChange}
                     onStartTimedView={onStartTimedView}

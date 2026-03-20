@@ -1151,6 +1151,7 @@ export function constructGlobalQAResponsePrompt(
   taskDescription: string,
   learningGoal: string,
   masteredRelatedContext?: string,
+  situationMasteryContext?: string,
 ): string {
   const historyText = conversationHistory
     .map(
@@ -1166,10 +1167,22 @@ export function constructGlobalQAResponsePrompt(
     ? `\n    "mastered_related_context": ${JSON.stringify(masteredRelatedContext)},`
     : "";
 
+  const situationField = situationMasteryContext
+    ? `\n    "learner_mastery_profile": ${JSON.stringify(situationMasteryContext)},`
+    : "";
+
   const masteredReqs = masteredRelatedContext
     ? [
         `"When mastered_related_context is provided, actively leverage the user's existing understanding listed there. Reference what they already know to give more targeted, connected explanations, e.g. 'You already learned about X — here Y works the same way but …'."`,
         `"Minimize jargon by default, but if a term appears in the mastered_related_context, you may use it directly since the user has encountered it before."`,
+      ]
+    : [];
+
+  const situationReqs = situationMasteryContext
+    ? [
+        `"When learner_mastery_profile is provided, it contains items the user has mastered (已掌握) and items the user has NOT yet mastered (尚未掌握). Use this information ONLY when relevant to the current question — do NOT force unrelated knowledge into the response."`,
+        `"For mastered items: if the current question relates to something the user already understands, reference that knowledge to build connections (e.g. 'You already know about X — Y works similarly but …'). This helps the user anchor new learning to existing knowledge."`,
+        `"For unmastered items: if the current question touches on something the user hasn't learned yet, briefly mention it may be worth exploring later, but do NOT derail the answer with unrelated topics."`,
       ]
     : [];
 
@@ -1179,7 +1192,7 @@ export function constructGlobalQAResponsePrompt(
     "project_steps": ${JSON.stringify(stepsText)},
     "related_code": ${JSON.stringify(codeContext)},
     "project_context": ${JSON.stringify(taskDescription)},
-    "learning_objectives": ${JSON.stringify(learningGoal)},${masteredField}
+    "learning_objectives": ${JSON.stringify(learningGoal)},${masteredField}${situationField}
     "requirements": [
         "Treat the user as a beginning learner: use plain language as the baseline, but do not shy away from terms the user has already encountered (see mastered_related_context if provided).",
         "Use adaptive scaffolding style: internally choose one of hinting/explaining/instructing/modeling, but DO NOT output the chosen type.",
@@ -1187,7 +1200,7 @@ export function constructGlobalQAResponsePrompt(
         "If the user says they still don't understand, try a different approach: use an analogy, give a concrete example, or simplify further.",
         "Response must be 4-6 sentences, informative yet accessible.",
         "Sentence 1: TLDR in plain language. Sentences 2-4: explanation that connects to the user's existing knowledge (from mastered_related_context if available) and ties to project context and code. Remaining sentences: a practical takeaway, next-step hint, or clarifying example.",
-        ${masteredReqs.join(",\n        ")}
+        ${[...masteredReqs, ...situationReqs].join(",\n        ")}
         "Use simple words and life-like analogies when helpful.",
         "Do not dump full code explanations. Only mention the most relevant code behavior if needed.",
         "Respond in the same language as the user's question. You may use Markdown for readability.",
@@ -1208,6 +1221,7 @@ export function constructQAToKnowledgeCardPrompt(
     title: string;
   }>,
   taskDescription: string,
+  situationMasteryContext?: string,
 ): string {
   const historyText = conversationHistory
     .map(
@@ -1229,6 +1243,16 @@ export function constructQAToKnowledgeCardPrompt(
     )
     .join(",\n    ");
 
+  const situationField = situationMasteryContext
+    ? `\n    "learner_mastery_profile": ${JSON.stringify(situationMasteryContext)},`
+    : "";
+
+  const situationReqs = situationMasteryContext
+    ? [
+        `"When learner_mastery_profile is provided, consider the user's current mastery state when generating the knowledge card content. Prioritize linking to concepts the user has already mastered to strengthen memory connections. If the conversation topic relates to unmastered knowledge, the card content should gently bridge from known to unknown."`,
+      ]
+    : [];
+
   return `{
     "task": "Analyze the following Q&A conversation between a non-programmer user and an assistant about a coding project. Extract the key knowledge from this conversation and convert it into a knowledge card. You must: (1) identify the most prominent knowledge node category from the conversation, (2) identify the theme within that category, (3) map to existing nodes in the knowledge graph, and (4) select the most relevant step to attach this card to.",
     "conversation": ${JSON.stringify(historyText)},
@@ -1238,7 +1262,7 @@ export function constructQAToKnowledgeCardPrompt(
     "existing_knowledge_nodes": [
     ${nodesJson}
     ],
-    "project_description": ${JSON.stringify(taskDescription)},
+    "project_description": ${JSON.stringify(taskDescription)},${situationField}
     "node_categories_explanation": {
         "background-knowledge": "Foundational concepts, syntax, algorithms, or framework knowledge needed to understand the code",
         "step": "Understanding of what a specific implementation step does and why",
@@ -1253,7 +1277,7 @@ export function constructQAToKnowledgeCardPrompt(
         "Select the step (from all_steps) that is most relevant to the conversation topic.",
         "Generate a concise knowledge card title that is phrased as a SHORT QUESTION (ending with '?'), 6-18 words, in plain language that helps a non-programmer quickly judge whether they need this card. Example: '为什么用循环能省掉重复劳动？' instead of '循环结构'. Also generate content (2-3 sentences in Markdown, using adaptive scaffolding style).",
         "The content should synthesize the key insight from the conversation, not just repeat the last answer.",
-        "Respond in the same language as the conversation.",
+        ${situationReqs.length > 0 ? situationReqs.join(",\n        ") + ",\n        " : ""}"Respond in the same language as the conversation.",
         "You must follow this JSON format: {\\"selected_step_id\\": \\"(step id)\\", \\"node_category\\": \\"(background-knowledge|step|code-chunk|situation)\\", \\"theme\\": \\"(identified theme)\\", \\"linkedMasteryNodes\\": [{\\"nodeId\\": \\"(id)\\", \\"nodeType\\": \\"(type)\\"}], \\"linkedKnowledgeNodeIds\\": [\\"(knowledge node id 1)\\", ...], \\"title\\": \\"(card title)\\", \\"content\\": \\"(card content in Markdown)\\"}",
         "IMPORTANT: linkedMasteryNodes and linkedKnowledgeNodeIds MUST reference nodeIds from the existing_knowledge_nodes list. Do not invent new IDs.",
         "IMPORTANT: Properly escape all special characters in JSON strings. Ensure the JSON is valid and parseable.",

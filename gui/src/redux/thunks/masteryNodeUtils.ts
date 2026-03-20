@@ -2,13 +2,19 @@
  * Shared mastery-node utilities for confusion-candidate generation.
  */
 import type {
+  CodeAwareMapping,
   CodeAwareCognitiveEdge,
   CodeChunk,
   KnowledgePoint,
+  KnowledgeToStepRelation,
   MasteryNodeRef,
   NodeMasteryScore,
   StepItem,
 } from "core";
+import {
+  computeSituationGroups,
+  toSituationNodeId,
+} from "../../utils/situationGrouping";
 
 /* ─── score lookup ─── */
 export function buildScoreLookup(
@@ -239,4 +245,247 @@ function resolveNodeContent(
     return step ? `${step.title}: ${step.abstract}` : "";
   }
   return "";
+}
+
+/* ─── situation-based mastery context for global QA ─── */
+
+interface SituationMasteryEntry {
+  situationNodeId: string;
+  stepId: string;
+  groupId: string;
+  mastery: number;
+  masteryLabel: string;
+  stepTitle: string;
+  stepAbstract: string;
+  prerequisiteKnowledge: string[];
+  codeSnippet: string;
+}
+
+const CODE_SNIPPET_MAX_CHARS = 2000;
+
+function masteryLabel(score: number): string {
+  if (score > 0.5) return "了解";
+  if (score < 0.3) return "还不知道";
+  return "初步接触";
+}
+
+/**
+ * Build a situation-based mastery profile for global QA prompts.
+ *
+ * Collects the top-K highest-mastery and top-K lowest-mastery situation nodes,
+ * with their related step, prerequisite knowledge, and code context.
+ * Falls back to step-level mastery when no situation nodes exist.
+ */
+export function buildSituationMasteryContext({
+  nodeMasteryScores,
+  codeAwareMappings,
+  codeChunks,
+  steps,
+  knowledgePoints,
+  knowledgeToStepRelations,
+  topK = 3,
+}: {
+  nodeMasteryScores: NodeMasteryScore[];
+  codeAwareMappings: CodeAwareMapping[];
+  codeChunks: CodeChunk[];
+  steps: StepItem[];
+  knowledgePoints: KnowledgePoint[];
+  knowledgeToStepRelations: KnowledgeToStepRelation[];
+  topK?: number;
+}): string {
+  const scoreLookup = buildScoreLookup(nodeMasteryScores);
+
+  // Build step lookup maps
+  const stepById = new Map<string, StepItem>();
+  steps.forEach((s) => stepById.set(s.id, s));
+
+  // Build knowledge relations lookup: stepId → KnowledgePoint[]
+  const knowledgeByStepId = new Map<string, KnowledgePoint[]>();
+  knowledgeToStepRelations.forEach((rel) => {
+    const kp = knowledgePoints.find((k) => k.id === rel.knowledgeId);
+    if (!kp) return;
+    const existing = knowledgeByStepId.get(rel.stepId) || [];
+    existing.push(kp);
+    knowledgeByStepId.set(rel.stepId, existing);
+  });
+
+  // Build code chunk lookup
+  const chunkById = new Map<string, CodeChunk>();
+  codeChunks.forEach((c) => chunkById.set(c.id, c));
+
+  // Try situation-based approach first
+  const groups = computeSituationGroups(codeAwareMappings, codeChunks);
+
+  let entries: SituationMasteryEntry[] = [];
+
+  if (groups.length > 0) {
+    // Collect all situation nodes with scores
+    const situationScores: Array<{
+      sitNodeId: string;
+      stepId: string;
+      groupId: string;
+      score: number;
+      codeChunkIds: string[];
+    }> = [];
+
+    const seenSitNodes = new Set<string>();
+
+    groups.forEach((group) => {
+      group.stepIds.forEach((stepId) => {
+        const sitNodeId = toSituationNodeId(stepId, group.groupId);
+        if (seenSitNodes.has(sitNodeId)) return;
+        seenSitNodes.add(sitNodeId);
+
+        const score = getScore(scoreLookup, sitNodeId, "situation");
+        situationScores.push({
+          sitNodeId,
+          stepId,
+          groupId: group.groupId,
+          score,
+          codeChunkIds: group.codeChunkIds,
+        });
+      });
+    });
+
+    // Sort by score descending, take top-K highest and top-K lowest
+    situationScores.sort((a, b) => b.score - a.score);
+
+    const topHigh = situationScores
+      .filter((s) => s.score >= 0.5)
+      .slice(0, topK);
+    const topLow = situationScores
+      .filter((s) => s.score < 0.3)
+      .slice(-topK)
+      .reverse(); // lowest scores from the end
+
+    // Re-sort topLow to get actual lowest first
+    topLow.sort((a, b) => a.score - b.score);
+
+    const selected = [...topHigh, ...topLow];
+    // Deduplicate by sitNodeId
+    const selectedSet = new Set<string>();
+
+    for (const sit of selected) {
+      if (selectedSet.has(sit.sitNodeId)) continue;
+      selectedSet.add(sit.sitNodeId);
+
+      const step = stepById.get(sit.stepId);
+      if (!step) continue;
+
+      // Collect prerequisite knowledge for this step
+      const relatedKPs = knowledgeByStepId.get(sit.stepId) || [];
+      const prereqTitles = relatedKPs.slice(0, 3).map((kp) => kp.title);
+
+      // Collect and merge code content
+      let codeContent = "";
+      for (const chunkId of sit.codeChunkIds) {
+        const chunk = chunkById.get(chunkId);
+        if (!chunk) continue;
+        if (
+          codeContent.length + chunk.content.length + 1 >
+          CODE_SNIPPET_MAX_CHARS
+        ) {
+          codeContent += "\n...";
+          break;
+        }
+        codeContent += (codeContent ? "\n" : "") + chunk.content;
+      }
+
+      entries.push({
+        situationNodeId: sit.sitNodeId,
+        stepId: sit.stepId,
+        groupId: sit.groupId,
+        mastery: sit.score,
+        masteryLabel: masteryLabel(sit.score),
+        stepTitle: step.title,
+        stepAbstract: step.abstract,
+        prerequisiteKnowledge: prereqTitles,
+        codeSnippet: codeContent,
+      });
+    }
+  }
+
+  // Fallback: if no situation nodes, use step-level mastery
+  if (entries.length === 0 && steps.length > 0) {
+    const stepScores = steps.map((step) => ({
+      stepId: step.id,
+      score: getScore(scoreLookup, step.id, "step"),
+    }));
+
+    stepScores.sort((a, b) => b.score - a.score);
+
+    const topHighSteps = stepScores
+      .filter((s) => s.score >= 0.5)
+      .slice(0, topK);
+    const topLowSteps = stepScores
+      .filter((s) => s.score < 0.3)
+      .sort((a, b) => a.score - b.score)
+      .slice(0, topK);
+
+    const selectedSteps = [...topHighSteps, ...topLowSteps];
+    const selectedStepIds = new Set<string>();
+
+    for (const ss of selectedSteps) {
+      if (selectedStepIds.has(ss.stepId)) continue;
+      selectedStepIds.add(ss.stepId);
+
+      const step = stepById.get(ss.stepId);
+      if (!step) continue;
+
+      const relatedKPs = knowledgeByStepId.get(ss.stepId) || [];
+      const prereqTitles = relatedKPs.slice(0, 3).map((kp) => kp.title);
+
+      entries.push({
+        situationNodeId: ss.stepId, // use stepId as fallback identifier
+        stepId: ss.stepId,
+        groupId: "",
+        mastery: ss.score,
+        masteryLabel: masteryLabel(ss.score),
+        stepTitle: step.title,
+        stepAbstract: step.abstract,
+        prerequisiteKnowledge: prereqTitles,
+        codeSnippet: "",
+      });
+    }
+  }
+
+  if (entries.length === 0) return "";
+
+  // Format into two sections
+  const mastered = entries.filter((e) => e.mastery >= 0.5);
+  const unmastered = entries.filter((e) => e.mastery < 0.3);
+  const partial = entries.filter((e) => e.mastery >= 0.3 && e.mastery < 0.5);
+
+  const formatEntry = (e: SituationMasteryEntry): string => {
+    const lines: string[] = [];
+    lines.push(`- 步骤「${e.stepTitle}」(掌握度: ${e.masteryLabel})`);
+    lines.push(`  描述: ${e.stepAbstract}`);
+    if (e.prerequisiteKnowledge.length > 0) {
+      lines.push(`  前置知识: ${e.prerequisiteKnowledge.join("、")}`);
+    }
+    if (e.codeSnippet) {
+      const preview =
+        e.codeSnippet.length > 200
+          ? e.codeSnippet.substring(0, 200) + "..."
+          : e.codeSnippet;
+      lines.push(`  相关代码: ${preview}`);
+    }
+    return lines.join("\n");
+  };
+
+  const sections: string[] = [];
+
+  if (mastered.length > 0) {
+    sections.push("【已掌握的知识】\n" + mastered.map(formatEntry).join("\n"));
+  }
+  if (partial.length > 0) {
+    sections.push("【初步接触的知识】\n" + partial.map(formatEntry).join("\n"));
+  }
+  if (unmastered.length > 0) {
+    sections.push(
+      "【尚未掌握的知识】\n" + unmastered.map(formatEntry).join("\n"),
+    );
+  }
+
+  return sections.join("\n\n");
 }

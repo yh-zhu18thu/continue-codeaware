@@ -62,7 +62,10 @@ import {
 } from "../slices/configSlice";
 import { ThunkApiType } from "../store";
 import { generateCognitiveKnowledgeCards } from "./generateCognitiveKnowledgeCards";
-import { buildMasteredRelatedContext } from "./masteryNodeUtils";
+import {
+  buildMasteredRelatedContext,
+  buildSituationMasteryContext,
+} from "./masteryNodeUtils";
 
 // 辅助函数：检查并更新高级步骤的完成状态
 // TODO: 重新实现此函数以适配新的映射机制
@@ -3713,12 +3716,32 @@ export const respondToGlobalQA = createAsyncThunk<
       abstract: step.abstract,
     }));
 
+    // Build situation-based mastery context
+    const situationMasteryContext = buildSituationMasteryContext({
+      nodeMasteryScores: state.codeAwareSession.nodeMasteryScores,
+      codeAwareMappings: state.codeAwareSession.codeAwareMappings,
+      codeChunks: state.codeAwareSession.codeChunks,
+      steps,
+      knowledgePoints: state.codeAwareSession.knowledgePoints,
+      knowledgeToStepRelations: state.codeAwareSession.knowledgeToStepRelations,
+    });
+
+    if (situationMasteryContext) {
+      console.log(
+        "[CA:CodeGen] Global QA: injecting situation mastery context",
+        situationMasteryContext.substring(0, 300) +
+          (situationMasteryContext.length > 300 ? "..." : ""),
+      );
+    }
+
     const prompt = constructGlobalQAResponsePrompt(
       conversationHistory,
       allStepsInfo,
       currentCode,
       taskDescription,
       learningGoal,
+      undefined, // masteredRelatedContext — not used at global QA level
+      situationMasteryContext || undefined,
     );
 
     const maxRetries = 3;
@@ -3851,11 +3874,30 @@ export const convertQAToKnowledgeCard = createAsyncThunk<
       });
     });
 
+    // Build situation-based mastery context for card conversion
+    const situationMasteryContext = buildSituationMasteryContext({
+      nodeMasteryScores: state.codeAwareSession.nodeMasteryScores,
+      codeAwareMappings: state.codeAwareSession.codeAwareMappings,
+      codeChunks: state.codeAwareSession.codeChunks,
+      steps,
+      knowledgePoints: state.codeAwareSession.knowledgePoints,
+      knowledgeToStepRelations: state.codeAwareSession.knowledgeToStepRelations,
+    });
+
+    if (situationMasteryContext) {
+      console.log(
+        "[CA:CodeGen] QA to Card: injecting situation mastery context",
+        situationMasteryContext.substring(0, 300) +
+          (situationMasteryContext.length > 300 ? "..." : ""),
+      );
+    }
+
     const prompt = constructQAToKnowledgeCardPrompt(
       conversationHistory,
       allStepsInfo,
       existingNodes,
       taskDescription,
+      situationMasteryContext || undefined,
     );
 
     const maxRetries = 3;

@@ -10,7 +10,7 @@ export interface ActionToastAction {
 export interface ActionToastProps {
   message: string;
   actions: ActionToastAction[];
-  duration?: number; // ms, default 5000
+  duration?: number; // ms, default 3000
   onDismiss: () => void;
 }
 
@@ -27,22 +27,50 @@ const slideOut = keyframes`
 const Wrapper = styled.div<{ $leaving: boolean }>`
   position: fixed;
   bottom: 16px;
-  left: 50%;
-  transform: translateX(-50%);
+  left: 8px;
+  right: 8px;
   z-index: 1100;
+  display: flex;
+  justify-content: center;
   animation: ${(p) => (p.$leaving ? slideOut : slideIn)} 220ms ease forwards;
 `;
 
 const Card = styled.div`
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 10px 14px;
+  gap: 8px;
+  padding: 8px 12px;
+  padding-left: 24px;
   background: var(--vscode-editorWidget-background);
   border: 1px solid var(--vscode-editorWidget-border);
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
-  white-space: nowrap;
+  flex-wrap: wrap;
+  max-width: 100%;
+`;
+
+const CloseBtn = styled.button`
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--vscode-descriptionForeground);
+  font-size: 11px;
+  line-height: 16px;
+  text-align: center;
+  cursor: pointer;
+  border-radius: 3px;
+  opacity: 0.7;
+
+  &:hover {
+    opacity: 1;
+    background: var(--vscode-toolbar-hoverBackground);
+  }
 `;
 
 const Message = styled.span`
@@ -76,7 +104,7 @@ const Btn = styled.button<{ $primary?: boolean }>`
 const ActionToast: React.FC<ActionToastProps> = ({
   message,
   actions,
-  duration = 5000,
+  duration = 3000,
   onDismiss,
 }) => {
   const [leaving, setLeaving] = useState(false);
@@ -116,6 +144,9 @@ const ActionToast: React.FC<ActionToastProps> = ({
       onMouseLeave={handleMouseLeave}
     >
       <Card>
+        <CloseBtn onClick={dismiss} title="关闭">
+          ×
+        </CloseBtn>
         <Message>{message}</Message>
         {actions.map((a, i) => (
           <Btn

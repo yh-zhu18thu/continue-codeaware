@@ -87,29 +87,29 @@ steps:
 
 ## ⚠️ abstract 撰写规范（严格遵守）
 
-每个 step 的 abstract 需要**通俗、生动、可读**，长度在 **80-150字** 之间，使用 Markdown 格式。
+每个 step 的 abstract 需要**通俗、生动、可读**，长度**严格控制在 3-4 句话之内（60-100字）**，使用 Markdown 格式。
 
-### 核心原则：写给非程序员看
+### 核心原则：写给非程序员看，越短越好
 
-读者是完全没有编程基础的初学者。abstract 的目标是让他们**快速理解这一步在做什么、为什么重要、做完后会有什么效果**。
+读者是完全没有编程基础的初学者。abstract 的目标是让他们**用最少的文字快速理解这一步在做什么、为什么重要**。
 
 1. **用大白话说清楚这一步干什么**：像跟朋友聊天一样，用日常类比把这步要做的事讲明白。比如"给每个像素打分，看它有多重要"比"计算梯度能量值"更易理解。
-2. **点明为什么要这一步**：一两句话说清楚缺了这步的后果，或者这步对整体目标的作用。不需要面面俱到，点到即止。
-3. **自然流畅**：不要分条罗列，不要使用"本步骤"、"对整体项目的贡献"这类书面腔。就像在口头给朋友解释一样自然地写。
+2. **点明为什么要这一步**：一句话说清楚这步的作用或做完后的效果。点到即止，不要展开。
+3. **自然流畅，严控篇幅**：不要分条罗列，不要使用"本步骤"、"对整体项目的贡献"这类书面腔。就像在口头给朋友用3句话解释一样自然地写。超过4句话就是太长了。
 
-### ❌ 不好的 abstract（教条、结构化）
+### ❌ 不好的 abstract（太长、教条）
 
 "本步骤计算图像中每个像素的梯度能量值。在图像能量分析功能域中，本步骤为后续构建能量图矩阵提供基础。对整个项目而言，像素能量计算是判断哪些区域可安全移除的起点。"
-→ 问题：读起来像教科书，初学者看到"梯度能量值"就会困惑。
+→ 问题：读起来像教科书，初学者看到"梯度能量值"就会困惑，而且啰嗦。
 
-### ✅ 好的 abstract（口语化、有类比）
+### ✅ 好的 abstract（口语化、3句话搞定）
 
-"给图片中的每个像素'打分'，衡量它对画面有多重要——就像判断拼图里哪块最不起眼。具体来说，比较每个像素和它邻居的颜色差异：差异越大（比如轮廓边缘），说明越重要，越不适合被删除。有了这些分数，后面才能知道该从哪里下手缩小图片。"
+"给图片中每个像素'打分'，看它对画面有多重要——就像判断拼图里哪块最不起眼。比较每个像素和邻居的颜色差异，差异越大说明越重要。有了这些分数，后面才能知道从哪里下手缩小图片。"
 
 ### 额外提示
 
 - 可以在关键术语首次出现时用加粗+通俗解释，比如 **梯度能量（也就是像素的"重要程度评分"）**
-- 允许用 \n\n 分段让内容更清晰
+- **严禁超过4句话**。如果你发现写了5句以上，请删减合并到3-4句
 - 避免让 abstract 读起来像三条互不相关的条目
 
 ## 数量指引
@@ -131,7 +131,7 @@ steps:
   "steps": [
     {
       "title": "<具体子目标，动词开头，5-15字>",
-      "abstract": "<通俗的步骤描述，Markdown格式，80-150字。用大白话讲清楚这步干什么、为什么需要它、做完后有什么效果，像在跟没有编程基础的朋友聊天一样自然>",
+      "abstract": "<通俗的步骤描述，Markdown格式，严格3-4句话（60-100字）。用大白话讲清楚这步干什么和为什么重要，像跟没编程基础的朋友用3句话解释一样>",
       "task_corresponding_high_level_task": <对应的高级步骤序号，1-based>
     },
     ...
@@ -154,7 +154,7 @@ steps:
 1. 每个 high_level_step 下面是否有 ≥2 个 steps？如果不是，调整后再输出。
 2. high_level_step 和对应 steps 的标题放在一起读，是否粒度有明显区别？如果读起来像同义改写，调整后再输出。
 3. high_level_step 是否都是名词短语（无动词开头）？steps 是否都以动词开头？
-4. 每个 step 的 abstract 是否在 80-150 字之间？是否用大白话写清楚了这步做什么、为什么重要？如果读起来像教科书或太结构化，改口语化后再输出。
+4. 每个 step 的 abstract 是否在 3-4 句话之内（60-100字）？是否用大白话写清楚了这步做什么、为什么重要？如果超过4句话，必须删减合并后再输出。
 5. **完整性检查**：把所有 steps 串起来读一遍，是否覆盖了实现该项目的全部语义步骤？有没有遗漏"输入处理""输出展示""边界条件""用户交互"等方面？如果有遗漏，补充后再输出。
 
 现在请开始分解任务。`;
@@ -656,8 +656,10 @@ export function constructGenerateKnowledgeCardDetailPrompt(
             "Use adaptive scaffolding style: internally choose one of hinting/explaining/instructing/modeling, but DO NOT output the chosen type.",
             "Focus on one specific confusion point only. Do not expand to downstream topics or unrelated concepts.",
             "STRICT: Only reference knowledge the user has already mastered (from mastered_related_context). Do NOT introduce new concepts, code snippets, syntax, or technical terms that the user has not encountered yet. If no mastered_related_context is provided, explain purely in plain language without any code.",
+            "STRICT LENGTH: Content MUST be exactly 3-4 sentences. No more. Every word must earn its place. If you find yourself writing a 5th sentence, merge or delete.",
+            "UNMASTERED CONTENT CONTROL: For concepts the user has NOT yet mastered, mention AT MOST the single most relevant one, and only briefly. Do NOT list or explain multiple unmastered concepts. Mastered concepts can be referenced more freely as anchors, but still keep it concise.",
             "Title must be a SHORT QUESTION (ending with '?' in Chinese or English) that helps a non-programmer quickly judge whether they need this card. Avoid obscure jargon. Example: '为什么用循环能省掉重复劳动？' instead of '循环结构'.",
-            "Content must be 3-4 sentences, informative yet accessible.",
+            "Content must be 3-4 sentences, informative yet accessible. Prioritize brevity for non-programmer readability.",
             "Sentence 1: TLDR in plain language. Sentences 2-3: explanation that connects to the user's existing knowledge (from mastered_related_context if available) and ties to project_context. Last sentence: a practical takeaway or next-step hint.",
             ${masteredRequirements.join(",\n            ")}
             "Use simple words and life-like analogies when helpful.",
@@ -1162,6 +1164,17 @@ export function constructGlobalQAResponsePrompt(
   learningGoal: string,
   masteredRelatedContext?: string,
   situationMasteryContext?: string,
+  focusContext?: {
+    level: "knowledge-card" | "step" | "global";
+    /** For KC level: card title */
+    cardTitle?: string;
+    /** For KC level: card content */
+    cardContent?: string;
+    /** For step level: step title */
+    stepTitle?: string;
+    /** For step level: step abstract */
+    stepAbstract?: string;
+  },
 ): string {
   const historyText = conversationHistory
     .map(
@@ -1172,6 +1185,23 @@ export function constructGlobalQAResponsePrompt(
   const stepsText = (Array.isArray(allSteps) ? allSteps : [])
     .map((s) => `- ${s.title}: ${s.abstract}`)
     .join("\n");
+
+  // Build focus-context field for KC / step level
+  let focusField = "";
+  let focusReqs: string[] = [];
+  if (focusContext?.level === "knowledge-card" && focusContext.cardTitle) {
+    focusField = `\n    "focus_scope": "knowledge-card",\n    "card_title": ${JSON.stringify(focusContext.cardTitle)},\n    "card_content": ${JSON.stringify(focusContext.cardContent || "")},`;
+    focusReqs = [
+      `"CRITICAL SCOPE CONSTRAINT: The user is asking about a SPECIFIC knowledge card titled '${focusContext.cardTitle}'. Your response MUST directly address the content of this card. Do NOT answer from the overall project perspective — stay focused on the card's topic and content."`,
+      `"Ground your answer in the card_content provided. Explain, clarify, or rephrase what the card says. Use project context only as supporting background, not as the main topic."`,
+    ];
+  } else if (focusContext?.level === "step" && focusContext.stepTitle) {
+    focusField = `\n    "focus_scope": "step",\n    "focus_step_title": ${JSON.stringify(focusContext.stepTitle)},\n    "focus_step_description": ${JSON.stringify(focusContext.stepAbstract || "")},`;
+    focusReqs = [
+      `"CRITICAL SCOPE CONSTRAINT: The user is asking about a SPECIFIC step titled '${focusContext.stepTitle}'. Your response MUST directly address this step's topic and purpose. You may reference broader project context to help explain, but always bring the answer back to this step."`,
+      `"Focus on what this step does, why it matters, and how it works. Do NOT drift into explaining other steps or the overall project unless it directly helps the user understand this step."`,
+    ];
+  }
 
   const masteredField = masteredRelatedContext
     ? `\n    "mastered_related_context": ${JSON.stringify(masteredRelatedContext)},`
@@ -1192,7 +1222,7 @@ export function constructGlobalQAResponsePrompt(
     ? [
         `"When learner_mastery_profile is provided, it contains items the user has mastered (已掌握) and items the user has NOT yet mastered (尚未掌握). Use this information ONLY when relevant to the current question — do NOT force unrelated knowledge into the response."`,
         `"For mastered items: if the current question relates to something the user already understands, reference that knowledge to build connections (e.g. 'You already know about X — Y works similarly but …'). This helps the user anchor new learning to existing knowledge."`,
-        `"For unmastered items: if the current question touches on something the user hasn't learned yet, briefly mention it may be worth exploring later, but do NOT derail the answer with unrelated topics."`,
+        `"For unmastered items: pick ONLY the single most relevant unmastered item if it directly relates to the question. Mention it in one short clause at most. Do NOT list or explain multiple unmastered items — the response must stay within 3-4 sentences total."`,
       ]
     : [];
 
@@ -1202,15 +1232,16 @@ export function constructGlobalQAResponsePrompt(
     "project_steps": ${JSON.stringify(stepsText)},
     "related_code": ${JSON.stringify(codeContext)},
     "project_context": ${JSON.stringify(taskDescription)},
-    "learning_objectives": ${JSON.stringify(learningGoal)},${masteredField}${situationField}
+    "learning_objectives": ${JSON.stringify(learningGoal)},${focusField}${masteredField}${situationField}
     "requirements": [
         "Treat the user as a beginning learner: use plain language as the baseline, but do not shy away from terms the user has already encountered (see mastered_related_context if provided).",
         "Use adaptive scaffolding style: internally choose one of hinting/explaining/instructing/modeling, but DO NOT output the chosen type.",
         "Directly answer the user's latest question in the conversation. Do not repeat previous answers.",
         "If the user says they still don't understand, try a different approach: use an analogy, give a concrete example, or simplify further.",
-        "Response must be 4-6 sentences, informative yet accessible.",
-        "Sentence 1: TLDR in plain language. Sentences 2-4: explanation that connects to the user's existing knowledge (from mastered_related_context if available) and ties to project context and code. Remaining sentences: a practical takeaway, next-step hint, or clarifying example.",
-        ${[...masteredReqs, ...situationReqs].join(",\n        ")}
+        "STRICT LENGTH: Response MUST be 3-4 sentences. No more. Be concise and direct. Every sentence must carry key information.",
+        "UNMASTERED CONTENT CONTROL: For concepts the user has NOT yet mastered (from learner_mastery_profile), mention AT MOST the single most relevant unmastered point, and only briefly. Do NOT enumerate or explain multiple unmastered concepts. Mastered concepts can be referenced freely as anchors, but still keep the total response to 3-4 sentences.",
+        "Sentence 1: TLDR in plain language. Sentences 2-3: explanation that connects to the user's existing knowledge (from mastered_related_context if available) and ties to project context and code. Last sentence: a practical takeaway or next-step hint.",
+        ${[...focusReqs, ...masteredReqs, ...situationReqs].join(",\n        ")}
         "Use simple words and life-like analogies when helpful.",
         "Do not dump full code explanations. Only mention the most relevant code behavior if needed.",
         "Respond in the same language as the user's question. You may use Markdown for readability.",
@@ -1259,7 +1290,7 @@ export function constructQAToKnowledgeCardPrompt(
 
   const situationReqs = situationMasteryContext
     ? [
-        `"When learner_mastery_profile is provided, consider the user's current mastery state when generating the knowledge card content. Prioritize linking to concepts the user has already mastered to strengthen memory connections. If the conversation topic relates to unmastered knowledge, the card content should gently bridge from known to unknown."`,
+        `"When learner_mastery_profile is provided, consider the user's current mastery state when generating the knowledge card content. Prioritize linking to concepts the user has already mastered to strengthen memory connections. For unmastered concepts, mention AT MOST the single most relevant one briefly — do NOT pack multiple unmastered items into the 2-3 sentence content."`,
       ]
     : [];
 
@@ -1285,8 +1316,9 @@ export function constructQAToKnowledgeCardPrompt(
         "Identify a specific theme within that category (e.g., for background-knowledge: 'Python list comprehension syntax').",
         "From the existing_knowledge_nodes list, find ALL nodes that are related to this conversation. The card can link to multiple nodes across different types.",
         "Select the step (from all_steps) that is most relevant to the conversation topic.",
-        "Generate a concise knowledge card title that is phrased as a SHORT QUESTION (ending with '?'), 6-18 words, in plain language that helps a non-programmer quickly judge whether they need this card. Example: '为什么用循环能省掉重复劳动？' instead of '循环结构'. Also generate content (2-3 sentences in Markdown, using adaptive scaffolding style).",
-        "The content should synthesize the key insight from the conversation, not just repeat the last answer.",
+        "Generate a concise knowledge card title that is phrased as a SHORT QUESTION (ending with '?'), 6-18 words, in plain language that helps a non-programmer quickly judge whether they need this card. Example: '为什么用循环能省掉重复劳动？' instead of '循环结构'. Also generate content (STRICTLY 2-3 sentences in Markdown, using adaptive scaffolding style).",
+        "The content should synthesize the key insight from the conversation in 2-3 sentences only, not just repeat the last answer. Keep it short for non-programmer readability.",
+        "UNMASTERED CONTENT CONTROL: If the conversation touches on concepts the user hasn't mastered yet, mention AT MOST the single most relevant one briefly. Do NOT pack multiple unmastered concepts into the card content.",
         ${situationReqs.length > 0 ? situationReqs.join(",\n        ") + ",\n        " : ""}"Respond in the same language as the conversation.",
         "You must follow this JSON format: {\\"selected_step_id\\": \\"(step id)\\", \\"node_category\\": \\"(background-knowledge|step|code-chunk|situation)\\", \\"theme\\": \\"(identified theme)\\", \\"linkedMasteryNodes\\": [{\\"nodeId\\": \\"(id)\\", \\"nodeType\\": \\"(type)\\"}], \\"linkedKnowledgeNodeIds\\": [\\"(knowledge node id 1)\\", ...], \\"title\\": \\"(card title)\\", \\"content\\": \\"(card content in Markdown)\\"}",
         "IMPORTANT: linkedMasteryNodes and linkedKnowledgeNodeIds MUST reference nodeIds from the existing_knowledge_nodes list. Do not invent new IDs.",
@@ -1464,8 +1496,8 @@ ${stepsWithIds}
 
 ### 文段风格
 1. **先用大白话讲核心思路**：用 1-2 句话说清楚这个项目要解决什么问题、用的是什么思路。你的读者是完全没有编程基础的人，所以如果涉及专业概念（如"动态规划""梯度"等），必须紧跟一句通俗的解释让他们能理解（比如"动态规划——一种把大问题拆成小问题、逐步找最优解的方法"）。可以用一个贴切的日常类比辅助理解，但类比只是辅助，核心是把原理本身讲明白。
-2. **再串联各功能域**：在核心思路的基础上，依次引出每个功能域，用一两句话说清楚它具体在做什么事（用直白的语言让 non-programmer 能理解）。不需要显式告诉学习者"你会学到什么"，把事情本身讲清楚就够了。用因果或递进关系自然过渡，不要用"首先…接着…然后…最后…"这类机械连接词。
-3. **清晰且友好**：总长度控制在 100-200 字左右。语气像一位耐心的老师在给零基础学生讲解——温和、清楚、不居高临下。不要通篇都在打比方，但在专业概念首次出现时可以用一个短小的类比帮助理解。
+2. **再串联各功能域**：在核心思路的基础上，依次引出每个功能域，**每个功能域只用一句话**说清楚它在做什么。用因果或递进关系自然过渡，不要用"首先…接着…然后…最后…"这类机械连接词。
+3. **清晰且友好，严控篇幅**：总长度控制在 **80-150 字**。语气像一位耐心的老师在给零基础学生讲解——温和、清楚、不居高临下。每个功能域的描述点到为止，不要展开细节。
 4. **第二人称**：使用"你"来称呼学习者。
 
 ### ❌ 不好的写法

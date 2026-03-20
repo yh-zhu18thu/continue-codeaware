@@ -387,9 +387,10 @@ const StyledMarkdownPreview = memo(function StyledMarkdownPreview(
 
   return (
     <StyledMarkdown
+      className="wmde-markdown"
       fontSize={getFontSize()}
       whiteSpace={codeWrapState}
-      bgColor={props.useParentBackgroundColor ? "" : vscBackground}
+      bgColor={props.useParentBackgroundColor ? "transparent" : vscBackground}
     >
       {reactContent}
     </StyledMarkdown>

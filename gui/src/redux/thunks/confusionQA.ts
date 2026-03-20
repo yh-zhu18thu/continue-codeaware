@@ -53,21 +53,6 @@ export const respondToConfusionQA = createAsyncThunk<
       { role: "user" as const, content: question },
     ];
 
-    // Add contextual prefix for KC-level to guide the LLM
-    if (context.level === "knowledge-card" && context.currentContent) {
-      const contextMsg = `[Context: The user is asking about knowledge card content. Current card content:\n${context.currentContent.substring(0, 500)}${context.currentContent.length > 500 ? "..." : ""}]`;
-      // Prepend system context as first message if not already present
-      if (
-        fullHistory.length <= 2 &&
-        !fullHistory[0]?.content?.startsWith("[Context:")
-      ) {
-        fullHistory.unshift({
-          role: "user" as const,
-          content: contextMsg,
-        });
-      }
-    }
-
     const allStepsInfo = steps.map((step) => ({
       id: step.id,
       title: step.title,
@@ -105,6 +90,40 @@ export const respondToConfusionQA = createAsyncThunk<
     }
     // Global level: no mastered context
 
+    // Build focus context for level-specific prompting
+    let focusContext:
+      | {
+          level: "knowledge-card" | "step" | "global";
+          cardTitle?: string;
+          cardContent?: string;
+          stepTitle?: string;
+          stepAbstract?: string;
+        }
+      | undefined;
+
+    if (
+      context.level === "knowledge-card" &&
+      context.stepId &&
+      context.cardId
+    ) {
+      const step = steps.find((s) => s.id === context.stepId);
+      const card = step?.knowledgeCards.find((k) => k.id === context.cardId);
+      focusContext = {
+        level: "knowledge-card",
+        cardTitle: card?.title || "",
+        cardContent: context.currentContent || card?.content || "",
+        stepTitle: step?.title,
+        stepAbstract: step?.abstract,
+      };
+    } else if (context.level === "step" && context.stepId) {
+      const step = steps.find((s) => s.id === context.stepId);
+      focusContext = {
+        level: "step",
+        stepTitle: step?.title || "",
+        stepAbstract: step?.abstract || "",
+      };
+    }
+
     const prompt = constructGlobalQAResponsePrompt(
       fullHistory,
       allStepsInfo,
@@ -112,6 +131,8 @@ export const respondToConfusionQA = createAsyncThunk<
       context.taskDescription,
       context.learningGoal,
       masteredRelatedContext || undefined,
+      undefined,
+      focusContext,
     );
 
     const maxRetries = 3;

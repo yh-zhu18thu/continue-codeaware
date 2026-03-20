@@ -107,6 +107,8 @@ function buildGenerationPrompt(args: {
     "3. Keep linkedMasteryNodes and linkedKnowledgeNodeIds aligned with the plan and avoid introducing unknown node IDs.",
     "4. assumedMasteredNodeIds can include multiple nodes and can be empty when uncertain.",
     "5. Question wording should clearly connect to the knowledge point's role in this step.",
+    "6. STRICT: The question field must be concise (1-2 sentences). It should be understandable by a non-programmer. Do NOT pack multiple concepts into one question.",
+    "7. UNMASTERED CONTENT: Each card targets exactly ONE unmastered point. Do NOT mention or hint at other unmastered concepts. Mastered concepts may be referenced as anchors but keep it brief.",
   ].join("\n");
 }
 

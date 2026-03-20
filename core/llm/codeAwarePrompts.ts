@@ -1579,3 +1579,95 @@ ${knowledgePointsList}
 
 现在请生成知识卡片。`;
 }
+
+/**
+ * 构造"孤儿代码行归属"提示词。
+ *
+ * 在 step→code 映射主循环结束后，部分代码行未被任何步骤认领（import、样板、
+ * 配置、注释等）。此 prompt 将这些孤儿行分组，连同紧邻的已映射行上下文，
+ * 让 LLM 在单次调用中为每个孤儿块指定步骤归属。
+ */
+export function constructOrphanCodeAssignmentPrompt(
+  steps: Array<{ id: string; title: string }>,
+  orphanBlocks: Array<{
+    blockIndex: number;
+    lines: Array<{ lineNo: number; content: string }>;
+    aboveContext: Array<{
+      lineNo: number;
+      content: string;
+      stepId: string;
+    }>;
+    belowContext: Array<{
+      lineNo: number;
+      content: string;
+      stepId: string;
+    }>;
+  }>,
+): string {
+  const stepsText = steps.map((s) => `- ${s.id}: ${s.title}`).join("\n");
+
+  const blocksText = orphanBlocks
+    .map((block) => {
+      const startLine = block.lines[0]?.lineNo ?? "?";
+      const endLine = block.lines[block.lines.length - 1]?.lineNo ?? "?";
+
+      const aboveText =
+        block.aboveContext.length > 0
+          ? block.aboveContext
+              .map(
+                (ctx) =>
+                  `  行 ${ctx.lineNo}: ${ctx.content}  → 步骤 ${ctx.stepId}`,
+              )
+              .join("\n")
+          : "  （文件开头，无上方已映射代码）";
+
+      const belowText =
+        block.belowContext.length > 0
+          ? block.belowContext
+              .map(
+                (ctx) =>
+                  `  行 ${ctx.lineNo}: ${ctx.content}  → 步骤 ${ctx.stepId}`,
+              )
+              .join("\n")
+          : "  （文件末尾，无下方已映射代码）";
+
+      const orphanLines = block.lines
+        .map((l) => `  ${l.lineNo}: ${l.content}`)
+        .join("\n");
+
+      return `### 块 ${block.blockIndex} (行 ${startLine}-${endLine})
+上方已映射代码:
+${aboveText}
+---
+${orphanLines}
+---
+下方已映射代码:
+${belowText}`;
+    })
+    .join("\n\n");
+
+  return `你是代码映射助手。以下代码行在"步骤→代码"映射中未被任何步骤认领。
+请为每个未映射代码块指定最合适的步骤归属。
+
+## 所有步骤
+
+${stepsText}
+
+## 未映射代码块
+
+${blocksText}
+
+## 归属规则
+
+1. 每个块必须归属一个步骤。
+2. 优先选择与紧邻已映射代码相同的步骤（上下一致时直接选择）。
+3. 上下步骤不同时，根据代码内容的语义相关性判断更合适的步骤。
+4. 对 import/样板/配置等通用代码，选择最先使用它的步骤。
+
+返回严格 JSON：
+{
+  "assignments": [
+    { "block_index": 0, "step_id": "s-1", "confidence": 0.85 }
+  ]
+}`;
+}

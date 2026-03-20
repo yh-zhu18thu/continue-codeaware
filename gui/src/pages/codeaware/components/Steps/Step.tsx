@@ -167,6 +167,7 @@ interface StepProps {
   onStepConfusion?: (stepId: string) => void; // Confusion button handler (opens panel & generates candidates)
   onStepConfusionAsk?: (stepId: string, question: string) => Promise<string>; // Ask question in confusion panel
   onStepConfusionEnd?: (stepId: string, messages: ConfusionMessage[]) => void; // End confusion Q&A
+  onStepPendingLearn?: (stepId: string, messages: ConfusionMessage[]) => void; // Pending learn from confusion Q&A
   stepConfusionCandidates?: ConfusionCandidate[]; // Mastery-based candidates
   stepConfusionCandidatesLoading?: boolean; // Whether candidates are loading
   onStepPin?: (stepId: string) => void; // Pin handler
@@ -221,6 +222,7 @@ const Step: React.FC<StepProps> = ({
   onStepConfusion,
   onStepConfusionAsk,
   onStepConfusionEnd,
+  onStepPendingLearn,
   stepConfusionCandidates = [],
   stepConfusionCandidatesLoading = false,
   onStepPin,
@@ -641,7 +643,7 @@ const Step: React.FC<StepProps> = ({
         )}
 
         {/* Confusion Panel - replaces old ConfusionButton */}
-        {knowledgeCardGenerationStatus !== "generating" && isExpanded && (
+        {knowledgeCardGenerationStatus !== "generating" && (
           <ConfusionButtonContainer>
             {isStepConfusionOpen ? (
               <ConfusionPanel
@@ -660,6 +662,16 @@ const Step: React.FC<StepProps> = ({
                   }
                   setIsStepConfusionOpen(false);
                 }}
+                onPendingLearn={
+                  onStepPendingLearn
+                    ? (msgs) => {
+                        if (stepId) {
+                          onStepPendingLearn(stepId, msgs);
+                        }
+                        setIsStepConfusionOpen(false);
+                      }
+                    : undefined
+                }
                 onClose={() => setIsStepConfusionOpen(false)}
               />
             ) : (

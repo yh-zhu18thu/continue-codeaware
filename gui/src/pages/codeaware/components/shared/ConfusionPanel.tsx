@@ -1,7 +1,7 @@
 import {
+  BookmarkIcon,
   ChatBubbleLeftIcon,
   CheckCircleIcon,
-  QuestionMarkCircleIcon,
 } from "@heroicons/react/24/outline";
 import { PaperAirplaneIcon } from "@heroicons/react/24/solid";
 import React, { useCallback, useEffect, useRef, useState } from "react";
@@ -39,6 +39,8 @@ export interface ConfusionPanelProps {
   onAsk: (question: string) => Promise<string>;
   /** Called when user confirms understanding ("我懂了"); receives full message history */
   onEnd: (messages: ConfusionMessage[]) => void;
+  /** Called when user marks as "待学" — creates card + pins to learn-later list */
+  onPendingLearn?: (messages: ConfusionMessage[]) => void;
   /** Called when panel is closed without ending (optional) */
   onClose?: () => void;
 }
@@ -343,6 +345,7 @@ const ConfusionPanel: React.FC<ConfusionPanelProps> = ({
   candidatesLoading = false,
   onAsk,
   onEnd,
+  onPendingLearn,
   onClose,
 }) => {
   const [messages, setMessages] = useState<ConfusionMessage[]>([]);
@@ -421,9 +424,13 @@ const ConfusionPanel: React.FC<ConfusionPanelProps> = ({
     setTimeout(() => inputRef.current?.focus(), 50);
   }, []);
 
-  const handleStillConfused = useCallback(() => {
-    void doAsk("我还是不太理解，能换一种方式解释吗？");
-  }, [doAsk]);
+  const handlePendingLearn = useCallback(() => {
+    if (onPendingLearn) {
+      onPendingLearn(messages);
+      setMessages([]);
+      setQuestion("");
+    }
+  }, [onPendingLearn, messages]);
 
   const handleEnd = useCallback(() => {
     onEnd(messages);
@@ -501,13 +508,15 @@ const ConfusionPanel: React.FC<ConfusionPanelProps> = ({
                       <ChatBubbleLeftIcon />
                       继续追问
                     </ActionBtn>
-                    <ActionBtn
-                      onClick={handleStillConfused}
-                      disabled={isLoading}
-                    >
-                      <QuestionMarkCircleIcon />
-                      还不懂
-                    </ActionBtn>
+                    {onPendingLearn && (
+                      <ActionBtn
+                        onClick={handlePendingLearn}
+                        disabled={isLoading}
+                      >
+                        <BookmarkIcon />
+                        待学
+                      </ActionBtn>
+                    )}
                     <ActionBtn $variant="primary" onClick={handleEnd}>
                       <CheckCircleIcon />
                       我懂了

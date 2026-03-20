@@ -250,6 +250,7 @@ export interface KnowledgeCardProps {
   // Unified action callbacks
   onConfusionAsk?: (cardId: string, question: string) => Promise<string>;
   onConfusionEnd?: (cardId: string, messages: ConfusionMessage[]) => void;
+  onPendingLearn?: (cardId: string, messages: ConfusionMessage[]) => void;
   onSelfTest?: (cardId: string) => void;
   onPin?: (cardId: string) => void;
   isPinned?: boolean;
@@ -308,6 +309,7 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
   onFeedback,
   onConfusionAsk,
   onConfusionEnd,
+  onPendingLearn,
   onSelfTest,
   onPin,
   isPinned = false,
@@ -961,7 +963,7 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
           )}
 
         {/* Confusion panel at bottom of card */}
-        {isExpanded && markdownContent && markdownContent !== "::LOADING::" && (
+        {markdownContent && markdownContent !== "::LOADING::" && (
           <ConfusionFooter>
             <ConfusionPanel
               isOpen={isConfusionOpen}
@@ -978,6 +980,16 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
                 }
                 setIsConfusionOpen(false);
               }}
+              onPendingLearn={
+                onPendingLearn
+                  ? (msgs) => {
+                      if (cardId) {
+                        onPendingLearn(cardId, msgs);
+                      }
+                      setIsConfusionOpen(false);
+                    }
+                  : undefined
+              }
               onClose={() => setIsConfusionOpen(false)}
             />
             {!isConfusionOpen && (

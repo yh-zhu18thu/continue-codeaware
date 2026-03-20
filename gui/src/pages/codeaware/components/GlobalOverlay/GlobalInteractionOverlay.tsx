@@ -30,6 +30,8 @@ export interface GlobalInteractionOverlayProps {
   onConfusionAsk: (question: string) => Promise<string>;
   /** Confusion tab: called when user confirms understanding */
   onConfusionEnd: (messages: ConfusionMessage[]) => void;
+  /** Confusion tab: called when user marks as "待学" */
+  onPendingLearn?: (messages: ConfusionMessage[]) => void;
   /** Confusion tab: mastery-based candidates */
   confusionCandidates?: ConfusionCandidate[];
   confusionCandidatesLoading?: boolean;
@@ -467,6 +469,7 @@ export const GlobalInteractionOverlay: React.FC<
   onClose,
   onConfusionAsk,
   onConfusionEnd,
+  onPendingLearn,
   confusionCandidates = [],
   confusionCandidatesLoading = false,
   pinnedItems,
@@ -528,6 +531,7 @@ export const GlobalInteractionOverlay: React.FC<
               candidatesLoading={confusionCandidatesLoading}
               onAsk={onConfusionAsk}
               onEnd={onConfusionEnd}
+              onPendingLearn={onPendingLearn}
             />
           )}
 

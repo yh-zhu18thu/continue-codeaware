@@ -3138,6 +3138,108 @@ export const CodeAware = () => {
     [dispatch, logger, steps],
   );
 
+  // Handle global "待学" — like confusion end but with negative mastery signal + auto-pin
+  const handleGlobalPendingLearn = useCallback(
+    async (messages: ConfusionMessage[]) => {
+      setIsGlobalOverlayOpen(false);
+
+      if (messages.length === 0) return;
+
+      await logger.addLogEntry("user_global_pending_learn", {
+        messageCount: messages.length,
+        conversation: messages.map((m) => ({
+          role: m.role,
+          content:
+            m.content.length > 500
+              ? m.content.substring(0, 500) + "..."
+              : m.content,
+        })),
+      });
+
+      // Populate globalQASession for convertQAToKnowledgeCard
+      dispatch(startGlobalQASession());
+      for (const msg of messages) {
+        dispatch(
+          addGlobalQAMessage({
+            id: msg.id,
+            role: msg.role,
+            content: msg.content,
+            timestamp: msg.timestamp,
+          }),
+        );
+      }
+
+      try {
+        const result = await dispatch(convertQAToKnowledgeCard()).unwrap();
+        const { stepId, cardId } = result;
+
+        // Apply negative mastery signal to the NEW card's linked nodes
+        const freshState = latestCognitiveStateRef.current;
+        const targetStep = freshState.steps.find((s) => s.id === stepId);
+        const targetCard = targetStep?.knowledgeCards.find(
+          (k) => k.id === cardId,
+        );
+        const linkedMasteryNodes = targetCard?.linkedMasteryNodes || [
+          { nodeId: stepId, nodeType: "step" as const },
+        ];
+        const linkedKnowledgeNodeIds = targetCard?.linkedKnowledgeNodeIds || [];
+        const interaction: KnowledgeCardInteraction = {
+          type: "confusion",
+          value: "ask",
+        };
+        const masteryResult = applyKnowledgeCardInteraction({
+          linkedMasteryNodes,
+          linkedKnowledgeNodeIds,
+          interaction,
+          nodeMasteryScores: freshState.nodeMasteryScores,
+          cognitiveEdges: buildCodeAwareCognitiveEdges(freshState),
+        });
+        if (masteryResult.changedNodeIds.length > 0) {
+          dispatch(setNodeMasteryScores(masteryResult.updatedScores));
+          emitMasteryUpdateLogs({
+            interaction,
+            linkedMasteryNodes,
+            linkedKnowledgeNodeIds,
+            changedNodeIds: masteryResult.changedNodeIds,
+            debug: masteryResult.debug,
+            knowledgeNodeTitleById: latestKnowledgeNodeTitleByIdRef.current,
+          });
+        }
+
+        // Auto-pin the new card to 待学 list
+        dispatch(
+          addPinnedItem({
+            id: `pin-pending-${cardId}`,
+            level: "knowledge-card",
+            targetId: cardId,
+            title: targetCard?.title || "待学知识点",
+            stepId,
+            pinnedAt: Date.now(),
+          }),
+        );
+
+        setActiveToast({
+          key: Date.now(),
+          message: "知识卡片已添加到待学列表",
+          actions: [{ label: "知道了", onClick: () => {} }],
+        });
+      } catch (error) {
+        console.error(
+          "[CA:UI] Failed to convert global pending-learn to card:",
+          error,
+        );
+        setActiveToast({
+          key: Date.now(),
+          message: "问答转化为知识卡片失败",
+          actions: [{ label: "知道了", onClick: () => {} }],
+        });
+      } finally {
+        dispatch(clearGlobalQASession());
+      }
+    },
+    [dispatch, logger, steps, codeAwareSessionState],
+  );
+
   // Global overlay open/close
   const handleOpenGlobalOverlay = useCallback(
     (tab: OverlayTab) => {
@@ -3400,6 +3502,108 @@ export const CodeAware = () => {
       } catch (error) {
         console.error(
           "[CA:UI] Failed to convert step confusion to card:",
+          error,
+        );
+        setActiveToast({
+          key: Date.now(),
+          message: "问答转化为知识卡片失败",
+          actions: [{ label: "知道了", onClick: () => {} }],
+        });
+      } finally {
+        dispatch(clearGlobalQASession());
+      }
+    },
+    [dispatch, logger, steps, codeAwareSessionState],
+  );
+
+  // Step-level "待学" handler — negative mastery signal + create card + auto-pin
+  const handleStepPendingLearn = useCallback(
+    async (stepId: string, messages: ConfusionMessage[]) => {
+      await logger.addLogEntry("user_step_pending_learn", {
+        stepId,
+        stepTitle: steps.find((s) => s.id === stepId)?.title || stepId,
+        messageCount: messages.length,
+        conversation: messages.map((m) => ({
+          role: m.role,
+          content:
+            m.content.length > 500
+              ? m.content.substring(0, 500) + "..."
+              : m.content,
+        })),
+      });
+
+      if (messages.length === 0) return;
+
+      // Convert Q&A to knowledge card first
+      dispatch(startGlobalQASession());
+      for (const msg of messages) {
+        dispatch(
+          addGlobalQAMessage({
+            id: msg.id,
+            role: msg.role,
+            content: msg.content,
+            timestamp: msg.timestamp,
+          }),
+        );
+      }
+
+      try {
+        const result = await dispatch(convertQAToKnowledgeCard()).unwrap();
+        const { stepId: targetStepId, cardId } = result;
+
+        // Apply negative mastery signal to the NEW card's linked nodes
+        const freshState = latestCognitiveStateRef.current;
+        const targetStep = freshState.steps.find((s) => s.id === targetStepId);
+        const targetCard = targetStep?.knowledgeCards.find(
+          (k) => k.id === cardId,
+        );
+        const linkedMasteryNodes = targetCard?.linkedMasteryNodes || [
+          { nodeId: targetStepId, nodeType: "step" as const },
+        ];
+        const linkedKnowledgeNodeIds = targetCard?.linkedKnowledgeNodeIds || [];
+        const interaction: KnowledgeCardInteraction = {
+          type: "confusion",
+          value: "ask",
+        };
+        const masteryResult = applyKnowledgeCardInteraction({
+          linkedMasteryNodes,
+          linkedKnowledgeNodeIds,
+          interaction,
+          nodeMasteryScores: freshState.nodeMasteryScores,
+          cognitiveEdges: buildCodeAwareCognitiveEdges(freshState),
+        });
+        if (masteryResult.changedNodeIds.length > 0) {
+          dispatch(setNodeMasteryScores(masteryResult.updatedScores));
+          emitMasteryUpdateLogs({
+            interaction,
+            linkedMasteryNodes,
+            linkedKnowledgeNodeIds,
+            changedNodeIds: masteryResult.changedNodeIds,
+            debug: masteryResult.debug,
+            knowledgeNodeTitleById: latestKnowledgeNodeTitleByIdRef.current,
+          });
+        }
+
+        // Auto-pin the new card
+        dispatch(
+          addPinnedItem({
+            id: `pin-pending-${cardId}`,
+            level: "knowledge-card",
+            targetId: cardId,
+            title: targetCard?.title || "待学知识点",
+            stepId: targetStepId,
+            pinnedAt: Date.now(),
+          }),
+        );
+
+        setActiveToast({
+          key: Date.now(),
+          message: "知识卡片已添加到待学列表",
+          actions: [{ label: "知道了", onClick: () => {} }],
+        });
+      } catch (error) {
+        console.error(
+          "[CA:UI] Failed to convert step pending-learn to card:",
           error,
         );
         setActiveToast({
@@ -3685,6 +3889,98 @@ export const CodeAware = () => {
       }
     },
     [dispatch, steps, logger, codeAwareSessionState],
+  );
+
+  // Knowledge card level "待学" handler — negative mastery signal + append content + auto-pin
+  const handleKCPendingLearn = useCallback(
+    async (stepId: string, cardId: string, messages: ConfusionMessage[]) => {
+      const step = steps.find((s) => s.id === stepId);
+      const card = step?.knowledgeCards.find((k) => k.id === cardId);
+
+      await logger.addLogEntry("user_kc_pending_learn", {
+        stepId,
+        cardId,
+        cardTitle: card?.title || cardId,
+        messageCount: messages.length,
+        conversation: messages.map((m) => ({
+          role: m.role,
+          content:
+            m.content.length > 500
+              ? m.content.substring(0, 500) + "..."
+              : m.content,
+        })),
+      });
+
+      if (messages.length === 0) return;
+
+      // Apply negative mastery signal (confusion-ask)
+      if (card) {
+        const interaction: KnowledgeCardInteraction = {
+          type: "confusion",
+          value: "ask",
+        };
+        const linkedMasteryNodes = card.linkedMasteryNodes || [];
+        const linkedKnowledgeNodeIds = card.linkedKnowledgeNodeIds || [];
+        const result = applyKnowledgeCardInteraction({
+          linkedMasteryNodes,
+          linkedKnowledgeNodeIds,
+          interaction,
+          nodeMasteryScores: codeAwareSessionState.nodeMasteryScores,
+          cognitiveEdges: buildCodeAwareCognitiveEdges(codeAwareSessionState),
+        });
+        if (result.changedNodeIds.length > 0) {
+          dispatch(setNodeMasteryScores(result.updatedScores));
+          emitMasteryUpdateLogs({
+            interaction,
+            linkedMasteryNodes,
+            linkedKnowledgeNodeIds,
+            changedNodeIds: result.changedNodeIds,
+            debug: result.debug,
+            knowledgeNodeTitleById: latestKnowledgeNodeTitleByIdRef.current,
+          });
+        }
+      }
+
+      // Append Q&A content to the card
+      const qaSnippets = messages
+        .filter((m) => m.role === "assistant")
+        .map((m) => m.content)
+        .join("\n\n");
+
+      if (qaSnippets.trim()) {
+        dispatch(
+          appendKnowledgeCardContent({
+            stepId,
+            cardId,
+            additionalContent: `**补充说明**\n\n${qaSnippets}`,
+          }),
+        );
+      }
+
+      // Auto-pin the card if not already pinned
+      const alreadyPinned = pinnedItems.some(
+        (p) => p.level === "knowledge-card" && p.targetId === cardId,
+      );
+      if (!alreadyPinned) {
+        dispatch(
+          addPinnedItem({
+            id: `pin-pending-${cardId}`,
+            level: "knowledge-card",
+            targetId: cardId,
+            title: card?.title || "待学知识点",
+            stepId,
+            pinnedAt: Date.now(),
+          }),
+        );
+      }
+
+      setActiveToast({
+        key: Date.now(),
+        message: "已加入待学列表",
+        actions: [{ label: "知道了", onClick: () => {} }],
+      });
+    },
+    [dispatch, steps, logger, codeAwareSessionState, pinnedItems],
   );
 
   // Add webview listener for questions from code selection
@@ -4016,6 +4312,7 @@ export const CodeAware = () => {
                   onStepConfusion={handleStepConfusion}
                   onStepConfusionAsk={handleStepConfusionAsk}
                   onStepConfusionEnd={handleStepConfusionEnd}
+                  onStepPendingLearn={handleStepPendingLearn}
                   stepConfusionCandidates={stepConfusionCandidates}
                   stepConfusionCandidatesLoading={
                     stepConfusionCandidatesLoading
@@ -4127,6 +4424,12 @@ export const CodeAware = () => {
                           messages: ConfusionMessage[],
                         ) => {
                           void handleKCConfusionEnd(step.id, cardId, messages);
+                        },
+                        onPendingLearn: (
+                          cardId: string,
+                          messages: ConfusionMessage[],
+                        ) => {
+                          void handleKCPendingLearn(step.id, cardId, messages);
                         },
                         onPin: (cardId: string) => {
                           handleKnowledgeCardPin(step.id, cardId);
@@ -4258,6 +4561,7 @@ export const CodeAware = () => {
         onClose={handleCloseGlobalOverlay}
         onConfusionAsk={handleGlobalConfusionAsk}
         onConfusionEnd={handleGlobalConfusionEnd}
+        onPendingLearn={handleGlobalPendingLearn}
         confusionCandidates={globalConfusionCandidates}
         confusionCandidatesLoading={globalConfusionCandidatesLoading}
         pinnedItems={pinnedItems}

@@ -234,7 +234,7 @@ export const INITIAL_SESSION_STATE: SessionState = {
   id: uuidv4(),
   streamAborter: new AbortController(),
   symbols: {},
-  mode: "agent",
+  mode: "chat",
   isInEdit: false,
   codeBlockApplyStates: {
     states: [],

@@ -12,14 +12,11 @@ import {
 import { memo, useContext, useRef } from "react";
 import { IdeMessengerContext } from "../../context/IdeMessenger";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks";
-import { selectUseActiveFile } from "../../redux/selectors";
 import { selectSelectedChatModel } from "../../redux/slices/configSlice";
 import { setHasReasoningEnabled } from "../../redux/slices/sessionSlice";
 import { exitEdit } from "../../redux/thunks/edit";
-import { getMetaKeyLabel, isMetaEquivalentKeyPressed } from "../../util";
 import { ToolTip } from "../gui/Tooltip";
 import ModelSelect from "../modelSelection/ModelSelect";
-import { ModeSelect } from "../ModeSelect";
 import { Button } from "../ui";
 import { useFontSize } from "../ui/font";
 import ContextStatus from "./ContextStatus";
@@ -50,7 +47,6 @@ function InputToolbar(props: InputToolbarProps) {
   const ideMessenger = useContext(IdeMessengerContext);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const defaultModel = useAppSelector(selectSelectedChatModel);
-  const useActiveFile = useAppSelector(selectUseActiveFile);
   const isInEdit = useAppSelector((store) => store.session.isInEdit);
   const codeToEdit = useAppSelector((store) => store.editModeState.codeToEdit);
   const hasReasoningEnabled = useAppSelector(
@@ -83,13 +79,6 @@ function InputToolbar(props: InputToolbarProps) {
         }}
       >
         <div className="xs:gap-1.5 flex flex-row items-center gap-1">
-          {!isInEdit && (
-            <ToolTip place="top" content="Select Mode">
-              <HoverItem className="!p-0">
-                <ModeSelect />
-              </HoverItem>
-            </ToolTip>
-          )}
           <ToolTip place="top" content="Select Model">
             <HoverItem className="!p-0">
               <ModelSelect />
@@ -166,39 +155,6 @@ function InputToolbar(props: InputToolbarProps) {
           }}
         >
           {!isInEdit && <ContextStatus />}
-          {!props.toolbarOptions?.hideUseCodebase && !isInEdit && (
-            <div className="hidden transition-colors duration-200 hover:underline md:flex">
-              <HoverItem
-                className={
-                  props.activeKey === "Meta" ||
-                  props.activeKey === "Control" ||
-                  props.activeKey === "Alt"
-                    ? "underline"
-                    : ""
-                }
-                onClick={(e) =>
-                  props.onEnter?.({
-                    useCodebase: false,
-                    noContext: !useActiveFile,
-                  })
-                }
-              >
-                <ToolTip
-                  place="top-end"
-                  content={`${
-                    useActiveFile
-                      ? "Send Without Active File"
-                      : "Send With Active File"
-                  } (${getMetaKeyLabel()}⏎)`}
-                >
-                  <span>
-                    {getMetaKeyLabel()}⏎{" "}
-                    {useActiveFile ? "No active file" : "Active file"}
-                  </span>
-                </ToolTip>
-              </HoverItem>
-            </div>
-          )}
           {isInEdit && (
             <HoverItem
               className="hidden hover:underline sm:flex"
@@ -221,9 +177,7 @@ function InputToolbar(props: InputToolbarProps) {
                 if (props.onEnter) {
                   props.onEnter({
                     useCodebase: false,
-                    noContext: useActiveFile
-                      ? isMetaEquivalentKeyPressed(e as any) || e.altKey
-                      : !(isMetaEquivalentKeyPressed(e as any) || e.altKey),
+                    noContext: false,
                   });
                 }
               }}

@@ -139,6 +139,15 @@ steps:
 }
 \`\`\`
 
+## ⚠️ 步骤完整性要求（关键，严格遵守）
+
+你的 steps 列表必须**完整覆盖实现该项目所需的全部语义步骤**，不得遗漏。
+
+1. **先列清单再分组**：在开始生成 JSON 之前，先在脑中完整列出"要实现这个项目，开发者需要依次完成哪些具体的事"，然后再将它们归类到 high_level_steps 下。不要先定功能域再凑步骤——那样容易遗漏不属于任何显眼功能域的步骤。
+2. **覆盖全部实现关注点**：包括但不限于——输入处理、核心算法/逻辑、数据转换、输出/展示、边界条件处理、用户交互响应。如果需求涉及这些方面，都必须有对应的 step。
+3. **不要因为某个步骤"简单"就省略它**：即使某个步骤只需要几行代码（如"读取用户输入""格式化输出结果"），只要它是独立的语义动作，就应该作为单独的 step 出现。
+4. **自检完整性的方法**：假设按照你的 steps 列表一步步实现，最终能否得到一个完整可运行的项目？如果某些功能在你的 steps 中找不到对应的步骤，说明有遗漏。
+
 ## 输出前自检
 
 在输出 JSON 前，请在心里逐条检查：
@@ -146,6 +155,7 @@ steps:
 2. high_level_step 和对应 steps 的标题放在一起读，是否粒度有明显区别？如果读起来像同义改写，调整后再输出。
 3. high_level_step 是否都是名词短语（无动词开头）？steps 是否都以动词开头？
 4. 每个 step 的 abstract 是否在 80-150 字之间？是否用大白话写清楚了这步做什么、为什么重要？如果读起来像教科书或太结构化，改口语化后再输出。
+5. **完整性检查**：把所有 steps 串起来读一遍，是否覆盖了实现该项目的全部语义步骤？有没有遗漏"输入处理""输出展示""边界条件""用户交互"等方面？如果有遗漏，补充后再输出。
 
 现在请开始分解任务。`;
 }
@@ -1581,93 +1591,54 @@ ${knowledgePointsList}
 }
 
 /**
- * 构造"孤儿代码行归属"提示词。
+ * 构造"全量代码-步骤映射"提示词。
  *
- * 在 step→code 映射主循环结束后，部分代码行未被任何步骤认领（import、样板、
- * 配置、注释等）。此 prompt 将这些孤儿行分组，连同紧邻的已映射行上下文，
- * 让 LLM 在单次调用中为每个孤儿块指定步骤归属。
+ * 将完整代码（带行号）和所有步骤交给 LLM，让它为每一行非空代码
+ * 指定所属步骤。这是唯一的映射步骤（不再有 per-step 循环）。
  */
-export function constructOrphanCodeAssignmentPrompt(
-  steps: Array<{ id: string; title: string }>,
-  orphanBlocks: Array<{
-    blockIndex: number;
-    lines: Array<{ lineNo: number; content: string }>;
-    aboveContext: Array<{
-      lineNo: number;
-      content: string;
-      stepId: string;
-    }>;
-    belowContext: Array<{
-      lineNo: number;
-      content: string;
-      stepId: string;
-    }>;
-  }>,
+export function constructFullMappingReviewPrompt(
+  numberedCode: string,
+  steps: Array<{ id: string; title: string; abstract: string }>,
 ): string {
-  const stepsText = steps.map((s) => `- ${s.id}: ${s.title}`).join("\n");
-
-  const blocksText = orphanBlocks
-    .map((block) => {
-      const startLine = block.lines[0]?.lineNo ?? "?";
-      const endLine = block.lines[block.lines.length - 1]?.lineNo ?? "?";
-
-      const aboveText =
-        block.aboveContext.length > 0
-          ? block.aboveContext
-              .map(
-                (ctx) =>
-                  `  行 ${ctx.lineNo}: ${ctx.content}  → 步骤 ${ctx.stepId}`,
-              )
-              .join("\n")
-          : "  （文件开头，无上方已映射代码）";
-
-      const belowText =
-        block.belowContext.length > 0
-          ? block.belowContext
-              .map(
-                (ctx) =>
-                  `  行 ${ctx.lineNo}: ${ctx.content}  → 步骤 ${ctx.stepId}`,
-              )
-              .join("\n")
-          : "  （文件末尾，无下方已映射代码）";
-
-      const orphanLines = block.lines
-        .map((l) => `  ${l.lineNo}: ${l.content}`)
-        .join("\n");
-
-      return `### 块 ${block.blockIndex} (行 ${startLine}-${endLine})
-上方已映射代码:
-${aboveText}
----
-${orphanLines}
----
-下方已映射代码:
-${belowText}`;
-    })
+  const stepsText = steps
+    .map((s) => `[${s.id}] ${s.title}\n  ${s.abstract}`)
     .join("\n\n");
 
-  return `你是代码映射助手。以下代码行在"步骤→代码"映射中未被任何步骤认领。
-请为每个未映射代码块指定最合适的步骤归属。
+  return `你是代码分析专家。请仔细阅读下面的完整代码，为每一行非空代码判断它属于哪个实现步骤。
 
-## 所有步骤
+## 实现步骤列表
 
 ${stepsText}
 
-## 未映射代码块
+## 完整代码（含行号）
 
-${blocksText}
+${numberedCode}
 
-## 归属规则
+## 分析方法（请按此流程操作）
 
-1. 每个块必须归属一个步骤。
-2. 优先选择与紧邻已映射代码相同的步骤（上下一致时直接选择）。
-3. 上下步骤不同时，根据代码内容的语义相关性判断更合适的步骤。
-4. 对 import/样板/配置等通用代码，选择最先使用它的步骤。
+第一步：通读全部代码，理解程序的整体结构和每个函数/变量/语句的作用。
+第二步：对于每一行非空代码，思考"这行代码在做什么？它服务于哪个步骤的目标？"
+第三步：根据语义判断归属，将连续且属于同一步骤的行合并为一个区间。
 
-返回严格 JSON：
+## 关键规则
+
+- **按语义归属，不按位置顺序**：代码的物理顺序和步骤编号没有任何关系。步骤 s-3 的代码完全可能出现在文件开头，步骤 s-1 的代码可能在文件中部。
+- **同一步骤可出现多次**：一个步骤的代码可能分散在文件的多处（如：顶部 import + 中间定义 + 底部调用），输出中同一个 step_id 应出现多次。
+- **全覆盖**：所有非空行必须归属到某个步骤，不得遗漏。
+- **import / 注释 / 配置**：归属到它直接服务的步骤（例如某个 import 只被步骤 s-2 的代码使用，就归属 s-2）。
+
+## 输出格式
+
+返回严格 JSON（不要添加任何解释文字）：
 {
-  "assignments": [
-    { "block_index": 0, "step_id": "s-1", "confidence": 0.85 }
+  "line_mappings": [
+    { "start_line": 1, "end_line": 3, "step_id": "s-2" },
+    { "start_line": 4, "end_line": 4, "step_id": "s-1" },
+    { "start_line": 5, "end_line": 11, "step_id": "s-3" },
+    { "start_line": 12, "end_line": 18, "step_id": "s-1" },
+    { "start_line": 19, "end_line": 25, "step_id": "s-2" }
   ]
-}`;
+}
+
+注意上面示例中 step_id 的顺序是 s-2, s-1, s-3, s-1, s-2 ——这是正常的，因为归属由代码语义决定，不由步骤编号决定。`;
 }

@@ -14,10 +14,10 @@ import type {
 import {
   constructDeepenKnowledgePointsPrompt,
   constructExtractKnowledgePointsPrompt,
+  constructFullMappingReviewPrompt,
   constructGenerateHighLevelStepNarrativePrompt,
   constructGenerateStepsPrompt,
   constructKnowledgeDependencyPrompt,
-  constructOrphanCodeAssignmentPrompt,
 } from "core/llm/codeAwarePrompts";
 import { buildCodeAwareCognitiveEdges } from "../../utils/codeAwareRelationGraph";
 import { generateCodeChunks } from "../../utils/codeChunkUtils";
@@ -670,279 +670,153 @@ async function mapCodeChunksToSteps(
 
   const mappings: CodeAwareMapping[] = [];
 
-  for (const step of steps) {
-    const prompt = `你是代码映射助手。请针对“步骤”在完整代码中圈出直接实现该步骤的代码行。\n\n步骤信息：\n- ID: ${step.id}\n- 标题: ${step.title}\n- 描述: ${step.abstract}\n\n完整代码（含行号）：\n${numberedCode}\n\n要求：\n1. 只选择直接实现该步骤的代码，不要包含仅依赖/上下文/样板代码。\n2. 可返回连续区间 + 零星单行。\n3. 若步骤尚未实现，返回空集合。\n\n返回严格 JSON：\n{\n "line_ranges": [{ "start_line": 1, "end_line": 3 }],\n "single_lines": [8, 12],\n "confidence": 0.0\n}`;
+  // --- 全量映射：一次 LLM 调用完成所有代码行的步骤归属 ---
+  try {
+    console.log("[CA:InitGen] 全量映射: 开始（单次 LLM 调用完成所有行归属）");
 
-    try {
-      const llmContent = await completeJson(prompt, modelTitle, extra);
-      const parsed = parseJsonFromLlm<{
-        line_ranges?: Array<{ start_line?: number; end_line?: number }>;
-        single_lines?: number[];
-        confidence?: number;
-      }>(llmContent);
+    const reviewPrompt = constructFullMappingReviewPrompt(
+      numberedCode,
+      steps.map((s) => ({ id: s.id, title: s.title, abstract: s.abstract })),
+    );
 
-      const lineSet = new Set<number>();
+    const reviewContent = await completeJson(reviewPrompt, modelTitle, extra);
+    const reviewParsed = parseJsonFromLlm<{
+      line_mappings?: Array<{
+        start_line?: number;
+        end_line?: number;
+        step_id?: string;
+      }>;
+    }>(reviewContent);
 
-      (parsed.line_ranges || []).forEach((range) => {
-        const startLine = Number(range.start_line);
-        const endLine = Number(range.end_line);
-        if (
-          Number.isInteger(startLine) &&
-          Number.isInteger(endLine) &&
-          startLine > 0 &&
-          endLine >= startLine
-        ) {
-          for (let line = startLine; line <= endLine; line++) {
-            lineSet.add(line);
-          }
-        }
-      });
+    const validStepIds = new Set(steps.map((s) => s.id));
+    const chunkMap = new Map<string, CodeAwareMapping>();
 
-      (parsed.single_lines || []).forEach((line) => {
-        if (Number.isInteger(line) && line > 0) {
-          lineSet.add(line);
-        }
-      });
+    (reviewParsed.line_mappings || []).forEach((lm) => {
+      const startLine = Number(lm.start_line);
+      const endLine = Number(lm.end_line);
+      const stepId = lm.step_id;
 
-      Array.from(lineSet)
-        .sort((a, b) => a - b)
-        .forEach((line) => {
-          const chunkId = lineToChunkId.get(line);
-          if (!chunkId) {
-            return;
-          }
-
-          mappings.push({
-            codeChunkId: chunkId,
-            semanticElementId: step.id,
-            semanticElementType: "step",
-            createdAt: Date.now(),
-            source: "initial",
-            confidence: parsed.confidence ?? 0.8,
-          });
-        });
-    } catch (error) {
-      console.warn("[CA:InitGen] 步骤到代码行映射失败", {
-        stepId: step.id,
-        error,
-      });
-    }
-  }
-
-  if (mappings.length === 0 && codeChunks.length > 0 && steps.length > 0) {
-    steps.forEach((step, idx) => {
-      const chunk =
-        codeChunks[Math.floor((idx * codeChunks.length) / steps.length)];
-      if (!chunk) {
+      if (
+        !Number.isInteger(startLine) ||
+        !Number.isInteger(endLine) ||
+        startLine < 1 ||
+        endLine < startLine ||
+        !stepId ||
+        !validStepIds.has(stepId)
+      ) {
         return;
       }
 
-      mappings.push({
-        codeChunkId: chunk.id,
-        semanticElementId: step.id,
-        semanticElementType: "step",
-        createdAt: Date.now(),
-        source: "initial",
-        confidence: 0.35,
-      });
+      for (let line = startLine; line <= endLine; line++) {
+        const chunkId = lineToChunkId.get(line);
+        if (!chunkId) continue;
+
+        chunkMap.set(chunkId, {
+          codeChunkId: chunkId,
+          semanticElementId: stepId,
+          semanticElementType: "step",
+          createdAt: Date.now(),
+          source: "initial",
+          confidence: 0.85,
+        });
+      }
     });
+
+    if (chunkMap.size > 0) {
+      mappings.push(...chunkMap.values());
+      console.log(
+        `[CA:InitGen] 全量映射完成: ${chunkMap.size}/${codeChunks.length} 代码块`,
+      );
+    } else {
+      console.warn("[CA:InitGen] 全量映射返回空结果，回退到 per-step 映射");
+    }
+  } catch (error) {
+    console.warn(
+      "[CA:InitGen] 全量映射 LLM 调用失败，回退到 per-step 映射",
+      error,
+    );
   }
 
-  // --- Phase 3.5: 孤儿代码行回收 ---
-  const mappedChunkIds = new Set(mappings.map((m) => m.codeChunkId));
-  const orphanChunks = codeChunks.filter(
-    (chunk) => !mappedChunkIds.has(chunk.id),
-  );
+  // --- Fallback: 如果全量映射失败，用 per-step 方式逐步映射 ---
+  if (mappings.length === 0) {
+    console.log("[CA:InitGen] 开始 per-step 回退映射");
+    for (const step of steps) {
+      const prompt = `你是代码映射助手。请针对“步骤”在完整代码中圈出直接实现该步骤的代码行。\n\n步骤信息：\n- ID: ${step.id}\n- 标题: ${step.title}\n- 描述: ${step.abstract}\n\n完整代码（含行号）：\n${numberedCode}\n\n要求：\n1. 只选择直接实现该步骤的代码，不要包含仅依赖/上下文/样板代码。\n2. 可返回连续区间 + 零星单行。\n3. 若步骤尚未实现，返回空集合。\n\n返回严格 JSON：\n{\n "line_ranges": [{ "start_line": 1, "end_line": 3 }],\n "single_lines": [8, 12],\n "confidence": 0.0\n}`;
 
-  if (orphanChunks.length > 0) {
-    console.log(
-      `[CA:InitGen] 孤儿回收: 发现 ${orphanChunks.length}/${codeChunks.length} 个未映射代码块`,
-    );
+      try {
+        const llmContent = await completeJson(prompt, modelTitle, extra);
+        const parsed = parseJsonFromLlm<{
+          line_ranges?: Array<{ start_line?: number; end_line?: number }>;
+          single_lines?: number[];
+          confidence?: number;
+        }>(llmContent);
 
-    // Build a sorted map: lineNo → { chunkId, stepId } for mapped lines
-    const mappedLineInfo = new Map<
-      number,
-      { chunkId: string; stepId: string; content: string }
-    >();
-    for (const mapping of mappings) {
-      const chunk = codeChunks.find((c) => c.id === mapping.codeChunkId);
-      if (!chunk) continue;
-      const [start, end] = chunk.range;
-      for (let line = start; line <= end; line++) {
-        mappedLineInfo.set(line, {
-          chunkId: chunk.id,
-          stepId: mapping.semanticElementId,
-          content: chunk.content,
+        const lineSet = new Set<number>();
+
+        (parsed.line_ranges || []).forEach((range) => {
+          const startLine = Number(range.start_line);
+          const endLine = Number(range.end_line);
+          if (
+            Number.isInteger(startLine) &&
+            Number.isInteger(endLine) &&
+            startLine > 0 &&
+            endLine >= startLine
+          ) {
+            for (let line = startLine; line <= endLine; line++) {
+              lineSet.add(line);
+            }
+          }
+        });
+
+        (parsed.single_lines || []).forEach((line) => {
+          if (Number.isInteger(line) && line > 0) {
+            lineSet.add(line);
+          }
+        });
+
+        Array.from(lineSet)
+          .sort((a, b) => a - b)
+          .forEach((line) => {
+            const chunkId = lineToChunkId.get(line);
+            if (!chunkId) {
+              return;
+            }
+
+            mappings.push({
+              codeChunkId: chunkId,
+              semanticElementId: step.id,
+              semanticElementType: "step",
+              createdAt: Date.now(),
+              source: "initial",
+              confidence: parsed.confidence ?? 0.8,
+            });
+          });
+      } catch (error) {
+        console.warn("[CA:InitGen] 步骤到代码行映射失败", {
+          stepId: step.id,
+          error,
         });
       }
     }
 
-    // Group orphan chunks into contiguous blocks
-    // Two orphan lines are in the same block if their line numbers are
-    // consecutive or separated only by blank lines (lines without chunks).
-    const sortedOrphans = [...orphanChunks].sort(
-      (a, b) => a.range[0] - b.range[0],
-    );
-
-    type OrphanBlock = {
-      chunks: typeof sortedOrphans;
-      startLine: number;
-      endLine: number;
-    };
-    const orphanBlocks: OrphanBlock[] = [];
-    let currentBlock: OrphanBlock | null = null;
-
-    for (const chunk of sortedOrphans) {
-      const lineNo = chunk.range[0];
-      if (!currentBlock) {
-        currentBlock = {
-          chunks: [chunk],
-          startLine: lineNo,
-          endLine: chunk.range[1],
-        };
-        continue;
-      }
-
-      // Check if this chunk is contiguous with the current block.
-      // It's contiguous if between currentBlock.endLine and this lineNo,
-      // there are no mapped lines (only blank/skipped lines).
-      let hasGapWithMappedLine = false;
-      for (let l = currentBlock.endLine + 1; l < lineNo; l++) {
-        if (mappedLineInfo.has(l)) {
-          hasGapWithMappedLine = true;
-          break;
-        }
-      }
-
-      if (!hasGapWithMappedLine) {
-        currentBlock.chunks.push(chunk);
-        currentBlock.endLine = chunk.range[1];
-      } else {
-        orphanBlocks.push(currentBlock);
-        currentBlock = {
-          chunks: [chunk],
-          startLine: lineNo,
-          endLine: chunk.range[1],
-        };
-      }
-    }
-    if (currentBlock) {
-      orphanBlocks.push(currentBlock);
-    }
-
-    // Collect context for each block
-    const codeLines = fullCode.split("\n");
-    const contextSize = 3;
-
-    const promptBlocks = orphanBlocks.map((block, idx) => {
-      // Above context: find nearest mapped lines above block.startLine
-      const aboveContext: Array<{
-        lineNo: number;
-        content: string;
-        stepId: string;
-      }> = [];
-      for (
-        let l = block.startLine - 1;
-        l >= 1 && aboveContext.length < contextSize;
-        l--
-      ) {
-        const info = mappedLineInfo.get(l);
-        if (info) {
-          aboveContext.unshift({
-            lineNo: l,
-            content: codeLines[l - 1] ?? "",
-            stepId: info.stepId,
-          });
-        }
-      }
-
-      // Below context: find nearest mapped lines below block.endLine
-      const belowContext: Array<{
-        lineNo: number;
-        content: string;
-        stepId: string;
-      }> = [];
-      for (
-        let l = block.endLine + 1;
-        l <= codeLines.length && belowContext.length < contextSize;
-        l++
-      ) {
-        const info = mappedLineInfo.get(l);
-        if (info) {
-          belowContext.push({
-            lineNo: l,
-            content: codeLines[l - 1] ?? "",
-            stepId: info.stepId,
-          });
-        }
-      }
-
-      const lines = block.chunks.map((c) => ({
-        lineNo: c.range[0],
-        content: c.content,
-      }));
-
-      return {
-        blockIndex: idx,
-        lines,
-        aboveContext,
-        belowContext,
-      };
-    });
-
-    // Single LLM call for all orphan blocks
-    try {
-      const orphanPrompt = constructOrphanCodeAssignmentPrompt(
-        steps.map((s) => ({ id: s.id, title: s.title })),
-        promptBlocks,
-      );
-
-      const orphanContent = await completeJson(orphanPrompt, modelTitle, extra);
-      const orphanParsed = parseJsonFromLlm<{
-        assignments?: Array<{
-          block_index?: number;
-          step_id?: string;
-          confidence?: number;
-        }>;
-      }>(orphanContent);
-
-      const validStepIds = new Set(steps.map((s) => s.id));
-      let orphanMappingCount = 0;
-
-      (orphanParsed.assignments || []).forEach((assignment) => {
-        const blockIdx = assignment.block_index;
-        const stepId = assignment.step_id;
-        const confidence = assignment.confidence ?? 0.6;
-
-        if (
-          blockIdx == null ||
-          !stepId ||
-          !validStepIds.has(stepId) ||
-          blockIdx < 0 ||
-          blockIdx >= orphanBlocks.length
-        ) {
+    // Last resort: even distribution
+    if (mappings.length === 0 && codeChunks.length > 0 && steps.length > 0) {
+      steps.forEach((step, idx) => {
+        const chunk =
+          codeChunks[Math.floor((idx * codeChunks.length) / steps.length)];
+        if (!chunk) {
           return;
         }
 
-        const block = orphanBlocks[blockIdx];
-        block.chunks.forEach((chunk) => {
-          mappings.push({
-            codeChunkId: chunk.id,
-            semanticElementId: stepId,
-            semanticElementType: "step",
-            createdAt: Date.now(),
-            source: "initial",
-            confidence,
-          });
-          orphanMappingCount++;
+        mappings.push({
+          codeChunkId: chunk.id,
+          semanticElementId: step.id,
+          semanticElementType: "step",
+          createdAt: Date.now(),
+          source: "initial",
+          confidence: 0.35,
         });
       });
-
-      console.log(
-        `[CA:InitGen] 孤儿回收完成: ${orphanBlocks.length} 个孤儿块 → ${orphanMappingCount} 条映射`,
-      );
-    } catch (error) {
-      console.warn("[CA:InitGen] 孤儿回收 LLM 调用失败 (non-blocking)", error);
     }
   }
 

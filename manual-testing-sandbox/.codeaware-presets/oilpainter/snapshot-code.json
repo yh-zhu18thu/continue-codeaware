@@ -1,0 +1,1476 @@
+{
+  "codeFile": {
+    "relativePath": "minimal_oil_painter.py",
+    "content": "import cv2\nimport numpy as np\nimport time\n\n\nclass MinimalOilPainter:\n    \"\"\"\n    极简油画滤镜：通过“局部亮度统计 + 多数决 + 主导档平均色”实现色块化效果。\n\n    核心参数（固定为成员变量，后续所有计算围绕这两个旋钮展开）：\n    - radius（笔触半径）：决定每次“看周围多大一圈”，越大越像大色块、越抽象。\n    - levels（亮度等级数）：决定把明暗分成几档（量化桶数），越小越粗犷、颜色更少。\n    \"\"\"\n\n    def __init__(self, radius: int = 5, levels: int = 8):\n        self.radius = int(radius)\n        self.levels = int(levels)\n        if self.radius < 1:\n            raise ValueError(\"radius 必须 >= 1\")\n        if self.levels < 2:\n            raise ValueError(\"levels 必须 >= 2\")\n\n    def paint(self, input_path: str, output_path: str):\n        \"\"\"\n        约定文件输入输出方式：\n        - 用 input_path 读取 JPEG/常见图片\n        - 用 output_path 保存处理后的 JPEG（质量参数可控）\n        - 失败时给出可读提示并立即停止\n        \"\"\"\n        # 3. 读取图片并校验有效性\n        img = cv2.imread(input_path)\n        if img is None:\n            print(f\"错误：无法读取文件 {input_path}（请检查路径或文件是否损坏）\")\n            return None\n\n        h, w = img.shape[:2]\n\n        # 4. 生成灰度图与输出画布\n        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)\n        output = np.zeros_like(img)\n\n        print(f\"开始极简油画转换 {input_path} (levels={self.levels}, radius={self.radius})...\")\n        start_time = time.time()\n\n        # 5. 设置有效遍历范围（跳过边缘，避免 ROI 越界）\n        r = self.radius\n        for y in range(r, h - r):\n            for x in range(r, w - r):\n                # 6. 截取邻域窗口ROI（灰度 ROI 用于统计；彩色 ROI 用于累加/上色）\n                roi_gray = gray[y - r : y + r + 1, x - r : x + r + 1]\n                roi_color = img[y - r : y + r + 1, x - r : x + r + 1]\n\n                # 7. 量化灰度到亮度等级（映射到 0..levels-1）\n                intensity_map = (roi_gray.astype(np.uint32) * self.levels) // 256\n\n                # 8. 统计各亮度档出现次数\n                counts = np.zeros(self.levels, dtype=np.uint32)\n\n                # 9. 累加主导等级的颜色总和（这里先对每一档都累加，后面再选主导档）\n                sum_rgb = np.zeros((self.levels, 3), dtype=np.uint32)\n\n                flat_intensity = intensity_map.reshape(-1)\n                flat_color = roi_color.reshape(-1, 3)\n\n                for i in range(flat_intensity.shape[0]):\n                    lvl = int(flat_intensity[i])\n                    counts[lvl] += 1\n                    sum_rgb[lvl] += flat_color[i]\n\n                # 10. 选出出现最多的亮度档（多数决）\n                max_lvl = int(np.argmax(counts))\n\n                # 11. 计算平均颜色并回填像素\n                if counts[max_lvl] > 0:\n                    output[y, x] = (sum_rgb[max_lvl] // counts[max_lvl]).astype(np.uint8)\n\n        # 12. 保存JPEG并控制质量\n        ok = cv2.imwrite(output_path, output, [int(cv2.IMWRITE_JPEG_QUALITY), 95])\n        if not ok:\n            print(f\"错误：无法写入输出文件 {output_path}\")\n            return None\n\n        # 13. 输出耗时与效果自检点\n        elapsed = time.time() - start_time\n        print(f\"转换完成！耗时: {elapsed:.2f}秒，已保存至: {output_path}\")\n        print(f\"自检：输出尺寸 {output.shape[:2]}，与原图尺寸 {(h, w)} 一致；边缘未遍历区域偏黑属于预期现象。\")\n\n        return output\n\n\nif __name__ == \"__main__\":\n    # 使用示例：调小 levels（例如 5）可让色块效果更明显；调大 radius 色块更大、更抽象\n    painter = MinimalOilPainter(radius=5, levels=8)\n    painter.paint(\"input.jpg\", \"output_minimal.jpg\")"
+  },
+  "codeChunks": [
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-0",
+      "content": "import cv2",
+      "range": [1, 1],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-1",
+      "content": "import numpy as np",
+      "range": [2, 2],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-2",
+      "content": "import time",
+      "range": [3, 3],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-3",
+      "content": "class MinimalOilPainter:",
+      "range": [6, 6],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-4",
+      "content": "    \"\"\"",
+      "range": [7, 7],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-5",
+      "content": "    极简油画滤镜：通过“局部亮度统计 + 多数决 + 主导档平均色”实现色块化效果。",
+      "range": [8, 8],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-6",
+      "content": "    核心参数（固定为成员变量，后续所有计算围绕这两个旋钮展开）：",
+      "range": [10, 10],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-7",
+      "content": "    - radius（笔触半径）：决定每次“看周围多大一圈”，越大越像大色块、越抽象。",
+      "range": [11, 11],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-8",
+      "content": "    - levels（亮度等级数）：决定把明暗分成几档（量化桶数），越小越粗犷、颜色更少。",
+      "range": [12, 12],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-9",
+      "content": "    \"\"\"",
+      "range": [13, 13],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-10",
+      "content": "    def __init__(self, radius: int = 5, levels: int = 8):",
+      "range": [15, 15],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-11",
+      "content": "        self.radius = int(radius)",
+      "range": [16, 16],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-12",
+      "content": "        self.levels = int(levels)",
+      "range": [17, 17],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-13",
+      "content": "        if self.radius < 1:",
+      "range": [18, 18],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-14",
+      "content": "            raise ValueError(\"radius 必须 >= 1\")",
+      "range": [19, 19],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-15",
+      "content": "        if self.levels < 2:",
+      "range": [20, 20],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-16",
+      "content": "            raise ValueError(\"levels 必须 >= 2\")",
+      "range": [21, 21],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-17",
+      "content": "    def paint(self, input_path: str, output_path: str):",
+      "range": [23, 23],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-18",
+      "content": "        \"\"\"",
+      "range": [24, 24],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-19",
+      "content": "        约定文件输入输出方式：",
+      "range": [25, 25],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-20",
+      "content": "        - 用 input_path 读取 JPEG/常见图片",
+      "range": [26, 26],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-21",
+      "content": "        - 用 output_path 保存处理后的 JPEG（质量参数可控）",
+      "range": [27, 27],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-22",
+      "content": "        - 失败时给出可读提示并立即停止",
+      "range": [28, 28],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-23",
+      "content": "        \"\"\"",
+      "range": [29, 29],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-24",
+      "content": "        # 3. 读取图片并校验有效性",
+      "range": [30, 30],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-25",
+      "content": "        img = cv2.imread(input_path)",
+      "range": [31, 31],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-26",
+      "content": "        if img is None:",
+      "range": [32, 32],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-27",
+      "content": "            print(f\"错误：无法读取文件 {input_path}（请检查路径或文件是否损坏）\")",
+      "range": [33, 33],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-28",
+      "content": "            return None",
+      "range": [34, 34],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-29",
+      "content": "        h, w = img.shape[:2]",
+      "range": [36, 36],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-30",
+      "content": "        # 4. 生成灰度图与输出画布",
+      "range": [38, 38],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-31",
+      "content": "        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)",
+      "range": [39, 39],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-32",
+      "content": "        output = np.zeros_like(img)",
+      "range": [40, 40],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-33",
+      "content": "        print(f\"开始极简油画转换 {input_path} (levels={self.levels}, radius={self.radius})...\")",
+      "range": [42, 42],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-34",
+      "content": "        start_time = time.time()",
+      "range": [43, 43],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-35",
+      "content": "        # 5. 设置有效遍历范围（跳过边缘，避免 ROI 越界）",
+      "range": [45, 45],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-36",
+      "content": "        r = self.radius",
+      "range": [46, 46],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-37",
+      "content": "        for y in range(r, h - r):",
+      "range": [47, 47],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-38",
+      "content": "            for x in range(r, w - r):",
+      "range": [48, 48],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-39",
+      "content": "                # 6. 截取邻域窗口ROI（灰度 ROI 用于统计；彩色 ROI 用于累加/上色）",
+      "range": [49, 49],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-40",
+      "content": "                roi_gray = gray[y - r : y + r + 1, x - r : x + r + 1]",
+      "range": [50, 50],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-41",
+      "content": "                roi_color = img[y - r : y + r + 1, x - r : x + r + 1]",
+      "range": [51, 51],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-42",
+      "content": "                # 7. 量化灰度到亮度等级（映射到 0..levels-1）",
+      "range": [53, 53],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-43",
+      "content": "                intensity_map = (roi_gray.astype(np.uint32) * self.levels) // 256",
+      "range": [54, 54],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-44",
+      "content": "                # 8. 统计各亮度档出现次数",
+      "range": [56, 56],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-45",
+      "content": "                counts = np.zeros(self.levels, dtype=np.uint32)",
+      "range": [57, 57],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-46",
+      "content": "                # 9. 累加主导等级的颜色总和（这里先对每一档都累加，后面再选主导档）",
+      "range": [59, 59],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-47",
+      "content": "                sum_rgb = np.zeros((self.levels, 3), dtype=np.uint32)",
+      "range": [60, 60],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-48",
+      "content": "                flat_intensity = intensity_map.reshape(-1)",
+      "range": [62, 62],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-49",
+      "content": "                flat_color = roi_color.reshape(-1, 3)",
+      "range": [63, 63],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-50",
+      "content": "                for i in range(flat_intensity.shape[0]):",
+      "range": [65, 65],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-51",
+      "content": "                    lvl = int(flat_intensity[i])",
+      "range": [66, 66],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-52",
+      "content": "                    counts[lvl] += 1",
+      "range": [67, 67],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-53",
+      "content": "                    sum_rgb[lvl] += flat_color[i]",
+      "range": [68, 68],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-54",
+      "content": "                # 10. 选出出现最多的亮度档（多数决）",
+      "range": [70, 70],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-55",
+      "content": "                max_lvl = int(np.argmax(counts))",
+      "range": [71, 71],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-56",
+      "content": "                # 11. 计算平均颜色并回填像素",
+      "range": [73, 73],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-57",
+      "content": "                if counts[max_lvl] > 0:",
+      "range": [74, 74],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-58",
+      "content": "                    output[y, x] = (sum_rgb[max_lvl] // counts[max_lvl]).astype(np.uint8)",
+      "range": [75, 75],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-59",
+      "content": "        # 12. 保存JPEG并控制质量",
+      "range": [77, 77],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-60",
+      "content": "        ok = cv2.imwrite(output_path, output, [int(cv2.IMWRITE_JPEG_QUALITY), 95])",
+      "range": [78, 78],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-61",
+      "content": "        if not ok:",
+      "range": [79, 79],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-62",
+      "content": "            print(f\"错误：无法写入输出文件 {output_path}\")",
+      "range": [80, 80],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-63",
+      "content": "            return None",
+      "range": [81, 81],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-64",
+      "content": "        # 13. 输出耗时与效果自检点",
+      "range": [83, 83],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-65",
+      "content": "        elapsed = time.time() - start_time",
+      "range": [84, 84],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-66",
+      "content": "        print(f\"转换完成！耗时: {elapsed:.2f}秒，已保存至: {output_path}\")",
+      "range": [85, 85],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-67",
+      "content": "        print(f\"自检：输出尺寸 {output.shape[:2]}，与原图尺寸 {(h, w)} 一致；边缘未遍历区域偏黑属于预期现象。\")",
+      "range": [86, 86],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-68",
+      "content": "        return output",
+      "range": [88, 88],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-69",
+      "content": "if __name__ == \"__main__\":",
+      "range": [91, 91],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-70",
+      "content": "    # 使用示例：调小 levels（例如 5）可让色块效果更明显；调大 radius 色块更大、更抽象",
+      "range": [92, 92],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-71",
+      "content": "    painter = MinimalOilPainter(radius=5, levels=8)",
+      "range": [93, 93],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-72",
+      "content": "    painter.paint(\"input.jpg\", \"output_minimal.jpg\")",
+      "range": [94, 94],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py"
+    }
+  ],
+  "codeChunkRelations": [
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-4",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-9",
+      "similarity": 1,
+      "createdAt": 1774004677105
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-9",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-4",
+      "similarity": 1,
+      "createdAt": 1774004677105
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-4",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-18",
+      "similarity": 1,
+      "createdAt": 1774004677105
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-18",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-4",
+      "similarity": 1,
+      "createdAt": 1774004677105
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-4",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-23",
+      "similarity": 1,
+      "createdAt": 1774004677105
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-23",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-4",
+      "similarity": 1,
+      "createdAt": 1774004677105
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-9",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-18",
+      "similarity": 1,
+      "createdAt": 1774004677106
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-18",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-9",
+      "similarity": 1,
+      "createdAt": 1774004677106
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-9",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-23",
+      "similarity": 1,
+      "createdAt": 1774004677106
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-23",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-9",
+      "similarity": 1,
+      "createdAt": 1774004677106
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-10",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-11",
+      "similarity": 0.5,
+      "createdAt": 1774004677106
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-11",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-10",
+      "similarity": 0.5,
+      "createdAt": 1774004677106
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-10",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-12",
+      "similarity": 0.5,
+      "createdAt": 1774004677106
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-12",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-10",
+      "similarity": 0.5,
+      "createdAt": 1774004677106
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-10",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-71",
+      "similarity": 0.46153846153846156,
+      "createdAt": 1774004677106
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-71",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-10",
+      "similarity": 0.46153846153846156,
+      "createdAt": 1774004677106
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-11",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-12",
+      "similarity": 0.75,
+      "createdAt": 1774004677106
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-12",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-11",
+      "similarity": 0.75,
+      "createdAt": 1774004677106
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-11",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-36",
+      "similarity": 0.5714285714285714,
+      "createdAt": 1774004677106
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-36",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-11",
+      "similarity": 0.5714285714285714,
+      "createdAt": 1774004677106
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-11",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-55",
+      "similarity": 0.45454545454545453,
+      "createdAt": 1774004677106
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-55",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-11",
+      "similarity": 0.45454545454545453,
+      "createdAt": 1774004677106
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-12",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-45",
+      "similarity": 0.46153846153846156,
+      "createdAt": 1774004677106
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-45",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-12",
+      "similarity": 0.46153846153846156,
+      "createdAt": 1774004677106
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-12",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-47",
+      "similarity": 0.46153846153846156,
+      "createdAt": 1774004677106
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-47",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-12",
+      "similarity": 0.46153846153846156,
+      "createdAt": 1774004677106
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-12",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-55",
+      "similarity": 0.45454545454545453,
+      "createdAt": 1774004677106
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-55",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-12",
+      "similarity": 0.45454545454545453,
+      "createdAt": 1774004677106
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-13",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-15",
+      "similarity": 0.7142857142857143,
+      "createdAt": 1774004677106
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-15",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-13",
+      "similarity": 0.7142857142857143,
+      "createdAt": 1774004677106
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-14",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-16",
+      "similarity": 0.8181818181818182,
+      "createdAt": 1774004677106
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-16",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-14",
+      "similarity": 0.8181818181818182,
+      "createdAt": 1774004677106
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-18",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-23",
+      "similarity": 1,
+      "createdAt": 1774004677106
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-23",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-18",
+      "similarity": 1,
+      "createdAt": 1774004677106
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-25",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-31",
+      "similarity": 0.5,
+      "createdAt": 1774004677108
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-31",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-25",
+      "similarity": 0.5,
+      "createdAt": 1774004677108
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-25",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-32",
+      "similarity": 0.45454545454545453,
+      "createdAt": 1774004677108
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-32",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-25",
+      "similarity": 0.45454545454545453,
+      "createdAt": 1774004677108
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-28",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-63",
+      "similarity": 1,
+      "createdAt": 1774004677108
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-63",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-28",
+      "similarity": 1,
+      "createdAt": 1774004677108
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-29",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-41",
+      "similarity": 0.5454545454545454,
+      "createdAt": 1774004677108
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-41",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-29",
+      "similarity": 0.5454545454545454,
+      "createdAt": 1774004677108
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-34",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-65",
+      "similarity": 0.75,
+      "createdAt": 1774004677109
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-65",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-34",
+      "similarity": 0.75,
+      "createdAt": 1774004677109
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-37",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-38",
+      "similarity": 1,
+      "createdAt": 1774004677109
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-38",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-37",
+      "similarity": 1,
+      "createdAt": 1774004677109
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-37",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-50",
+      "similarity": 0.46153846153846156,
+      "createdAt": 1774004677109
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-50",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-37",
+      "similarity": 0.46153846153846156,
+      "createdAt": 1774004677109
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-38",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-50",
+      "similarity": 0.46153846153846156,
+      "createdAt": 1774004677109
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-50",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-38",
+      "similarity": 0.46153846153846156,
+      "createdAt": 1774004677109
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-40",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-41",
+      "similarity": 0.6363636363636364,
+      "createdAt": 1774004677109
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-41",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-40",
+      "similarity": 0.6363636363636364,
+      "createdAt": 1774004677109
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-43",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-45",
+      "similarity": 0.47058823529411764,
+      "createdAt": 1774004677109
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-45",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-43",
+      "similarity": 0.47058823529411764,
+      "createdAt": 1774004677109
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-43",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-47",
+      "similarity": 0.47058823529411764,
+      "createdAt": 1774004677109
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-47",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-43",
+      "similarity": 0.47058823529411764,
+      "createdAt": 1774004677109
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-45",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-47",
+      "similarity": 0.8461538461538461,
+      "createdAt": 1774004677109
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-47",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-45",
+      "similarity": 0.8461538461538461,
+      "createdAt": 1774004677109
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-48",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-49",
+      "similarity": 0.5454545454545454,
+      "createdAt": 1774004677110
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-49",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-48",
+      "similarity": 0.5454545454545454,
+      "createdAt": 1774004677110
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-48",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-65",
+      "similarity": 0.45454545454545453,
+      "createdAt": 1774004677110
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-65",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-48",
+      "similarity": 0.45454545454545453,
+      "createdAt": 1774004677110
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-52",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-53",
+      "similarity": 0.625,
+      "createdAt": 1774004677110
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-53",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-52",
+      "similarity": 0.625,
+      "createdAt": 1774004677110
+    }
+  ],
+  "codeAwareMappings": [
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-0",
+      "semanticElementId": "s-2",
+      "semanticElementType": "step",
+      "createdAt": 1774004677099,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-1",
+      "semanticElementId": "s-2",
+      "semanticElementType": "step",
+      "createdAt": 1774004677099,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-2",
+      "semanticElementId": "s-2",
+      "semanticElementType": "step",
+      "createdAt": 1774004677099,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-3",
+      "semanticElementId": "s-1",
+      "semanticElementType": "step",
+      "createdAt": 1774004677099,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-4",
+      "semanticElementId": "s-1",
+      "semanticElementType": "step",
+      "createdAt": 1774004677099,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-5",
+      "semanticElementId": "s-1",
+      "semanticElementType": "step",
+      "createdAt": 1774004677099,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-6",
+      "semanticElementId": "s-1",
+      "semanticElementType": "step",
+      "createdAt": 1774004677099,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-7",
+      "semanticElementId": "s-1",
+      "semanticElementType": "step",
+      "createdAt": 1774004677099,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-8",
+      "semanticElementId": "s-1",
+      "semanticElementType": "step",
+      "createdAt": 1774004677099,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-9",
+      "semanticElementId": "s-1",
+      "semanticElementType": "step",
+      "createdAt": 1774004677099,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-10",
+      "semanticElementId": "s-1",
+      "semanticElementType": "step",
+      "createdAt": 1774004677099,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-11",
+      "semanticElementId": "s-1",
+      "semanticElementType": "step",
+      "createdAt": 1774004677099,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-12",
+      "semanticElementId": "s-1",
+      "semanticElementType": "step",
+      "createdAt": 1774004677099,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-13",
+      "semanticElementId": "s-1",
+      "semanticElementType": "step",
+      "createdAt": 1774004677099,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-14",
+      "semanticElementId": "s-1",
+      "semanticElementType": "step",
+      "createdAt": 1774004677099,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-15",
+      "semanticElementId": "s-1",
+      "semanticElementType": "step",
+      "createdAt": 1774004677099,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-16",
+      "semanticElementId": "s-1",
+      "semanticElementType": "step",
+      "createdAt": 1774004677099,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-17",
+      "semanticElementId": "s-2",
+      "semanticElementType": "step",
+      "createdAt": 1774004677099,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-18",
+      "semanticElementId": "s-2",
+      "semanticElementType": "step",
+      "createdAt": 1774004677099,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-19",
+      "semanticElementId": "s-2",
+      "semanticElementType": "step",
+      "createdAt": 1774004677099,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-20",
+      "semanticElementId": "s-2",
+      "semanticElementType": "step",
+      "createdAt": 1774004677099,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-21",
+      "semanticElementId": "s-2",
+      "semanticElementType": "step",
+      "createdAt": 1774004677099,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-22",
+      "semanticElementId": "s-2",
+      "semanticElementType": "step",
+      "createdAt": 1774004677099,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-23",
+      "semanticElementId": "s-2",
+      "semanticElementType": "step",
+      "createdAt": 1774004677099,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-25",
+      "semanticElementId": "s-3",
+      "semanticElementType": "step",
+      "createdAt": 1774004677099,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-26",
+      "semanticElementId": "s-3",
+      "semanticElementType": "step",
+      "createdAt": 1774004677099,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-27",
+      "semanticElementId": "s-3",
+      "semanticElementType": "step",
+      "createdAt": 1774004677099,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-28",
+      "semanticElementId": "s-3",
+      "semanticElementType": "step",
+      "createdAt": 1774004677099,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-29",
+      "semanticElementId": "s-4",
+      "semanticElementType": "step",
+      "createdAt": 1774004677099,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-31",
+      "semanticElementId": "s-4",
+      "semanticElementType": "step",
+      "createdAt": 1774004677099,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-32",
+      "semanticElementId": "s-4",
+      "semanticElementType": "step",
+      "createdAt": 1774004677099,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-33",
+      "semanticElementId": "s-13",
+      "semanticElementType": "step",
+      "createdAt": 1774004677099,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-34",
+      "semanticElementId": "s-13",
+      "semanticElementType": "step",
+      "createdAt": 1774004677099,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-36",
+      "semanticElementId": "s-5",
+      "semanticElementType": "step",
+      "createdAt": 1774004677099,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-37",
+      "semanticElementId": "s-5",
+      "semanticElementType": "step",
+      "createdAt": 1774004677099,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-38",
+      "semanticElementId": "s-5",
+      "semanticElementType": "step",
+      "createdAt": 1774004677099,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-40",
+      "semanticElementId": "s-6",
+      "semanticElementType": "step",
+      "createdAt": 1774004677099,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-41",
+      "semanticElementId": "s-6",
+      "semanticElementType": "step",
+      "createdAt": 1774004677099,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-43",
+      "semanticElementId": "s-7",
+      "semanticElementType": "step",
+      "createdAt": 1774004677099,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-45",
+      "semanticElementId": "s-8",
+      "semanticElementType": "step",
+      "createdAt": 1774004677099,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-47",
+      "semanticElementId": "s-9",
+      "semanticElementType": "step",
+      "createdAt": 1774004677099,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-48",
+      "semanticElementId": "s-9",
+      "semanticElementType": "step",
+      "createdAt": 1774004677099,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-49",
+      "semanticElementId": "s-9",
+      "semanticElementType": "step",
+      "createdAt": 1774004677099,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-50",
+      "semanticElementId": "s-9",
+      "semanticElementType": "step",
+      "createdAt": 1774004677099,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-51",
+      "semanticElementId": "s-9",
+      "semanticElementType": "step",
+      "createdAt": 1774004677099,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-52",
+      "semanticElementId": "s-9",
+      "semanticElementType": "step",
+      "createdAt": 1774004677099,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-53",
+      "semanticElementId": "s-9",
+      "semanticElementType": "step",
+      "createdAt": 1774004677099,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-55",
+      "semanticElementId": "s-10",
+      "semanticElementType": "step",
+      "createdAt": 1774004677099,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-57",
+      "semanticElementId": "s-11",
+      "semanticElementType": "step",
+      "createdAt": 1774004677099,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-58",
+      "semanticElementId": "s-11",
+      "semanticElementType": "step",
+      "createdAt": 1774004677099,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-60",
+      "semanticElementId": "s-12",
+      "semanticElementType": "step",
+      "createdAt": 1774004677099,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-61",
+      "semanticElementId": "s-12",
+      "semanticElementType": "step",
+      "createdAt": 1774004677099,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-62",
+      "semanticElementId": "s-12",
+      "semanticElementType": "step",
+      "createdAt": 1774004677099,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-63",
+      "semanticElementId": "s-12",
+      "semanticElementType": "step",
+      "createdAt": 1774004677099,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-65",
+      "semanticElementId": "s-13",
+      "semanticElementType": "step",
+      "createdAt": 1774004677099,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-66",
+      "semanticElementId": "s-13",
+      "semanticElementType": "step",
+      "createdAt": 1774004677099,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-67",
+      "semanticElementId": "s-13",
+      "semanticElementType": "step",
+      "createdAt": 1774004677099,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-68",
+      "semanticElementId": "s-13",
+      "semanticElementType": "step",
+      "createdAt": 1774004677099,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-69",
+      "semanticElementId": "s-2",
+      "semanticElementType": "step",
+      "createdAt": 1774004677099,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-70",
+      "semanticElementId": "s-2",
+      "semanticElementType": "step",
+      "createdAt": 1774004677099,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-71",
+      "semanticElementId": "s-2",
+      "semanticElementType": "step",
+      "createdAt": 1774004677099,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-72",
+      "semanticElementId": "s-2",
+      "semanticElementType": "step",
+      "createdAt": 1774004677099,
+      "source": "initial",
+      "confidence": 0.85
+    }
+  ]
+}

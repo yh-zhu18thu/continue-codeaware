@@ -13,6 +13,12 @@ const CODICON_PATHS: Record<string, string> = {
   // bookmark (outline)
   bookmark:
     "M12 1H4a1 1 0 0 0-1 1v12.5l.5.5 4-2.5 4 2.5.5-.5V2a1 1 0 0 0-1-1zm0 12.25l-3.5-2.188L5 13.25V2h7v11.25z",
+  // question mark in circle
+  question:
+    "M8 1.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13zm0 12a5.5 5.5 0 1 1 0-11 5.5 5.5 0 0 1 0 11zm-.1-3.1h1.2v1.2H7.9v-1.2zm1.25-1.97-.38.3c-.4.31-.57.52-.57.97v.2H7.05v-.28c0-.75.3-1.16.83-1.57l.47-.37c.34-.26.52-.53.52-.88 0-.55-.43-.92-1.08-.92-.63 0-1.09.36-1.14 1.02H5.5c.06-1.29 1.03-2.07 2.28-2.07 1.36 0 2.23.78 2.23 1.93 0 .7-.29 1.2-.86 1.65z",
+  // comment discussion bubbles
+  "comment-discussion":
+    "M3.5 2h5l1 1H12l1 1v5l-1 1H9.5L7 12.5 6 10H3.5l-1-1V3l1-1zm0 1v6H6.7l.72 1.8L8.5 9H12V4H9.1l-1-1zm1.5 1h6v1H5V4zm0 2h6v1H5V6z",
   // trash
   trash:
     "M10 3h3v1h-1v9l-1 1H5l-1-1V4H3V3h3V2a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v1zM9 2H7v1h2V2zM5 4v9h6V4H5zm1 2h1v5H6V6zm3 0h1v5H9V6z",

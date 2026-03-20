@@ -1,8 +1,7 @@
 import {
-  BookmarkIcon as BookmarkOutlineIcon,
+  ChatBubbleLeftRightIcon,
   QuestionMarkCircleIcon,
 } from "@heroicons/react/24/outline";
-import { BookmarkIcon as BookmarkSolidIcon } from "@heroicons/react/24/solid";
 import React from "react";
 import styled from "styled-components";
 
@@ -84,8 +83,8 @@ const SmallSpinner = styled.div<{ $size: "sm" | "md" }>`
 /**
  * Unified 3-button action bar shared across all CodeAware levels.
  *
- * - **困惑** (QuestionMarkCircle): "I'm confused / dig deeper"
- * - **Pin** (Bookmark): "Mark for later review"
+ * - **困惑** (ChatBubbleLeftRight): "I'm confused / dig deeper"
+ * - **待学** (QuestionMarkCircle): "Mark for later review"
  */
 export const UnifiedActionBar: React.FC<UnifiedActionBarProps> = ({
   onConfusion,
@@ -110,7 +109,7 @@ export const UnifiedActionBar: React.FC<UnifiedActionBarProps> = ({
           {confusionLoading ? (
             <SmallSpinner $size={size} />
           ) : (
-            <QuestionMarkCircleIcon />
+            <ChatBubbleLeftRightIcon />
           )}
         </ActionButton>
       )}
@@ -123,7 +122,7 @@ export const UnifiedActionBar: React.FC<UnifiedActionBarProps> = ({
           disabled={disabled}
           title={isPinned ? "取消标记" : "标记待学"}
         >
-          {isPinned ? <BookmarkSolidIcon /> : <BookmarkOutlineIcon />}
+          <QuestionMarkCircleIcon />
         </ActionButton>
       )}
     </BarContainer>

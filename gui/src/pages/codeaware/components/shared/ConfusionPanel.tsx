@@ -1,7 +1,7 @@
 import {
-  BookmarkIcon,
   ChatBubbleLeftIcon,
   CheckCircleIcon,
+  QuestionMarkCircleIcon,
 } from "@heroicons/react/24/outline";
 import { PaperAirplaneIcon } from "@heroicons/react/24/solid";
 import React, { useCallback, useEffect, useRef, useState } from "react";
@@ -513,7 +513,7 @@ const ConfusionPanel: React.FC<ConfusionPanelProps> = ({
                         onClick={handlePendingLearn}
                         disabled={isLoading}
                       >
-                        <BookmarkIcon />
+                        <QuestionMarkCircleIcon />
                         待学
                       </ActionBtn>
                     )}

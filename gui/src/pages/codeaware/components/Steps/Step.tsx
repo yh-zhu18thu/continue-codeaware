@@ -1,4 +1,4 @@
-import { QuestionMarkCircleIcon } from "@heroicons/react/24/outline";
+import { ChatBubbleLeftRightIcon } from "@heroicons/react/24/outline";
 import {
   HighlightEvent,
   KnowledgeCardGenerationStatus,
@@ -676,7 +676,7 @@ const Step: React.FC<StepProps> = ({
               />
             ) : (
               <ConfusionButton onClick={handleConfusionClick}>
-                <QuestionMarkCircleIcon />
+                <ChatBubbleLeftRightIcon />
                 我有疑惑
               </ConfusionButton>
             )}

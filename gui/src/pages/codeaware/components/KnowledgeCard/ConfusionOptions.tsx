@@ -1,4 +1,4 @@
-import { QuestionMarkCircleIcon } from "@heroicons/react/24/outline";
+import { ChatBubbleLeftRightIcon } from "@heroicons/react/24/outline";
 import React, { useEffect, useRef, useState } from "react";
 import styled from "styled-components";
 import {
@@ -200,7 +200,7 @@ const ConfusionOptions: React.FC<ConfusionOptionsProps> = ({
         disabled={disabled || loading}
         title="我有疑惑"
       >
-        {loading ? <Spinner /> : <QuestionMarkCircleIcon />}
+        {loading ? <Spinner /> : <ChatBubbleLeftRightIcon />}
         我有疑惑
       </TriggerButton>
 

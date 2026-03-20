@@ -1,0 +1,2000 @@
+{
+  "knowledgePoints": [
+    {
+      "id": "k-s-1-1",
+      "title": "Python 类与构造函数",
+      "content": "理解代码需要知道 Python 用 class 定义类、用 __init__ 作为实例初始化方法，并通过 self 保存实例属性（如 self.radius、self.levels）。这样在后续算法方法里可直接读取这些配置参数，而无需重复传参。",
+      "relatedStepIds": ["s-1"],
+      "category": "syntax",
+      "difficulty": "easy",
+      "scope": "code"
+    },
+    {
+      "id": "k-s-1-2",
+      "title": "默认参数与类型注解",
+      "content": "代码在 __init__(radius: int = 5, levels: int = 8) 中同时使用默认参数和类型注解。需要理解默认值用于提供可选配置，类型注解主要用于可读性与静态检查，不会自动强制类型，因此仍可能需要显式转换。",
+      "relatedStepIds": ["s-1"],
+      "category": "syntax",
+      "difficulty": "easy",
+      "scope": "code"
+    },
+    {
+      "id": "k-s-1-3",
+      "title": "输入校验与异常抛出",
+      "content": "理解 if 条件检查与 raise ValueError 的用途：对初始化参数做边界约束（radius、levels 必须 >=1），在参数非法时立即失败（fail fast），避免后续算法在运行中出现更隐蔽的错误或异常结果。",
+      "relatedStepIds": ["s-1"],
+      "category": "concept",
+      "difficulty": "easy",
+      "scope": "code"
+    },
+    {
+      "id": "k-s-1-4",
+      "title": "滤镜参数接口设计",
+      "content": "步骤强调把“半径”“等级数”抽象为可调参数并作为初始化接口，体现可配置性与解耦：通过改参数即可观察效果变化，而不修改核心算法逻辑。这是图像处理类/滤镜常见的参数化设计思路。",
+      "relatedStepIds": ["s-1"],
+      "category": "concept",
+      "difficulty": "medium",
+      "scope": "step"
+    },
+    {
+      "id": "k-s-2-1",
+      "title": "OpenCV读取图像API",
+      "content": "需要了解 cv2.imread(path) 的作用与返回值：成功时返回 NumPy 数组形式的图像，失败时返回 None。理解这一点才能读懂“读取后先判空”的必要性，以及为什么后续能从 img 中获取尺寸等信息。",
+      "relatedStepIds": ["s-2"],
+      "category": "framework",
+      "difficulty": "easy",
+      "scope": "step"
+    },
+    {
+      "id": "k-s-2-2",
+      "title": "图像的NumPy表示",
+      "content": "OpenCV 读入的图像通常是 NumPy ndarray，包含高度、宽度以及通道数等维度信息（常见为 H×W×C）。理解“图像是数组”这一表示方式，才能理解 img.shape 的含义以及尺寸如何用于后续遍历像素。",
+      "relatedStepIds": ["s-2"],
+      "category": "concept",
+      "difficulty": "easy",
+      "scope": "step"
+    },
+    {
+      "id": "k-s-2-3",
+      "title": "ndarray的shape切片",
+      "content": "需要掌握 Python 中切片语法在元组/序列上的用法：img.shape[:2] 表示取 shape 的前两个维度。这样可以在不关心通道数的情况下，直接得到 h 和 w，用于控制后续循环边界。",
+      "relatedStepIds": ["s-2"],
+      "category": "syntax",
+      "difficulty": "easy",
+      "scope": "code"
+    },
+    {
+      "id": "k-s-2-4",
+      "title": "异常抛出与判空",
+      "content": "需要理解用 if img is None 做输入校验，并通过 raise FileNotFoundError 主动中断流程的模式。这样能在数据无效时尽早失败（fail fast），避免后续对空对象访问 shape 或处理像素而产生更隐蔽的错误。",
+      "relatedStepIds": ["s-2"],
+      "category": "concept",
+      "difficulty": "medium",
+      "scope": "step"
+    },
+    {
+      "id": "k-s-3-1",
+      "title": "数字图像像素表示",
+      "content": "理解图像在代码里通常表示为二维/三维数组：每个像素由若干通道组成（如B、G、R），每个通道是0-255的强度值。只有知道“像素-通道-数值”的数据表达，才能理解把彩色图变成灰度图本质上是在把3通道压缩为1通道。",
+      "relatedStepIds": ["s-3"],
+      "category": "concept",
+      "difficulty": "easy",
+      "scope": "step"
+    },
+    {
+      "id": "k-s-3-2",
+      "title": "灰度化与亮度计算",
+      "content": "灰度图并不是简单取某个颜色通道，而是将RGB/BGR按权重组合成“亮度”(luminance)的单通道值（常见如0.299R+0.587G+0.114B）。理解灰度值代表“亮不亮”，才能明白后续按灰度等级桶做分组与统计的依据。",
+      "relatedStepIds": ["s-3"],
+      "category": "concept",
+      "difficulty": "medium",
+      "scope": "step"
+    },
+    {
+      "id": "k-s-3-3",
+      "title": "OpenCV颜色空间转换",
+      "content": "OpenCV 提供 cv2.cvtColor 用于在不同颜色空间/通道布局间转换；需要知道其函数签名是“输入图像+转换码→输出图像”。理解 COLOR_* 常量的意义，才能读懂这一行代码是在做 BGR→GRAY 的颜色空间变换。",
+      "relatedStepIds": ["s-3"],
+      "category": "framework",
+      "difficulty": "easy",
+      "scope": "code"
+    },
+    {
+      "id": "k-s-3-4",
+      "title": "OpenCV默认BGR顺序",
+      "content": "OpenCV 读入与处理的彩色图默认通道顺序是 BGR（而非许多库常见的 RGB）。若不了解这一点，可能会误用 COLOR_RGB2GRAY 导致结果偏差。理解 BGR 与 RGB 的区别是正确选择 cv2.COLOR_BGR2GRAY 的前提。",
+      "relatedStepIds": ["s-3"],
+      "category": "framework",
+      "difficulty": "easy",
+      "scope": "code"
+    },
+    {
+      "id": "k-s-4-1",
+      "title": "灰度量化分桶",
+      "content": "灰度量化是把 0-255 的连续亮度值映射到更少的离散等级（如 5/8 档），本质是“分桶/分组”。理解它能解释为何画面会出现更明显的色阶，以及 levels 越小分组越粗、细节越少的“油画化”效果。",
+      "relatedStepIds": ["s-4"],
+      "category": "concept",
+      "difficulty": "easy",
+      "scope": "step"
+    },
+    {
+      "id": "k-s-4-2",
+      "title": "线性缩放取整",
+      "content": "用公式将值域从 [0,255] 变换到 [0,levels-1]，常见做法是乘以 levels 再除以 256 并向下取整。理解整数除法的“地板效应”可掌握每个灰度值如何落入某个等级编号，以及边界值（0、255）如何被映射。",
+      "relatedStepIds": ["s-4"],
+      "category": "algorithm",
+      "difficulty": "medium",
+      "scope": "code"
+    },
+    {
+      "id": "k-s-4-3",
+      "title": "NumPy 类型转换",
+      "content": "NumPy 的 astype 用于显式改变数组元素的数据类型。这里把 roi_gray 转为 uint32 是为了在乘以 levels 时避免 uint8 的溢出回绕（例如 200*8 超过 255 会截断），从而保证量化计算结果正确。",
+      "relatedStepIds": ["s-4"],
+      "category": "framework",
+      "difficulty": "medium",
+      "scope": "code"
+    },
+    {
+      "id": "k-s-4-4",
+      "title": "NumPy 广播与整除",
+      "content": "NumPy 支持数组与标量逐元素运算，表达式中的乘法和 // 会对每个像素独立计算。理解 // 在 NumPy 中表示逐元素整数整除（向下取整），有助于读懂一行代码如何一次性生成整幅 intensity_map。",
+      "relatedStepIds": ["s-4"],
+      "category": "syntax",
+      "difficulty": "easy",
+      "scope": "code"
+    },
+    {
+      "id": "k-s-5-1",
+      "title": "NumPy数组切片",
+      "content": "理解 gray[y-r:y+r+1, x-r:x+r+1] 这类二维切片的含义：左闭右开、步长默认1，以及“+1”用于包含中心像素。需要知道切片返回的是子数组视图/拷贝语义差异，才能正确理解ROI提取与后续计算的输入范围。",
+      "relatedStepIds": ["s-5"],
+      "category": "syntax",
+      "difficulty": "easy",
+      "scope": "code"
+    },
+    {
+      "id": "k-s-5-2",
+      "title": "图像矩阵与通道",
+      "content": "理解图像在代码中通常表示为 NumPy 数组：灰度图是二维(H×W)，彩色图是三维(H×W×C)。这解释了为什么 roi_gray 与 roi_color 的维度不同、如何对应“灰度小块/颜色小块”，以及后续统计或绘制笔触时使用哪个数据。",
+      "relatedStepIds": ["s-5"],
+      "category": "concept",
+      "difficulty": "easy",
+      "scope": "step"
+    },
+    {
+      "id": "k-s-5-3",
+      "title": "滑动窗口遍历",
+      "content": "滑动窗口是在每个像素位置取其邻域(2r+1)×(2r+1)作为局部上下文。需要理解窗口半径r决定邻域大小、局部特征/统计只依赖窗口内像素，从而构成“笔触观察范围”，也是局部滤波/纹理化算法的基础模式。",
+      "relatedStepIds": ["s-5"],
+      "category": "algorithm",
+      "difficulty": "medium",
+      "scope": "step"
+    },
+    {
+      "id": "k-s-5-4",
+      "title": "边界处理策略",
+      "content": "当窗口靠近图像边缘时会越界，常见处理包括：跳过边缘、填充(padding)、镜像/复制边界等。本步骤采用跳过边缘一圈(range(r, h-r))，需理解其原因是保证每次都能取到完整邻域，避免索引越界与不一致的窗口大小。",
+      "relatedStepIds": ["s-5"],
+      "category": "concept",
+      "difficulty": "medium",
+      "scope": "step"
+    },
+    {
+      "id": "k-s-5-5",
+      "title": "局部窗口的复杂度",
+      "content": "双层循环遍历每个有效像素，并在每次迭代提取(2r+1)^2窗口，会带来时间/内存开销。需理解总体复杂度约为 O(H·W·r^2)，以及为何这一步决定性能瓶颈，为后续可能的向量化、积分图或并行优化提供背景。",
+      "relatedStepIds": ["s-5"],
+      "category": "algorithm",
+      "difficulty": "medium",
+      "scope": "step"
+    },
+    {
+      "id": "k-s-6-1",
+      "title": "NumPy数组与dtype",
+      "content": "理解 np.zeros 创建指定形状数组及 dtype 的意义：counts/sum_bgr 用 uint32 是为了在计数与颜色累加时避免溢出并提升性能；同时需要知道 NumPy 数组的形状（如 (levels,) 与 (levels,3)）决定了后续索引与加法的含义。",
+      "relatedStepIds": ["s-6"],
+      "category": "framework",
+      "difficulty": "easy",
+      "scope": "code"
+    },
+    {
+      "id": "k-s-6-2",
+      "title": "reshape与扁平化索引",
+      "content": "理解 reshape(-1) 将二维/多维图像数据拉平成一维序列，便于用单个 for 循环遍历所有像素；并知道 flat_color.reshape(-1,3) 保持每个像素对应三通道 BGR，从而保证强度与颜色能按相同 i 对齐。",
+      "relatedStepIds": ["s-6"],
+      "category": "framework",
+      "difficulty": "easy",
+      "scope": "code"
+    },
+    {
+      "id": "k-s-6-3",
+      "title": "亮度量化与分档",
+      "content": "理解“亮度等级/levels”代表将连续亮度值映射到有限个离散档位（bin），例如 0..levels-1。只有理解量化/分桶，才能明白为何可以用 lvl 作为数组下标去统计频次与分档累加颜色。",
+      "relatedStepIds": ["s-6"],
+      "category": "concept",
+      "difficulty": "medium",
+      "scope": "step"
+    },
+    {
+      "id": "k-s-6-4",
+      "title": "直方图计数与分组求和",
+      "content": "理解按类别做统计的基本思想：counts 是亮度直方图（每档出现次数），sum_bgr 是“按同一档位分组后的颜色向量和”。后续通常用 sum_bgr[lvl]/counts[lvl] 得到该亮度档的平均颜色，并用多数决（max counts）选主导档位。",
+      "relatedStepIds": ["s-6"],
+      "category": "algorithm",
+      "difficulty": "medium",
+      "scope": "step"
+    },
+    {
+      "id": "k-s-7-1",
+      "title": "直方图计数数组",
+      "content": "counts 通常表示各亮度等级在邻域内出现次数的统计结果（类似直方图）。理解它需要知道：数组每个索引对应一个离散亮度等级，数组值是该等级的频次。后续“选主导亮度”等价于在频次分布中找众数。",
+      "relatedStepIds": ["s-7"],
+      "category": "algorithm",
+      "difficulty": "easy",
+      "scope": "step"
+    },
+    {
+      "id": "k-s-7-2",
+      "title": "众数与最大值索引",
+      "content": "“出现次数最多的亮度等级”对应统计学里的众数。在代码层面，需要将“最大频次”转成“该频次所在的位置（索引）”，因为索引才代表亮度等级编号。理解这一点才能把 counts 的最大项映射回具体亮度等级。",
+      "relatedStepIds": ["s-7"],
+      "category": "algorithm",
+      "difficulty": "easy",
+      "scope": "step"
+    },
+    {
+      "id": "k-s-7-3",
+      "title": "NumPy argmax用法",
+      "content": "np.argmax(a) 会返回数组 a 中最大元素的索引（若有并列最大，返回第一个）。这里用它从 counts 中定位最大频次所在的亮度等级。需要知道它返回的是索引而非最大值本身，以及对一维数组的默认行为。",
+      "relatedStepIds": ["s-7"],
+      "category": "framework",
+      "difficulty": "easy",
+      "scope": "code"
+    },
+    {
+      "id": "k-s-7-4",
+      "title": "Python类型转换int",
+      "content": "np.argmax 的返回值常是 NumPy 的整数类型（如 np.int64）。用 int(...) 转为 Python 原生 int，便于后续作为列表索引、字典键或参与其它只接受原生 int 的逻辑。理解这一转换能避免类型不兼容的疑惑。",
+      "relatedStepIds": ["s-7"],
+      "category": "syntax",
+      "difficulty": "easy",
+      "scope": "code"
+    },
+    {
+      "id": "k-s-8-1",
+      "title": "NumPy数组索引赋值",
+      "content": "理解 output[y, x] 与 img[y, x] 这类二维索引在图像数组中的含义：每个位置对应一个像素（通常包含3个通道BGR）。并知道给 output[y, x] 赋值时，需要提供形状匹配的通道向量，才能把计算出的“代表色”写回到输出画布。",
+      "relatedStepIds": ["s-8"],
+      "category": "framework",
+      "difficulty": "easy",
+      "scope": "code"
+    },
+    {
+      "id": "k-s-8-2",
+      "title": "整除运算与类型",
+      "content": "代码使用 // 做整数整除，避免产生浮点结果；同时理解 Python/NumPy 的整数类型提升规则：sum_bgr 可能是更大位宽的整数，整除后仍需控制范围。掌握这些有助于避免颜色计算出现非预期的浮点或溢出。",
+      "relatedStepIds": ["s-8"],
+      "category": "syntax",
+      "difficulty": "medium",
+      "scope": "code"
+    },
+    {
+      "id": "k-s-8-3",
+      "title": "astype与uint8截断",
+      "content": "图像常用 uint8 表示通道值0-255。理解 .astype(np.uint8) 的作用：将计算结果转换为8位无符号整数以适配图像数组存储；同时要意识到超过0-255的值会发生截断/回绕风险，因此前面的计算应尽量保证结果在合法范围内。",
+      "relatedStepIds": ["s-8"],
+      "category": "framework",
+      "difficulty": "medium",
+      "scope": "code"
+    },
+    {
+      "id": "k-s-8-4",
+      "title": "主导等级均值聚合",
+      "content": "理解步骤中的算法思想：先找“主导等级”(max_lvl)对应像素集合，再用该集合的颜色总和除以数量得到代表色（相当于对该组做均值池化/聚类中心近似），从而让输出像素受邻域主导颜色影响，形成色块化、抽象化的效果。",
+      "relatedStepIds": ["s-8"],
+      "category": "concept",
+      "difficulty": "medium",
+      "scope": "step"
+    },
+    {
+      "id": "k-s-8-5",
+      "title": "除零与分支保护",
+      "content": "理解 if c > 0 的防御式编程：当计数为0时避免除零异常，并给出回退策略 output[y, x] = img[y, x]。即使“理论上不会为零”，在边界条件或数据异常下仍需要保护，以保证算法稳定运行。",
+      "relatedStepIds": ["s-8"],
+      "category": "concept",
+      "difficulty": "easy",
+      "scope": "step"
+    },
+    {
+      "id": "k-s-9-1",
+      "title": "OpenCV图像写入",
+      "content": "需要理解 OpenCV 的 cv2.imwrite 用于把 numpy 图像矩阵写入磁盘，以及返回值表示写入是否成功。还要知道它接收输出路径、图像数组以及可选的编码参数列表，从而将处理结果真正“落盘”形成可交付文件。",
+      "relatedStepIds": ["s-9"],
+      "category": "framework",
+      "difficulty": "easy",
+      "scope": "code"
+    },
+    {
+      "id": "k-s-9-2",
+      "title": "JPEG质量参数",
+      "content": "需要了解 JPEG 有“有损压缩”，质量参数会在文件体积与细节保真间权衡。OpenCV 通过 cv2.IMWRITE_JPEG_QUALITY 指定质量（0-100），并以“键-值成对”的整数列表传入，才能控制输出效果与大小。",
+      "relatedStepIds": ["s-9"],
+      "category": "concept",
+      "difficulty": "medium",
+      "scope": "code"
+    },
+    {
+      "id": "k-s-9-3",
+      "title": "time模块计时",
+      "content": "需要理解用 time.time() 获取当前时间戳（秒），通过 end-start 计算耗时，并用格式化输出控制小数位（如 {elapsed:.2f}）。这用于向用户反馈性能与运行结果，便于调试和评估处理速度。",
+      "relatedStepIds": ["s-9"],
+      "category": "framework",
+      "difficulty": "easy",
+      "scope": "code"
+    },
+    {
+      "id": "k-s-9-4",
+      "title": "__main__入口写法",
+      "content": "需要理解 Python 脚本作为“被导入模块”与“直接运行程序”的区别。if __name__ == \"__main__\" 用于仅在直接运行文件时执行示例入口，既方便命令行一键运行，又不影响他人 import 该模块复用类与函数。",
+      "relatedStepIds": ["s-9"],
+      "category": "syntax",
+      "difficulty": "medium",
+      "scope": "code"
+    },
+    {
+      "id": "k-deep-1",
+      "title": "数组索引坐标系",
+      "content": "需要理解二维/三维数组用“行、列”索引访问：img[y, x] 表示第 y 行第 x 列，y 对应高度方向、x 对应宽度方向；并了解从 0 开始计数。否则很难读懂滑动窗口、边界 range(r, h-r) 以及输出像素写回的位置含义。",
+      "relatedStepIds": ["s-2", "s-5", "s-8"],
+      "category": "concept",
+      "difficulty": "easy",
+      "scope": "code"
+    },
+    {
+      "id": "k-deep-2",
+      "title": "for循环与range",
+      "content": "理解 Python 的 for 循环按序迭代，以及 range(start, stop) 生成整数序列且 stop 不包含在内。代码用 range(r, h-r) 与 range(r, w-r) 遍历有效像素，这依赖对“循环边界”与“左闭右开”规则的掌握。",
+      "relatedStepIds": ["s-5"],
+      "category": "syntax",
+      "difficulty": "easy",
+      "scope": "code"
+    },
+    {
+      "id": "k-deep-3",
+      "title": "整数与溢出概念",
+      "content": "需要先理解“整数位宽有限”导致的溢出：uint8 只能表示 0-255，超过会回绕/截断；而更大位宽如 uint32 可容纳更大中间结果。否则难以理解为何要 astype(np.uint32) 做防溢出，以及最终再转回 uint8 的必要性与风险。",
+      "relatedStepIds": ["s-4", "s-6", "s-8"],
+      "category": "concept",
+      "difficulty": "medium",
+      "scope": "step"
+    },
+    {
+      "id": "k-deep-4",
+      "title": "均值计算与除法",
+      "content": "理解“平均值=总和/数量”的数学含义，以及整数除法会向下取整带来的舍入误差。代码用 sum_bgr[lvl]//counts[lvl] 得代表色，若不理解均值与整除的关系，就难以明白输出颜色为何会偏暗/偏差及为何要做除零保护。",
+      "relatedStepIds": ["s-6", "s-8"],
+      "category": "concept",
+      "difficulty": "easy",
+      "scope": "step"
+    }
+  ],
+  "knowledgeRelations": [
+    {
+      "fromKnowledgeId": "k-s-1-1",
+      "toKnowledgeId": "k-s-1-2",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1774015829517
+    },
+    {
+      "fromKnowledgeId": "k-s-1-2",
+      "toKnowledgeId": "k-s-1-1",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1774015829517
+    },
+    {
+      "fromKnowledgeId": "k-s-1-1",
+      "toKnowledgeId": "k-s-1-3",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1774015829517
+    },
+    {
+      "fromKnowledgeId": "k-s-1-3",
+      "toKnowledgeId": "k-s-1-1",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1774015829517
+    },
+    {
+      "fromKnowledgeId": "k-s-1-1",
+      "toKnowledgeId": "k-s-1-4",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1774015829517
+    },
+    {
+      "fromKnowledgeId": "k-s-1-4",
+      "toKnowledgeId": "k-s-1-1",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1774015829517
+    },
+    {
+      "fromKnowledgeId": "k-s-2-1",
+      "toKnowledgeId": "k-s-2-4",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1774015829517
+    },
+    {
+      "fromKnowledgeId": "k-s-2-4",
+      "toKnowledgeId": "k-s-2-1",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1774015829517
+    },
+    {
+      "fromKnowledgeId": "k-s-2-1",
+      "toKnowledgeId": "k-s-2-2",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1774015829517
+    },
+    {
+      "fromKnowledgeId": "k-s-2-2",
+      "toKnowledgeId": "k-s-2-1",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1774015829517
+    },
+    {
+      "fromKnowledgeId": "k-s-2-2",
+      "toKnowledgeId": "k-s-2-3",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1774015829517
+    },
+    {
+      "fromKnowledgeId": "k-s-2-3",
+      "toKnowledgeId": "k-s-2-2",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1774015829517
+    },
+    {
+      "fromKnowledgeId": "k-s-3-4",
+      "toKnowledgeId": "k-s-3-3",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1774015829517
+    },
+    {
+      "fromKnowledgeId": "k-s-3-3",
+      "toKnowledgeId": "k-s-3-4",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1774015829517
+    },
+    {
+      "fromKnowledgeId": "k-s-3-1",
+      "toKnowledgeId": "k-s-3-2",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1774015829517
+    },
+    {
+      "fromKnowledgeId": "k-s-3-2",
+      "toKnowledgeId": "k-s-3-1",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1774015829517
+    },
+    {
+      "fromKnowledgeId": "k-s-4-1",
+      "toKnowledgeId": "k-s-4-2",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1774015829517
+    },
+    {
+      "fromKnowledgeId": "k-s-4-2",
+      "toKnowledgeId": "k-s-4-1",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1774015829517
+    },
+    {
+      "fromKnowledgeId": "k-deep-3",
+      "toKnowledgeId": "k-s-4-3",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1774015829517
+    },
+    {
+      "fromKnowledgeId": "k-s-4-3",
+      "toKnowledgeId": "k-deep-3",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1774015829517
+    },
+    {
+      "fromKnowledgeId": "k-s-4-2",
+      "toKnowledgeId": "k-s-4-4",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1774015829517
+    },
+    {
+      "fromKnowledgeId": "k-s-4-4",
+      "toKnowledgeId": "k-s-4-2",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1774015829517
+    },
+    {
+      "fromKnowledgeId": "k-s-5-2",
+      "toKnowledgeId": "k-s-5-1",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1774015829517
+    },
+    {
+      "fromKnowledgeId": "k-s-5-1",
+      "toKnowledgeId": "k-s-5-2",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1774015829517
+    },
+    {
+      "fromKnowledgeId": "k-deep-1",
+      "toKnowledgeId": "k-s-5-1",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1774015829517
+    },
+    {
+      "fromKnowledgeId": "k-s-5-1",
+      "toKnowledgeId": "k-deep-1",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1774015829517
+    },
+    {
+      "fromKnowledgeId": "k-deep-2",
+      "toKnowledgeId": "k-s-5-4",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1774015829517
+    },
+    {
+      "fromKnowledgeId": "k-s-5-4",
+      "toKnowledgeId": "k-deep-2",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1774015829517
+    },
+    {
+      "fromKnowledgeId": "k-s-5-3",
+      "toKnowledgeId": "k-s-5-5",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1774015829517
+    },
+    {
+      "fromKnowledgeId": "k-s-5-5",
+      "toKnowledgeId": "k-s-5-3",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1774015829517
+    },
+    {
+      "fromKnowledgeId": "k-s-6-1",
+      "toKnowledgeId": "k-s-6-4",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1774015829517
+    },
+    {
+      "fromKnowledgeId": "k-s-6-4",
+      "toKnowledgeId": "k-s-6-1",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1774015829517
+    },
+    {
+      "fromKnowledgeId": "k-s-6-3",
+      "toKnowledgeId": "k-s-6-4",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1774015829517
+    },
+    {
+      "fromKnowledgeId": "k-s-6-4",
+      "toKnowledgeId": "k-s-6-3",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1774015829517
+    },
+    {
+      "fromKnowledgeId": "k-s-7-1",
+      "toKnowledgeId": "k-s-7-2",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1774015829517
+    },
+    {
+      "fromKnowledgeId": "k-s-7-2",
+      "toKnowledgeId": "k-s-7-1",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1774015829517
+    },
+    {
+      "fromKnowledgeId": "k-s-7-2",
+      "toKnowledgeId": "k-s-7-3",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1774015829517
+    },
+    {
+      "fromKnowledgeId": "k-s-7-3",
+      "toKnowledgeId": "k-s-7-2",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1774015829517
+    },
+    {
+      "fromKnowledgeId": "k-s-7-3",
+      "toKnowledgeId": "k-s-7-4",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1774015829517
+    },
+    {
+      "fromKnowledgeId": "k-s-7-4",
+      "toKnowledgeId": "k-s-7-3",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1774015829517
+    },
+    {
+      "fromKnowledgeId": "k-deep-4",
+      "toKnowledgeId": "k-s-8-4",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1774015829517
+    },
+    {
+      "fromKnowledgeId": "k-s-8-4",
+      "toKnowledgeId": "k-deep-4",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1774015829517
+    },
+    {
+      "fromKnowledgeId": "k-s-8-4",
+      "toKnowledgeId": "k-s-8-5",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1774015829517
+    },
+    {
+      "fromKnowledgeId": "k-s-8-5",
+      "toKnowledgeId": "k-s-8-4",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1774015829517
+    },
+    {
+      "fromKnowledgeId": "k-s-8-2",
+      "toKnowledgeId": "k-s-8-3",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1774015829517
+    },
+    {
+      "fromKnowledgeId": "k-s-8-3",
+      "toKnowledgeId": "k-s-8-2",
+      "similarity": 1,
+      "relationType": "prerequisite",
+      "createdAt": 1774015829517
+    },
+    {
+      "fromKnowledgeId": "k-s-1-4",
+      "toKnowledgeId": "k-s-5-4",
+      "similarity": 0.6518443300955187,
+      "relationType": "related",
+      "createdAt": 1774015830507
+    },
+    {
+      "fromKnowledgeId": "k-s-5-4",
+      "toKnowledgeId": "k-s-1-4",
+      "similarity": 0.6518443300955187,
+      "relationType": "related",
+      "createdAt": 1774015830507
+    },
+    {
+      "fromKnowledgeId": "k-s-2-1",
+      "toKnowledgeId": "k-s-3-3",
+      "similarity": 0.73028179631875,
+      "relationType": "related",
+      "createdAt": 1774015830507
+    },
+    {
+      "fromKnowledgeId": "k-s-3-3",
+      "toKnowledgeId": "k-s-2-1",
+      "similarity": 0.73028179631875,
+      "relationType": "related",
+      "createdAt": 1774015830507
+    },
+    {
+      "fromKnowledgeId": "k-s-2-1",
+      "toKnowledgeId": "k-s-9-1",
+      "similarity": 0.8394409652016052,
+      "relationType": "related",
+      "createdAt": 1774015830507
+    },
+    {
+      "fromKnowledgeId": "k-s-9-1",
+      "toKnowledgeId": "k-s-2-1",
+      "similarity": 0.8394409652016052,
+      "relationType": "related",
+      "createdAt": 1774015830507
+    },
+    {
+      "fromKnowledgeId": "k-s-2-1",
+      "toKnowledgeId": "k-s-9-2",
+      "similarity": 0.6523728731852503,
+      "relationType": "related",
+      "createdAt": 1774015830507
+    },
+    {
+      "fromKnowledgeId": "k-s-9-2",
+      "toKnowledgeId": "k-s-2-1",
+      "similarity": 0.6523728731852503,
+      "relationType": "related",
+      "createdAt": 1774015830507
+    },
+    {
+      "fromKnowledgeId": "k-s-2-2",
+      "toKnowledgeId": "k-s-4-4",
+      "similarity": 0.6992216907017607,
+      "relationType": "related",
+      "createdAt": 1774015830507
+    },
+    {
+      "fromKnowledgeId": "k-s-4-4",
+      "toKnowledgeId": "k-s-2-2",
+      "similarity": 0.6992216907017607,
+      "relationType": "related",
+      "createdAt": 1774015830507
+    },
+    {
+      "fromKnowledgeId": "k-s-2-2",
+      "toKnowledgeId": "k-s-8-1",
+      "similarity": 0.6969589005273373,
+      "relationType": "related",
+      "createdAt": 1774015830507
+    },
+    {
+      "fromKnowledgeId": "k-s-8-1",
+      "toKnowledgeId": "k-s-2-2",
+      "similarity": 0.6969589005273373,
+      "relationType": "related",
+      "createdAt": 1774015830507
+    },
+    {
+      "fromKnowledgeId": "k-s-2-2",
+      "toKnowledgeId": "k-s-9-1",
+      "similarity": 0.7583099618512804,
+      "relationType": "related",
+      "createdAt": 1774015830507
+    },
+    {
+      "fromKnowledgeId": "k-s-9-1",
+      "toKnowledgeId": "k-s-2-2",
+      "similarity": 0.7583099618512804,
+      "relationType": "related",
+      "createdAt": 1774015830507
+    },
+    {
+      "fromKnowledgeId": "k-s-2-3",
+      "toKnowledgeId": "k-s-8-1",
+      "similarity": 0.6693280661091918,
+      "relationType": "related",
+      "createdAt": 1774015830507
+    },
+    {
+      "fromKnowledgeId": "k-s-8-1",
+      "toKnowledgeId": "k-s-2-3",
+      "similarity": 0.6693280661091918,
+      "relationType": "related",
+      "createdAt": 1774015830507
+    },
+    {
+      "fromKnowledgeId": "k-s-3-1",
+      "toKnowledgeId": "k-deep-1",
+      "similarity": 0.7424752145717307,
+      "relationType": "related",
+      "createdAt": 1774015830507
+    },
+    {
+      "fromKnowledgeId": "k-deep-1",
+      "toKnowledgeId": "k-s-3-1",
+      "similarity": 0.7424752145717307,
+      "relationType": "related",
+      "createdAt": 1774015830507
+    },
+    {
+      "fromKnowledgeId": "k-s-3-2",
+      "toKnowledgeId": "k-s-3-4",
+      "similarity": 0.6686136192537627,
+      "relationType": "related",
+      "createdAt": 1774015830507
+    },
+    {
+      "fromKnowledgeId": "k-s-3-4",
+      "toKnowledgeId": "k-s-3-2",
+      "similarity": 0.6686136192537627,
+      "relationType": "related",
+      "createdAt": 1774015830507
+    },
+    {
+      "fromKnowledgeId": "k-s-3-3",
+      "toKnowledgeId": "k-s-9-1",
+      "similarity": 0.8328005814383146,
+      "relationType": "related",
+      "createdAt": 1774015830508
+    },
+    {
+      "fromKnowledgeId": "k-s-9-1",
+      "toKnowledgeId": "k-s-3-3",
+      "similarity": 0.8328005814383146,
+      "relationType": "related",
+      "createdAt": 1774015830508
+    },
+    {
+      "fromKnowledgeId": "k-s-3-3",
+      "toKnowledgeId": "k-s-9-2",
+      "similarity": 0.6899534273715291,
+      "relationType": "related",
+      "createdAt": 1774015830508
+    },
+    {
+      "fromKnowledgeId": "k-s-9-2",
+      "toKnowledgeId": "k-s-3-3",
+      "similarity": 0.6899534273715291,
+      "relationType": "related",
+      "createdAt": 1774015830508
+    },
+    {
+      "fromKnowledgeId": "k-s-3-4",
+      "toKnowledgeId": "k-s-9-1",
+      "similarity": 0.7055361757741908,
+      "relationType": "related",
+      "createdAt": 1774015830508
+    },
+    {
+      "fromKnowledgeId": "k-s-9-1",
+      "toKnowledgeId": "k-s-3-4",
+      "similarity": 0.7055361757741908,
+      "relationType": "related",
+      "createdAt": 1774015830508
+    },
+    {
+      "fromKnowledgeId": "k-s-4-1",
+      "toKnowledgeId": "k-s-6-3",
+      "similarity": 0.742842873325784,
+      "relationType": "related",
+      "createdAt": 1774015830508
+    },
+    {
+      "fromKnowledgeId": "k-s-6-3",
+      "toKnowledgeId": "k-s-4-1",
+      "similarity": 0.742842873325784,
+      "relationType": "related",
+      "createdAt": 1774015830508
+    },
+    {
+      "fromKnowledgeId": "k-s-4-3",
+      "toKnowledgeId": "k-s-4-4",
+      "similarity": 0.6668318338524086,
+      "relationType": "related",
+      "createdAt": 1774015830508
+    },
+    {
+      "fromKnowledgeId": "k-s-4-4",
+      "toKnowledgeId": "k-s-4-3",
+      "similarity": 0.6668318338524086,
+      "relationType": "related",
+      "createdAt": 1774015830508
+    },
+    {
+      "fromKnowledgeId": "k-s-4-3",
+      "toKnowledgeId": "k-s-6-1",
+      "similarity": 0.6931138941003254,
+      "relationType": "related",
+      "createdAt": 1774015830508
+    },
+    {
+      "fromKnowledgeId": "k-s-6-1",
+      "toKnowledgeId": "k-s-4-3",
+      "similarity": 0.6931138941003254,
+      "relationType": "related",
+      "createdAt": 1774015830508
+    },
+    {
+      "fromKnowledgeId": "k-s-4-4",
+      "toKnowledgeId": "k-s-7-3",
+      "similarity": 0.6575432539069379,
+      "relationType": "related",
+      "createdAt": 1774015830508
+    },
+    {
+      "fromKnowledgeId": "k-s-7-3",
+      "toKnowledgeId": "k-s-4-4",
+      "similarity": 0.6575432539069379,
+      "relationType": "related",
+      "createdAt": 1774015830508
+    },
+    {
+      "fromKnowledgeId": "k-s-5-4",
+      "toKnowledgeId": "k-deep-1",
+      "similarity": 0.6511763044495117,
+      "relationType": "related",
+      "createdAt": 1774015830510
+    },
+    {
+      "fromKnowledgeId": "k-deep-1",
+      "toKnowledgeId": "k-s-5-4",
+      "similarity": 0.6511763044495117,
+      "relationType": "related",
+      "createdAt": 1774015830510
+    },
+    {
+      "fromKnowledgeId": "k-s-6-4",
+      "toKnowledgeId": "k-deep-4",
+      "similarity": 0.760348002964157,
+      "relationType": "related",
+      "createdAt": 1774015830510
+    },
+    {
+      "fromKnowledgeId": "k-deep-4",
+      "toKnowledgeId": "k-s-6-4",
+      "similarity": 0.760348002964157,
+      "relationType": "related",
+      "createdAt": 1774015830510
+    },
+    {
+      "fromKnowledgeId": "k-s-7-4",
+      "toKnowledgeId": "k-s-8-2",
+      "similarity": 0.6977268475293249,
+      "relationType": "related",
+      "createdAt": 1774015830510
+    },
+    {
+      "fromKnowledgeId": "k-s-8-2",
+      "toKnowledgeId": "k-s-7-4",
+      "similarity": 0.6977268475293249,
+      "relationType": "related",
+      "createdAt": 1774015830510
+    },
+    {
+      "fromKnowledgeId": "k-s-8-3",
+      "toKnowledgeId": "k-deep-3",
+      "similarity": 0.8459049023641578,
+      "relationType": "related",
+      "createdAt": 1774015830510
+    },
+    {
+      "fromKnowledgeId": "k-deep-3",
+      "toKnowledgeId": "k-s-8-3",
+      "similarity": 0.8459049023641578,
+      "relationType": "related",
+      "createdAt": 1774015830510
+    },
+    {
+      "fromKnowledgeId": "k-s-8-5",
+      "toKnowledgeId": "k-deep-1",
+      "similarity": 0.6856531573557308,
+      "relationType": "related",
+      "createdAt": 1774015830510
+    },
+    {
+      "fromKnowledgeId": "k-deep-1",
+      "toKnowledgeId": "k-s-8-5",
+      "similarity": 0.6856531573557308,
+      "relationType": "related",
+      "createdAt": 1774015830510
+    },
+    {
+      "fromKnowledgeId": "k-s-9-1",
+      "toKnowledgeId": "k-s-9-2",
+      "similarity": 0.7656418976722948,
+      "relationType": "related",
+      "createdAt": 1774015830510
+    },
+    {
+      "fromKnowledgeId": "k-s-9-2",
+      "toKnowledgeId": "k-s-9-1",
+      "similarity": 0.7656418976722948,
+      "relationType": "related",
+      "createdAt": 1774015830510
+    }
+  ],
+  "knowledgeToStepRelations": [
+    {
+      "knowledgeId": "k-s-1-4",
+      "stepId": "s-1",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-2-1",
+      "stepId": "s-2",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-2-2",
+      "stepId": "s-2",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-2-4",
+      "stepId": "s-2",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-3-1",
+      "stepId": "s-3",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-3-2",
+      "stepId": "s-3",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-4-1",
+      "stepId": "s-4",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-5-2",
+      "stepId": "s-5",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-5-3",
+      "stepId": "s-5",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-5-4",
+      "stepId": "s-5",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-5-5",
+      "stepId": "s-5",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-6-3",
+      "stepId": "s-6",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-6-4",
+      "stepId": "s-6",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-7-1",
+      "stepId": "s-7",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-7-2",
+      "stepId": "s-7",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-8-4",
+      "stepId": "s-8",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-8-5",
+      "stepId": "s-8",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-deep-3",
+      "stepId": "s-4",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-deep-3",
+      "stepId": "s-6",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-deep-3",
+      "stepId": "s-8",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-deep-4",
+      "stepId": "s-6",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-deep-4",
+      "stepId": "s-8",
+      "createdAt": 1774015802849
+    }
+  ],
+  "knowledgeToCodeChunkRelations": [
+    {
+      "knowledgeId": "k-s-1-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-3",
+      "viaStepId": "s-1",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-1-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-4",
+      "viaStepId": "s-1",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-1-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-5",
+      "viaStepId": "s-1",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-1-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-6",
+      "viaStepId": "s-1",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-1-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-7",
+      "viaStepId": "s-1",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-1-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-8",
+      "viaStepId": "s-1",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-1-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-9",
+      "viaStepId": "s-1",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-1-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-10",
+      "viaStepId": "s-1",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-1-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-11",
+      "viaStepId": "s-1",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-1-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-12",
+      "viaStepId": "s-1",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-1-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-3",
+      "viaStepId": "s-1",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-1-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-4",
+      "viaStepId": "s-1",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-1-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-5",
+      "viaStepId": "s-1",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-1-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-6",
+      "viaStepId": "s-1",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-1-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-7",
+      "viaStepId": "s-1",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-1-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-8",
+      "viaStepId": "s-1",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-1-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-9",
+      "viaStepId": "s-1",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-1-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-10",
+      "viaStepId": "s-1",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-1-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-11",
+      "viaStepId": "s-1",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-1-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-12",
+      "viaStepId": "s-1",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-1-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-3",
+      "viaStepId": "s-1",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-1-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-4",
+      "viaStepId": "s-1",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-1-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-5",
+      "viaStepId": "s-1",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-1-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-6",
+      "viaStepId": "s-1",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-1-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-7",
+      "viaStepId": "s-1",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-1-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-8",
+      "viaStepId": "s-1",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-1-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-9",
+      "viaStepId": "s-1",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-1-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-10",
+      "viaStepId": "s-1",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-1-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-11",
+      "viaStepId": "s-1",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-1-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-12",
+      "viaStepId": "s-1",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-2-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-0",
+      "viaStepId": "s-2",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-2-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-1",
+      "viaStepId": "s-2",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-2-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-2",
+      "viaStepId": "s-2",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-2-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-13",
+      "viaStepId": "s-2",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-2-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-14",
+      "viaStepId": "s-2",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-2-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-15",
+      "viaStepId": "s-2",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-2-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-16",
+      "viaStepId": "s-2",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-2-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-17",
+      "viaStepId": "s-2",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-2-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-18",
+      "viaStepId": "s-2",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-3-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-20",
+      "viaStepId": "s-3",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-3-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-20",
+      "viaStepId": "s-3",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-4-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-31",
+      "viaStepId": "s-4",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-4-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-31",
+      "viaStepId": "s-4",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-4-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-31",
+      "viaStepId": "s-4",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-5-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-21",
+      "viaStepId": "s-5",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-5-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-22",
+      "viaStepId": "s-5",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-5-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-23",
+      "viaStepId": "s-5",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-5-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-24",
+      "viaStepId": "s-5",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-5-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-26",
+      "viaStepId": "s-5",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-5-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-27",
+      "viaStepId": "s-5",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-5-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-28",
+      "viaStepId": "s-5",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-5-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-29",
+      "viaStepId": "s-5",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-6-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-33",
+      "viaStepId": "s-6",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-6-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-34",
+      "viaStepId": "s-6",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-6-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-35",
+      "viaStepId": "s-6",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-6-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-36",
+      "viaStepId": "s-6",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-6-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-37",
+      "viaStepId": "s-6",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-6-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-38",
+      "viaStepId": "s-6",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-6-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-39",
+      "viaStepId": "s-6",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-6-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-40",
+      "viaStepId": "s-6",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-6-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-33",
+      "viaStepId": "s-6",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-6-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-34",
+      "viaStepId": "s-6",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-6-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-35",
+      "viaStepId": "s-6",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-6-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-36",
+      "viaStepId": "s-6",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-6-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-37",
+      "viaStepId": "s-6",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-6-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-38",
+      "viaStepId": "s-6",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-6-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-39",
+      "viaStepId": "s-6",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-6-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-40",
+      "viaStepId": "s-6",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-7-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-42",
+      "viaStepId": "s-7",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-7-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-42",
+      "viaStepId": "s-7",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-8-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-44",
+      "viaStepId": "s-8",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-8-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-45",
+      "viaStepId": "s-8",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-8-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-46",
+      "viaStepId": "s-8",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-8-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-47",
+      "viaStepId": "s-8",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-8-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-48",
+      "viaStepId": "s-8",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-8-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-44",
+      "viaStepId": "s-8",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-8-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-45",
+      "viaStepId": "s-8",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-8-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-46",
+      "viaStepId": "s-8",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-8-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-47",
+      "viaStepId": "s-8",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-8-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-48",
+      "viaStepId": "s-8",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-8-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-44",
+      "viaStepId": "s-8",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-8-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-45",
+      "viaStepId": "s-8",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-8-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-46",
+      "viaStepId": "s-8",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-8-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-47",
+      "viaStepId": "s-8",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-8-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-48",
+      "viaStepId": "s-8",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-9-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-50",
+      "viaStepId": "s-9",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-9-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-51",
+      "viaStepId": "s-9",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-9-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-52",
+      "viaStepId": "s-9",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-9-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-53",
+      "viaStepId": "s-9",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-9-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-54",
+      "viaStepId": "s-9",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-9-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-55",
+      "viaStepId": "s-9",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-9-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-56",
+      "viaStepId": "s-9",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-9-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-50",
+      "viaStepId": "s-9",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-9-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-51",
+      "viaStepId": "s-9",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-9-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-52",
+      "viaStepId": "s-9",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-9-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-53",
+      "viaStepId": "s-9",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-9-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-54",
+      "viaStepId": "s-9",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-9-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-55",
+      "viaStepId": "s-9",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-9-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-56",
+      "viaStepId": "s-9",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-9-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-50",
+      "viaStepId": "s-9",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-9-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-51",
+      "viaStepId": "s-9",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-9-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-52",
+      "viaStepId": "s-9",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-9-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-53",
+      "viaStepId": "s-9",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-9-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-54",
+      "viaStepId": "s-9",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-9-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-55",
+      "viaStepId": "s-9",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-9-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-56",
+      "viaStepId": "s-9",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-9-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-50",
+      "viaStepId": "s-9",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-9-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-51",
+      "viaStepId": "s-9",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-9-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-52",
+      "viaStepId": "s-9",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-9-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-53",
+      "viaStepId": "s-9",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-9-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-54",
+      "viaStepId": "s-9",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-9-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-55",
+      "viaStepId": "s-9",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-s-9-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-56",
+      "viaStepId": "s-9",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-0",
+      "viaStepId": "s-2",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-1",
+      "viaStepId": "s-2",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-2",
+      "viaStepId": "s-2",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-13",
+      "viaStepId": "s-2",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-14",
+      "viaStepId": "s-2",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-15",
+      "viaStepId": "s-2",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-16",
+      "viaStepId": "s-2",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-17",
+      "viaStepId": "s-2",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-18",
+      "viaStepId": "s-2",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-21",
+      "viaStepId": "s-5",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-22",
+      "viaStepId": "s-5",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-23",
+      "viaStepId": "s-5",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-24",
+      "viaStepId": "s-5",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-26",
+      "viaStepId": "s-5",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-27",
+      "viaStepId": "s-5",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-28",
+      "viaStepId": "s-5",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-29",
+      "viaStepId": "s-5",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-44",
+      "viaStepId": "s-8",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-45",
+      "viaStepId": "s-8",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-46",
+      "viaStepId": "s-8",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-47",
+      "viaStepId": "s-8",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-deep-1",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-48",
+      "viaStepId": "s-8",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-deep-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-21",
+      "viaStepId": "s-5",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-deep-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-22",
+      "viaStepId": "s-5",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-deep-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-23",
+      "viaStepId": "s-5",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-deep-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-24",
+      "viaStepId": "s-5",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-deep-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-26",
+      "viaStepId": "s-5",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-deep-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-27",
+      "viaStepId": "s-5",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-deep-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-28",
+      "viaStepId": "s-5",
+      "createdAt": 1774015802849
+    },
+    {
+      "knowledgeId": "k-deep-2",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/minimal_oil_painter.py-chunk-29",
+      "viaStepId": "s-5",
+      "createdAt": 1774015802849
+    }
+  ]
+}

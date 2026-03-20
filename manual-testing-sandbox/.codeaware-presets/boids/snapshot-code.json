@@ -1,1892 +1,2084 @@
 {
   "codeFile": {
-    "relativePath": "boids_simulation.py",
-    "content": "import pygame\nimport random\n\n# Step 2: 设置速度、距离等参数\nWIDTH, HEIGHT = 800, 600\nNUM_BOIDS = 50\nVIEW_RADIUS = 50\nPROTECTED_RANGE = 20\nAVOID_FACTOR = 0.05\nMATCH_FACTOR = 0.05\nCENTER_FACTOR = 0.0005\nMAX_SPEED = 5\nMIN_SPEED = 2\n\n# Step 1: 定义鸟群行为规则（Boid类）\nclass Boid:\n    def __init__(self):\n        self.pos = pygame.Vector2(random.uniform(0, WIDTH), random.uniform(0, HEIGHT))\n        self.vel = pygame.Vector2(random.uniform(-MAX_SPEED, MAX_SPEED), random.uniform(-MAX_SPEED, MAX_SPEED))\n\n    # Step 3/4: 实现位置和速度动态更新 & 边界循环与群体碰撞\n    def update(self, boids):\n        sep = pygame.Vector2(0, 0)\n        ali = pygame.Vector2(0, 0)\n        coh = pygame.Vector2(0, 0)\n        neighbors = 0\n\n        for other in boids:\n            if other is self:\n                continue\n            dist = self.pos.distance_to(other.pos)\n            if dist < VIEW_RADIUS:\n                if dist < PROTECTED_RANGE:\n                    sep += (self.pos - other.pos)\n                ali += other.vel\n                coh += other.pos\n                neighbors += 1\n\n        if neighbors > 0:\n            ali /= neighbors\n            coh /= neighbors\n            self.vel += (ali - self.vel) * MATCH_FACTOR\n            self.vel += (coh - self.pos) * CENTER_FACTOR\n        self.vel += sep * AVOID_FACTOR\n\n        speed = self.vel.length()\n        if speed > MAX_SPEED:\n            self.vel.scale_to_length(MAX_SPEED)\n        if speed < MIN_SPEED:\n            self.vel.scale_to_length(MIN_SPEED)\n        self.pos += self.vel\n        # Step 4: 处理边界循环\n        self.pos.x %= WIDTH\n        self.pos.y %= HEIGHT\n\n    # Step 5: 绘制鸟群动画效果\n    def draw(self, screen):\n        pygame.draw.circle(screen, (200, 200, 255), (int(self.pos.x), int(self.pos.y)), 3)\n\n# Step 6: 搭建持续动画循环\n\ndef main():\n    pygame.init()\n    screen = pygame.display.set_mode((WIDTH, HEIGHT))\n    pygame.display.set_caption(\"Boids 群鸟仿真模拟\")\n    clock = pygame.time.Clock()\n    boids = [Boid() for _ in range(NUM_BOIDS)]\n    running = True\n    while running:\n        for event in pygame.event.get():\n            if event.type == pygame.QUIT:\n                running = False\n        screen.fill((30, 30, 35))\n        for boid in boids:\n            boid.update(boids)\n            boid.draw(screen)\n        pygame.display.flip()\n        clock.tick(60)\n    pygame.quit()\n\nif __name__ == \"__main__\":\n    main()\n"
+    "relativePath": "boids.py",
+    "content": "import pygame\nimport random\n\n# Step 1: 定义全局参数常量\nWIDTH, HEIGHT = 800, 600\nNUM_BOIDS = 50\nVIEW_RADIUS = 50\nPROTECTED_RANGE = 20\nAVOID_FACTOR = 0.05\nMATCH_FACTOR = 0.05\nCENTER_FACTOR = 0.0005\nMAX_SPEED = 5\nMIN_SPEED = 2\n\n\n# Step 3: 定义Boid的位置与速度字段\nclass Boid:\n    def __init__(self):\n        # Step 4: 随机生成初始群体状态\n        self.pos = pygame.Vector2(random.uniform(0, WIDTH), random.uniform(0, HEIGHT))\n        self.vel = pygame.Vector2(\n            random.uniform(-MAX_SPEED, MAX_SPEED),\n            random.uniform(-MAX_SPEED, MAX_SPEED),\n        )\n\n    def update(self, boids):\n        # Step 5: 统计邻居并计算分离向量\n        sep = pygame.Vector2(0, 0)\n        # Step 6: 计算对齐与聚合目标\n        ali = pygame.Vector2(0, 0)\n        coh = pygame.Vector2(0, 0)\n        neighbors = 0\n\n        for other in boids:\n            if other is self:\n                continue\n\n            dist = self.pos.distance_to(other.pos)\n            if dist < VIEW_RADIUS:\n                if dist < PROTECTED_RANGE:\n                    sep += (self.pos - other.pos)\n                ali += other.vel\n                coh += other.pos\n                neighbors += 1\n\n        if neighbors > 0:\n            ali /= neighbors\n            coh /= neighbors\n            # Step 7: 按系数更新速度向量\n            self.vel += (ali - self.vel) * MATCH_FACTOR\n            self.vel += (coh - self.pos) * CENTER_FACTOR\n\n        self.vel += sep * AVOID_FACTOR\n\n        # Step 8: 限制速度到最小最大范围\n        speed = self.vel.length()\n        if speed > MAX_SPEED:\n            self.vel.scale_to_length(MAX_SPEED)\n        elif speed < MIN_SPEED:\n            self.vel.scale_to_length(MIN_SPEED)\n\n        # Step 9: 推进位置并处理边界循环\n        self.pos += self.vel\n        self.pos.x %= WIDTH\n        self.pos.y %= HEIGHT\n\n    # Step 10: 绘制每只鸟为小圆点\n    def draw(self, screen):\n        pygame.draw.circle(\n            screen,\n            (200, 200, 255),\n            (int(self.pos.x), int(self.pos.y)),\n            3,\n        )\n\n\ndef main():\n    # Step 2: 初始化Pygame显示环境\n    pygame.init()\n    screen = pygame.display.set_mode((WIDTH, HEIGHT))\n    pygame.display.set_caption(\"Boids 群鸟仿真模拟\")\n    clock = pygame.time.Clock()\n\n    # Step 4: 随机生成初始群体状态\n    boids = [Boid() for _ in range(NUM_BOIDS)]\n\n    running = True\n    while running:\n        # Step 11: 处理退出事件并清屏刷新\n        for event in pygame.event.get():\n            if event.type == pygame.QUIT:\n                running = False\n\n        screen.fill((30, 30, 35))\n\n        for boid in boids:\n            boid.update(boids)\n            boid.draw(screen)\n\n        pygame.display.flip()\n\n        # Step 12: 控制帧率并收尾退出Pygame\n        clock.tick(60)\n\n    pygame.quit()\n\n\nif __name__ == \"__main__\":\n    main()"
   },
   "codeChunks": [
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-0",
-      "content": "simport pygame",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-0",
+      "content": "import pygame",
       "range": [1, 1],
       "isHighlighted": false,
       "disabled": false,
-      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py"
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-1",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-1",
       "content": "import random",
       "range": [2, 2],
       "isHighlighted": false,
       "disabled": false,
-      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py"
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-2",
-      "content": "# Step 2: 设置速度、距离等参数",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-2",
+      "content": "# Step 1: 定义全局参数常量",
       "range": [4, 4],
       "isHighlighted": false,
       "disabled": false,
-      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py"
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-3",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-3",
       "content": "WIDTH, HEIGHT = 800, 600",
       "range": [5, 5],
       "isHighlighted": false,
       "disabled": false,
-      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py"
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-4",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-4",
       "content": "NUM_BOIDS = 50",
       "range": [6, 6],
       "isHighlighted": false,
       "disabled": false,
-      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py"
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-5",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-5",
       "content": "VIEW_RADIUS = 50",
       "range": [7, 7],
       "isHighlighted": false,
       "disabled": false,
-      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py"
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-6",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-6",
       "content": "PROTECTED_RANGE = 20",
       "range": [8, 8],
       "isHighlighted": false,
       "disabled": false,
-      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py"
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-7",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-7",
       "content": "AVOID_FACTOR = 0.05",
       "range": [9, 9],
       "isHighlighted": false,
       "disabled": false,
-      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py"
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-8",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-8",
       "content": "MATCH_FACTOR = 0.05",
       "range": [10, 10],
       "isHighlighted": false,
       "disabled": false,
-      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py"
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-9",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-9",
       "content": "CENTER_FACTOR = 0.0005",
       "range": [11, 11],
       "isHighlighted": false,
       "disabled": false,
-      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py"
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-10",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-10",
       "content": "MAX_SPEED = 5",
       "range": [12, 12],
       "isHighlighted": false,
       "disabled": false,
-      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py"
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-11",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-11",
       "content": "MIN_SPEED = 2",
       "range": [13, 13],
       "isHighlighted": false,
       "disabled": false,
-      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py"
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-12",
-      "content": "# Step 1: 定义鸟群行为规则（Boid类）",
-      "range": [15, 15],
-      "isHighlighted": false,
-      "disabled": false,
-      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-13",
-      "content": "class Boid:",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-12",
+      "content": "# Step 3: 定义Boid的位置与速度字段",
       "range": [16, 16],
       "isHighlighted": false,
       "disabled": false,
-      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py"
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-14",
-      "content": "    def __init__(self):",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-13",
+      "content": "class Boid:",
       "range": [17, 17],
       "isHighlighted": false,
       "disabled": false,
-      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py"
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-15",
-      "content": "        self.pos = pygame.Vector2(random.uniform(0, WIDTH), random.uniform(0, HEIGHT))",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-14",
+      "content": "    def __init__(self):",
       "range": [18, 18],
       "isHighlighted": false,
       "disabled": false,
-      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py"
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-16",
-      "content": "        self.vel = pygame.Vector2(random.uniform(-MAX_SPEED, MAX_SPEED), random.uniform(-MAX_SPEED, MAX_SPEED))",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-15",
+      "content": "        # Step 4: 随机生成初始群体状态",
       "range": [19, 19],
       "isHighlighted": false,
       "disabled": false,
-      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py"
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-17",
-      "content": "    # Step 3/4: 实现位置和速度动态更新 & 边界循环与群体碰撞",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-16",
+      "content": "        self.pos = pygame.Vector2(random.uniform(0, WIDTH), random.uniform(0, HEIGHT))",
+      "range": [20, 20],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-17",
+      "content": "        self.vel = pygame.Vector2(",
       "range": [21, 21],
       "isHighlighted": false,
       "disabled": false,
-      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py"
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-18",
-      "content": "    def update(self, boids):",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-18",
+      "content": "            random.uniform(-MAX_SPEED, MAX_SPEED),",
       "range": [22, 22],
       "isHighlighted": false,
       "disabled": false,
-      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py"
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-19",
-      "content": "        sep = pygame.Vector2(0, 0)",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-19",
+      "content": "            random.uniform(-MAX_SPEED, MAX_SPEED),",
       "range": [23, 23],
       "isHighlighted": false,
       "disabled": false,
-      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py"
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-20",
-      "content": "        ali = pygame.Vector2(0, 0)",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-20",
+      "content": "        )",
       "range": [24, 24],
       "isHighlighted": false,
       "disabled": false,
-      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py"
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-21",
-      "content": "        coh = pygame.Vector2(0, 0)",
-      "range": [25, 25],
-      "isHighlighted": false,
-      "disabled": false,
-      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-22",
-      "content": "        neighbors = 0",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-21",
+      "content": "    def update(self, boids):",
       "range": [26, 26],
       "isHighlighted": false,
       "disabled": false,
-      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py"
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-23",
-      "content": "        for other in boids:",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-22",
+      "content": "        # Step 5: 统计邻居并计算分离向量",
+      "range": [27, 27],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-23",
+      "content": "        sep = pygame.Vector2(0, 0)",
       "range": [28, 28],
       "isHighlighted": false,
       "disabled": false,
-      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py"
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-24",
-      "content": "            if other is self:",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-24",
+      "content": "        # Step 6: 计算对齐与聚合目标",
       "range": [29, 29],
       "isHighlighted": false,
       "disabled": false,
-      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py"
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-25",
-      "content": "                continue",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-25",
+      "content": "        ali = pygame.Vector2(0, 0)",
       "range": [30, 30],
       "isHighlighted": false,
       "disabled": false,
-      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py"
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-26",
-      "content": "            dist = self.pos.distance_to(other.pos)",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-26",
+      "content": "        coh = pygame.Vector2(0, 0)",
       "range": [31, 31],
       "isHighlighted": false,
       "disabled": false,
-      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py"
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-27",
-      "content": "            if dist < VIEW_RADIUS:",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-27",
+      "content": "        neighbors = 0",
       "range": [32, 32],
       "isHighlighted": false,
       "disabled": false,
-      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py"
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-28",
-      "content": "                if dist < PROTECTED_RANGE:",
-      "range": [33, 33],
-      "isHighlighted": false,
-      "disabled": false,
-      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-29",
-      "content": "                    sep += (self.pos - other.pos)",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-28",
+      "content": "        for other in boids:",
       "range": [34, 34],
       "isHighlighted": false,
       "disabled": false,
-      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py"
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-30",
-      "content": "                ali += other.vel",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-29",
+      "content": "            if other is self:",
       "range": [35, 35],
       "isHighlighted": false,
       "disabled": false,
-      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py"
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-31",
-      "content": "                coh += other.pos",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-30",
+      "content": "                continue",
       "range": [36, 36],
       "isHighlighted": false,
       "disabled": false,
-      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py"
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-32",
-      "content": "                neighbors += 1",
-      "range": [37, 37],
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-31",
+      "content": "            dist = self.pos.distance_to(other.pos)",
+      "range": [38, 38],
       "isHighlighted": false,
       "disabled": false,
-      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py"
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-33",
-      "content": "        if neighbors > 0:",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-32",
+      "content": "            if dist < VIEW_RADIUS:",
       "range": [39, 39],
       "isHighlighted": false,
       "disabled": false,
-      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py"
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-34",
-      "content": "            ali /= neighbors",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-33",
+      "content": "                if dist < PROTECTED_RANGE:",
       "range": [40, 40],
       "isHighlighted": false,
       "disabled": false,
-      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py"
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-35",
-      "content": "            coh /= neighbors",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-34",
+      "content": "                    sep += (self.pos - other.pos)",
       "range": [41, 41],
       "isHighlighted": false,
       "disabled": false,
-      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py"
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-36",
-      "content": "            self.vel += (ali - self.vel) * MATCH_FACTOR",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-35",
+      "content": "                ali += other.vel",
       "range": [42, 42],
       "isHighlighted": false,
       "disabled": false,
-      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py"
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-37",
-      "content": "            self.vel += (coh - self.pos) * CENTER_FACTOR",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-36",
+      "content": "                coh += other.pos",
       "range": [43, 43],
       "isHighlighted": false,
       "disabled": false,
-      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py"
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-38",
-      "content": "        self.vel += sep * AVOID_FACTOR",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-37",
+      "content": "                neighbors += 1",
       "range": [44, 44],
       "isHighlighted": false,
       "disabled": false,
-      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py"
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-39",
-      "content": "        speed = self.vel.length()",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-38",
+      "content": "        if neighbors > 0:",
       "range": [46, 46],
       "isHighlighted": false,
       "disabled": false,
-      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py"
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-40",
-      "content": "        if speed > MAX_SPEED:",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-39",
+      "content": "            ali /= neighbors",
       "range": [47, 47],
       "isHighlighted": false,
       "disabled": false,
-      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py"
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-41",
-      "content": "            self.vel.scale_to_length(MAX_SPEED)",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-40",
+      "content": "            coh /= neighbors",
       "range": [48, 48],
       "isHighlighted": false,
       "disabled": false,
-      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py"
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-42",
-      "content": "        if speed < MIN_SPEED:",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-41",
+      "content": "            # Step 7: 按系数更新速度向量",
       "range": [49, 49],
       "isHighlighted": false,
       "disabled": false,
-      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py"
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-43",
-      "content": "            self.vel.scale_to_length(MIN_SPEED)",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-42",
+      "content": "            self.vel += (ali - self.vel) * MATCH_FACTOR",
       "range": [50, 50],
       "isHighlighted": false,
       "disabled": false,
-      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py"
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-44",
-      "content": "        self.pos += self.vel",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-43",
+      "content": "            self.vel += (coh - self.pos) * CENTER_FACTOR",
       "range": [51, 51],
       "isHighlighted": false,
       "disabled": false,
-      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py"
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-45",
-      "content": "        # Step 4: 处理边界循环",
-      "range": [52, 52],
-      "isHighlighted": false,
-      "disabled": false,
-      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-46",
-      "content": "        self.pos.x %= WIDTH",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-44",
+      "content": "        self.vel += sep * AVOID_FACTOR",
       "range": [53, 53],
       "isHighlighted": false,
       "disabled": false,
-      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py"
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-47",
-      "content": "        self.pos.y %= HEIGHT",
-      "range": [54, 54],
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-45",
+      "content": "        # Step 8: 限制速度到最小最大范围",
+      "range": [55, 55],
       "isHighlighted": false,
       "disabled": false,
-      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py"
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-48",
-      "content": "    # Step 5: 绘制鸟群动画效果",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-46",
+      "content": "        speed = self.vel.length()",
       "range": [56, 56],
       "isHighlighted": false,
       "disabled": false,
-      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py"
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-49",
-      "content": "    def draw(self, screen):",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-47",
+      "content": "        if speed > MAX_SPEED:",
       "range": [57, 57],
       "isHighlighted": false,
       "disabled": false,
-      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py"
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-50",
-      "content": "        pygame.draw.circle(screen, (200, 200, 255), (int(self.pos.x), int(self.pos.y)), 3)",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-48",
+      "content": "            self.vel.scale_to_length(MAX_SPEED)",
       "range": [58, 58],
       "isHighlighted": false,
       "disabled": false,
-      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py"
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-51",
-      "content": "# Step 6: 搭建持续动画循环",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-49",
+      "content": "        elif speed < MIN_SPEED:",
+      "range": [59, 59],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-50",
+      "content": "            self.vel.scale_to_length(MIN_SPEED)",
       "range": [60, 60],
       "isHighlighted": false,
       "disabled": false,
-      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py"
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-52",
-      "content": "def main():",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-51",
+      "content": "        # Step 9: 推进位置并处理边界循环",
       "range": [62, 62],
       "isHighlighted": false,
       "disabled": false,
-      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py"
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-53",
-      "content": "    pygame.init()",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-52",
+      "content": "        self.pos += self.vel",
       "range": [63, 63],
       "isHighlighted": false,
       "disabled": false,
-      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py"
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-54",
-      "content": "    screen = pygame.display.set_mode((WIDTH, HEIGHT))",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-53",
+      "content": "        self.pos.x %= WIDTH",
       "range": [64, 64],
       "isHighlighted": false,
       "disabled": false,
-      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py"
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-55",
-      "content": "    pygame.display.set_caption(\"Boids 群鸟仿真模拟\")",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-54",
+      "content": "        self.pos.y %= HEIGHT",
       "range": [65, 65],
       "isHighlighted": false,
       "disabled": false,
-      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py"
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-56",
-      "content": "    clock = pygame.time.Clock()",
-      "range": [66, 66],
-      "isHighlighted": false,
-      "disabled": false,
-      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-57",
-      "content": "    boids = [Boid() for _ in range(NUM_BOIDS)]",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-55",
+      "content": "    # Step 10: 绘制每只鸟为小圆点",
       "range": [67, 67],
       "isHighlighted": false,
       "disabled": false,
-      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py"
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-58",
-      "content": "    running = True",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-56",
+      "content": "    def draw(self, screen):",
       "range": [68, 68],
       "isHighlighted": false,
       "disabled": false,
-      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py"
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-59",
-      "content": "    while running:",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-57",
+      "content": "        pygame.draw.circle(",
       "range": [69, 69],
       "isHighlighted": false,
       "disabled": false,
-      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py"
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-60",
-      "content": "        for event in pygame.event.get():",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-58",
+      "content": "            screen,",
       "range": [70, 70],
       "isHighlighted": false,
       "disabled": false,
-      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py"
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-61",
-      "content": "            if event.type == pygame.QUIT:",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-59",
+      "content": "            (200, 200, 255),",
       "range": [71, 71],
       "isHighlighted": false,
       "disabled": false,
-      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py"
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-62",
-      "content": "                running = False",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-60",
+      "content": "            (int(self.pos.x), int(self.pos.y)),",
       "range": [72, 72],
       "isHighlighted": false,
       "disabled": false,
-      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py"
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-63",
-      "content": "        screen.fill((30, 30, 35))",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-61",
+      "content": "            3,",
       "range": [73, 73],
       "isHighlighted": false,
       "disabled": false,
-      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py"
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-64",
-      "content": "        for boid in boids:",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-62",
+      "content": "        )",
       "range": [74, 74],
       "isHighlighted": false,
       "disabled": false,
-      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py"
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-65",
-      "content": "            boid.update(boids)",
-      "range": [75, 75],
-      "isHighlighted": false,
-      "disabled": false,
-      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-66",
-      "content": "            boid.draw(screen)",
-      "range": [76, 76],
-      "isHighlighted": false,
-      "disabled": false,
-      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py"
-    },
-    {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-67",
-      "content": "        pygame.display.flip()",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-63",
+      "content": "def main():",
       "range": [77, 77],
       "isHighlighted": false,
       "disabled": false,
-      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py"
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-68",
-      "content": "        clock.tick(60)",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-64",
+      "content": "    # Step 2: 初始化Pygame显示环境",
       "range": [78, 78],
       "isHighlighted": false,
       "disabled": false,
-      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py"
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-69",
-      "content": "    pygame.quit()",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-65",
+      "content": "    pygame.init()",
       "range": [79, 79],
       "isHighlighted": false,
       "disabled": false,
-      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py"
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-70",
-      "content": "if __name__ == \"__main__\":",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-66",
+      "content": "    screen = pygame.display.set_mode((WIDTH, HEIGHT))",
+      "range": [80, 80],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-67",
+      "content": "    pygame.display.set_caption(\"Boids 群鸟仿真模拟\")",
       "range": [81, 81],
       "isHighlighted": false,
       "disabled": false,
-      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py"
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
     },
     {
-      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-71",
-      "content": "    main()",
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-68",
+      "content": "    clock = pygame.time.Clock()",
       "range": [82, 82],
       "isHighlighted": false,
       "disabled": false,
-      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py"
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-69",
+      "content": "    # Step 4: 随机生成初始群体状态",
+      "range": [84, 84],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-70",
+      "content": "    boids = [Boid() for _ in range(NUM_BOIDS)]",
+      "range": [85, 85],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-71",
+      "content": "    running = True",
+      "range": [87, 87],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-72",
+      "content": "    while running:",
+      "range": [88, 88],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-73",
+      "content": "        # Step 11: 处理退出事件并清屏刷新",
+      "range": [89, 89],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-74",
+      "content": "        for event in pygame.event.get():",
+      "range": [90, 90],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-75",
+      "content": "            if event.type == pygame.QUIT:",
+      "range": [91, 91],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-76",
+      "content": "                running = False",
+      "range": [92, 92],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-77",
+      "content": "        screen.fill((30, 30, 35))",
+      "range": [94, 94],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-78",
+      "content": "        for boid in boids:",
+      "range": [96, 96],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-79",
+      "content": "            boid.update(boids)",
+      "range": [97, 97],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-80",
+      "content": "            boid.draw(screen)",
+      "range": [98, 98],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-81",
+      "content": "        pygame.display.flip()",
+      "range": [100, 100],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-82",
+      "content": "        # Step 12: 控制帧率并收尾退出Pygame",
+      "range": [102, 102],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-83",
+      "content": "        clock.tick(60)",
+      "range": [103, 103],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-84",
+      "content": "    pygame.quit()",
+      "range": [105, 105],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-85",
+      "content": "if __name__ == \"__main__\":",
+      "range": [108, 108],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
+    },
+    {
+      "id": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-86",
+      "content": "    main()",
+      "range": [109, 109],
+      "isHighlighted": false,
+      "disabled": false,
+      "filePath": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py"
     }
   ],
   "codeChunkRelations": [
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-7",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-8",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-7",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-8",
       "similarity": 0.5,
-      "createdAt": 1773915824525
+      "createdAt": 1774016866873
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-8",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-7",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-8",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-7",
       "similarity": 0.5,
-      "createdAt": 1773915824525
+      "createdAt": 1774016866873
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-7",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-9",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-7",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-9",
       "similarity": 0.5,
-      "createdAt": 1773915824525
+      "createdAt": 1774016866873
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-9",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-7",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-9",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-7",
       "similarity": 0.5,
-      "createdAt": 1773915824525
+      "createdAt": 1774016866873
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-8",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-9",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-8",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-9",
       "similarity": 0.5,
-      "createdAt": 1773915824525
+      "createdAt": 1774016866873
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-9",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-8",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-9",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-8",
       "similarity": 0.5,
-      "createdAt": 1773915824525
+      "createdAt": 1774016866873
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-14",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-18",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-14",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-21",
       "similarity": 0.5555555555555556,
-      "createdAt": 1773915824526
+      "createdAt": 1774016866873
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-18",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-14",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-21",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-14",
       "similarity": 0.5555555555555556,
-      "createdAt": 1773915824526
+      "createdAt": 1774016866873
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-14",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-49",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-14",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-56",
       "similarity": 0.5555555555555556,
-      "createdAt": 1773915824526
+      "createdAt": 1774016866873
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-49",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-14",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-56",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-14",
       "similarity": 0.5555555555555556,
-      "createdAt": 1773915824526
+      "createdAt": 1774016866873
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-14",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-52",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-14",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-63",
       "similarity": 0.5714285714285714,
-      "createdAt": 1773915824526
+      "createdAt": 1774016866873
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-52",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-14",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-63",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-14",
       "similarity": 0.5714285714285714,
-      "createdAt": 1773915824526
+      "createdAt": 1774016866873
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-15",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-16",
-      "similarity": 0.625,
-      "createdAt": 1773915824526
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-15",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-69",
+      "similarity": 1,
+      "createdAt": 1774016866874
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-16",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-15",
-      "similarity": 0.625,
-      "createdAt": 1773915824526
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-69",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-15",
+      "similarity": 1,
+      "createdAt": 1774016866874
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-15",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-19",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-16",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-23",
       "similarity": 0.5,
-      "createdAt": 1773915824526
+      "createdAt": 1774016866874
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-19",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-15",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-23",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-16",
       "similarity": 0.5,
-      "createdAt": 1773915824526
+      "createdAt": 1774016866874
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-15",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-20",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-16",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-25",
       "similarity": 0.5,
-      "createdAt": 1773915824526
+      "createdAt": 1774016866874
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-20",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-15",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-25",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-16",
       "similarity": 0.5,
-      "createdAt": 1773915824526
+      "createdAt": 1774016866874
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-15",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-21",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-16",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-26",
       "similarity": 0.5,
-      "createdAt": 1773915824526
+      "createdAt": 1774016866874
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-21",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-15",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-26",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-16",
       "similarity": 0.5,
-      "createdAt": 1773915824526
+      "createdAt": 1774016866874
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-15",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-54",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-16",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-66",
       "similarity": 0.5,
-      "createdAt": 1773915824526
+      "createdAt": 1774016866874
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-54",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-15",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-66",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-16",
       "similarity": 0.5,
-      "createdAt": 1773915824526
+      "createdAt": 1774016866874
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-16",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-19",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-17",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-23",
       "similarity": 0.5,
-      "createdAt": 1773915824526
+      "createdAt": 1774016866874
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-19",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-16",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-23",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-17",
       "similarity": 0.5,
-      "createdAt": 1773915824526
+      "createdAt": 1774016866874
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-16",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-20",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-17",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-25",
       "similarity": 0.5,
-      "createdAt": 1773915824526
+      "createdAt": 1774016866874
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-20",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-16",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-25",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-17",
       "similarity": 0.5,
-      "createdAt": 1773915824526
+      "createdAt": 1774016866874
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-16",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-21",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-17",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-26",
       "similarity": 0.5,
-      "createdAt": 1773915824526
+      "createdAt": 1774016866874
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-21",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-16",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-26",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-17",
       "similarity": 0.5,
-      "createdAt": 1773915824526
+      "createdAt": 1774016866874
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-18",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-49",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-17",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-46",
+      "similarity": 0.5,
+      "createdAt": 1774016866874
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-46",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-17",
+      "similarity": 0.5,
+      "createdAt": 1774016866874
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-18",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-19",
+      "similarity": 1,
+      "createdAt": 1774016866874
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-19",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-18",
+      "similarity": 1,
+      "createdAt": 1774016866874
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-20",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-62",
+      "similarity": 1,
+      "createdAt": 1774016866874
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-62",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-20",
+      "similarity": 1,
+      "createdAt": 1774016866874
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-21",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-56",
       "similarity": 0.6,
-      "createdAt": 1773915824526
+      "createdAt": 1774016866874
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-49",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-18",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-56",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-21",
       "similarity": 0.6,
-      "createdAt": 1773915824526
+      "createdAt": 1774016866874
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-19",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-20",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-23",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-25",
       "similarity": 0.7777777777777778,
-      "createdAt": 1773915824526
+      "createdAt": 1774016866874
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-20",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-19",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-25",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-23",
       "similarity": 0.7777777777777778,
-      "createdAt": 1773915824526
+      "createdAt": 1774016866874
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-19",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-21",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-23",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-26",
       "similarity": 0.7777777777777778,
-      "createdAt": 1773915824526
+      "createdAt": 1774016866874
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-21",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-19",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-26",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-23",
       "similarity": 0.7777777777777778,
-      "createdAt": 1773915824526
+      "createdAt": 1774016866874
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-19",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-54",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-23",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-66",
       "similarity": 0.46153846153846156,
-      "createdAt": 1773915824526
+      "createdAt": 1774016866874
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-54",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-19",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-66",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-23",
       "similarity": 0.46153846153846156,
-      "createdAt": 1773915824526
+      "createdAt": 1774016866874
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-19",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-56",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-23",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-68",
       "similarity": 0.45454545454545453,
-      "createdAt": 1773915824526
+      "createdAt": 1774016866874
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-56",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-19",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-68",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-23",
       "similarity": 0.45454545454545453,
-      "createdAt": 1773915824526
+      "createdAt": 1774016866874
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-20",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-21",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-25",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-26",
       "similarity": 0.7777777777777778,
-      "createdAt": 1773915824526
+      "createdAt": 1774016866875
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-21",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-20",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-26",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-25",
       "similarity": 0.7777777777777778,
-      "createdAt": 1773915824526
+      "createdAt": 1774016866875
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-20",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-54",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-25",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-66",
       "similarity": 0.46153846153846156,
-      "createdAt": 1773915824526
+      "createdAt": 1774016866875
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-54",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-20",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-66",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-25",
       "similarity": 0.46153846153846156,
-      "createdAt": 1773915824526
+      "createdAt": 1774016866875
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-20",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-56",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-25",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-68",
       "similarity": 0.45454545454545453,
-      "createdAt": 1773915824526
+      "createdAt": 1774016866875
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-56",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-20",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-68",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-25",
       "similarity": 0.45454545454545453,
-      "createdAt": 1773915824526
+      "createdAt": 1774016866875
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-21",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-54",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-26",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-66",
       "similarity": 0.46153846153846156,
-      "createdAt": 1773915824526
+      "createdAt": 1774016866875
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-54",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-21",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-66",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-26",
       "similarity": 0.46153846153846156,
-      "createdAt": 1773915824526
+      "createdAt": 1774016866875
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-21",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-56",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-26",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-68",
       "similarity": 0.45454545454545453,
-      "createdAt": 1773915824526
+      "createdAt": 1774016866875
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-56",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-21",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-68",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-26",
       "similarity": 0.45454545454545453,
-      "createdAt": 1773915824526
+      "createdAt": 1774016866875
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-22",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-32",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-27",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-37",
       "similarity": 0.6666666666666666,
-      "createdAt": 1773915824526
+      "createdAt": 1774016866875
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-32",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-22",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-37",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-27",
       "similarity": 0.6666666666666666,
-      "createdAt": 1773915824526
+      "createdAt": 1774016866875
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-22",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-34",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-27",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-39",
       "similarity": 0.5,
-      "createdAt": 1773915824526
+      "createdAt": 1774016866875
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-34",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-22",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-39",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-27",
       "similarity": 0.5,
-      "createdAt": 1773915824526
+      "createdAt": 1774016866875
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-22",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-35",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-27",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-40",
       "similarity": 0.5,
-      "createdAt": 1773915824526
+      "createdAt": 1774016866875
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-35",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-22",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-40",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-27",
       "similarity": 0.5,
-      "createdAt": 1773915824526
+      "createdAt": 1774016866875
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-23",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-64",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-28",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-78",
       "similarity": 0.6666666666666666,
-      "createdAt": 1773915824526
+      "createdAt": 1774016866875
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-64",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-23",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-78",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-28",
       "similarity": 0.6666666666666666,
-      "createdAt": 1773915824526
+      "createdAt": 1774016866875
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-26",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-29",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-31",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-34",
       "similarity": 0.5833333333333334,
-      "createdAt": 1773915824527
+      "createdAt": 1774016866875
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-29",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-26",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-34",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-31",
       "similarity": 0.5833333333333334,
-      "createdAt": 1773915824527
+      "createdAt": 1774016866875
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-27",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-28",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-31",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-60",
+      "similarity": 0.45454545454545453,
+      "createdAt": 1774016866875
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-60",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-31",
+      "similarity": 0.45454545454545453,
+      "createdAt": 1774016866875
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-32",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-33",
       "similarity": 0.6666666666666666,
-      "createdAt": 1773915824527
+      "createdAt": 1774016866875
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-28",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-27",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-33",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-32",
       "similarity": 0.6666666666666666,
-      "createdAt": 1773915824527
+      "createdAt": 1774016866875
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-29",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-31",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-34",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-36",
       "similarity": 0.45454545454545453,
-      "createdAt": 1773915824527
+      "createdAt": 1774016866875
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-31",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-29",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-36",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-34",
       "similarity": 0.45454545454545453,
-      "createdAt": 1773915824527
+      "createdAt": 1774016866875
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-29",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-36",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-34",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-42",
       "similarity": 0.5,
-      "createdAt": 1773915824527
+      "createdAt": 1774016866875
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-36",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-29",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-42",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-34",
       "similarity": 0.5,
-      "createdAt": 1773915824527
+      "createdAt": 1774016866875
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-29",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-37",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-34",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-43",
       "similarity": 0.5714285714285714,
-      "createdAt": 1773915824527
+      "createdAt": 1774016866875
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-37",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-29",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-43",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-34",
       "similarity": 0.5714285714285714,
-      "createdAt": 1773915824527
+      "createdAt": 1774016866875
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-29",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-44",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-34",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-52",
       "similarity": 0.45454545454545453,
-      "createdAt": 1773915824527
+      "createdAt": 1774016866875
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-44",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-29",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-52",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-34",
       "similarity": 0.45454545454545453,
-      "createdAt": 1773915824527
+      "createdAt": 1774016866875
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-30",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-31",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-35",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-36",
       "similarity": 0.5,
-      "createdAt": 1773915824527
+      "createdAt": 1774016866875
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-31",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-30",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-36",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-35",
       "similarity": 0.5,
-      "createdAt": 1773915824527
+      "createdAt": 1774016866875
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-30",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-44",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-35",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-52",
       "similarity": 0.5,
-      "createdAt": 1773915824527
+      "createdAt": 1774016866875
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-44",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-30",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-52",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-35",
       "similarity": 0.5,
-      "createdAt": 1773915824527
+      "createdAt": 1774016866875
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-31",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-44",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-36",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-52",
       "similarity": 0.5,
-      "createdAt": 1773915824527
+      "createdAt": 1774016866875
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-44",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-31",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-52",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-36",
       "similarity": 0.5,
-      "createdAt": 1773915824527
+      "createdAt": 1774016866875
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-33",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-40",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-38",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-47",
       "similarity": 0.5,
-      "createdAt": 1773915824527
+      "createdAt": 1774016866875
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-40",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-33",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-47",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-38",
       "similarity": 0.5,
-      "createdAt": 1773915824527
+      "createdAt": 1774016866875
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-34",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-35",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-39",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-40",
       "similarity": 0.6,
-      "createdAt": 1773915824527
+      "createdAt": 1774016866875
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-35",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-34",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-40",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-39",
       "similarity": 0.6,
-      "createdAt": 1773915824527
+      "createdAt": 1774016866875
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-36",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-37",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-42",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-43",
       "similarity": 0.6428571428571429,
-      "createdAt": 1773915824527
+      "createdAt": 1774016866876
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-37",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-36",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-43",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-42",
       "similarity": 0.6428571428571429,
-      "createdAt": 1773915824527
+      "createdAt": 1774016866876
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-36",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-38",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-42",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-44",
       "similarity": 0.46153846153846156,
-      "createdAt": 1773915824527
+      "createdAt": 1774016866876
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-38",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-36",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-44",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-42",
       "similarity": 0.46153846153846156,
-      "createdAt": 1773915824527
+      "createdAt": 1774016866876
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-36",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-39",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-42",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-46",
       "similarity": 0.46153846153846156,
-      "createdAt": 1773915824527
+      "createdAt": 1774016866876
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-39",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-36",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-46",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-42",
       "similarity": 0.46153846153846156,
-      "createdAt": 1773915824527
+      "createdAt": 1774016866876
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-37",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-44",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-43",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-52",
       "similarity": 0.5,
-      "createdAt": 1773915824527
+      "createdAt": 1774016866876
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-44",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-37",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-52",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-43",
       "similarity": 0.5,
-      "createdAt": 1773915824527
+      "createdAt": 1774016866876
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-38",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-44",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-44",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-52",
       "similarity": 0.5555555555555556,
-      "createdAt": 1773915824527
+      "createdAt": 1774016866876
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-44",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-38",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-52",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-44",
       "similarity": 0.5555555555555556,
-      "createdAt": 1773915824527
+      "createdAt": 1774016866876
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-39",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-41",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-46",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-48",
       "similarity": 0.5,
-      "createdAt": 1773915824527
+      "createdAt": 1774016866876
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-41",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-39",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-48",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-46",
       "similarity": 0.5,
-      "createdAt": 1773915824527
+      "createdAt": 1774016866876
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-39",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-43",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-46",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-50",
       "similarity": 0.5,
-      "createdAt": 1773915824527
+      "createdAt": 1774016866876
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-43",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-39",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-50",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-46",
       "similarity": 0.5,
-      "createdAt": 1773915824527
+      "createdAt": 1774016866876
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-41",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-43",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-48",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-50",
       "similarity": 0.75,
-      "createdAt": 1773915824527
+      "createdAt": 1774016866876
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-43",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-41",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-50",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-48",
       "similarity": 0.75,
-      "createdAt": 1773915824527
+      "createdAt": 1774016866876
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-44",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-46",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-52",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-53",
       "similarity": 0.5,
-      "createdAt": 1773915824527
+      "createdAt": 1774016866876
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-46",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-44",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-53",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-52",
       "similarity": 0.5,
-      "createdAt": 1773915824527
+      "createdAt": 1774016866876
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-44",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-47",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-52",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-54",
       "similarity": 0.5,
-      "createdAt": 1773915824527
+      "createdAt": 1774016866876
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-47",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-44",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-54",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-52",
       "similarity": 0.5,
-      "createdAt": 1773915824527
+      "createdAt": 1774016866876
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-46",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-47",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-53",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-54",
       "similarity": 0.7142857142857143,
-      "createdAt": 1773915824527
+      "createdAt": 1774016866876
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-47",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-46",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-54",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-53",
       "similarity": 0.7142857142857143,
-      "createdAt": 1773915824527
+      "createdAt": 1774016866876
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-49",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-50",
-      "similarity": 0.46153846153846156,
-      "createdAt": 1773915824528
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-58",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-61",
+      "similarity": 0.5,
+      "createdAt": 1774016866876
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-50",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-49",
-      "similarity": 0.46153846153846156,
-      "createdAt": 1773915824528
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-61",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-58",
+      "similarity": 0.5,
+      "createdAt": 1774016866876
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-52",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-71",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-59",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-77",
+      "similarity": 0.5,
+      "createdAt": 1774016866876
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-77",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-59",
+      "similarity": 0.5,
+      "createdAt": 1774016866876
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-59",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-86",
+      "similarity": 0.5,
+      "createdAt": 1774016866876
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-86",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-59",
+      "similarity": 0.5,
+      "createdAt": 1774016866876
+    },
+    {
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-63",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-86",
       "similarity": 0.6,
-      "createdAt": 1773915824528
+      "createdAt": 1774016866876
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-71",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-52",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-86",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-63",
       "similarity": 0.6,
-      "createdAt": 1773915824528
+      "createdAt": 1774016866876
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-53",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-67",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-65",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-81",
       "similarity": 0.5714285714285714,
-      "createdAt": 1773915824528
+      "createdAt": 1774016866877
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-67",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-53",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-81",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-65",
       "similarity": 0.5714285714285714,
-      "createdAt": 1773915824528
+      "createdAt": 1774016866877
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-53",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-69",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-65",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-84",
       "similarity": 0.6666666666666666,
-      "createdAt": 1773915824528
+      "createdAt": 1774016866877
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-69",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-53",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-84",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-65",
       "similarity": 0.6666666666666666,
-      "createdAt": 1773915824528
+      "createdAt": 1774016866877
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-58",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-62",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-71",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-76",
       "similarity": 0.5,
-      "createdAt": 1773915824528
+      "createdAt": 1774016866877
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-62",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-58",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-76",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-71",
       "similarity": 0.5,
-      "createdAt": 1773915824528
+      "createdAt": 1774016866877
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-63",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-66",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-77",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-80",
       "similarity": 0.5,
-      "createdAt": 1773915824528
+      "createdAt": 1774016866877
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-66",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-63",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-80",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-77",
       "similarity": 0.5,
-      "createdAt": 1773915824528
+      "createdAt": 1774016866877
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-65",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-66",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-79",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-80",
       "similarity": 0.5,
-      "createdAt": 1773915824528
+      "createdAt": 1774016866877
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-66",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-65",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-80",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-79",
       "similarity": 0.5,
-      "createdAt": 1773915824528
+      "createdAt": 1774016866877
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-67",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-69",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-81",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-84",
       "similarity": 0.5714285714285714,
-      "createdAt": 1773915824528
+      "createdAt": 1774016866877
     },
     {
-      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-69",
-      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-67",
+      "fromChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-84",
+      "toChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-81",
       "similarity": 0.5714285714285714,
-      "createdAt": 1773915824528
+      "createdAt": 1774016866877
     }
   ],
   "codeAwareMappings": [
     {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-19",
-      "semanticElementId": "s-1",
-      "semanticElementType": "step",
-      "createdAt": 1773915809152,
-      "source": "initial",
-      "confidence": 1
-    },
-    {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-20",
-      "semanticElementId": "s-1",
-      "semanticElementType": "step",
-      "createdAt": 1773915809152,
-      "source": "initial",
-      "confidence": 1
-    },
-    {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-21",
-      "semanticElementId": "s-1",
-      "semanticElementType": "step",
-      "createdAt": 1773915809152,
-      "source": "initial",
-      "confidence": 1
-    },
-    {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-22",
-      "semanticElementId": "s-1",
-      "semanticElementType": "step",
-      "createdAt": 1773915809152,
-      "source": "initial",
-      "confidence": 1
-    },
-    {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-23",
-      "semanticElementId": "s-1",
-      "semanticElementType": "step",
-      "createdAt": 1773915809152,
-      "source": "initial",
-      "confidence": 1
-    },
-    {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-24",
-      "semanticElementId": "s-1",
-      "semanticElementType": "step",
-      "createdAt": 1773915809152,
-      "source": "initial",
-      "confidence": 1
-    },
-    {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-25",
-      "semanticElementId": "s-1",
-      "semanticElementType": "step",
-      "createdAt": 1773915809152,
-      "source": "initial",
-      "confidence": 1
-    },
-    {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-26",
-      "semanticElementId": "s-1",
-      "semanticElementType": "step",
-      "createdAt": 1773915809152,
-      "source": "initial",
-      "confidence": 1
-    },
-    {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-27",
-      "semanticElementId": "s-1",
-      "semanticElementType": "step",
-      "createdAt": 1773915809152,
-      "source": "initial",
-      "confidence": 1
-    },
-    {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-28",
-      "semanticElementId": "s-1",
-      "semanticElementType": "step",
-      "createdAt": 1773915809152,
-      "source": "initial",
-      "confidence": 1
-    },
-    {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-29",
-      "semanticElementId": "s-1",
-      "semanticElementType": "step",
-      "createdAt": 1773915809152,
-      "source": "initial",
-      "confidence": 1
-    },
-    {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-30",
-      "semanticElementId": "s-1",
-      "semanticElementType": "step",
-      "createdAt": 1773915809152,
-      "source": "initial",
-      "confidence": 1
-    },
-    {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-31",
-      "semanticElementId": "s-1",
-      "semanticElementType": "step",
-      "createdAt": 1773915809152,
-      "source": "initial",
-      "confidence": 1
-    },
-    {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-32",
-      "semanticElementId": "s-1",
-      "semanticElementType": "step",
-      "createdAt": 1773915809152,
-      "source": "initial",
-      "confidence": 1
-    },
-    {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-33",
-      "semanticElementId": "s-1",
-      "semanticElementType": "step",
-      "createdAt": 1773915809152,
-      "source": "initial",
-      "confidence": 1
-    },
-    {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-34",
-      "semanticElementId": "s-1",
-      "semanticElementType": "step",
-      "createdAt": 1773915809152,
-      "source": "initial",
-      "confidence": 1
-    },
-    {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-35",
-      "semanticElementId": "s-1",
-      "semanticElementType": "step",
-      "createdAt": 1773915809152,
-      "source": "initial",
-      "confidence": 1
-    },
-    {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-36",
-      "semanticElementId": "s-1",
-      "semanticElementType": "step",
-      "createdAt": 1773915809152,
-      "source": "initial",
-      "confidence": 1
-    },
-    {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-37",
-      "semanticElementId": "s-1",
-      "semanticElementType": "step",
-      "createdAt": 1773915809152,
-      "source": "initial",
-      "confidence": 1
-    },
-    {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-38",
-      "semanticElementId": "s-1",
-      "semanticElementType": "step",
-      "createdAt": 1773915809152,
-      "source": "initial",
-      "confidence": 1
-    },
-    {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-3",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-0",
       "semanticElementId": "s-2",
       "semanticElementType": "step",
-      "createdAt": 1773915812358,
+      "createdAt": 1774016866867,
       "source": "initial",
-      "confidence": 1
+      "confidence": 0.85
     },
     {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-4",
-      "semanticElementId": "s-2",
-      "semanticElementType": "step",
-      "createdAt": 1773915812358,
-      "source": "initial",
-      "confidence": 1
-    },
-    {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-5",
-      "semanticElementId": "s-2",
-      "semanticElementType": "step",
-      "createdAt": 1773915812358,
-      "source": "initial",
-      "confidence": 1
-    },
-    {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-6",
-      "semanticElementId": "s-2",
-      "semanticElementType": "step",
-      "createdAt": 1773915812358,
-      "source": "initial",
-      "confidence": 1
-    },
-    {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-7",
-      "semanticElementId": "s-2",
-      "semanticElementType": "step",
-      "createdAt": 1773915812358,
-      "source": "initial",
-      "confidence": 1
-    },
-    {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-8",
-      "semanticElementId": "s-2",
-      "semanticElementType": "step",
-      "createdAt": 1773915812358,
-      "source": "initial",
-      "confidence": 1
-    },
-    {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-9",
-      "semanticElementId": "s-2",
-      "semanticElementType": "step",
-      "createdAt": 1773915812358,
-      "source": "initial",
-      "confidence": 1
-    },
-    {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-10",
-      "semanticElementId": "s-2",
-      "semanticElementType": "step",
-      "createdAt": 1773915812358,
-      "source": "initial",
-      "confidence": 1
-    },
-    {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-11",
-      "semanticElementId": "s-2",
-      "semanticElementType": "step",
-      "createdAt": 1773915812358,
-      "source": "initial",
-      "confidence": 1
-    },
-    {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-18",
-      "semanticElementId": "s-3",
-      "semanticElementType": "step",
-      "createdAt": 1773915815448,
-      "source": "initial",
-      "confidence": 1
-    },
-    {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-19",
-      "semanticElementId": "s-3",
-      "semanticElementType": "step",
-      "createdAt": 1773915815448,
-      "source": "initial",
-      "confidence": 1
-    },
-    {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-20",
-      "semanticElementId": "s-3",
-      "semanticElementType": "step",
-      "createdAt": 1773915815448,
-      "source": "initial",
-      "confidence": 1
-    },
-    {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-21",
-      "semanticElementId": "s-3",
-      "semanticElementType": "step",
-      "createdAt": 1773915815448,
-      "source": "initial",
-      "confidence": 1
-    },
-    {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-22",
-      "semanticElementId": "s-3",
-      "semanticElementType": "step",
-      "createdAt": 1773915815448,
-      "source": "initial",
-      "confidence": 1
-    },
-    {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-23",
-      "semanticElementId": "s-3",
-      "semanticElementType": "step",
-      "createdAt": 1773915815448,
-      "source": "initial",
-      "confidence": 1
-    },
-    {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-24",
-      "semanticElementId": "s-3",
-      "semanticElementType": "step",
-      "createdAt": 1773915815448,
-      "source": "initial",
-      "confidence": 1
-    },
-    {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-25",
-      "semanticElementId": "s-3",
-      "semanticElementType": "step",
-      "createdAt": 1773915815448,
-      "source": "initial",
-      "confidence": 1
-    },
-    {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-26",
-      "semanticElementId": "s-3",
-      "semanticElementType": "step",
-      "createdAt": 1773915815448,
-      "source": "initial",
-      "confidence": 1
-    },
-    {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-27",
-      "semanticElementId": "s-3",
-      "semanticElementType": "step",
-      "createdAt": 1773915815448,
-      "source": "initial",
-      "confidence": 1
-    },
-    {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-28",
-      "semanticElementId": "s-3",
-      "semanticElementType": "step",
-      "createdAt": 1773915815448,
-      "source": "initial",
-      "confidence": 1
-    },
-    {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-29",
-      "semanticElementId": "s-3",
-      "semanticElementType": "step",
-      "createdAt": 1773915815448,
-      "source": "initial",
-      "confidence": 1
-    },
-    {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-30",
-      "semanticElementId": "s-3",
-      "semanticElementType": "step",
-      "createdAt": 1773915815448,
-      "source": "initial",
-      "confidence": 1
-    },
-    {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-31",
-      "semanticElementId": "s-3",
-      "semanticElementType": "step",
-      "createdAt": 1773915815448,
-      "source": "initial",
-      "confidence": 1
-    },
-    {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-32",
-      "semanticElementId": "s-3",
-      "semanticElementType": "step",
-      "createdAt": 1773915815448,
-      "source": "initial",
-      "confidence": 1
-    },
-    {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-33",
-      "semanticElementId": "s-3",
-      "semanticElementType": "step",
-      "createdAt": 1773915815448,
-      "source": "initial",
-      "confidence": 1
-    },
-    {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-34",
-      "semanticElementId": "s-3",
-      "semanticElementType": "step",
-      "createdAt": 1773915815448,
-      "source": "initial",
-      "confidence": 1
-    },
-    {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-35",
-      "semanticElementId": "s-3",
-      "semanticElementType": "step",
-      "createdAt": 1773915815448,
-      "source": "initial",
-      "confidence": 1
-    },
-    {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-36",
-      "semanticElementId": "s-3",
-      "semanticElementType": "step",
-      "createdAt": 1773915815448,
-      "source": "initial",
-      "confidence": 1
-    },
-    {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-37",
-      "semanticElementId": "s-3",
-      "semanticElementType": "step",
-      "createdAt": 1773915815448,
-      "source": "initial",
-      "confidence": 1
-    },
-    {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-38",
-      "semanticElementId": "s-3",
-      "semanticElementType": "step",
-      "createdAt": 1773915815448,
-      "source": "initial",
-      "confidence": 1
-    },
-    {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-39",
-      "semanticElementId": "s-3",
-      "semanticElementType": "step",
-      "createdAt": 1773915815448,
-      "source": "initial",
-      "confidence": 1
-    },
-    {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-40",
-      "semanticElementId": "s-3",
-      "semanticElementType": "step",
-      "createdAt": 1773915815448,
-      "source": "initial",
-      "confidence": 1
-    },
-    {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-41",
-      "semanticElementId": "s-3",
-      "semanticElementType": "step",
-      "createdAt": 1773915815448,
-      "source": "initial",
-      "confidence": 1
-    },
-    {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-42",
-      "semanticElementId": "s-3",
-      "semanticElementType": "step",
-      "createdAt": 1773915815448,
-      "source": "initial",
-      "confidence": 1
-    },
-    {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-43",
-      "semanticElementId": "s-3",
-      "semanticElementType": "step",
-      "createdAt": 1773915815448,
-      "source": "initial",
-      "confidence": 1
-    },
-    {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-44",
-      "semanticElementId": "s-3",
-      "semanticElementType": "step",
-      "createdAt": 1773915815448,
-      "source": "initial",
-      "confidence": 1
-    },
-    {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-28",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-1",
       "semanticElementId": "s-4",
       "semanticElementType": "step",
-      "createdAt": 1773915818605,
+      "createdAt": 1774016866867,
       "source": "initial",
-      "confidence": 1
+      "confidence": 0.85
     },
     {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-29",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-2",
+      "semanticElementId": "s-1",
+      "semanticElementType": "step",
+      "createdAt": 1774016866867,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-3",
+      "semanticElementId": "s-1",
+      "semanticElementType": "step",
+      "createdAt": 1774016866867,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-4",
+      "semanticElementId": "s-1",
+      "semanticElementType": "step",
+      "createdAt": 1774016866867,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-5",
+      "semanticElementId": "s-1",
+      "semanticElementType": "step",
+      "createdAt": 1774016866867,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-6",
+      "semanticElementId": "s-1",
+      "semanticElementType": "step",
+      "createdAt": 1774016866867,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-7",
+      "semanticElementId": "s-1",
+      "semanticElementType": "step",
+      "createdAt": 1774016866867,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-8",
+      "semanticElementId": "s-1",
+      "semanticElementType": "step",
+      "createdAt": 1774016866867,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-9",
+      "semanticElementId": "s-1",
+      "semanticElementType": "step",
+      "createdAt": 1774016866867,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-10",
+      "semanticElementId": "s-1",
+      "semanticElementType": "step",
+      "createdAt": 1774016866867,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-11",
+      "semanticElementId": "s-1",
+      "semanticElementType": "step",
+      "createdAt": 1774016866867,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-13",
+      "semanticElementId": "s-3",
+      "semanticElementType": "step",
+      "createdAt": 1774016866867,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-14",
+      "semanticElementId": "s-3",
+      "semanticElementType": "step",
+      "createdAt": 1774016866867,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-16",
       "semanticElementId": "s-4",
       "semanticElementType": "step",
-      "createdAt": 1773915818605,
+      "createdAt": 1774016866867,
       "source": "initial",
-      "confidence": 1
+      "confidence": 0.85
     },
     {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-46",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-17",
       "semanticElementId": "s-4",
       "semanticElementType": "step",
-      "createdAt": 1773915818605,
+      "createdAt": 1774016866867,
       "source": "initial",
-      "confidence": 1
+      "confidence": 0.85
     },
     {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-47",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-18",
       "semanticElementId": "s-4",
       "semanticElementType": "step",
-      "createdAt": 1773915818605,
+      "createdAt": 1774016866867,
       "source": "initial",
-      "confidence": 1
+      "confidence": 0.85
     },
     {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-49",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-19",
+      "semanticElementId": "s-4",
+      "semanticElementType": "step",
+      "createdAt": 1774016866867,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-20",
+      "semanticElementId": "s-4",
+      "semanticElementType": "step",
+      "createdAt": 1774016866867,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-21",
+      "semanticElementId": "s-7",
+      "semanticElementType": "step",
+      "createdAt": 1774016866867,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-23",
       "semanticElementId": "s-5",
       "semanticElementType": "step",
-      "createdAt": 1773915821385,
+      "createdAt": 1774016866867,
       "source": "initial",
-      "confidence": 1
+      "confidence": 0.85
     },
     {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-50",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-25",
+      "semanticElementId": "s-6",
+      "semanticElementType": "step",
+      "createdAt": 1774016866867,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-26",
+      "semanticElementId": "s-6",
+      "semanticElementType": "step",
+      "createdAt": 1774016866867,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-27",
+      "semanticElementId": "s-6",
+      "semanticElementType": "step",
+      "createdAt": 1774016866867,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-28",
       "semanticElementId": "s-5",
       "semanticElementType": "step",
-      "createdAt": 1773915821385,
+      "createdAt": 1774016866867,
       "source": "initial",
-      "confidence": 1
+      "confidence": 0.85
     },
     {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-66",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-29",
       "semanticElementId": "s-5",
       "semanticElementType": "step",
-      "createdAt": 1773915821385,
+      "createdAt": 1774016866867,
       "source": "initial",
-      "confidence": 1
+      "confidence": 0.85
     },
     {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-59",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-30",
+      "semanticElementId": "s-5",
+      "semanticElementType": "step",
+      "createdAt": 1774016866867,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-31",
+      "semanticElementId": "s-5",
+      "semanticElementType": "step",
+      "createdAt": 1774016866867,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-32",
+      "semanticElementId": "s-5",
+      "semanticElementType": "step",
+      "createdAt": 1774016866867,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-33",
+      "semanticElementId": "s-5",
+      "semanticElementType": "step",
+      "createdAt": 1774016866867,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-34",
+      "semanticElementId": "s-5",
+      "semanticElementType": "step",
+      "createdAt": 1774016866867,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-35",
+      "semanticElementId": "s-5",
+      "semanticElementType": "step",
+      "createdAt": 1774016866867,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-36",
+      "semanticElementId": "s-5",
+      "semanticElementType": "step",
+      "createdAt": 1774016866867,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-37",
+      "semanticElementId": "s-5",
+      "semanticElementType": "step",
+      "createdAt": 1774016866867,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-38",
       "semanticElementId": "s-6",
       "semanticElementType": "step",
-      "createdAt": 1773915824501,
+      "createdAt": 1774016866867,
       "source": "initial",
-      "confidence": 1
+      "confidence": 0.85
     },
     {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-60",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-39",
       "semanticElementId": "s-6",
       "semanticElementType": "step",
-      "createdAt": 1773915824501,
+      "createdAt": 1774016866867,
       "source": "initial",
-      "confidence": 1
+      "confidence": 0.85
     },
     {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-61",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-40",
       "semanticElementId": "s-6",
       "semanticElementType": "step",
-      "createdAt": 1773915824501,
+      "createdAt": 1774016866867,
       "source": "initial",
-      "confidence": 1
+      "confidence": 0.85
     },
     {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-62",
-      "semanticElementId": "s-6",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-42",
+      "semanticElementId": "s-7",
       "semanticElementType": "step",
-      "createdAt": 1773915824501,
+      "createdAt": 1774016866867,
       "source": "initial",
-      "confidence": 1
+      "confidence": 0.85
     },
     {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-63",
-      "semanticElementId": "s-6",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-43",
+      "semanticElementId": "s-7",
       "semanticElementType": "step",
-      "createdAt": 1773915824501,
+      "createdAt": 1774016866867,
       "source": "initial",
-      "confidence": 1
+      "confidence": 0.85
     },
     {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-64",
-      "semanticElementId": "s-6",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-44",
+      "semanticElementId": "s-7",
       "semanticElementType": "step",
-      "createdAt": 1773915824501,
+      "createdAt": 1774016866867,
       "source": "initial",
-      "confidence": 1
+      "confidence": 0.85
     },
     {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-65",
-      "semanticElementId": "s-6",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-46",
+      "semanticElementId": "s-8",
       "semanticElementType": "step",
-      "createdAt": 1773915824501,
+      "createdAt": 1774016866867,
       "source": "initial",
-      "confidence": 1
+      "confidence": 0.85
     },
     {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-66",
-      "semanticElementId": "s-6",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-47",
+      "semanticElementId": "s-8",
       "semanticElementType": "step",
-      "createdAt": 1773915824501,
+      "createdAt": 1774016866867,
       "source": "initial",
-      "confidence": 1
+      "confidence": 0.85
     },
     {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-67",
-      "semanticElementId": "s-6",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-48",
+      "semanticElementId": "s-8",
       "semanticElementType": "step",
-      "createdAt": 1773915824501,
+      "createdAt": 1774016866867,
       "source": "initial",
-      "confidence": 1
+      "confidence": 0.85
     },
     {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-68",
-      "semanticElementId": "s-6",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-49",
+      "semanticElementId": "s-8",
       "semanticElementType": "step",
-      "createdAt": 1773915824501,
+      "createdAt": 1774016866867,
       "source": "initial",
-      "confidence": 1
+      "confidence": 0.85
     },
     {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-45",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-50",
+      "semanticElementId": "s-8",
+      "semanticElementType": "step",
+      "createdAt": 1774016866867,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-52",
+      "semanticElementId": "s-9",
+      "semanticElementType": "step",
+      "createdAt": 1774016866867,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-53",
+      "semanticElementId": "s-9",
+      "semanticElementType": "step",
+      "createdAt": 1774016866867,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-54",
+      "semanticElementId": "s-9",
+      "semanticElementType": "step",
+      "createdAt": 1774016866867,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-56",
+      "semanticElementId": "s-10",
+      "semanticElementType": "step",
+      "createdAt": 1774016866867,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-57",
+      "semanticElementId": "s-10",
+      "semanticElementType": "step",
+      "createdAt": 1774016866867,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-58",
+      "semanticElementId": "s-10",
+      "semanticElementType": "step",
+      "createdAt": 1774016866867,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-59",
+      "semanticElementId": "s-10",
+      "semanticElementType": "step",
+      "createdAt": 1774016866867,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-60",
+      "semanticElementId": "s-10",
+      "semanticElementType": "step",
+      "createdAt": 1774016866867,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-61",
+      "semanticElementId": "s-10",
+      "semanticElementType": "step",
+      "createdAt": 1774016866867,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-62",
+      "semanticElementId": "s-10",
+      "semanticElementType": "step",
+      "createdAt": 1774016866867,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-63",
+      "semanticElementId": "s-2",
+      "semanticElementType": "step",
+      "createdAt": 1774016866867,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-65",
+      "semanticElementId": "s-2",
+      "semanticElementType": "step",
+      "createdAt": 1774016866867,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-66",
+      "semanticElementId": "s-2",
+      "semanticElementType": "step",
+      "createdAt": 1774016866867,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-67",
+      "semanticElementId": "s-2",
+      "semanticElementType": "step",
+      "createdAt": 1774016866867,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-68",
+      "semanticElementId": "s-2",
+      "semanticElementType": "step",
+      "createdAt": 1774016866867,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-70",
       "semanticElementId": "s-4",
       "semanticElementType": "step",
-      "createdAt": 1773916150503,
-      "source": "llm",
-      "confidence": 1
+      "createdAt": 1774016866867,
+      "source": "initial",
+      "confidence": 0.85
     },
     {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-38",
-      "semanticElementId": "s-4",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-71",
+      "semanticElementId": "s-11",
       "semanticElementType": "step",
-      "createdAt": 1773916175855,
-      "source": "llm",
-      "confidence": 1
+      "createdAt": 1774016866867,
+      "source": "initial",
+      "confidence": 0.85
     },
     {
-      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids_simulation.py-chunk-69",
-      "semanticElementId": "s-6",
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-72",
+      "semanticElementId": "s-11",
       "semanticElementType": "step",
-      "createdAt": 1773916183348,
-      "source": "llm",
-      "confidence": 1
+      "createdAt": 1774016866867,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-73",
+      "semanticElementId": "s-11",
+      "semanticElementType": "step",
+      "createdAt": 1774016866867,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-74",
+      "semanticElementId": "s-11",
+      "semanticElementType": "step",
+      "createdAt": 1774016866867,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-75",
+      "semanticElementId": "s-11",
+      "semanticElementType": "step",
+      "createdAt": 1774016866867,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-76",
+      "semanticElementId": "s-11",
+      "semanticElementType": "step",
+      "createdAt": 1774016866867,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-77",
+      "semanticElementId": "s-11",
+      "semanticElementType": "step",
+      "createdAt": 1774016866867,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-78",
+      "semanticElementId": "s-11",
+      "semanticElementType": "step",
+      "createdAt": 1774016866867,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-79",
+      "semanticElementId": "s-11",
+      "semanticElementType": "step",
+      "createdAt": 1774016866867,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-80",
+      "semanticElementId": "s-11",
+      "semanticElementType": "step",
+      "createdAt": 1774016866867,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-81",
+      "semanticElementId": "s-11",
+      "semanticElementType": "step",
+      "createdAt": 1774016866867,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-83",
+      "semanticElementId": "s-12",
+      "semanticElementType": "step",
+      "createdAt": 1774016866867,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-84",
+      "semanticElementId": "s-12",
+      "semanticElementType": "step",
+      "createdAt": 1774016866867,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-85",
+      "semanticElementId": "s-2",
+      "semanticElementType": "step",
+      "createdAt": 1774016866867,
+      "source": "initial",
+      "confidence": 0.85
+    },
+    {
+      "codeChunkId": "file:///Users/thuzyh/Documents/hci/CodeAware/dev/CodeAware/manual-testing-sandbox/boids.py-chunk-86",
+      "semanticElementId": "s-2",
+      "semanticElementType": "step",
+      "createdAt": 1774016866867,
+      "source": "initial",
+      "confidence": 0.85
     }
   ]
 }

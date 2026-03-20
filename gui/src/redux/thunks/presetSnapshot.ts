@@ -94,6 +94,14 @@ async function resolveWorkspaceDir(
     dir = dir.slice(5);
   }
 
+  // 解码 URI 编码字符（如 %3A -> :）
+  dir = decodeURIComponent(dir);
+
+  // Windows: 去掉驱动器盘符前的 /（如 /c:/Users -> c:/Users）
+  if (/^\/[a-zA-Z]:/.test(dir)) {
+    dir = dir.slice(1);
+  }
+
   return dir;
 }
 

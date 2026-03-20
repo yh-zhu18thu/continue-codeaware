@@ -1,8 +1,7 @@
 import {
-  BookmarkIcon as BookmarkOutlineIcon,
   ChevronDownIcon,
+  QuestionMarkCircleIcon,
 } from "@heroicons/react/24/outline";
-import { BookmarkIcon as BookmarkSolidIcon } from "@heroicons/react/24/solid";
 import { StepStatus } from "core";
 import React from "react";
 import styled from "styled-components";
@@ -259,11 +258,7 @@ const StepTitleBar: React.FC<StepTitleBarProps> = ({
               : undefined
           }
         >
-          {isPinned ? (
-            <BookmarkSolidIcon width={15} height={15} />
-          ) : (
-            <BookmarkOutlineIcon width={15} height={15} />
-          )}
+          <QuestionMarkCircleIcon width={15} height={15} />
         </IconButton>
         <ChevronContainer isExpanded={isExpanded}>
           <ChevronDownIcon width={16} height={16} />

@@ -698,7 +698,12 @@ export class VsCodeMessenger {
 
     this.onWebview("readFileUnlimited", async (msg) => {
       try {
-        const uri = vscode.Uri.file(msg.data.filepath);
+        let filepath = decodeURIComponent(msg.data.filepath);
+        // Windows: 去掉驱动器盘符前的 /（如 /c:/Users -> c:/Users）
+        if (/^\/[a-zA-Z]:/.test(filepath)) {
+          filepath = filepath.slice(1);
+        }
+        const uri = vscode.Uri.file(filepath);
         const bytes = await vscode.workspace.fs.readFile(uri);
         return new TextDecoder().decode(bytes);
       } catch (e) {

@@ -1,9 +1,8 @@
 import {
-  BookmarkIcon as BookmarkOutlineIcon,
   ChevronDownIcon,
-  XMarkIcon,
+  QuestionMarkCircleIcon,
+  TrashIcon,
 } from "@heroicons/react/24/outline";
-import { BookmarkIcon as BookmarkSolidIcon } from "@heroicons/react/24/solid";
 import React from "react";
 import styled from "styled-components";
 import {
@@ -212,7 +211,7 @@ const KnowledgeCardToolBar: React.FC<KnowledgeCardToolBarProps> = ({
             }}
             title="移除卡片"
           >
-            <XMarkIcon />
+            <TrashIcon />
           </RemoveBtn>
         )}
         {sourceTag && (
@@ -231,7 +230,7 @@ const KnowledgeCardToolBar: React.FC<KnowledgeCardToolBarProps> = ({
           }}
           title={isPinned ? "取消标记" : "标记待学"}
         >
-          {isPinned ? <BookmarkSolidIcon /> : <BookmarkOutlineIcon />}
+          <QuestionMarkCircleIcon />
         </ActionBtn>
       </ActionButtonsContainer>
 

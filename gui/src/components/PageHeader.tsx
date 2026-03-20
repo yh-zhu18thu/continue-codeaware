@@ -1,5 +1,5 @@
 import {
-  BookmarkIcon,
+  ChatBubbleLeftRightIcon,
   QuestionMarkCircleIcon,
 } from "@heroicons/react/24/outline";
 
@@ -50,7 +50,7 @@ export function PageHeader({
                 className={actionBtnClass}
                 title="我有疑惑"
               >
-                <QuestionMarkCircleIcon className="h-3.5 w-3.5" />
+                <ChatBubbleLeftRightIcon className="h-3.5 w-3.5" />
               </button>
             )}
             {onGlobalPins && (
@@ -59,7 +59,7 @@ export function PageHeader({
                 className={`${actionBtnClass} relative`}
                 title="标记列表"
               >
-                <BookmarkIcon className="h-3.5 w-3.5" />
+                <QuestionMarkCircleIcon className="h-3.5 w-3.5" />
                 {pinCount > 0 && (
                   <span className="absolute -right-0.5 -top-0.5 flex h-[14px] min-w-[14px] items-center justify-center rounded-full bg-blue-600 px-0.5 text-[9px] font-bold leading-none text-white">
                     {pinCount}

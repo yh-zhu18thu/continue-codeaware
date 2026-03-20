@@ -1,7 +1,7 @@
 import {
+  ChatBubbleLeftRightIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
-  QuestionMarkCircleIcon,
 } from "@heroicons/react/24/outline";
 import type { MasteryNodeRef } from "core";
 import React, { useCallback, useEffect, useRef, useState } from "react";
@@ -997,7 +997,7 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
                 onClick={() => setIsConfusionOpen(true)}
                 disabled={disabled}
               >
-                <QuestionMarkCircleIcon />
+                <ChatBubbleLeftRightIcon />
                 我有疑惑
               </ConfusionTriggerBtn>
             )}

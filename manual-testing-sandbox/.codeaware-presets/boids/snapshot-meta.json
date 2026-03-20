@@ -1,31 +1,43 @@
 {
   "schemaVersion": 1,
   "presetName": "boids",
-  "createdAt": "2026-03-19T10:30:32.029Z",
-  "originalRequirement": "使用pygame实现一个简单的群鸟飞行模拟（Boids），只需要可视化界面就可以，不需要用户操控和参数控制；你可以参考代码: import pygame\nimport random\n\nWIDTH, HEIGHT = 800, 600\nNUM_BOIDS = 50\nVIEW_RADIUS = 50\nPROTECTED_RANGE = 20\nAVOID_FACTOR = 0.05\nMATCH_FACTOR = 0.05\nCENTER_FACTOR = 0.0005\nMAX_SPEED = 5\nMIN_SPEED = 2\n\nclass Boid:\n    def init(self):\n        self.pos = pygame.Vector2(random.uniform(0, WIDTH), random.uniform(0, HEIGHT))\n        self.vel = pygame.Vector2(random.uniform(-MAX_SPEED, MAX_SPEED), random.uniform(-MAX_SPEED, MAX_SPEED))\n\n    def update(self, boids):\n        sep = pygame.Vector2(0, 0)\n        ali = pygame.Vector2(0, 0)\n        coh = pygame.Vector2(0, 0)\n        neighbors = 0\n\n        for other in boids:\n            if other is self: continue\n            dist = self.pos.distance_to(other.pos)\n\n            if dist < VIEW_RADIUS:\n                if dist < PROTECTED_RANGE:\n                    sep += (self.pos - other.pos)\n                ali += other.vel\n                coh += other.pos\n                neighbors += 1\n\n        if neighbors > 0:\n            ali /= neighbors\n            coh /= neighbors\n            self.vel += (ali - self.vel)  MATCH_FACTOR\n            self.vel += (coh - self.pos)  CENTER_FACTOR\n        \n        self.vel += sep * AVOID_FACTOR\n\n        speed = self.vel.length()\n        if speed > MAX_SPEED: self.vel.scale_to_length(MAX_SPEED)\n        if speed < MIN_SPEED: self.vel.scale_to_length(MIN_SPEED)\n\n        self.pos += self.vel\n        self.pos.x %= WIDTH\n        self.pos.y %= HEIGHT\n\n    def draw(self, screen):\n        pygame.draw.circle(screen, (200, 200, 255), (int(self.pos.x), int(self.pos.y)), 3)\n\ndef main():\n    pygame.init()\n    screen = pygame.display.set_mode((WIDTH, HEIGHT))\n    clock = pygame.time.Clock()\n    boids = [Boid() for  in range(NUMBOIDS)]\n\n    running = True\n    while running:\n        for event in pygame.event.get():\n            if event.type == pygame.QUIT:\n                running = False\n\n        screen.fill((30, 30, 35))\n        for boid in boids:\n            boid.update(boids)\n            boid.draw(screen)\n        \n        pygame.display.flip()\n        clock.tick(60)\n\n    pygame.quit()\n\nif name == \"__main__\":     main(),控制长度接近，但可以加入一些按步骤划分的注释；请分三个总体步骤实现这个项目",
-  "title": "群鸟飞行可视化模拟",
-  "learningGoal": "通过这个项目，你可以学会如何把真实世界中的群体行为拆解成几个互动规则，并用可视化方式展示出来，掌握模拟、界面绘制、和对象间协作的编程思路。",
+  "createdAt": "2026-03-20T14:35:04.531Z",
+  "originalRequirement": "我想用实现群鸟飞行可视化，参考代码为import pygame\nimport random\n\n# Step 2: 设置速度、距离等参数\nWIDTH, HEIGHT = 800, 600\nNUM_BOIDS = 50\nVIEW_RADIUS = 50\nPROTECTED_RANGE = 20\nAVOID_FACTOR = 0.05\nMATCH_FACTOR = 0.05\nCENTER_FACTOR = 0.0005\nMAX_SPEED = 5\nMIN_SPEED = 2\n\n# Step 1: 定义鸟群行为规则（Boid类）\nclass Boid:\n    def init(self):\n        self.pos = pygame.Vector2(random.uniform(0, WIDTH), random.uniform(0, HEIGHT))\n        self.vel = pygame.Vector2(random.uniform(-MAX_SPEED, MAX_SPEED), random.uniform(-MAX_SPEED, MAX_SPEED))\n\n    # Step 3/4: 实现位置和速度动态更新 & 边界循环与群体碰撞\n    def update(self, boids):\n        sep = pygame.Vector2(0, 0)\n        ali = pygame.Vector2(0, 0)\n        coh = pygame.Vector2(0, 0)\n        neighbors = 0\n\n        for other in boids:\n            if other is self:\n                continue\n            dist = self.pos.distance_to(other.pos)\n            if dist < VIEW_RADIUS:\n                if dist < PROTECTED_RANGE:\n                    sep += (self.pos - other.pos)\n                ali += other.vel\n                coh += other.pos\n                neighbors += 1\n\n        if neighbors > 0:\n            ali /= neighbors\n            coh /= neighbors\n            self.vel += (ali - self.vel)  MATCH_FACTOR\n            self.vel += (coh - self.pos)  CENTER_FACTOR\n        self.vel += sep * AVOID_FACTOR\n\n        speed = self.vel.length()\n        if speed > MAX_SPEED:\n            self.vel.scale_to_length(MAX_SPEED)\n        if speed < MIN_SPEED:\n            self.vel.scale_to_length(MIN_SPEED)\n        self.pos += self.vel\n        # Step 4: 处理边界循环\n        self.pos.x %= WIDTH\n        self.pos.y %= HEIGHT\n\n    # Step 5: 绘制鸟群动画效果\n    def draw(self, screen):\n        pygame.draw.circle(screen, (200, 200, 255), (int(self.pos.x), int(self.pos.y)), 3)\n\n# Step 6: 搭建持续动画循环\n\ndef main():\n    pygame.init()\n    screen = pygame.display.set_mode((WIDTH, HEIGHT))\n    pygame.display.set_caption(\"Boids 群鸟仿真模拟\")\n    clock = pygame.time.Clock()\n    boids = [Boid() for  in range(NUMBOIDS)]\n    running = True\n    while running:\n        for event in pygame.event.get():\n            if event.type == pygame.QUIT:\n                running = False\n        screen.fill((30, 30, 35))\n        for boid in boids:\n            boid.update(boids)\n            boid.draw(screen)\n        pygame.display.flip()\n        clock.tick(60)\n    pygame.quit()\n\nif name == \"__main__\":     main() 你不需要增添任何额外的功能以及处理，照着这个代码写就行；你可以根据实际步骤修改一下注释，但不要增加大段注释；请你帮我实现这个项目\n\n",
+  "title": "群鸟飞行可视化",
+  "learningGoal": "学会把一个小型仿真动画拆成：参数配置、个体对象建模、群体规则计算、边界与速度约束、以及用事件循环持续渲染的完整闭环。",
   "highLevelSteps": [
     {
       "id": "r-1",
-      "content": "群体行为建模与规则设计",
+      "content": "仿真参数与环境设定",
       "isHighlighted": false,
       "isCompleted": false
     },
     {
       "id": "r-2",
-      "content": "模拟动态更新与边界处理",
+      "content": "Boid个体数据模型",
       "isHighlighted": false,
       "isCompleted": false
     },
     {
       "id": "r-3",
-      "content": "交互式动画与视觉呈现",
+      "content": "群体行为规则计算",
+      "isHighlighted": false,
+      "isCompleted": false
+    },
+    {
+      "id": "r-4",
+      "content": "运动约束与边界处理",
+      "isHighlighted": false,
+      "isCompleted": false
+    },
+    {
+      "id": "r-5",
+      "content": "动画渲染与主循环",
       "isHighlighted": false,
       "isCompleted": false
     }
   ],
-  "highLevelStepNarrative": "这个项目要解决的是怎样模拟一群鸟像现实中那样自动结队飞行，而不是各自乱飞——你可以把它想成给每只鸟设定一套简单规则，让它们彼此协作，最终形成漂亮的群体行为。具体来说，{{r-1:群体行为建模与规则设计}}负责把鸟的互相避让、保持队形和靠近同伴的习惯转化为代码里的规则，让每只鸟知道怎样根据附近同伴调整自己的速度和方向。随着每一帧的进行，{{r-2:模拟动态更新与边界处理}}让鸟的位置和速度不断变化，并确保它们不会飞出画面边界。最后，{{r-3:交互式动画与视觉呈现}}把整个过程用动画展现出来，让你可以直观地看到鸟群不断变化和聚合的效果。",
+  "highLevelStepNarrative": "这个项目要做的是让一群小点像鸟一样“自己会飞还会结队”，做法是每一帧都根据邻居的位置和速度算出新速度，再把它画出来形成动画。在{{r-1:仿真参数与环境设定}}里你先定好窗口大小、鸟的数量、可视距离和速度上限等规则。接着用{{r-2:Boid个体数据模型}}把每只鸟抽象成“位置+速度”的对象，方便统一更新。随后在{{r-3:群体行为规则计算}}中按分离、对齐、聚合三条简单规则把邻居影响累加到速度上。为了让运动更稳定，{{r-4:运动约束与边界处理}}会限制速度范围并让小鸟飞出屏幕后从另一侧出现。最后通过{{r-5:动画渲染与主循环}}持续处理退出事件、更新所有鸟并刷新屏幕，你就得到连续的群鸟飞行效果。",
   "stepToHighLevelMappings": [
     {
       "stepId": "s-1",
@@ -56,23 +68,52 @@
       "stepId": "s-6",
       "highLevelStepId": "r-3",
       "highLevelStepIndex": 3
+    },
+    {
+      "stepId": "s-7",
+      "highLevelStepId": "r-3",
+      "highLevelStepIndex": 3
+    },
+    {
+      "stepId": "s-8",
+      "highLevelStepId": "r-4",
+      "highLevelStepIndex": 4
+    },
+    {
+      "stepId": "s-9",
+      "highLevelStepId": "r-4",
+      "highLevelStepIndex": 4
+    },
+    {
+      "stepId": "s-10",
+      "highLevelStepId": "r-5",
+      "highLevelStepIndex": 5
+    },
+    {
+      "stepId": "s-11",
+      "highLevelStepId": "r-5",
+      "highLevelStepIndex": 5
+    },
+    {
+      "stepId": "s-12",
+      "highLevelStepId": "r-5",
+      "highLevelStepIndex": 5
     }
   ],
   "steps": [
     {
       "id": "s-1",
-      "title": "定义鸟群行为规则",
-      "abstract": "为每只鸟（Boid）设定它们彼此之间如何影响和移动，比如避开太近的伙伴、跟随整体队形、以及向队伍中心靠拢。这样每个成员都不需要知道全局，只是根据邻居的动作自己调整方向，最终让整个群体像真实鸟群一样有秩序地飞。没有这些规则的话，鸟们要么乱飞，要么全挤一团，根本不像自然的行为。",
+      "title": "定义全局参数常量",
+      "abstract": "先把窗口大小、鸟的数量、可视半径、最小距离、以及各种影响系数都写成清晰的常量。这样做就像把“游戏规则”贴在墙上，后面调效果只改数字，不用到处翻代码。参数齐全后，仿真行为才会稳定且容易复现。",
       "knowledgeCards": [],
-      "isHighlighted": true,
+      "isHighlighted": false,
       "stepStatus": "generated",
-      "knowledgeCardGenerationStatus": "empty",
-      "highlightType": "primary"
+      "knowledgeCardGenerationStatus": "empty"
     },
     {
       "id": "s-2",
-      "title": "设置速度、距离等参数",
-      "abstract": "要让鸟群效果逼真，需要对速度、可视范围、最小保护距离等做精细控制，避免它们飞得太快或太慢、太分散或太拥挤。调整这些参数让鸟儿既不会撞到一起，也不会各自为政；群体会呈现出流动、队形变化等特征。参数设置其实就是像导演一样，把群体的表演节奏和场面调和到最佳。",
+      "title": "初始化Pygame显示环境",
+      "abstract": "创建窗口、设置标题、准备时钟对象，确保程序有一个能画图的“画布”。时钟用来控制每秒刷新次数，避免不同电脑上速度忽快忽慢。到这一步，你就具备了持续播放动画的基础条件。",
       "knowledgeCards": [],
       "isHighlighted": false,
       "stepStatus": "generated",
@@ -80,8 +121,8 @@
     },
     {
       "id": "s-3",
-      "title": "实现位置和速度动态更新",
-      "abstract": "每一帧都要计算每只鸟下一步的位置和速度，让它根据刚才设置的行为规则不断调整。这样整个群体始终保持自然的动态，像动画一样不断前进。如果不做动态更新，画面就会变成静止的点，失去了模拟的魅力和真实感。",
+      "title": "定义Boid的位置与速度字段",
+      "abstract": "创建一个 Boid 类，并用二维向量保存位置 pos 和速度 vel。位置表示鸟在哪，速度表示下一瞬间往哪飞、飞多快。用 Vector2 的好处是加减、求长度都很方便，后面的规则计算会更直观。",
       "knowledgeCards": [],
       "isHighlighted": false,
       "stepStatus": "generated",
@@ -89,8 +130,8 @@
     },
     {
       "id": "s-4",
-      "title": "处理边界循环和群体碰撞",
-      "abstract": "每只鸟飞到屏幕边缘时，需要让它能“穿越”边界，比如从右边消失就从左侧重新出现，保证场面持续变化而不死板。还要注意避免太靠近时发生“碰撞”——其实就是让它们互相避让。这样场景可以一直循环下去，鸟们不会困在角落或消失，整体体验更加流畅。",
+      "title": "随机生成初始群体状态",
+      "abstract": "在创建每只鸟时，把位置随机放到窗口范围内，并给一个随机速度，让画面一开始就“活”起来。然后一次性生成 NUM_BOIDS 只鸟组成列表，作为后续规则计算的输入。这样群体规模固定，便于观察参数变化带来的效果。",
       "knowledgeCards": [],
       "isHighlighted": false,
       "stepStatus": "generated",
@@ -98,8 +139,8 @@
     },
     {
       "id": "s-5",
-      "title": "绘制鸟群动画效果",
-      "abstract": "用图形方式把所有鸟的位置画出来，就像在屏幕上点缀一堆移动的小亮点。每帧都重绘它们，让观看者能直观看到鸟群如何移动、聚散、变队形。视觉效果是群体行为模拟最重要的展示窗口，也是让这个抽象规则变得生动有趣的关键。如果没有可视化，就很难理解鸟群是怎么互动的。",
+      "title": "统计邻居并计算分离向量",
+      "abstract": "遍历其它鸟，先判断距离是否在可视半径内，只有“看得见”的才算邻居。若距离还小于保护距离，就累加一个远离对方的方向，这就是分离（避免撞在一起）。这一步决定了鸟群不会挤成一团，看起来更像真实群体。",
       "knowledgeCards": [],
       "isHighlighted": false,
       "stepStatus": "generated",
@@ -107,8 +148,62 @@
     },
     {
       "id": "s-6",
-      "title": "搭建持续动画循环",
-      "abstract": "通过不断刷新画面和更新鸟群状态，形成一个“活”的动画——让系统不断运行和变化。每次循环都要处理新事件（比如退出画面），然后重新绘制和计算鸟群。这样模拟就不只是一次性的，用户可以一直看下去，体验群体行为的持续变化和动态魅力。",
+      "title": "计算对齐与聚合目标",
+      "abstract": "对邻居的速度求平均得到对齐目标，让自己尽量朝“大家的方向”飞。对邻居的位置求平均得到聚合目标，让自己往群体中心靠近但不会瞬移。把这两种目标作为“想跟上队伍”和“别掉队”的动力来源。",
+      "knowledgeCards": [],
+      "isHighlighted": false,
+      "stepStatus": "generated",
+      "knowledgeCardGenerationStatus": "empty"
+    },
+    {
+      "id": "s-7",
+      "title": "按系数更新速度向量",
+      "abstract": "把分离、对齐、聚合三种影响按各自系数加到当前速度上，得到下一帧的速度变化。系数就像三种“性格强度”的旋钮：怕撞、爱跟随、想靠近分别有多强。做完这步，群体运动就会出现队形和流动感。",
+      "knowledgeCards": [],
+      "isHighlighted": false,
+      "stepStatus": "generated",
+      "knowledgeCardGenerationStatus": "empty"
+    },
+    {
+      "id": "s-8",
+      "title": "限制速度到最小最大范围",
+      "abstract": "计算速度长度，如果超过最大值就缩短到 MAX_SPEED，太慢则拉到 MIN_SPEED。这样可以避免突然飞得过快看不清，也避免速度接近 0 导致鸟停住不动。速度被约束后，动画节奏会更均匀、更像“飞行”。",
+      "knowledgeCards": [],
+      "isHighlighted": false,
+      "stepStatus": "generated",
+      "knowledgeCardGenerationStatus": "empty"
+    },
+    {
+      "id": "s-9",
+      "title": "推进位置并处理边界循环",
+      "abstract": "用 pos += vel 推进位置，让每帧都真正移动起来。然后用取模把 x、y 限制回窗口范围，实现“从右边飞出去会从左边回来”的循环世界。没有这一步，鸟会越飞越远，画面很快就空了。",
+      "knowledgeCards": [],
+      "isHighlighted": false,
+      "stepStatus": "generated",
+      "knowledgeCardGenerationStatus": "empty"
+    },
+    {
+      "id": "s-10",
+      "title": "绘制每只鸟为小圆点",
+      "abstract": "在 draw 方法里用 pygame.draw.circle 把每只鸟画成一个小圆点，并把浮点坐标转成整数像素坐标。画得简单反而更方便观察运动规律，而不是被复杂造型干扰。只要能稳定看到点在移动，仿真就算可视化成功。",
+      "knowledgeCards": [],
+      "isHighlighted": false,
+      "stepStatus": "generated",
+      "knowledgeCardGenerationStatus": "empty"
+    },
+    {
+      "id": "s-11",
+      "title": "处理退出事件并清屏刷新",
+      "abstract": "在主循环里读取事件，遇到 QUIT 就把 running 设为 False，让窗口能正常关闭。每帧先用背景色 fill 清屏，再更新与绘制所有 boids，最后 flip 把这一帧显示出来。这个流程保证画面不会残影，并且每一帧都是最新状态。",
+      "knowledgeCards": [],
+      "isHighlighted": false,
+      "stepStatus": "generated",
+      "knowledgeCardGenerationStatus": "empty"
+    },
+    {
+      "id": "s-12",
+      "title": "控制帧率并收尾退出Pygame",
+      "abstract": "用 clock.tick(60) 把刷新率稳定在 60 帧左右，让运动速度更可控、更一致。循环结束后调用 pygame.quit() 做干净收尾，避免资源没释放导致卡住。完成这一步，你就拥有一个能持续运行、能正常退出的完整小项目。",
       "knowledgeCards": [],
       "isHighlighted": false,
       "stepStatus": "generated",

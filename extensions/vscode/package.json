@@ -345,19 +345,19 @@
         "command": "continue.deleteCodeAnnotation",
         "category": "Continue",
         "title": "删除注释",
-        "icon": "$(chrome-close)"
+        "icon": "$(trash)"
       },
       {
         "command": "continue.askFollowUpAnnotation",
         "category": "Continue",
         "title": "深入提问",
-        "icon": "$(question)"
+        "icon": "$(comment-discussion)"
       },
       {
         "command": "continue.pinCodeAnnotation",
         "category": "Continue",
         "title": "标记/取消标记",
-        "icon": "$(bookmark)"
+        "icon": "$(question)"
       },
       {
         "command": "continue.focusContinueSessionId",

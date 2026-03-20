@@ -1,6 +1,7 @@
 import {
-  BookmarkIcon,
+  ChatBubbleLeftRightIcon,
   QuestionMarkCircleIcon,
+  TrashIcon,
   XMarkIcon,
 } from "@heroicons/react/24/outline";
 import type { PinnedItem } from "core";
@@ -488,8 +489,8 @@ export const GlobalInteractionOverlay: React.FC<
   if (!isOpen) return null;
 
   const tabIcons: Record<OverlayTab, React.ReactNode> = {
-    confusion: <QuestionMarkCircleIcon />,
-    pins: <BookmarkIcon />,
+    confusion: <ChatBubbleLeftRightIcon />,
+    pins: <QuestionMarkCircleIcon />,
   };
 
   const tabLabels: Record<OverlayTab, string> = {
@@ -538,7 +539,9 @@ export const GlobalInteractionOverlay: React.FC<
           {activeTab === "pins" && (
             <>
               {pinnedItems.length === 0 ? (
-                <EmptyHint>暂无标记项目。点击各层级的书签按钮添加。</EmptyHint>
+                <EmptyHint>
+                  暂无标记项目。点击各层级的待学问号按钮添加。
+                </EmptyHint>
               ) : (
                 <PinList>
                   {pinnedItems.map((item) => (
@@ -558,7 +561,7 @@ export const GlobalInteractionOverlay: React.FC<
                         }}
                         title="移除标记"
                       >
-                        <XMarkIcon />
+                        <TrashIcon />
                       </PinRemoveBtn>
                     </PinRow>
                   ))}

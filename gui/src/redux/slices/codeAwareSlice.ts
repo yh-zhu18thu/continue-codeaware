@@ -1376,6 +1376,16 @@ export const codeAwareSessionSlice = createSlice({
       const { snapshot, resolvedCodeFilePath } = action.payload;
       const now = Date.now();
 
+      // 构建旧 chunk ID → 新 chunk ID 的映射表
+      // chunk ID 格式: `${filePath}-chunk-${index}`，需要把旧路径替换为新路径
+      const chunkIdMap = new Map<string, string>();
+      for (const chunk of snapshot.codeChunks) {
+        const newId = `${resolvedCodeFilePath}-chunk-${chunk.id.replace(/^.*-chunk-/, "")}`;
+        chunkIdMap.set(chunk.id, newId);
+      }
+      const remapChunkId = (oldId: string): string =>
+        chunkIdMap.get(oldId) ?? oldId;
+
       // 基础信息
       state.title = snapshot.title;
       state.learningGoal = snapshot.learningGoal;
@@ -1393,32 +1403,57 @@ export const codeAwareSessionSlice = createSlice({
       state.stepToHighLevelMappings = snapshot.stepToHighLevelMappings;
       state.steps = snapshot.steps;
 
-      // 代码块（替换 filePath 为当前 workspace 的绝对路径）
+      // 代码块（替换 filePath 和 id 为当前 workspace 的绝对路径）
       state.codeChunks = snapshot.codeChunks.map((chunk) => ({
         ...chunk,
+        id: remapChunkId(chunk.id),
         filePath: resolvedCodeFilePath,
       }));
-      state.codeChunkRelations = snapshot.codeChunkRelations;
+      state.codeChunkRelations = snapshot.codeChunkRelations.map((rel) => ({
+        ...rel,
+        fromChunkId: remapChunkId(rel.fromChunkId),
+        toChunkId: remapChunkId(rel.toChunkId),
+      }));
 
-      // 映射
-      state.codeAwareMappings = snapshot.codeAwareMappings;
+      // 映射（更新 codeChunkId 以匹配新路径）
+      state.codeAwareMappings = snapshot.codeAwareMappings.map((mapping) => ({
+        ...mapping,
+        codeChunkId: remapChunkId(mapping.codeChunkId),
+      }));
 
       // 知识图谱
       state.knowledgePoints = snapshot.knowledgePoints;
       state.knowledgeRelations = snapshot.knowledgeRelations;
       state.knowledgeToStepRelations = snapshot.knowledgeToStepRelations;
       state.knowledgeToCodeChunkRelations =
-        snapshot.knowledgeToCodeChunkRelations;
+        snapshot.knowledgeToCodeChunkRelations.map((rel) => ({
+          ...rel,
+          codeChunkId: remapChunkId(rel.codeChunkId),
+        }));
 
-      // 掌握度：重置为 0（每个学生从零开始）
+      // 掌握度：重置为 0（每个学生从零开始），同时更新 code-chunk 类型的 nodeId
       state.nodeMasteryScores = snapshot.nodeMasteryScores.map((score) => ({
         ...score,
+        nodeId:
+          score.nodeType === "code-chunk"
+            ? remapChunkId(score.nodeId)
+            : score.nodeId,
         score: 0,
         updatedAt: now,
       }));
 
-      // 认知边：直接从快照恢复，不重算
-      state.cognitiveEdges = snapshot.cognitiveEdges;
+      // 认知边：从快照恢复并更新 code-chunk 类型节点的 ID
+      state.cognitiveEdges = snapshot.cognitiveEdges.map((edge) => ({
+        ...edge,
+        fromNodeId:
+          edge.fromNodeType === "code-chunk"
+            ? remapChunkId(edge.fromNodeId)
+            : edge.fromNodeId,
+        toNodeId:
+          edge.toNodeType === "code-chunk"
+            ? remapChunkId(edge.toNodeId)
+            : edge.toNodeId,
+      }));
 
       // 初始生成状态：标记为已完成
       state.initialGeneration = {

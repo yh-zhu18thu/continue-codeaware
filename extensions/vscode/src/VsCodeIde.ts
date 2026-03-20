@@ -19,6 +19,19 @@ import { getExtensionVersion, isExtensionPrerelease } from "./util/util";
 import { getExtensionUri, openEditorAndRevealRange } from "./util/vscode";
 import { VsCodeWebviewProtocol } from "./webviewProtocol";
 
+/**
+ * 将文件路径或 URI 字符串统一转为 vscode.Uri。
+ * - 已经是完整 URI（如 file:///...、vscode-userdata:...）则 parse
+ * - Windows 裸路径（如 c:/Users/...）或 Unix 路径（/home/...）则用 Uri.file
+ */
+function toFileUri(fileUriOrPath: string): vscode.Uri {
+  // 有 scheme 且 scheme 长度 > 1（排除 Windows 盘符如 "c:"）
+  if (/^[a-zA-Z][a-zA-Z0-9+\-.]{1,}:/.test(fileUriOrPath)) {
+    return vscode.Uri.parse(fileUriOrPath);
+  }
+  return vscode.Uri.file(fileUriOrPath);
+}
+
 import type {
   DocumentSymbol,
   FileStatsMap,
@@ -304,7 +317,7 @@ class VsCodeIde implements IDE {
   }
 
   async writeFile(fileUri: string, contents: string): Promise<void> {
-    const targetUri = vscode.Uri.parse(fileUri);
+    const targetUri = toFileUri(fileUri);
     const parentPath = targetUri.path.slice(0, targetUri.path.lastIndexOf("/"));
 
     if (parentPath) {
@@ -320,7 +333,7 @@ class VsCodeIde implements IDE {
   }
 
   async openFile(fileUri: string): Promise<void> {
-    await this.ideUtils.openFile(vscode.Uri.parse(fileUri));
+    await this.ideUtils.openFile(toFileUri(fileUri));
   }
 
   // CodeAware: Create and open a new file

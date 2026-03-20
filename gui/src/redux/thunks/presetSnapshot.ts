@@ -422,10 +422,16 @@ export const loadPresetSnapshot = createAsyncThunk<
         }),
       );
 
+      // 将 plain path 转为 file:// URI，与 IDE getCurrentFile() 返回的格式一致
+      // 这样 chunk ID (${filePath}-chunk-N) 才能与后续 IDE 生成的 chunk 匹配
+      const codeFileUri = codeFilePath.startsWith("file://")
+        ? codeFilePath
+        : `file://${codeFilePath.startsWith("/") ? "" : "/"}${codeFilePath}`;
+
       dispatch(
         restoreFromSnapshot({
           snapshot,
-          resolvedCodeFilePath: codeFilePath,
+          resolvedCodeFilePath: codeFileUri,
         }),
       );
 

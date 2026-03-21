@@ -17,6 +17,7 @@ export const WEBVIEW_TO_CORE_PASS_THROUGH: (keyof ToCoreFromWebviewProtocol)[] =
     "history/save",
     "history/clear",
     "devdata/log",
+    "chatLog/event",
     "config/addModel",
     "config/newPromptFile",
     "config/newAssistantFile",

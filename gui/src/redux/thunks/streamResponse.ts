@@ -89,6 +89,19 @@ export const streamResponseThunk = createAsyncThunk<
         });
         posthog.capture("userInput", {});
 
+        try {
+          extra.ideMessenger.post("chatLog/event", {
+            sessionId: state.session.id,
+            eventType: "user_message",
+            payload: {
+              content:
+                typeof content === "string" ? content : JSON.stringify(content),
+            },
+          });
+        } catch (e) {
+          console.error("Failed to log user message", e);
+        }
+
         if (legacyCommandWithInput) {
           posthog.capture("step run", {
             step_name: legacyCommandWithInput.command.name,

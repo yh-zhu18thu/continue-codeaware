@@ -216,6 +216,20 @@ export const streamNormalInput = createAsyncThunk<
         dispatch(addPromptCompletionPair([next.value]));
 
         try {
+          extra.ideMessenger.post("chatLog/event", {
+            sessionId: state.session.id,
+            eventType: "assistant_message",
+            payload: {
+              content: next.value.completion,
+              modelTitle: selectedChatModel.title,
+              modelProvider: selectedChatModel.underlyingProviderName,
+            },
+          });
+        } catch (e) {
+          console.error("Failed to log assistant message", e);
+        }
+
+        try {
           extra.ideMessenger.post("devdata/log", {
             name: "chatInteraction",
             data: {

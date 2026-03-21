@@ -11,6 +11,7 @@ import { ConfigHandler } from "./config/ConfigHandler";
 import { addModel, deleteModel } from "./config/util";
 import { getAuthUrlForTokenPage } from "./control-plane/auth/index";
 import { getControlPlaneEnv } from "./control-plane/env";
+import { ChatSessionLogger } from "./data/chatSessionLogger";
 import { DevDataSqliteDb } from "./data/devdataSqlite";
 import { DataLogger } from "./data/log";
 import { CodebaseIndexer } from "./indexing/CodebaseIndexer";
@@ -376,6 +377,18 @@ export class Core {
 
     on("devdata/log", async (msg) => {
       void DataLogger.getInstance().logDevData(msg.data);
+    });
+
+    on("chatLog/event", async (msg) => {
+      const workspaceDirs = await this.ide.getWorkspaceDirs();
+      if (workspaceDirs.length > 0) {
+        ChatSessionLogger.getInstance().logEvent(
+          workspaceDirs[0],
+          msg.data.sessionId,
+          msg.data.eventType,
+          msg.data.payload,
+        );
+      }
     });
 
     on("config/addModel", (msg) => {

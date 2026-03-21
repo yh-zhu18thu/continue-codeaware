@@ -47,20 +47,19 @@ function normalizeFilePath(path: string): string {
   if (normalized.startsWith("file://")) {
     // 移除 file:// 前缀
     normalized = normalized.replace(/^file:\/\//, "");
-
-    // 在 Windows 上，处理类似 file:///C:/... 的情况
-    // 在 Unix 上，file:///path 变为 /path
-    if (normalized.startsWith("/") && normalized.includes(":")) {
-      // Windows 路径：/C:/... -> C:/...
-      normalized = normalized.slice(1);
-    }
   }
 
-  // 解码 URI 编码的字符（如空格等）
+  // 先解码 URI 编码的字符（%3A → : 等），再做 Windows 路径判断
   try {
     normalized = decodeURIComponent(normalized);
   } catch (e) {
     // 如果解码失败，保持原样
+  }
+
+  // 在 Windows 上，处理类似 /C:/... 的情况（去掉前导斜杠）
+  // 在 Unix 上，/path 保持不变
+  if (/^\/[a-zA-Z]:/.test(normalized)) {
+    normalized = normalized.slice(1);
   }
 
   // 统一路径分隔符为正斜杠

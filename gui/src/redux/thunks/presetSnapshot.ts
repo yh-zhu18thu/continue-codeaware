@@ -39,6 +39,23 @@ function joinPath(baseDir: string, ...segments: string[]): string {
 }
 
 /**
+ * 将本地路径转为 file:// URI（回退方案）。
+ * 在 Windows 上将驱动器字母小写化以匹配 VS Code 的 uri.toString() 行为。
+ */
+function toFileUri(fsPath: string): string {
+  let p = fsPath.replace(/\\/g, "/");
+  if (p.startsWith("file://")) return p;
+  const prefix = p.startsWith("/") ? "file://" : "file:///";
+  let uri = `${prefix}${p}`;
+  // VS Code 在 Windows 上始终将驱动器字母小写化
+  uri = uri.replace(
+    /^(file:\/\/\/)([A-Z]):/,
+    (_, pre, drive) => `${pre}${drive.toLowerCase()}:`,
+  );
+  return uri;
+}
+
+/**
  * 多级回退获取工作区目录：
  * 1. Redux state.workspaceDirectory
  * 2. window.workspacePaths[0]
@@ -422,16 +439,32 @@ export const loadPresetSnapshot = createAsyncThunk<
         }),
       );
 
-      // 将 plain path 转为 file:// URI，与 IDE getCurrentFile() 返回的格式一致
-      // 这样 chunk ID (${filePath}-chunk-N) 才能与后续 IDE 生成的 chunk 匹配
-      const codeFileUri = codeFilePath.startsWith("file://")
-        ? codeFilePath
-        : `file://${codeFilePath.startsWith("/") ? "" : "/"}${codeFilePath}`;
+      // 从编辑器获取规范的 file:// URI（而非手动拼接），确保与后续
+      // getCurrentFile() 返回的路径格式完全一致（尤其是 Windows 驱动器字母大小写、
+      // URI 编码等差异）。chunk ID (${filePath}-chunk-N) 必须精确匹配。
+      let resolvedCodeFileUri = codeFilePath;
+      try {
+        const currentFileResp = await extra.ideMessenger.request(
+          "getCurrentFile",
+          undefined,
+        );
+        if (
+          currentFileResp?.status === "success" &&
+          currentFileResp.content?.path
+        ) {
+          resolvedCodeFileUri = currentFileResp.content.path;
+        } else {
+          // Editor 未就绪 — 回退到手动构造
+          resolvedCodeFileUri = toFileUri(codeFilePath);
+        }
+      } catch {
+        resolvedCodeFileUri = toFileUri(codeFilePath);
+      }
 
       dispatch(
         restoreFromSnapshot({
           snapshot,
-          resolvedCodeFilePath: codeFileUri,
+          resolvedCodeFilePath: resolvedCodeFileUri,
         }),
       );
 

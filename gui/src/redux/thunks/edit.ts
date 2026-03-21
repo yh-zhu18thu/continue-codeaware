@@ -112,7 +112,7 @@ export const exitEdit = createAsyncThunk<
     await dispatch(loadLastSession());
   }
 
-  dispatch(setMode(state.editModeState.returnToMode));
+  dispatch(setMode("chat"));
 });
 
 export const enterEdit = createAsyncThunk<

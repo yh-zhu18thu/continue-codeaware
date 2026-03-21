@@ -39,8 +39,7 @@ const saveSubsetFilters = [
     "lastSessionId",
     "title",
 
-    // Persist edit mode in case closes in middle
-    "mode",
+    // Mode is no longer persisted - always starts as "chat"
 
     // higher risk to persist
     // codeBlockApplyStates

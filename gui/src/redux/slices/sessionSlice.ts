@@ -684,6 +684,7 @@ export const sessionSlice = createSlice({
 
       state.isStreaming = false;
       state.symbols = {};
+      state.mode = "chat";
 
       state.inlineErrorMessage = undefined;
       state.isPruned = false;

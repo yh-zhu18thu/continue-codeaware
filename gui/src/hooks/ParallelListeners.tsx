@@ -219,7 +219,7 @@ function ParallelListeners() {
 
   useWebviewListener("loadAgentSession", async (data) => {
     dispatch(newSession(data.session));
-    dispatch(setMode("agent"));
+    dispatch(setMode("chat"));
   });
 
   useWebviewListener("setTTSActive", async (status) => {

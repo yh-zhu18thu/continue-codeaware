@@ -50,7 +50,7 @@ export function useMainEditorWebviewListeners({
     async (data) => {
       if (!editor) return;
       editor.commands.insertContent(data.input);
-      onEnterRef.current({ useCodebase: false, noContext: true });
+      onEnterRef.current({ useCodebase: false, noContext: false });
     },
     [editor, onEnterRef.current],
   );
@@ -155,7 +155,7 @@ export function useMainEditorWebviewListeners({
       }
 
       if (data.shouldRun) {
-        onEnterRef.current({ useCodebase: false, noContext: true });
+        onEnterRef.current({ useCodebase: false, noContext: false });
       }
 
       setTimeout(() => {

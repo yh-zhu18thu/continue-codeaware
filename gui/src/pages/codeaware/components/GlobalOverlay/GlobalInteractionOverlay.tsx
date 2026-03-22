@@ -28,7 +28,10 @@ export interface GlobalInteractionOverlayProps {
   initialTab?: OverlayTab;
   onClose: () => void;
   /** Confusion tab: ConfusionPanel onAsk callback */
-  onConfusionAsk: (question: string) => Promise<string>;
+  onConfusionAsk: (
+    question: string,
+    conversationHistory: Array<{ role: "user" | "assistant"; content: string }>,
+  ) => Promise<string>;
   /** Confusion tab: called when user confirms understanding */
   onConfusionEnd: (messages: ConfusionMessage[]) => void;
   /** Confusion tab: called when user marks as "待学" */

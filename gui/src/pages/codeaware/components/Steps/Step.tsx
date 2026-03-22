@@ -165,7 +165,11 @@ interface StepProps {
   onHighlightEvent?: (event: HighlightEvent) => void;
   onClearHighlight?: () => void;
   onStepConfusion?: (stepId: string) => void; // Confusion button handler (opens panel & generates candidates)
-  onStepConfusionAsk?: (stepId: string, question: string) => Promise<string>; // Ask question in confusion panel
+  onStepConfusionAsk?: (
+    stepId: string,
+    question: string,
+    conversationHistory: Array<{ role: "user" | "assistant"; content: string }>,
+  ) => Promise<string>; // Ask question in confusion panel
   onStepConfusionEnd?: (stepId: string, messages: ConfusionMessage[]) => void; // End confusion Q&A
   onStepPendingLearn?: (stepId: string, messages: ConfusionMessage[]) => void; // Pending learn from confusion Q&A
   stepConfusionCandidates?: ConfusionCandidate[]; // Mastery-based candidates
@@ -650,9 +654,9 @@ const Step: React.FC<StepProps> = ({
                 isOpen={isStepConfusionOpen}
                 candidates={stepConfusionCandidates}
                 candidatesLoading={stepConfusionCandidatesLoading}
-                onAsk={async (q) => {
+                onAsk={async (q, history) => {
                   if (stepId && onStepConfusionAsk) {
-                    return onStepConfusionAsk(stepId, q);
+                    return onStepConfusionAsk(stepId, q, history);
                   }
                   return "暂不可用";
                 }}

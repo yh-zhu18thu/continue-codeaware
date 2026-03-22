@@ -248,7 +248,11 @@ export interface KnowledgeCardProps {
   onFeedback?: (cardId: string, feedback: "understood" | "uncertain") => void;
 
   // Unified action callbacks
-  onConfusionAsk?: (cardId: string, question: string) => Promise<string>;
+  onConfusionAsk?: (
+    cardId: string,
+    question: string,
+    conversationHistory: Array<{ role: "user" | "assistant"; content: string }>,
+  ) => Promise<string>;
   onConfusionEnd?: (cardId: string, messages: ConfusionMessage[]) => void;
   onPendingLearn?: (cardId: string, messages: ConfusionMessage[]) => void;
   onSelfTest?: (cardId: string) => void;
@@ -968,9 +972,9 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
             <ConfusionPanel
               isOpen={isConfusionOpen}
               candidates={DEEPDIVE_CANDIDATES}
-              onAsk={async (q) => {
+              onAsk={async (q, history) => {
                 if (cardId && onConfusionAsk) {
-                  return onConfusionAsk(cardId, q);
+                  return onConfusionAsk(cardId, q, history);
                 }
                 return "暂不可用";
               }}

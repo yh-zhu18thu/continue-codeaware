@@ -68,28 +68,16 @@ ${code}
 
 /** 深入提问的系统提示词 */
 const FOLLOWUP_SYSTEM_PROMPT =
-  "You are a code explanation assistant for non-programmers. The user has seen a basic explanation of some code and wants to understand a specific detail. Respond in Chinese with plain, everyday language. Keep it concise (2-3 sentences). Use analogies when helpful.";
+  "你是一个面向非程序员的代码解释助手。用户已经看过一段代码的基本解释，现在想进一步了解某个细节。请用中文、日常化的语言回答。回答控制在2-3句话以内，可以使用类比来帮助理解。";
 
-/** 构建深入提问的用户提示词 */
-function buildFollowUpPrompt(
-  code: string,
-  language: string,
-  existingAnnotation: string,
-  question: string,
-): string {
-  return `以下是一段 ${language} 代码及其已有注释：
+/** 构建深入提问的系统上下文（代码 + 语言信息） */
+function buildFollowUpSystemContext(code: string, language: string): string {
+  return `${FOLLOWUP_SYSTEM_PROMPT}
 
-代码：
+用户正在学习的代码（${language}）：
 \`\`\`${language}
 ${code}
-\`\`\`
-
-已有注释：
-${existingAnnotation}
-
-用户追问：${question}
-
-请用中文简洁回答。`;
+\`\`\``;
 }
 
 // ===========================================================
@@ -334,7 +322,10 @@ export class CodeAnnotationController implements vscode.Disposable {
     answerFn: (
       code: string,
       language: string,
-      existingAnnotation: string,
+      conversationHistory: Array<{
+        role: "user" | "assistant";
+        content: string;
+      }>,
       question: string,
     ) => Promise<string>,
   ): Promise<void> {
@@ -348,14 +339,23 @@ export class CodeAnnotationController implements vscode.Disposable {
     const code = document.getText(thread.range);
     const language = document.languageId;
 
-    // 获取已有注释内容
-    const firstComment = thread.comments[0] as AnnotationComment;
-    const existingAnnotation =
-      typeof firstComment.body === "string"
-        ? firstComment.body
-        : firstComment.body.value;
+    // Build conversation history from existing thread comments
+    const conversationHistory: Array<{
+      role: "user" | "assistant";
+      content: string;
+    }> = [];
+    for (const comment of thread.comments) {
+      const ac = comment as AnnotationComment;
+      const bodyText = typeof ac.body === "string" ? ac.body : ac.body.value;
+      const isUser = ac.author?.name === "You";
+      conversationHistory.push({
+        role: isUser ? "user" : "assistant",
+        content: bodyText,
+      });
+    }
 
     // 追加用户提问
+    const firstComment = thread.comments[0] as AnnotationComment;
     const userComment = new AnnotationComment(
       question,
       firstComment.annotationId,
@@ -373,7 +373,7 @@ export class CodeAnnotationController implements vscode.Disposable {
       const answer = await answerFn(
         code,
         language,
-        existingAnnotation,
+        conversationHistory,
         question,
       );
       const answerComment = new AnnotationComment(
@@ -398,14 +398,9 @@ export class CodeAnnotationController implements vscode.Disposable {
     return FOLLOWUP_SYSTEM_PROMPT;
   }
 
-  /** 构建深入提问的 user prompt */
-  static buildFollowUpPrompt(
-    code: string,
-    language: string,
-    existingAnnotation: string,
-    question: string,
-  ): string {
-    return buildFollowUpPrompt(code, language, existingAnnotation, question);
+  /** 构建深入提问的系统上下文（含代码） */
+  static buildFollowUpSystemContext(code: string, language: string): string {
+    return buildFollowUpSystemContext(code, language);
   }
 
   /** 恢复指定文件的持久注释 */

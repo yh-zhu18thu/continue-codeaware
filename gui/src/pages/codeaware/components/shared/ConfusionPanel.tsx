@@ -36,7 +36,10 @@ export interface ConfusionPanelProps {
   /** Whether candidates are being generated */
   candidatesLoading?: boolean;
   /** Called when user submits a question; should return AI response text */
-  onAsk: (question: string) => Promise<string>;
+  onAsk: (
+    question: string,
+    conversationHistory: Array<{ role: "user" | "assistant"; content: string }>,
+  ) => Promise<string>;
   /** Called when user confirms understanding ("我懂了"); receives full message history */
   onEnd: (messages: ConfusionMessage[]) => void;
   /** Called when user marks as "待学" — creates card + pins to learn-later list */
@@ -389,7 +392,12 @@ const ConfusionPanel: React.FC<ConfusionPanelProps> = ({
       setIsLoading(true);
 
       try {
-        const response = await onAsk(q.trim());
+        // Pass conversation history (before this message) for multi-turn context
+        const history = messages.map((m) => ({
+          role: m.role,
+          content: m.content,
+        }));
+        const response = await onAsk(q.trim(), history);
 
         const assistantMsg: ConfusionMessage = {
           id: `cp-${Date.now()}-a`,

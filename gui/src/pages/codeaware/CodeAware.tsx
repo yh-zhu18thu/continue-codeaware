@@ -3033,7 +3033,13 @@ export const CodeAware = () => {
 
   // Handle global confusion ask — ConfusionPanel onAsk callback
   const handleGlobalConfusionAsk = useCallback(
-    async (question: string): Promise<string> => {
+    async (
+      question: string,
+      conversationHistory: Array<{
+        role: "user" | "assistant";
+        content: string;
+      }>,
+    ): Promise<string> => {
       await logger.addLogEntry("user_submit_global_confusion_question", {
         question: question.substring(0, 200),
       });
@@ -3060,7 +3066,7 @@ export const CodeAware = () => {
           question,
           context: {
             level: "global",
-            conversationHistory: [],
+            conversationHistory,
             learningGoal: learningGoal || "",
             taskDescription: task?.requirementDescription || "",
             currentCode,
@@ -3411,7 +3417,14 @@ export const CodeAware = () => {
 
   // Step-level confusion Q&A ask handler
   const handleStepConfusionAsk = useCallback(
-    async (stepId: string, question: string): Promise<string> => {
+    async (
+      stepId: string,
+      question: string,
+      conversationHistory: Array<{
+        role: "user" | "assistant";
+        content: string;
+      }>,
+    ): Promise<string> => {
       const step = steps.find((s) => s.id === stepId);
       const result = await dispatch(
         respondToConfusionQA({
@@ -3419,7 +3432,7 @@ export const CodeAware = () => {
           context: {
             level: "step",
             stepId,
-            conversationHistory: [],
+            conversationHistory,
             learningGoal: learningGoal || "",
             taskDescription: task?.requirementDescription || "",
           },
@@ -3765,6 +3778,10 @@ export const CodeAware = () => {
       stepId: string,
       cardId: string,
       question: string,
+      conversationHistory: Array<{
+        role: "user" | "assistant";
+        content: string;
+      }>,
     ): Promise<string> => {
       const step = steps.find((s) => s.id === stepId);
       const card = step?.knowledgeCards.find((k) => k.id === cardId);
@@ -3812,7 +3829,7 @@ export const CodeAware = () => {
             stepId,
             cardId,
             currentContent: card?.content || "",
-            conversationHistory: [],
+            conversationHistory,
             learningGoal: learningGoal || "",
             taskDescription: task?.requirementDescription || "",
           },
@@ -4412,11 +4429,19 @@ export const CodeAware = () => {
                             p.targetId ===
                               (kc.id || `${step.id}-card-${kcIndex}`),
                         ),
-                        onConfusionAsk: (cardId: string, question: string) => {
+                        onConfusionAsk: (
+                          cardId: string,
+                          question: string,
+                          conversationHistory: Array<{
+                            role: "user" | "assistant";
+                            content: string;
+                          }>,
+                        ) => {
                           return handleKCConfusionAsk(
                             step.id,
                             cardId,
                             question,
+                            conversationHistory,
                           );
                         },
                         onConfusionEnd: (

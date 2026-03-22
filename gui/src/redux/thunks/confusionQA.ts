@@ -1,5 +1,7 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
-import { constructGlobalQAResponsePrompt } from "../../../../core/llm/codeAwarePrompts";
+import { ChatMessage } from "core";
+import { renderChatMessage } from "core/util/messageContent";
+import { constructConfusionQASystemPrompt } from "../../../../core/llm/codeAwarePrompts";
 import { buildCodeAwareCognitiveEdges } from "../../utils/codeAwareRelationGraph";
 import {
   selectJsonGenerationModel,
@@ -46,12 +48,6 @@ export const respondToConfusionQA = createAsyncThunk<
     }
 
     const steps = state.codeAwareSession.steps;
-
-    // Build conversation history including the current question
-    const fullHistory = [
-      ...context.conversationHistory,
-      { role: "user" as const, content: question },
-    ];
 
     const allStepsInfo = steps.map((step) => ({
       id: step.id,
@@ -124,8 +120,8 @@ export const respondToConfusionQA = createAsyncThunk<
       };
     }
 
-    const prompt = constructGlobalQAResponsePrompt(
-      fullHistory,
+    // Build system prompt (no conversation history — that goes into messages array)
+    const systemPrompt = constructConfusionQASystemPrompt(
       allStepsInfo,
       context.currentCode || "",
       context.taskDescription,
@@ -135,26 +131,49 @@ export const respondToConfusionQA = createAsyncThunk<
       focusContext,
     );
 
+    // Build multi-turn ChatMessage array: system + history + current question
+    const chatMessages: ChatMessage[] = [
+      { role: "system", content: systemPrompt },
+      ...context.conversationHistory.map(
+        (msg) =>
+          ({
+            role: msg.role === "user" ? "user" : "assistant",
+            content: msg.content,
+          }) as ChatMessage,
+      ),
+      { role: "user", content: question },
+    ];
+
     const maxRetries = 3;
     let lastError: Error | null = null;
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        const result = await extra.ideMessenger.request("llm/complete", {
-          prompt,
-          completionOptions: {},
-          title: defaultModel.title,
-        });
+        // Use multi-turn conversation API instead of single-prompt completion
+        const abortController = new AbortController();
+        const gen = extra.ideMessenger.llmStreamChat(
+          {
+            messages: chatMessages,
+            completionOptions: {},
+            title: defaultModel.title,
+          },
+          abortController.signal,
+        );
 
-        if (
-          result.status !== "success" ||
-          !result.content ||
-          !result.content.trim()
-        ) {
-          throw new Error("LLM 返回了空响应或失败状态");
+        let accumulatedContent = "";
+        let next = await gen.next();
+        while (!next.done) {
+          for (const msg of next.value) {
+            accumulatedContent += renderChatMessage(msg);
+          }
+          next = await gen.next();
         }
 
-        const parsed = JSON.parse(result.content);
+        if (!accumulatedContent.trim()) {
+          throw new Error("LLM 返回了空响应");
+        }
+
+        const parsed = JSON.parse(accumulatedContent);
         const response =
           typeof parsed.response === "string"
             ? parsed.response

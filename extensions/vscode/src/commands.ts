@@ -549,28 +549,35 @@ const getCommandsMap: (
       await annotationController.askFollowUp(
         thread,
         question.trim(),
-        async (code, language, existingAnnotation, q) => {
+        async (code, language, conversationHistory, q) => {
           const { config } = await configHandler.loadConfig();
           const llm = config?.selectedModelByRole.chat;
           if (!llm) {
             throw new Error("未找到可用的 Chat 模型");
           }
+          // Build multi-turn messages: system context + conversation history + current question
+          const messages: ChatMessage[] = [
+            {
+              role: "system" as const,
+              content: CodeAnnotationController.buildFollowUpSystemContext(
+                code,
+                language,
+              ),
+            },
+            ...conversationHistory.map(
+              (msg) =>
+                ({
+                  role: msg.role,
+                  content: msg.content,
+                }) as ChatMessage,
+            ),
+            {
+              role: "user" as const,
+              content: q,
+            },
+          ];
           const response: ChatMessage = await llm.chat(
-            [
-              {
-                role: "system" as const,
-                content: CodeAnnotationController.getFollowUpSystemPrompt(),
-              },
-              {
-                role: "user" as const,
-                content: CodeAnnotationController.buildFollowUpPrompt(
-                  code,
-                  language,
-                  existingAnnotation,
-                  q,
-                ),
-              },
-            ],
+            messages,
             new AbortController().signal,
           );
           const text =

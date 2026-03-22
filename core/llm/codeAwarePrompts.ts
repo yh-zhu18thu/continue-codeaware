@@ -652,19 +652,12 @@ export function constructGenerateKnowledgeCardDetailPrompt(
         "related_code": "${codeContext}",
         "project_context": "${taskDescription || ""}",${masteredSection}
         "requirements": [
-            "CRITICAL: The user is a NON-PROGRAMMER. Write as if explaining to someone who has never written code. Use everyday language throughout.",
-            "Use adaptive scaffolding style: internally choose one of hinting/explaining/instructing/modeling, but DO NOT output the chosen type.",
-            "Focus on one specific confusion point only. Do not expand to downstream topics or unrelated concepts.",
-            "STRICT: Only reference knowledge the user has already mastered (from mastered_related_context). Do NOT introduce new concepts, code snippets, syntax, or technical terms that the user has not encountered yet. If no mastered_related_context is provided, explain purely in plain language without any code.",
-            "STRICT LENGTH: Content MUST be exactly 3-4 sentences. No more. Every word must earn its place. If you find yourself writing a 5th sentence, merge or delete.",
-            "UNMASTERED CONTENT CONTROL: For concepts the user has NOT yet mastered, mention AT MOST the single most relevant one, and only briefly. Do NOT list or explain multiple unmastered concepts. Mastered concepts can be referenced more freely as anchors, but still keep it concise.",
-            "Title must be a SHORT QUESTION (ending with '?' in Chinese or English) that helps a non-programmer quickly judge whether they need this card. Avoid obscure jargon. Example: '为什么用循环能省掉重复劳动？' instead of '循环结构'.",
-            "Content must be 3-4 sentences, informative yet accessible. Prioritize brevity for non-programmer readability.",
-            "Sentence 1: TLDR in plain language. Sentences 2-3: explanation that connects to the user's existing knowledge (from mastered_related_context if available) and ties to project_context. Last sentence: a practical takeaway or next-step hint.",
+            "用户是非程序员，用日常语言、类比、生活化的例子来解释，让没有编程基础的人也能理解。",
+            "只聚焦一个知识点，不要扩展到下游话题或无关概念。",
+            "内容控制在3-4句话以内，简洁有力。",
+            "标题必须是一个简短的问句（中文以'？'结尾，英文以'?'结尾），帮助用户快速判断是否需要了解。避免晦涩术语。例如：'为什么用循环能省掉重复劳动？' 而不是 '循环结构'。",
             ${masteredRequirements.join(",\n            ")}
-            "Use simple words and life-like analogies when helpful.",
-            "Do NOT include code snippets, code examples, or programming syntax in the content unless the user has already demonstrated familiarity with code (evident from mastered_related_context). Focus on conceptual understanding instead.",
-            "Respond in the same language as the project_context. You may use Markdown in the content to make it more readable.",
+            "用与 project_context 相同的语言回答，可以使用 Markdown 增强可读性。",
             "You must follow this JSON format in your response: {\\"title\\": \\"(title of the knowledge card)\\", \\"content\\": \\"(content of the knowledge card. Markdown can be used here)\\"}",
             "IMPORTANT: Properly escape all special characters in JSON strings. Ensure the JSON is valid and parseable.",
             "Please do not use invalid \`\`\`json character to envelope the JSON response, just return the JSON object directly."
@@ -1156,6 +1149,72 @@ export function constructRerunStepCodeUpdatePrompt(
 }
 
 // ─── Global Q&A: in-overlay conversation scaffolding response ───
+/**
+ * Build a system prompt for confusion Q&A.
+ * Conversation history is NOT embedded here — it's passed as separate
+ * user/assistant messages in the ChatMessage[] array (multi-turn API).
+ */
+export function constructConfusionQASystemPrompt(
+  allSteps: Array<{ id: string; title: string; abstract: string }>,
+  codeContext: string,
+  taskDescription: string,
+  learningGoal: string,
+  masteredRelatedContext?: string,
+  situationMasteryContext?: string,
+  focusContext?: {
+    level: "knowledge-card" | "step" | "global";
+    cardTitle?: string;
+    cardContent?: string;
+    stepTitle?: string;
+    stepAbstract?: string;
+  },
+): string {
+  const stepsText = (Array.isArray(allSteps) ? allSteps : [])
+    .map((s) => `- ${s.title}: ${s.abstract}`)
+    .join("\n");
+
+  // Build focus-context section
+  let focusSection = "";
+  if (focusContext?.level === "knowledge-card" && focusContext.cardTitle) {
+    focusSection = `\n\n## 当前聚焦\n范围: 知识卡片\n卡片标题: ${focusContext.cardTitle}\n卡片内容: ${focusContext.cardContent || ""}\n所属步骤: ${focusContext.stepTitle || ""}\n\n请围绕这张知识卡片的主题和内容来回答，不要偏离到整体项目上。可以用项目上下文作为辅助解释的背景。`;
+  } else if (focusContext?.level === "step" && focusContext.stepTitle) {
+    focusSection = `\n\n## 当前聚焦\n范围: 步骤\n步骤标题: ${focusContext.stepTitle}\n步骤描述: ${focusContext.stepAbstract || ""}\n\n请围绕这个步骤的主题来回答，可以引用整体项目上下文辅助解释，但始终回到这个步骤本身。`;
+  }
+
+  const masteredSection = masteredRelatedContext
+    ? `\n\n## 用户已掌握的相关知识\n${masteredRelatedContext}\n\n可以自然地引用用户已掌握的知识来进行类比或衔接，比如"你之前了解的 X —— 这里的 Y 跟它类似……"。已掌握的术语可以直接使用。`
+    : "";
+
+  const situationSection = situationMasteryContext
+    ? `\n\n## 用户掌握情况\n${situationMasteryContext}\n\n仅在与当前问题相关时利用此信息。如果用户已经掌握某些概念，可以借此建立联系。`
+    : "";
+
+  return `你是一个面向非程序员用户的编程项目学习助手。用户正在学习一个编程项目，遇到了困惑，正在和你进行多轮对话。
+
+## 项目步骤
+${stepsText}
+
+## 相关代码
+${codeContext}
+
+## 项目描述
+${taskDescription}
+
+## 学习目标
+${learningGoal}${focusSection}${masteredSection}${situationSection}
+
+## 回答要求
+- 用通俗易懂、面向非程序员的风格回答，用日常语言、类比和生活化的例子
+- 直接回答用户的最新问题，不要重复之前已经说过的内容
+- 如果用户说还不理解，换一种方式解释：用类比、举具体例子、或进一步简化
+- 回答控制在3-4句话以内，简洁有力
+- 用与用户提问相同的语言回答，可以使用 Markdown 增强可读性
+- 你必须以如下 JSON 格式回复: {"response": "(你的回答，支持 Markdown)"}
+- 确保 JSON 字符串中的特殊字符正确转义，保证 JSON 可被解析
+- 不要用 \`\`\`json 等代码块包裹 JSON，直接返回 JSON 对象`;
+}
+
+// Keep the old function name as an alias for backward compatibility
 export function constructGlobalQAResponsePrompt(
   conversationHistory: Array<{ role: "user" | "assistant"; content: string }>,
   allSteps: Array<{ id: string; title: string; abstract: string }>,
@@ -1166,90 +1225,30 @@ export function constructGlobalQAResponsePrompt(
   situationMasteryContext?: string,
   focusContext?: {
     level: "knowledge-card" | "step" | "global";
-    /** For KC level: card title */
     cardTitle?: string;
-    /** For KC level: card content */
     cardContent?: string;
-    /** For step level: step title */
     stepTitle?: string;
-    /** For step level: step abstract */
     stepAbstract?: string;
   },
 ): string {
+  // Legacy single-prompt format — kept for any remaining callers
+  const systemPrompt = constructConfusionQASystemPrompt(
+    allSteps,
+    codeContext,
+    taskDescription,
+    learningGoal,
+    masteredRelatedContext,
+    situationMasteryContext,
+    focusContext,
+  );
+
   const historyText = conversationHistory
     .map(
       (msg) => `${msg.role === "user" ? "User" : "Assistant"}: ${msg.content}`,
     )
     .join("\n");
 
-  const stepsText = (Array.isArray(allSteps) ? allSteps : [])
-    .map((s) => `- ${s.title}: ${s.abstract}`)
-    .join("\n");
-
-  // Build focus-context field for KC / step level
-  let focusField = "";
-  let focusReqs: string[] = [];
-  if (focusContext?.level === "knowledge-card" && focusContext.cardTitle) {
-    focusField = `\n    "focus_scope": "knowledge-card",\n    "card_title": ${JSON.stringify(focusContext.cardTitle)},\n    "card_content": ${JSON.stringify(focusContext.cardContent || "")},`;
-    focusReqs = [
-      `"CRITICAL SCOPE CONSTRAINT: The user is asking about a SPECIFIC knowledge card titled '${focusContext.cardTitle}'. Your response MUST directly address the content of this card. Do NOT answer from the overall project perspective — stay focused on the card's topic and content."`,
-      `"Ground your answer in the card_content provided. Explain, clarify, or rephrase what the card says. Use project context only as supporting background, not as the main topic."`,
-    ];
-  } else if (focusContext?.level === "step" && focusContext.stepTitle) {
-    focusField = `\n    "focus_scope": "step",\n    "focus_step_title": ${JSON.stringify(focusContext.stepTitle)},\n    "focus_step_description": ${JSON.stringify(focusContext.stepAbstract || "")},`;
-    focusReqs = [
-      `"CRITICAL SCOPE CONSTRAINT: The user is asking about a SPECIFIC step titled '${focusContext.stepTitle}'. Your response MUST directly address this step's topic and purpose. You may reference broader project context to help explain, but always bring the answer back to this step."`,
-      `"Focus on what this step does, why it matters, and how it works. Do NOT drift into explaining other steps or the overall project unless it directly helps the user understand this step."`,
-    ];
-  }
-
-  const masteredField = masteredRelatedContext
-    ? `\n    "mastered_related_context": ${JSON.stringify(masteredRelatedContext)},`
-    : "";
-
-  const situationField = situationMasteryContext
-    ? `\n    "learner_mastery_profile": ${JSON.stringify(situationMasteryContext)},`
-    : "";
-
-  const masteredReqs = masteredRelatedContext
-    ? [
-        `"When mastered_related_context is provided, actively leverage the user's existing understanding listed there. Reference what they already know to give more targeted, connected explanations, e.g. 'You already learned about X — here Y works the same way but …'."`,
-        `"Minimize jargon by default, but if a term appears in the mastered_related_context, you may use it directly since the user has encountered it before."`,
-      ]
-    : [];
-
-  const situationReqs = situationMasteryContext
-    ? [
-        `"When learner_mastery_profile is provided, it contains items the user has mastered (已掌握) and items the user has NOT yet mastered (尚未掌握). Use this information ONLY when relevant to the current question — do NOT force unrelated knowledge into the response."`,
-        `"For mastered items: if the current question relates to something the user already understands, reference that knowledge to build connections (e.g. 'You already know about X — Y works similarly but …'). This helps the user anchor new learning to existing knowledge."`,
-        `"For unmastered items: pick ONLY the single most relevant unmastered item if it directly relates to the question. Mention it in one short clause at most. Do NOT list or explain multiple unmastered items — the response must stay within 3-4 sentences total."`,
-      ]
-    : [];
-
-  return `{
-    "task": "A non-programmer user is confused about a coding project. They are having a conversation with you. Based on the conversation history, project context, related code, learning objectives, project steps, and the user's already-mastered related knowledge, provide a clear and helpful response using adaptive scaffolding.",
-    "conversation_history": ${JSON.stringify(historyText)},
-    "project_steps": ${JSON.stringify(stepsText)},
-    "related_code": ${JSON.stringify(codeContext)},
-    "project_context": ${JSON.stringify(taskDescription)},
-    "learning_objectives": ${JSON.stringify(learningGoal)},${focusField}${masteredField}${situationField}
-    "requirements": [
-        "Treat the user as a beginning learner: use plain language as the baseline, but do not shy away from terms the user has already encountered (see mastered_related_context if provided).",
-        "Use adaptive scaffolding style: internally choose one of hinting/explaining/instructing/modeling, but DO NOT output the chosen type.",
-        "Directly answer the user's latest question in the conversation. Do not repeat previous answers.",
-        "If the user says they still don't understand, try a different approach: use an analogy, give a concrete example, or simplify further.",
-        "STRICT LENGTH: Response MUST be 3-4 sentences. No more. Be concise and direct. Every sentence must carry key information.",
-        "UNMASTERED CONTENT CONTROL: For concepts the user has NOT yet mastered (from learner_mastery_profile), mention AT MOST the single most relevant unmastered point, and only briefly. Do NOT enumerate or explain multiple unmastered concepts. Mastered concepts can be referenced freely as anchors, but still keep the total response to 3-4 sentences.",
-        "Sentence 1: TLDR in plain language. Sentences 2-3: explanation that connects to the user's existing knowledge (from mastered_related_context if available) and ties to project context and code. Last sentence: a practical takeaway or next-step hint.",
-        ${[...focusReqs, ...masteredReqs, ...situationReqs].join(",\n        ")}
-        "Use simple words and life-like analogies when helpful.",
-        "Do not dump full code explanations. Only mention the most relevant code behavior if needed.",
-        "Respond in the same language as the user's question. You may use Markdown for readability.",
-        "You must follow this JSON format in your response: {\\"response\\": \\"(your response in Markdown)\\"}",
-        "IMPORTANT: Properly escape all special characters in JSON strings. Ensure the JSON is valid and parseable.",
-        "Please do not use invalid code block characters to envelope the JSON response, just return the JSON object directly."
-    ]
-  }`;
+  return `${systemPrompt}\n\n## 对话历史\n${historyText}`;
 }
 
 // ─── Global Q&A: convert conversation to knowledge card ───
